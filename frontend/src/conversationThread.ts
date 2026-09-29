@@ -1,4 +1,4 @@
-import type { Artifact, Attachment, CreditConsumption, ExpertStage, ResourceCreationAction } from "./api/client";
+import type { Artifact, Attachment, CreditConsumption, Evidence, ExecutionPlan, ExpertStage, ResourceCreationAction, SessionWorkflowLink } from "./api/client";
 
 export interface ConversationActivityItem {
   id: string | number;
@@ -6,10 +6,15 @@ export interface ConversationActivityItem {
   detail?: string;
 }
 
+export type ConversationActivityKind = "runtime" | "reasoning" | "tool" | "file" | "activity";
+
 export interface ConversationActivityGroup {
   id: string | number;
   label: string;
   detail?: string;
+  kind?: ConversationActivityKind;
+  toolCallCount?: number;
+  fileChangeCount?: number;
   state?: "running" | "completed";
   items: ConversationActivityItem[];
 }
@@ -31,12 +36,18 @@ export interface ConversationMessage {
   progressDetail?: string;
   currentActivity?: ConversationActivityItem;
   activities?: ConversationActivityGroup[];
+  executionEvidenceCounts?: { toolCalls: number; fileChanges: number };
   stages?: ExpertStage[];
   creditConsumption?: CreditConsumption;
   artifacts?: Artifact[];
+  evidence?: Evidence[];
+  executionPlan?: ExecutionPlan;
   attachments?: Attachment[];
+  taskAttachments?: Attachment[];
   resourceAction?: ResourceCreationAction;
   skills?: Array<{ id: string; name: string }>;
   meta?: { label: string; title?: string };
   retryable?: boolean;
+  canSaveWorkflow?: boolean;
+  workflowLink?: SessionWorkflowLink;
 }

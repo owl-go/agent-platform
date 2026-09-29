@@ -2,6 +2,7 @@ package agentworkspace
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	accountapplication "agent-platform/backend/internal/biz/account/application"
@@ -15,11 +16,13 @@ import (
 	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	"agent-platform/backend/internal/data/aiapplication/modelchat"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
+	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/modeldiscovery"
 	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
+	"agent-platform/backend/internal/productanalytics"
 	"agent-platform/backend/internal/secretcrypto"
 	platformserver "agent-platform/backend/internal/server"
 	workspaceservice "agent-platform/backend/internal/service/workspace"
@@ -36,6 +39,7 @@ var ProviderSet = wire.NewSet(
 	NewIdentityProvider,
 	NewAccountService,
 	NewWorkspaceService,
+	NewProductAnalytics,
 	NewCreditsRepository,
 	NewCreditsService,
 	aicreationwiring.NewApplication,
@@ -48,6 +52,7 @@ var ProviderSet = wire.NewSet(
 	workspaceservice.NewAuthenticationFilter,
 	NewHTTPHandlers,
 	wire.Bind(new(accountapplication.IdentityProvider), new(*keycloak.Provider)),
+	wire.Bind(new(productanalytics.Observer), new(*analyticsrepo.Recorder)),
 )
 
 func NewTokenVerifier(ctx context.Context, config platformconfig.Config) (accountapplication.TokenVerifier, error) {
@@ -76,6 +81,10 @@ func NewAccountService(ctx context.Context, config platformconfig.Config, databa
 
 func NewCreditsRepository(database *gormdb.Database) *creditsrepo.Repository {
 	return creditsrepo.New(database.ORM())
+}
+
+func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analyticsrepo.Recorder, error) {
+	return analyticsrepo.New(database.ORM(), logger)
 }
 
 func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider) (*workspaceapplication.Service, error) {

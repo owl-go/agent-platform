@@ -4,6 +4,38 @@ import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("loads the metadata-only Home overview and normalizes omitted collections", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ recent_tasks: [{ kind: "session", id: "session-1", title: "Report", state: "completed", updated_at: "2026-09-28T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const item = await createPlatformApi(() => "token").getHomeOverview();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/home-overview");
+    expect(item.recent_tasks).toHaveLength(1);
+    expect(item.action_items).toEqual([]);
+    expect(item.common_workflows).toEqual([]);
+  });
+
+  it("updates the versioned enterprise Credit policy", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").updateCreditPolicy({ default_daily_allocation_hundredths: 25_000, warning_threshold_percent: 85, redemption_codes_enabled: false, version: 3 });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/admin/credit-policy");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PUT");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ default_daily_allocation_hundredths: 25_000, warning_threshold_percent: 85, redemption_codes_enabled: false, expected_version: 3 });
+  });
+
+  it("downloads the exact cited Knowledge revision", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("source", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").downloadKnowledgeEvidence("base/1", "document 1", "revision?1");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/knowledge-bases/base%2F1/documents/document%201/download?revision_id=revision%3F1");
+  });
+
   it("classifies oversized Skill uploads as validation errors", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "request_body_too_large" }), { status: 413 })));
     await expect(createPlatformApi(() => "token").createUploadSkill({ archive: "YQ==" })).rejects.toMatchObject({ kind: "validation", status: 413 });
@@ -45,9 +77,9 @@ describe("Agent Workspace API client", () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await createPlatformApi(() => "token").updateSettings({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 3 });
+    await createPlatformApi(() => "token").updateSettings({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 3, execution_inherited: true, platform_execution_available: true });
 
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", expected_version: 3 });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", expected_version: 3, inherit_platform_execution: true });
   });
 
   it("normalizes omitted provider model collections from protobuf JSON", async () => {
@@ -191,6 +223,27 @@ describe("Agent Workspace API client", () => {
     expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Authorization")).toBe("Bearer token");
   });
 
+  it("previews and creates a Workflow from one successful Session response", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === "POST") return new Response(JSON.stringify({ workflow: { id: "workflow-1", name: "Report", goal: "Build report", environment: [], api_credential_configured: false, deleted: false, created_at: "2026-09-28T00:00:00Z", updated_at: "2026-09-28T00:00:00Z", version: 1 }, validation_run: { id: "run-1", conversation_id: "run-1", turn_number: 1, workflow_id: "workflow-1", workflow_name: "Report", trigger: "session_conversion", state: "waiting_for_user", queued_at: "2026-09-28T00:00:00Z" }, link: { session_id: "session-1", message_id: 2, workflow_id: "workflow-1", workflow_name: "Report", validation_run_id: "run-1", created_at: "2026-09-28T00:00:00Z" }, replayed: false }), { status: 200, headers: { "Content-Type": "application/json" } });
+      if (url.endsWith("/workflow-links")) return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ suggested_name: "Report", suggested_goal: "Build report", specialist_name: "Default", resources: [], files: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createPlatformApi(() => "token");
+
+    await api.previewSessionWorkflowDraft("session-1", 2);
+    const created = await api.createWorkflowFromSession("session-1", 2, { name: "Report", goal: "Build report", files: [] });
+    await api.listSessionWorkflowLinks("session-1");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/workflow-draft");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/workflow");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ name: "Report", goal: "Build report", files: [] });
+    expect(created.validation_run.elapsed_ms).toBe(0);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe("/api/v1/sessions/session-1/workflow-links");
+  });
+
   it("downloads Workflow Artifact content through the authenticated API", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("workflow report", { status: 200, headers: { "Content-Type": "application/octet-stream" } }));
     vi.stubGlobal("fetch", fetchMock);
@@ -272,12 +325,15 @@ describe("Agent Workspace API client", () => {
 
   it("parses replayed and live SSE events in order", async () => {
     const body = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode("id: 1\nevent: run.started\ndata: {}\n\nid: 2\nevent: run.succeeded\ndata: {\"message\":\"done\"}\n\n")); controller.close(); } });
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } })));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
     const events: string[] = [];
 
-    await createPlatformApi(() => "token").streamRunEvents("workflow-1", "run-1", (event) => events.push(`${event.sequence}:${event.type}:${String(event.payload.message ?? "")}`));
+    await createPlatformApi(() => "token").streamRunEvents("workflow-1", "run-1", (event) => events.push(`${event.sequence}:${event.type}:${String(event.payload.message ?? "")}`), undefined, { afterSequence: 4, reconnect: true });
 
     expect(events).toEqual(["1:run.started:", "2:run.succeeded:done"]);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow-1/runs/run-1/events?reconnect=true");
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ "Last-Event-ID": "4" });
   });
 
   it("streams Session message snapshots with progress and partial content", async () => {
@@ -305,6 +361,16 @@ describe("Agent Workspace API client", () => {
     await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, (snapshot) => snapshots.push(snapshot));
 
     expect(snapshots).toEqual([{ state: "completed", content: "完成", elapsed_ms: 1200 }]);
+  });
+
+  it("marks a resumed Session stream without changing the message identity", async () => {
+    const body = new ReadableStream({ start(controller) { controller.close(); } });
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").streamSessionMessage("session-1", 2, () => undefined, undefined, { reconnect: true });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/events?reconnect=true");
   });
 
   it("requests backend cancellation for the active Session response", async () => {

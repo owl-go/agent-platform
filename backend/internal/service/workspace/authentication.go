@@ -15,6 +15,7 @@ import (
 	accountapplication "agent-platform/backend/internal/biz/account/application"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
+	"agent-platform/backend/internal/productanalytics"
 
 	kratoshttp "github.com/go-kratos/kratos/v3/transport/http"
 	"golang.org/x/crypto/bcrypt"
@@ -39,9 +40,9 @@ type workflowTokenClaims struct {
 	ExpiresAt  int64  `json:"exp"`
 }
 
-func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *workspaceapplication.Service) (kratoshttp.FilterFunc, error) {
-	if accounts == nil || workspace == nil {
-		return nil, fmt.Errorf("Account and Agent Workspace services are required")
+func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *workspaceapplication.Service, analytics productanalytics.Observer) (kratoshttp.FilterFunc, error) {
+	if accounts == nil || workspace == nil || analytics == nil {
+		return nil, fmt.Errorf("Account, Agent Workspace, and product analytics services are required")
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -85,6 +86,7 @@ func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *wo
 			principal, err := accounts.Authenticate(request.Context(), strings.TrimSpace(token))
 			switch {
 			case err == nil:
+				analytics.LoginCompleted(request.Context(), principal.UserID, "oidc")
 				next.ServeHTTP(writer, request.WithContext(accountapplication.WithPrincipal(request.Context(), principal)))
 			case errors.Is(err, accountdomain.ErrUnauthenticated):
 				writeAuthError(writer, http.StatusUnauthorized, "invalid_authentication")

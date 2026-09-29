@@ -3,7 +3,7 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElNotification } from "element-plus";
-import { Box, ChatDotRound, Connection, Folder, Loading, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { Box, ChatDotRound, Connection, HomeFilled, Loading, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
@@ -33,6 +33,7 @@ const navGroups = [
   {
     id: "workspace",
     items: [
+      { id: "home", icon: HomeFilled, path: "/home" },
       { id: "sessions", icon: ChatDotRound, path: "/sessions" },
       { id: "workflows", icon: Connection, path: "/workflows" },
       {
@@ -44,7 +45,6 @@ const navGroups = [
           { id: "ai-applications-image-creation", path: "/ai-apps/image-creation" },
         ],
       },
-      { id: "knowledge-bases", icon: Folder, path: "/knowledge-bases" },
     ],
   },
   {
@@ -158,7 +158,7 @@ function toggleAIApplications() {
     <section v-else-if="authState.kind === 'error'" class="auth-screen"><el-result icon="error" :title="t('auth.unavailable')" :sub-title="authState.message" /></section>
     <el-container v-else class="app-shell">
       <el-aside class="sidebar" :class="{ open: mobileOpen }" width="240px">
-        <RouterLink to="/sessions" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
+        <RouterLink to="/home" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
         <el-button class="new-session" @click="$router.push('/sessions?new=1'); mobileOpen = false"><el-icon><Plus /></el-icon>{{ t('sessions.new') }}</el-button>
         <nav :aria-label="t('nav.label')">
           <section v-for="group in navGroups" :key="group.id" class="nav-group">
@@ -180,7 +180,7 @@ function toggleAIApplications() {
           <el-dropdown placement="top-start" trigger="click" @command="handleUserCommand">
             <button class="user-button"><el-avatar :size="34">{{ initials }}</el-avatar><span><strong>{{ currentUser?.display_name }}</strong><small>@{{ currentUser?.username }}</small></span><el-icon><MoreFilled /></el-icon></button>
             <template #dropdown><el-dropdown-menu>
-              <el-dropdown-item command="credits"><span class="credit-menu-row"><b>✧</b><span>{{ t('credits.balance') }}</span><strong>{{ formatCredits(creditBalance?.total_hundredths) }} ›</strong></span></el-dropdown-item>
+              <el-dropdown-item command="credits"><span class="credit-menu-row"><b>✧</b><span>{{ t('credits.available') }}</span><strong>{{ formatCredits(creditBalance?.available_hundredths) }} ›</strong></span></el-dropdown-item>
               <el-dropdown-item v-if="currentUser?.administrator" command="users" :icon="User">{{ t('nav.users') }}</el-dropdown-item>
               <el-dropdown-item command="locale" :icon="UserFilled">{{ locale === 'zh-CN' ? 'English' : '中文' }}</el-dropdown-item>
               <el-dropdown-item command="signout" :icon="SwitchButton" divided>{{ t('auth.signOut') }}</el-dropdown-item>

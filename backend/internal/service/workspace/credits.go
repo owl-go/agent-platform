@@ -21,7 +21,38 @@ func (service *Service) GetCreditBalance(ctx context.Context, _ *workspacev1.Get
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return creditBalanceResponse(balance), nil
+	policy, err := service.credits.Policy(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return creditBalanceResponse(balance, policy), nil
+}
+
+func (service *Service) GetCreditPolicy(ctx context.Context, _ *workspacev1.GetCreditPolicyRequest) (*workspacev1.CreditPolicy, error) {
+	if _, err := service.administrator(ctx); err != nil {
+		return nil, err
+	}
+	policy, err := service.credits.Policy(ctx)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return creditPolicyResponse(policy), nil
+}
+
+func (service *Service) UpdateCreditPolicy(ctx context.Context, request *workspacev1.UpdateCreditPolicyRequest) (*workspacev1.CreditPolicy, error) {
+	administrator, err := service.administrator(ctx)
+	if err != nil {
+		return nil, err
+	}
+	policy, err := service.credits.UpdatePolicy(ctx, administrator.UserID, creditsdomain.Policy{
+		DefaultDailyAllocation:  creditsdomain.Amount(request.DefaultDailyAllocationHundredths),
+		WarningThresholdPercent: int(request.WarningThresholdPercent),
+		RedemptionCodesEnabled:  request.RedemptionCodesEnabled,
+	}, request.ExpectedVersion)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return creditPolicyResponse(policy), nil
 }
 
 func (service *Service) ListCreditLedger(ctx context.Context, request *workspacev1.ListCreditLedgerRequest) (*workspacev1.ListCreditLedgerResponse, error) {
@@ -64,7 +95,11 @@ func (service *Service) RedeemCreditCode(ctx context.Context, request *workspace
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return creditBalanceResponse(balance), nil
+	policy, policyErr := service.credits.Policy(ctx)
+	if policyErr != nil {
+		return nil, publicError(policyErr)
+	}
+	return creditBalanceResponse(balance, policy), nil
 }
 
 func (service *Service) ConfigureUserDailyCredits(ctx context.Context, request *workspacev1.ConfigureUserDailyCreditsRequest) (*workspacev1.CreditBalance, error) {
@@ -75,7 +110,11 @@ func (service *Service) ConfigureUserDailyCredits(ctx context.Context, request *
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return creditBalanceResponse(balance), nil
+	policy, policyErr := service.credits.Policy(ctx)
+	if policyErr != nil {
+		return nil, publicError(policyErr)
+	}
+	return creditBalanceResponse(balance, policy), nil
 }
 
 func (service *Service) AdjustUserCredits(ctx context.Context, request *workspacev1.AdjustUserCreditsRequest) (*workspacev1.CreditBalance, error) {
@@ -87,7 +126,11 @@ func (service *Service) AdjustUserCredits(ctx context.Context, request *workspac
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return creditBalanceResponse(balance), nil
+	policy, policyErr := service.credits.Policy(ctx)
+	if policyErr != nil {
+		return nil, publicError(policyErr)
+	}
+	return creditBalanceResponse(balance, policy), nil
 }
 
 func (service *Service) ListModelCreditRates(ctx context.Context, _ *workspacev1.ListModelCreditRatesRequest) (*workspacev1.ListModelCreditRatesResponse, error) {
@@ -208,11 +251,22 @@ func (service *Service) userTimezone(ctx context.Context, userID string) string 
 	return "Asia/Shanghai"
 }
 
-func creditBalanceResponse(balance creditsdomain.Balance) *workspacev1.CreditBalance {
-	response := &workspacev1.CreditBalance{TotalHundredths: int64(balance.Total), ReservedHundredths: int64(balance.Reserved), AvailableHundredths: int64(balance.Available), DailyRemainingHundredths: int64(balance.DailyRemaining), PersistentHundredths: int64(balance.Persistent), TodayConsumedHundredths: int64(balance.TodayConsumed), DailyAllocationHundredths: int64(balance.DailyAllocation), CreditDay: balance.CreditDay, Timezone: balance.Timezone, NextAllocationAt: timestamppb.New(balance.NextAllocationAt), PendingEffectiveDay: optionalString(balance.PendingEffectiveDay), Version: balance.Version}
+func creditBalanceResponse(balance creditsdomain.Balance, policy creditsdomain.Policy) *workspacev1.CreditBalance {
+	response := &workspacev1.CreditBalance{TotalHundredths: int64(balance.Total), ReservedHundredths: int64(balance.Reserved), AvailableHundredths: int64(balance.Available), DailyRemainingHundredths: int64(balance.DailyRemaining), PersistentHundredths: int64(balance.Persistent), TodayConsumedHundredths: int64(balance.TodayConsumed), DailyAllocationHundredths: int64(balance.DailyAllocation), CreditDay: balance.CreditDay, Timezone: balance.Timezone, NextAllocationAt: timestamppb.New(balance.NextAllocationAt), PendingEffectiveDay: optionalString(balance.PendingEffectiveDay), Version: balance.Version, WarningThresholdPercent: int32(policy.WarningThresholdPercent), RedemptionCodesEnabled: policy.RedemptionCodesEnabled}
+	if balance.GroupBudget != nil {
+		response.GroupBudget = &workspacev1.GroupCreditBudget{GroupId: balance.GroupBudget.GroupID, GroupName: balance.GroupBudget.Name, LimitHundredths: int64(balance.GroupBudget.Limit), ConsumedHundredths: int64(balance.GroupBudget.Consumed), ReservedHundredths: int64(balance.GroupBudget.Reserved), AvailableHundredths: int64(balance.GroupBudget.Available)}
+	}
 	if balance.PendingDailyAllocation != nil {
 		value := int64(*balance.PendingDailyAllocation)
 		response.PendingDailyAllocationHundredths = &value
+	}
+	return response
+}
+
+func creditPolicyResponse(policy creditsdomain.Policy) *workspacev1.CreditPolicy {
+	response := &workspacev1.CreditPolicy{DefaultDailyAllocationHundredths: int64(policy.DefaultDailyAllocation), WarningThresholdPercent: int32(policy.WarningThresholdPercent), RedemptionCodesEnabled: policy.RedemptionCodesEnabled, Version: policy.Version, UpdatedAt: timestamppb.New(policy.UpdatedAt)}
+	if policy.UpdatedByUserID != "" {
+		response.UpdatedByUserId = &policy.UpdatedByUserID
 	}
 	return response
 }

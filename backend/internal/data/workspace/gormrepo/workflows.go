@@ -40,6 +40,9 @@ func (repository *Repository) ListWorkflows(ctx context.Context, ownerID string,
 		}
 		items = append(items, item)
 	}
+	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
+		return nil, err
+	}
 	return items, nil
 }
 
@@ -60,7 +63,15 @@ func (repository *Repository) CreateWorkflow(ctx context.Context, ownerID string
 	}); err != nil {
 		return domain.Workflow{}, fmt.Errorf("create Workflow: %w", err)
 	}
-	return workflowDomain(row)
+	item, err := workflowDomain(row)
+	if err != nil {
+		return domain.Workflow{}, err
+	}
+	items := []domain.Workflow{item}
+	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
+		return domain.Workflow{}, err
+	}
+	return items[0], nil
 }
 
 func (repository *Repository) GetWorkflow(ctx context.Context, ownerID, workflowID string, includeDeleted bool) (domain.Workflow, error) {
@@ -72,7 +83,15 @@ func (repository *Repository) GetWorkflow(ctx context.Context, ownerID, workflow
 	if err := query.Take(&row).Error; err != nil {
 		return domain.Workflow{}, mapNotFound(err)
 	}
-	return workflowDomain(row)
+	item, err := workflowDomain(row)
+	if err != nil {
+		return domain.Workflow{}, err
+	}
+	items := []domain.Workflow{item}
+	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
+		return domain.Workflow{}, err
+	}
+	return items[0], nil
 }
 
 func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workflowID string, input domain.WorkflowInput, secretCiphertext []byte, expectedVersion int64) (domain.Workflow, error) {
@@ -95,6 +114,7 @@ func (repository *Repository) UpdateWorkflow(ctx context.Context, ownerID, workf
 		"name": strings.TrimSpace(input.Name), "goal": strings.TrimSpace(input.Goal), "expert_id": input.ExpertID, "expert_team_id": input.ExpertTeamID,
 		"provider_model_id": nil, "runtime_engine": nil, "environment": environment,
 		"schedule": schedule, "knowledge_base_ids": knowledgeBaseIDs, "next_scheduled_at": nextScheduledAt(input.Schedule, time.Now().UTC()), "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+		"execution_template": gorm.Expr("CASE WHEN expert_id IS NOT DISTINCT FROM ? AND expert_team_id IS NOT DISTINCT FROM ? THEN execution_template ELSE NULL END", input.ExpertID, input.ExpertTeamID),
 	}
 	if secretCiphertext != nil {
 		updates["environment_secret_ciphertext"] = secretCiphertext
@@ -176,11 +196,19 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 	}
 	if len(input.KnowledgeBaseIDs) > 0 {
 		var available int64
-		if err := tx.Table("knowledge_bases").Where("id IN ? AND deleted_at IS NULL AND (owner_user_id = ? OR (platform = true AND visibility = 'public'))", input.KnowledgeBaseIDs, ownerID).Count(&available).Error; err != nil {
+		if err := tx.Table("knowledge_bases").Where(`id IN ? AND deleted_at IS NULL AND (
+			(scope_type = 'private' AND owner_user_id = ?)
+			OR (scope_type = 'platform' AND visibility = 'public')
+			OR (scope_type = 'group' AND EXISTS (
+				SELECT 1 FROM identity_group_memberships membership
+				JOIN identity_groups identity_group ON identity_group.id = membership.group_id AND identity_group.deleted_at IS NULL AND identity_group.department = true
+				WHERE membership.group_id = knowledge_bases.group_id AND membership.user_id = ?
+			))
+		) AND EXISTS (SELECT 1 FROM knowledge_documents document WHERE document.knowledge_base_id = knowledge_bases.id AND document.deleted_at IS NULL AND document.state = 'ready')`, input.KnowledgeBaseIDs, ownerID, ownerID).Count(&available).Error; err != nil {
 			return err
 		}
 		if available != int64(len(input.KnowledgeBaseIDs)) {
-			return fmt.Errorf("%w: selected Knowledge Base does not belong to the User", domain.ErrInvalid)
+			return fmt.Errorf("%w: selected Knowledge Base is inaccessible or has no retrieval-ready Document", domain.ErrInvalid)
 		}
 	}
 	return nil
@@ -311,7 +339,7 @@ func (repository *Repository) CreateRun(ctx context.Context, ownerID, workflowID
 	var created runRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var err error
-		created, err = createRunOnTx(tx, ownerID, workflowID, trigger, textInput, jsonInput)
+		created, err = createRunOnTx(tx, ownerID, workflowID, trigger, textInput, jsonInput, "", false)
 		return err
 	})
 	if err != nil {
@@ -324,6 +352,28 @@ func (repository *Repository) CreateRun(ctx context.Context, ownerID, workflowID
 		return domain.Run{}, positionErr
 	}
 	return item, nil
+}
+
+func (repository *Repository) CreatePlannedRun(ctx context.Context, ownerID, workflowID, trigger string, textInput *string, jsonInput map[string]any, preference string) (domain.Run, error) {
+	if trigger != "manual" {
+		return domain.Run{}, fmt.Errorf("%w: conditional Plan is available only for manual Runs", domain.ErrInvalid)
+	}
+	if err := validateRunInput(textInput, jsonInput); err != nil {
+		return domain.Run{}, err
+	}
+	var created runRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var err error
+		created, err = createRunOnTx(tx, ownerID, workflowID, trigger, textInput, jsonInput, preference, true)
+		return err
+	})
+	if err != nil {
+		return domain.Run{}, fmt.Errorf("create planned Workflow Run: %w", err)
+	}
+	item := runDomain(created)
+	var positionErr error
+	item.QueuePosition, positionErr = repository.runQueuePosition(ctx, item)
+	return item, positionErr
 }
 
 func (repository *Repository) CreateRunIdempotent(ctx context.Context, ownerID, workflowID, trigger, key string, textInput *string, jsonInput map[string]any) (domain.Run, bool, error) {
@@ -371,7 +421,7 @@ func (repository *Repository) CreateRunIdempotent(ctx context.Context, ownerID, 
 			replayed = true
 			return nil
 		}
-		created, err = createRunOnTx(tx, ownerID, workflowID, trigger, textInput, jsonInput)
+		created, err = createRunOnTx(tx, ownerID, workflowID, trigger, textInput, jsonInput, "", false)
 		if err != nil {
 			return err
 		}
@@ -404,7 +454,7 @@ func validateRunInput(textInput *string, jsonInput map[string]any) error {
 	return nil
 }
 
-func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *string, jsonInput map[string]any) (runRecord, error) {
+func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *string, jsonInput map[string]any, planPreference string, conditionalPlan bool) (runRecord, error) {
 	var workflow workflowRecord
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).Take(&workflow).Error; err != nil {
 		return runRecord{}, mapNotFound(err)
@@ -413,7 +463,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 		return runRecord{}, err
 	}
 	var queued int64
-	if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND state = 'queued'", workflowID).Count(&queued).Error; err != nil {
+	if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND (state = 'queued' OR (state = 'waiting_for_user' AND execution_plan->>'state' = 'pending'))", workflowID).Count(&queued).Error; err != nil {
 		return runRecord{}, err
 	}
 	input, err := marshal(map[string]any{"text": textInput, "json": jsonInput})
@@ -428,19 +478,56 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	if err != nil {
 		return runRecord{}, err
 	}
+	now := time.Now().UTC()
+	var encodedPlan []byte
+	if conditionalPlan {
+		objective := executionSnapshot.Goal
+		if textInput != nil && strings.TrimSpace(*textInput) != "" {
+			objective += " — " + strings.TrimSpace(*textInput)
+		}
+		stages, err := executionSnapshot.OrderedStages()
+		if err != nil {
+			return runRecord{}, err
+		}
+		plan, err := domain.BuildExecutionPlan(domain.ExecutionPlanContext{Objective: objective, Preference: planPreference, Stages: stages, KnowledgeBaseIDs: executionSnapshot.KnowledgeBaseIDs, GitSource: executionSnapshot.GitSource, Workflow: true}, now)
+		if err != nil {
+			return runRecord{}, err
+		}
+		if plan != nil {
+			encodedPlan, err = marshal(plan)
+			if err != nil {
+				return runRecord{}, err
+			}
+		}
+	}
 	id := uuid.NewString()
-	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: "queued", Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+	state := "queued"
+	if len(encodedPlan) > 0 {
+		state = "waiting_for_user"
+	}
+	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: state, Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), Evidence: []byte("[]"), ExecutionPlan: encodedPlan, QueuedAt: now, Version: 1}
 	if err := tx.Create(&created).Error; err != nil {
 		return runRecord{}, err
+	}
+	if len(encodedPlan) > 0 {
+		return created, appendRunEvents(tx, created.ID, nil, "plan.proposed", created.QueuedAt)
 	}
 	return created, appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
 }
 
 func (repository *Repository) ContinueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment) (domain.Run, error) {
-	return repository.ContinueSelectedRunConversation(ctx, ownerID, workflowID, runID, content, attachments, "")
+	return repository.continueRunConversation(ctx, ownerID, workflowID, runID, content, attachments, "", "", false)
 }
 
 func (repository *Repository) ContinueSelectedRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment, selectionID string) (domain.Run, error) {
+	return repository.continueRunConversation(ctx, ownerID, workflowID, runID, content, attachments, selectionID, "", false)
+}
+
+func (repository *Repository) ContinuePlannedRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment, selectionID, preference string) (domain.Run, error) {
+	return repository.continueRunConversation(ctx, ownerID, workflowID, runID, content, attachments, selectionID, preference, true)
+}
+
+func (repository *Repository) continueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment, selectionID, planPreference string, conditionalPlan bool) (domain.Run, error) {
 	content = strings.TrimSpace(content)
 	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
 		return domain.Run{}, fmt.Errorf("%w: follow-up must contain text or an attachment", domain.ErrInvalid)
@@ -483,7 +570,7 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 			return err
 		}
 		stages = withCurrentExecutionConfiguration(stages, configuration)
-		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 		if selectionID == "" && root.SelectionID != nil {
 			selectionID = *root.SelectionID
 		}
@@ -510,8 +597,24 @@ func (repository *Repository) ContinueSelectedRunConversation(ctx context.Contex
 		if err != nil {
 			return err
 		}
+		if conditionalPlan {
+			executionPlan, planErr := domain.BuildExecutionPlan(domain.ExecutionPlanContext{Objective: content, Preference: planPreference, Stages: stages, KnowledgeBaseIDs: plan.KnowledgeBaseIDs, GitSource: plan.GitSource, Workflow: true}, created.QueuedAt)
+			if planErr != nil {
+				return planErr
+			}
+			if executionPlan != nil {
+				created.ExecutionPlan, err = marshal(executionPlan)
+				if err != nil {
+					return err
+				}
+				created.State = "waiting_for_user"
+			}
+		}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
+		}
+		if len(created.ExecutionPlan) > 0 {
+			return appendRunEvents(tx, created.ID, nil, "plan.proposed", created.QueuedAt)
 		}
 		return appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
 	})
@@ -571,6 +674,21 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		if err := json.Unmarshal(workflow.GitSource, snapshot.GitSource); err != nil {
 			return domain.ExecutionSnapshot{}, fmt.Errorf("decode Workflow Git source snapshot: %w", err)
 		}
+	}
+	if len(workflow.ExecutionTemplate) > 0 && string(workflow.ExecutionTemplate) != "null" {
+		var template []domain.ExecutionStageSnapshot
+		if err := json.Unmarshal(workflow.ExecutionTemplate, &template); err != nil {
+			return domain.ExecutionSnapshot{}, fmt.Errorf("decode saved Session execution template: %w", err)
+		}
+		configuration, err := currentExecutionStage(tx, workflow.OwnerID)
+		if err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		snapshot.Stages = withCurrentExecutionConfiguration(template, configuration)
+		if _, err := snapshot.OrderedStages(); err != nil {
+			return domain.ExecutionSnapshot{}, err
+		}
+		return snapshot, nil
 	}
 	if workflow.ExpertID == nil && workflow.ExpertTeamID == nil {
 		stage, err := loadExecutionStage(tx, workflow.OwnerID, providerModelID, runtime, nil, nil, nil, nil, 1)
@@ -934,6 +1052,23 @@ func (repository *Repository) CancelRun(ctx context.Context, ownerID, workflowID
 		}
 		now := time.Now().UTC()
 		updates := map[string]any{"cancel_requested_at": now, "version": gorm.Expr("version + 1")}
+		if run.State == "waiting_for_user" && len(run.ExecutionPlan) > 0 {
+			var plan domain.ExecutionPlan
+			if err := json.Unmarshal(run.ExecutionPlan, &plan); err != nil {
+				return err
+			}
+			if plan.State == "pending" {
+				if err := decideExecutionPlan(&plan, "cancel", plan.Version, now); err != nil {
+					return err
+				}
+				encoded, err := marshal(plan)
+				if err != nil {
+					return err
+				}
+				updates["execution_plan"] = encoded
+				updates["state"], updates["ended_at"] = "cancelled", now
+			}
+		}
 		if run.State == "queued" {
 			updates["state"] = "cancelled"
 			updates["ended_at"] = now
@@ -941,7 +1076,7 @@ func (repository *Repository) CancelRun(ctx context.Context, ownerID, workflowID
 		if err := tx.Model(&runRecord{}).Where("id = ?", run.ID).Updates(updates).Error; err != nil {
 			return err
 		}
-		if run.State == "queued" {
+		if updates["state"] == "cancelled" {
 			return appendRunEvents(tx, run.ID, nil, "run.cancelled", now)
 		}
 		return nil
@@ -960,7 +1095,7 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 	created := runRecord{
 		ID: uuid.NewString(), OwnerID: ownerID, WorkflowID: source.WorkflowID, WorkflowName: source.WorkflowName,
 		Trigger: "manual", State: "queued", Input: append([]byte(nil), source.Input...),
-		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), ExpertStages: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1,
+		WorkflowSnapshot: append([]byte(nil), source.WorkflowSnapshot...), ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1,
 	}
 	created.ConversationID = created.ID
 	created.TurnNumber = 1
@@ -1012,7 +1147,7 @@ func (repository *Repository) Rerun(ctx context.Context, ownerID, workflowID, ru
 
 func ensureWorkflowQueueCapacity(tx *gorm.DB, workflowID string) error {
 	var queued int64
-	if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND state = 'queued'", workflowID).Count(&queued).Error; err != nil {
+	if err := tx.Model(&runRecord{}).Where("workflow_id = ? AND (state = 'queued' OR (state = 'waiting_for_user' AND execution_plan->>'state' = 'pending'))", workflowID).Count(&queued).Error; err != nil {
 		return err
 	}
 	if queued >= maxQueuedWorkflowRuns {
@@ -1200,6 +1335,31 @@ func workflowDomain(row workflowRecord) (domain.Workflow, error) {
 	return item, nil
 }
 
+func (repository *Repository) loadWorkflowOrigins(ctx context.Context, ownerID string, items []domain.Workflow) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(items))
+	indexes := make(map[string]int, len(items))
+	for index := range items {
+		ids = append(ids, items[index].ID)
+		indexes[items[index].ID] = index
+	}
+	var rows []workflowSessionOriginRecord
+	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND workflow_id IN ?", ownerID, ids).Find(&rows).Error; err != nil {
+		return fmt.Errorf("load Workflow Session origins: %w", err)
+	}
+	for _, row := range rows {
+		index, ok := indexes[row.WorkflowID]
+		if !ok {
+			continue
+		}
+		link := originDomain(row, items[index].Name)
+		items[index].Origin = &link
+	}
+	return nil
+}
+
 func runDomain(row runRecord) domain.Run {
 	item := domain.Run{ID: row.ID, ConversationID: row.ConversationID, TurnNumber: row.TurnNumber, OwnerID: row.OwnerID, WorkflowName: row.WorkflowName, Trigger: row.Trigger, State: row.State, QueuedAt: row.QueuedAt, StartedAt: row.StartedAt, EndedAt: row.EndedAt}
 	if row.WorkflowID != nil {
@@ -1219,6 +1379,15 @@ func runDomain(row runRecord) domain.Run {
 		item.CreditConsumption = &domain.CreditConsumption{}
 		if err := json.Unmarshal(row.CreditConsumption, item.CreditConsumption); err != nil {
 			item.CreditConsumption = nil
+		}
+	}
+	if len(row.Evidence) > 0 && string(row.Evidence) != "null" {
+		_ = json.Unmarshal(row.Evidence, &item.Evidence)
+	}
+	if len(row.ExecutionPlan) > 0 && string(row.ExecutionPlan) != "null" {
+		item.ExecutionPlan = &domain.ExecutionPlan{}
+		if json.Unmarshal(row.ExecutionPlan, item.ExecutionPlan) != nil {
+			item.ExecutionPlan = nil
 		}
 	}
 	if row.TerminalError != nil {

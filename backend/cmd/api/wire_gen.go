@@ -73,11 +73,15 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	workspaceService, err := workspace.New(applicationService, service2, service3, service4, chatModel, service5, box, store, skillstoreStore, objectstoreProvider, config)
+	recorder, err := agentworkspace.NewProductAnalytics(database, logger)
 	if err != nil {
 		return nil, err
 	}
-	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service5)
+	workspaceService, err := workspace.New(applicationService, service2, service3, service4, chatModel, service5, box, store, skillstoreStore, objectstoreProvider, recorder, config)
+	if err != nil {
+		return nil, err
+	}
+	filterFunc, err := workspace.NewAuthenticationFilter(applicationService, service5, recorder)
 	if err != nil {
 		return nil, err
 	}

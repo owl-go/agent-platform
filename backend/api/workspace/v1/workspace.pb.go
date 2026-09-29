@@ -24,6 +24,354 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type GetHomeOverviewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHomeOverviewRequest) Reset() {
+	*x = GetHomeOverviewRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHomeOverviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHomeOverviewRequest) ProtoMessage() {}
+
+func (x *GetHomeOverviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHomeOverviewRequest.ProtoReflect.Descriptor instead.
+func (*GetHomeOverviewRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{0}
+}
+
+type HomeOverview struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	RecentTasks     []*HomeTask            `protobuf:"bytes,1,rep,name=recent_tasks,json=recentTasks,proto3" json:"recent_tasks,omitempty"`
+	CommonWorkflows []*HomeWorkflow        `protobuf:"bytes,2,rep,name=common_workflows,json=commonWorkflows,proto3" json:"common_workflows,omitempty"`
+	ActionItems     []*HomeAction          `protobuf:"bytes,3,rep,name=action_items,json=actionItems,proto3" json:"action_items,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *HomeOverview) Reset() {
+	*x = HomeOverview{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HomeOverview) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HomeOverview) ProtoMessage() {}
+
+func (x *HomeOverview) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HomeOverview.ProtoReflect.Descriptor instead.
+func (*HomeOverview) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HomeOverview) GetRecentTasks() []*HomeTask {
+	if x != nil {
+		return x.RecentTasks
+	}
+	return nil
+}
+
+func (x *HomeOverview) GetCommonWorkflows() []*HomeWorkflow {
+	if x != nil {
+		return x.CommonWorkflows
+	}
+	return nil
+}
+
+func (x *HomeOverview) GetActionItems() []*HomeAction {
+	if x != nil {
+		return x.ActionItems
+	}
+	return nil
+}
+
+type HomeTask struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ParentId      string                 `protobuf:"bytes,3,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	State         string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HomeTask) Reset() {
+	*x = HomeTask{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HomeTask) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HomeTask) ProtoMessage() {}
+
+func (x *HomeTask) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HomeTask.ProtoReflect.Descriptor instead.
+func (*HomeTask) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *HomeTask) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *HomeTask) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *HomeTask) GetParentId() string {
+	if x != nil {
+		return x.ParentId
+	}
+	return ""
+}
+
+func (x *HomeTask) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *HomeTask) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *HomeTask) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type HomeWorkflow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	RunCount      int64                  `protobuf:"varint,3,opt,name=run_count,json=runCount,proto3" json:"run_count,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HomeWorkflow) Reset() {
+	*x = HomeWorkflow{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HomeWorkflow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HomeWorkflow) ProtoMessage() {}
+
+func (x *HomeWorkflow) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HomeWorkflow.ProtoReflect.Descriptor instead.
+func (*HomeWorkflow) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *HomeWorkflow) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *HomeWorkflow) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *HomeWorkflow) GetRunCount() int64 {
+	if x != nil {
+		return x.RunCount
+	}
+	return 0
+}
+
+func (x *HomeWorkflow) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type HomeAction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	ExecutionKind string                 `protobuf:"bytes,3,opt,name=execution_kind,json=executionKind,proto3" json:"execution_kind,omitempty"`
+	ExecutionId   string                 `protobuf:"bytes,4,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	ParentId      string                 `protobuf:"bytes,5,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
+	Title         string                 `protobuf:"bytes,6,opt,name=title,proto3" json:"title,omitempty"`
+	State         string                 `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HomeAction) Reset() {
+	*x = HomeAction{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HomeAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HomeAction) ProtoMessage() {}
+
+func (x *HomeAction) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HomeAction.ProtoReflect.Descriptor instead.
+func (*HomeAction) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *HomeAction) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *HomeAction) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *HomeAction) GetExecutionKind() string {
+	if x != nil {
+		return x.ExecutionKind
+	}
+	return ""
+}
+
+func (x *HomeAction) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *HomeAction) GetParentId() string {
+	if x != nil {
+		return x.ParentId
+	}
+	return ""
+}
+
+func (x *HomeAction) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *HomeAction) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *HomeAction) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
 type GetCurrentUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -32,7 +380,7 @@ type GetCurrentUserRequest struct {
 
 func (x *GetCurrentUserRequest) Reset() {
 	*x = GetCurrentUserRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[0]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +392,7 @@ func (x *GetCurrentUserRequest) String() string {
 func (*GetCurrentUserRequest) ProtoMessage() {}
 
 func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[0]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,25 +405,28 @@ func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{0}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{5}
 }
 
 type CurrentUser struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Email         string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Administrator bool                   `protobuf:"varint,5,opt,name=administrator,proto3" json:"administrator,omitempty"`
-	SettingsReady bool                   `protobuf:"varint,6,opt,name=settings_ready,json=settingsReady,proto3" json:"settings_ready,omitempty"`
-	CreditBalance *CreditBalance         `protobuf:"bytes,7,opt,name=credit_balance,json=creditBalance,proto3,oneof" json:"credit_balance,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username               string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Email                  string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	DisplayName            string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Administrator          bool                   `protobuf:"varint,5,opt,name=administrator,proto3" json:"administrator,omitempty"`
+	SettingsReady          bool                   `protobuf:"varint,6,opt,name=settings_ready,json=settingsReady,proto3" json:"settings_ready,omitempty"`
+	CreditBalance          *CreditBalance         `protobuf:"bytes,7,opt,name=credit_balance,json=creditBalance,proto3,oneof" json:"credit_balance,omitempty"`
+	BootstrapAdministrator bool                   `protobuf:"varint,8,opt,name=bootstrap_administrator,json=bootstrapAdministrator,proto3" json:"bootstrap_administrator,omitempty"`
+	ResourcePublisher      bool                   `protobuf:"varint,9,opt,name=resource_publisher,json=resourcePublisher,proto3" json:"resource_publisher,omitempty"`
+	Groups                 []*IdentityGroup       `protobuf:"bytes,10,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *CurrentUser) Reset() {
 	*x = CurrentUser{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[1]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -87,7 +438,7 @@ func (x *CurrentUser) String() string {
 func (*CurrentUser) ProtoMessage() {}
 
 func (x *CurrentUser) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[1]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -100,7 +451,7 @@ func (x *CurrentUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CurrentUser.ProtoReflect.Descriptor instead.
 func (*CurrentUser) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{1}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CurrentUser) GetId() string {
@@ -152,6 +503,27 @@ func (x *CurrentUser) GetCreditBalance() *CreditBalance {
 	return nil
 }
 
+func (x *CurrentUser) GetBootstrapAdministrator() bool {
+	if x != nil {
+		return x.BootstrapAdministrator
+	}
+	return false
+}
+
+func (x *CurrentUser) GetResourcePublisher() bool {
+	if x != nil {
+		return x.ResourcePublisher
+	}
+	return false
+}
+
+func (x *CurrentUser) GetGroups() []*IdentityGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
 type ListUsersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -160,7 +532,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[2]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -172,7 +544,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[2]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -185,7 +557,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{2}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{7}
 }
 
 type ListUsersResponse struct {
@@ -197,7 +569,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[3]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -209,7 +581,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[3]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -222,7 +594,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{3}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListUsersResponse) GetItems() []*UserAccount {
@@ -243,7 +615,7 @@ type CreateUserRequest struct {
 
 func (x *CreateUserRequest) Reset() {
 	*x = CreateUserRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[4]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -255,7 +627,7 @@ func (x *CreateUserRequest) String() string {
 func (*CreateUserRequest) ProtoMessage() {}
 
 func (x *CreateUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[4]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -268,7 +640,7 @@ func (x *CreateUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUserRequest.ProtoReflect.Descriptor instead.
 func (*CreateUserRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{4}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateUserRequest) GetUsername() string {
@@ -302,7 +674,7 @@ type CreateUserResponse struct {
 
 func (x *CreateUserResponse) Reset() {
 	*x = CreateUserResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[5]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +686,7 @@ func (x *CreateUserResponse) String() string {
 func (*CreateUserResponse) ProtoMessage() {}
 
 func (x *CreateUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[5]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +699,7 @@ func (x *CreateUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateUserResponse.ProtoReflect.Descriptor instead.
 func (*CreateUserResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{5}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateUserResponse) GetUser() *UserAccount {
@@ -349,13 +721,14 @@ type SetUserEnabledRequest struct {
 	UserId          string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Enabled         bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	ExpectedVersion int64                  `protobuf:"varint,3,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	Reason          string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SetUserEnabledRequest) Reset() {
 	*x = SetUserEnabledRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[6]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -367,7 +740,7 @@ func (x *SetUserEnabledRequest) String() string {
 func (*SetUserEnabledRequest) ProtoMessage() {}
 
 func (x *SetUserEnabledRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[6]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -380,7 +753,7 @@ func (x *SetUserEnabledRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetUserEnabledRequest.ProtoReflect.Descriptor instead.
 func (*SetUserEnabledRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{6}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SetUserEnabledRequest) GetUserId() string {
@@ -404,6 +777,13 @@ func (x *SetUserEnabledRequest) GetExpectedVersion() int64 {
 	return 0
 }
 
+func (x *SetUserEnabledRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 type ResetUserPasswordRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -413,7 +793,7 @@ type ResetUserPasswordRequest struct {
 
 func (x *ResetUserPasswordRequest) Reset() {
 	*x = ResetUserPasswordRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[7]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +805,7 @@ func (x *ResetUserPasswordRequest) String() string {
 func (*ResetUserPasswordRequest) ProtoMessage() {}
 
 func (x *ResetUserPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[7]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +818,7 @@ func (x *ResetUserPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetUserPasswordRequest.ProtoReflect.Descriptor instead.
 func (*ResetUserPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{7}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ResetUserPasswordRequest) GetUserId() string {
@@ -457,7 +837,7 @@ type ResetUserPasswordResponse struct {
 
 func (x *ResetUserPasswordResponse) Reset() {
 	*x = ResetUserPasswordResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[8]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -469,7 +849,7 @@ func (x *ResetUserPasswordResponse) String() string {
 func (*ResetUserPasswordResponse) ProtoMessage() {}
 
 func (x *ResetUserPasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[8]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -482,7 +862,7 @@ func (x *ResetUserPasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetUserPasswordResponse.ProtoReflect.Descriptor instead.
 func (*ResetUserPasswordResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{8}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ResetUserPasswordResponse) GetTemporaryPassword() string {
@@ -493,23 +873,26 @@ func (x *ResetUserPasswordResponse) GetTemporaryPassword() string {
 }
 
 type UserAccount struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Email         string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Administrator bool                   `protobuf:"varint,5,opt,name=administrator,proto3" json:"administrator,omitempty"`
-	Enabled       bool                   `protobuf:"varint,6,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Version       int64                  `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`
-	CreditBalance *CreditBalance         `protobuf:"bytes,9,opt,name=credit_balance,json=creditBalance,proto3,oneof" json:"credit_balance,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username               string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Email                  string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	DisplayName            string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Administrator          bool                   `protobuf:"varint,5,opt,name=administrator,proto3" json:"administrator,omitempty"`
+	Enabled                bool                   `protobuf:"varint,6,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Version                int64                  `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`
+	CreditBalance          *CreditBalance         `protobuf:"bytes,9,opt,name=credit_balance,json=creditBalance,proto3,oneof" json:"credit_balance,omitempty"`
+	BootstrapAdministrator bool                   `protobuf:"varint,10,opt,name=bootstrap_administrator,json=bootstrapAdministrator,proto3" json:"bootstrap_administrator,omitempty"`
+	ResourcePublisher      bool                   `protobuf:"varint,11,opt,name=resource_publisher,json=resourcePublisher,proto3" json:"resource_publisher,omitempty"`
+	Groups                 []*IdentityGroup       `protobuf:"bytes,12,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *UserAccount) Reset() {
 	*x = UserAccount{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[9]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -521,7 +904,7 @@ func (x *UserAccount) String() string {
 func (*UserAccount) ProtoMessage() {}
 
 func (x *UserAccount) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[9]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -534,7 +917,7 @@ func (x *UserAccount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserAccount.ProtoReflect.Descriptor instead.
 func (*UserAccount) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{9}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *UserAccount) GetId() string {
@@ -600,6 +983,747 @@ func (x *UserAccount) GetCreditBalance() *CreditBalance {
 	return nil
 }
 
+func (x *UserAccount) GetBootstrapAdministrator() bool {
+	if x != nil {
+		return x.BootstrapAdministrator
+	}
+	return false
+}
+
+func (x *UserAccount) GetResourcePublisher() bool {
+	if x != nil {
+		return x.ResourcePublisher
+	}
+	return false
+}
+
+func (x *UserAccount) GetGroups() []*IdentityGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+type SetUserRolesRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	UserId            string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Administrator     bool                   `protobuf:"varint,2,opt,name=administrator,proto3" json:"administrator,omitempty"`
+	ResourcePublisher bool                   `protobuf:"varint,3,opt,name=resource_publisher,json=resourcePublisher,proto3" json:"resource_publisher,omitempty"`
+	ExpectedVersion   int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	Reason            string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SetUserRolesRequest) Reset() {
+	*x = SetUserRolesRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetUserRolesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetUserRolesRequest) ProtoMessage() {}
+
+func (x *SetUserRolesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetUserRolesRequest.ProtoReflect.Descriptor instead.
+func (*SetUserRolesRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SetUserRolesRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SetUserRolesRequest) GetAdministrator() bool {
+	if x != nil {
+		return x.Administrator
+	}
+	return false
+}
+
+func (x *SetUserRolesRequest) GetResourcePublisher() bool {
+	if x != nil {
+		return x.ResourcePublisher
+	}
+	return false
+}
+
+func (x *SetUserRolesRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *SetUserRolesRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type ListIdentityGroupsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListIdentityGroupsRequest) Reset() {
+	*x = ListIdentityGroupsRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListIdentityGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListIdentityGroupsRequest) ProtoMessage() {}
+
+func (x *ListIdentityGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListIdentityGroupsRequest.ProtoReflect.Descriptor instead.
+func (*ListIdentityGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{16}
+}
+
+type SyncIdentityGroupsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncIdentityGroupsRequest) Reset() {
+	*x = SyncIdentityGroupsRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncIdentityGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncIdentityGroupsRequest) ProtoMessage() {}
+
+func (x *SyncIdentityGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncIdentityGroupsRequest.ProtoReflect.Descriptor instead.
+func (*SyncIdentityGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{17}
+}
+
+type ListIdentityGroupsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*IdentityGroup       `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListIdentityGroupsResponse) Reset() {
+	*x = ListIdentityGroupsResponse{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListIdentityGroupsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListIdentityGroupsResponse) ProtoMessage() {}
+
+func (x *ListIdentityGroupsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListIdentityGroupsResponse.ProtoReflect.Descriptor instead.
+func (*ListIdentityGroupsResponse) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListIdentityGroupsResponse) GetItems() []*IdentityGroup {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type UpdateIdentityGroupBudgetRequest struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	GroupId                    string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	DailyCreditLimitHundredths *int64                 `protobuf:"varint,2,opt,name=daily_credit_limit_hundredths,json=dailyCreditLimitHundredths,proto3,oneof" json:"daily_credit_limit_hundredths,omitempty"`
+	ExpectedVersion            int64                  `protobuf:"varint,3,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	Reason                     string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *UpdateIdentityGroupBudgetRequest) Reset() {
+	*x = UpdateIdentityGroupBudgetRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateIdentityGroupBudgetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateIdentityGroupBudgetRequest) ProtoMessage() {}
+
+func (x *UpdateIdentityGroupBudgetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateIdentityGroupBudgetRequest.ProtoReflect.Descriptor instead.
+func (*UpdateIdentityGroupBudgetRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateIdentityGroupBudgetRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *UpdateIdentityGroupBudgetRequest) GetDailyCreditLimitHundredths() int64 {
+	if x != nil && x.DailyCreditLimitHundredths != nil {
+		return *x.DailyCreditLimitHundredths
+	}
+	return 0
+}
+
+func (x *UpdateIdentityGroupBudgetRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *UpdateIdentityGroupBudgetRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type IdentityGroup struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	Id                         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ExternalId                 string                 `protobuf:"bytes,2,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	Name                       string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Path                       string                 `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
+	Department                 bool                   `protobuf:"varint,5,opt,name=department,proto3" json:"department,omitempty"`
+	DailyCreditLimitHundredths *int64                 `protobuf:"varint,6,opt,name=daily_credit_limit_hundredths,json=dailyCreditLimitHundredths,proto3,oneof" json:"daily_credit_limit_hundredths,omitempty"`
+	MemberCount                int64                  `protobuf:"varint,7,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
+	LastSyncedAt               *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_synced_at,json=lastSyncedAt,proto3" json:"last_synced_at,omitempty"`
+	Version                    int64                  `protobuf:"varint,9,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *IdentityGroup) Reset() {
+	*x = IdentityGroup{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IdentityGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IdentityGroup) ProtoMessage() {}
+
+func (x *IdentityGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IdentityGroup.ProtoReflect.Descriptor instead.
+func (*IdentityGroup) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *IdentityGroup) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *IdentityGroup) GetExternalId() string {
+	if x != nil {
+		return x.ExternalId
+	}
+	return ""
+}
+
+func (x *IdentityGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *IdentityGroup) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *IdentityGroup) GetDepartment() bool {
+	if x != nil {
+		return x.Department
+	}
+	return false
+}
+
+func (x *IdentityGroup) GetDailyCreditLimitHundredths() int64 {
+	if x != nil && x.DailyCreditLimitHundredths != nil {
+		return *x.DailyCreditLimitHundredths
+	}
+	return 0
+}
+
+func (x *IdentityGroup) GetMemberCount() int64 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
+}
+
+func (x *IdentityGroup) GetLastSyncedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastSyncedAt
+	}
+	return nil
+}
+
+func (x *IdentityGroup) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+type ListGovernanceAuditEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         *int32                 `protobuf:"varint,1,opt,name=limit,proto3,oneof" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListGovernanceAuditEventsRequest) Reset() {
+	*x = ListGovernanceAuditEventsRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListGovernanceAuditEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListGovernanceAuditEventsRequest) ProtoMessage() {}
+
+func (x *ListGovernanceAuditEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListGovernanceAuditEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListGovernanceAuditEventsRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListGovernanceAuditEventsRequest) GetLimit() int32 {
+	if x != nil && x.Limit != nil {
+		return *x.Limit
+	}
+	return 0
+}
+
+type ListGovernanceAuditEventsResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Items         []*GovernanceAuditEvent `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListGovernanceAuditEventsResponse) Reset() {
+	*x = ListGovernanceAuditEventsResponse{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListGovernanceAuditEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListGovernanceAuditEventsResponse) ProtoMessage() {}
+
+func (x *ListGovernanceAuditEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListGovernanceAuditEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListGovernanceAuditEventsResponse) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ListGovernanceAuditEventsResponse) GetItems() []*GovernanceAuditEvent {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type GovernanceAuditMetric struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         int64                  `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GovernanceAuditMetric) Reset() {
+	*x = GovernanceAuditMetric{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GovernanceAuditMetric) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GovernanceAuditMetric) ProtoMessage() {}
+
+func (x *GovernanceAuditMetric) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GovernanceAuditMetric.ProtoReflect.Descriptor instead.
+func (*GovernanceAuditMetric) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GovernanceAuditMetric) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *GovernanceAuditMetric) GetValue() int64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+type GovernanceAuditEvent struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Id            int64                    `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	ActorUserId   string                   `protobuf:"bytes,2,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
+	Action        string                   `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
+	TargetType    string                   `protobuf:"bytes,4,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	TargetId      string                   `protobuf:"bytes,5,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Reason        string                   `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	Metrics       []*GovernanceAuditMetric `protobuf:"bytes,7,rep,name=metrics,proto3" json:"metrics,omitempty"`
+	OccurredAt    *timestamppb.Timestamp   `protobuf:"bytes,8,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GovernanceAuditEvent) Reset() {
+	*x = GovernanceAuditEvent{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GovernanceAuditEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GovernanceAuditEvent) ProtoMessage() {}
+
+func (x *GovernanceAuditEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GovernanceAuditEvent.ProtoReflect.Descriptor instead.
+func (*GovernanceAuditEvent) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GovernanceAuditEvent) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GovernanceAuditEvent) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *GovernanceAuditEvent) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *GovernanceAuditEvent) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *GovernanceAuditEvent) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *GovernanceAuditEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *GovernanceAuditEvent) GetMetrics() []*GovernanceAuditMetric {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
+func (x *GovernanceAuditEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+type TransferGroupResourcesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	FromUserId    string                 `protobuf:"bytes,2,opt,name=from_user_id,json=fromUserId,proto3" json:"from_user_id,omitempty"`
+	ToUserId      string                 `protobuf:"bytes,3,opt,name=to_user_id,json=toUserId,proto3" json:"to_user_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransferGroupResourcesRequest) Reset() {
+	*x = TransferGroupResourcesRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferGroupResourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferGroupResourcesRequest) ProtoMessage() {}
+
+func (x *TransferGroupResourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferGroupResourcesRequest.ProtoReflect.Descriptor instead.
+func (*TransferGroupResourcesRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *TransferGroupResourcesRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *TransferGroupResourcesRequest) GetFromUserId() string {
+	if x != nil {
+		return x.FromUserId
+	}
+	return ""
+}
+
+func (x *TransferGroupResourcesRequest) GetToUserId() string {
+	if x != nil {
+		return x.ToUserId
+	}
+	return ""
+}
+
+func (x *TransferGroupResourcesRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type TransferGroupResourcesResponse struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	KnowledgeBaseCount int64                  `protobuf:"varint,1,opt,name=knowledge_base_count,json=knowledgeBaseCount,proto3" json:"knowledge_base_count,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *TransferGroupResourcesResponse) Reset() {
+	*x = TransferGroupResourcesResponse{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransferGroupResourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransferGroupResourcesResponse) ProtoMessage() {}
+
+func (x *TransferGroupResourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransferGroupResourcesResponse.ProtoReflect.Descriptor instead.
+func (*TransferGroupResourcesResponse) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *TransferGroupResourcesResponse) GetKnowledgeBaseCount() int64 {
+	if x != nil {
+		return x.KnowledgeBaseCount
+	}
+	return 0
+}
+
 type GetCreditBalanceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -608,7 +1732,7 @@ type GetCreditBalanceRequest struct {
 
 func (x *GetCreditBalanceRequest) Reset() {
 	*x = GetCreditBalanceRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[10]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +1744,7 @@ func (x *GetCreditBalanceRequest) String() string {
 func (*GetCreditBalanceRequest) ProtoMessage() {}
 
 func (x *GetCreditBalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[10]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +1757,7 @@ func (x *GetCreditBalanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCreditBalanceRequest.ProtoReflect.Descriptor instead.
 func (*GetCreditBalanceRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{10}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{27}
 }
 
 type CreditBalance struct {
@@ -651,13 +1775,16 @@ type CreditBalance struct {
 	Version                          int64                  `protobuf:"varint,11,opt,name=version,proto3" json:"version,omitempty"`
 	ReservedHundredths               int64                  `protobuf:"varint,12,opt,name=reserved_hundredths,json=reservedHundredths,proto3" json:"reserved_hundredths,omitempty"`
 	AvailableHundredths              int64                  `protobuf:"varint,13,opt,name=available_hundredths,json=availableHundredths,proto3" json:"available_hundredths,omitempty"`
+	WarningThresholdPercent          int32                  `protobuf:"varint,14,opt,name=warning_threshold_percent,json=warningThresholdPercent,proto3" json:"warning_threshold_percent,omitempty"`
+	RedemptionCodesEnabled           bool                   `protobuf:"varint,15,opt,name=redemption_codes_enabled,json=redemptionCodesEnabled,proto3" json:"redemption_codes_enabled,omitempty"`
+	GroupBudget                      *GroupCreditBudget     `protobuf:"bytes,16,opt,name=group_budget,json=groupBudget,proto3,oneof" json:"group_budget,omitempty"`
 	unknownFields                    protoimpl.UnknownFields
 	sizeCache                        protoimpl.SizeCache
 }
 
 func (x *CreditBalance) Reset() {
 	*x = CreditBalance{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[11]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -669,7 +1796,7 @@ func (x *CreditBalance) String() string {
 func (*CreditBalance) ProtoMessage() {}
 
 func (x *CreditBalance) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[11]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -682,7 +1809,7 @@ func (x *CreditBalance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreditBalance.ProtoReflect.Descriptor instead.
 func (*CreditBalance) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{11}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CreditBalance) GetTotalHundredths() int64 {
@@ -776,6 +1903,299 @@ func (x *CreditBalance) GetAvailableHundredths() int64 {
 	return 0
 }
 
+func (x *CreditBalance) GetWarningThresholdPercent() int32 {
+	if x != nil {
+		return x.WarningThresholdPercent
+	}
+	return 0
+}
+
+func (x *CreditBalance) GetRedemptionCodesEnabled() bool {
+	if x != nil {
+		return x.RedemptionCodesEnabled
+	}
+	return false
+}
+
+func (x *CreditBalance) GetGroupBudget() *GroupCreditBudget {
+	if x != nil {
+		return x.GroupBudget
+	}
+	return nil
+}
+
+type GroupCreditBudget struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	GroupId             string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	GroupName           string                 `protobuf:"bytes,2,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
+	LimitHundredths     int64                  `protobuf:"varint,3,opt,name=limit_hundredths,json=limitHundredths,proto3" json:"limit_hundredths,omitempty"`
+	ConsumedHundredths  int64                  `protobuf:"varint,4,opt,name=consumed_hundredths,json=consumedHundredths,proto3" json:"consumed_hundredths,omitempty"`
+	ReservedHundredths  int64                  `protobuf:"varint,5,opt,name=reserved_hundredths,json=reservedHundredths,proto3" json:"reserved_hundredths,omitempty"`
+	AvailableHundredths int64                  `protobuf:"varint,6,opt,name=available_hundredths,json=availableHundredths,proto3" json:"available_hundredths,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *GroupCreditBudget) Reset() {
+	*x = GroupCreditBudget{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GroupCreditBudget) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GroupCreditBudget) ProtoMessage() {}
+
+func (x *GroupCreditBudget) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GroupCreditBudget.ProtoReflect.Descriptor instead.
+func (*GroupCreditBudget) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GroupCreditBudget) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *GroupCreditBudget) GetGroupName() string {
+	if x != nil {
+		return x.GroupName
+	}
+	return ""
+}
+
+func (x *GroupCreditBudget) GetLimitHundredths() int64 {
+	if x != nil {
+		return x.LimitHundredths
+	}
+	return 0
+}
+
+func (x *GroupCreditBudget) GetConsumedHundredths() int64 {
+	if x != nil {
+		return x.ConsumedHundredths
+	}
+	return 0
+}
+
+func (x *GroupCreditBudget) GetReservedHundredths() int64 {
+	if x != nil {
+		return x.ReservedHundredths
+	}
+	return 0
+}
+
+func (x *GroupCreditBudget) GetAvailableHundredths() int64 {
+	if x != nil {
+		return x.AvailableHundredths
+	}
+	return 0
+}
+
+type GetCreditPolicyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCreditPolicyRequest) Reset() {
+	*x = GetCreditPolicyRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCreditPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCreditPolicyRequest) ProtoMessage() {}
+
+func (x *GetCreditPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCreditPolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetCreditPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{30}
+}
+
+type UpdateCreditPolicyRequest struct {
+	state                            protoimpl.MessageState `protogen:"open.v1"`
+	DefaultDailyAllocationHundredths int64                  `protobuf:"varint,1,opt,name=default_daily_allocation_hundredths,json=defaultDailyAllocationHundredths,proto3" json:"default_daily_allocation_hundredths,omitempty"`
+	WarningThresholdPercent          int32                  `protobuf:"varint,2,opt,name=warning_threshold_percent,json=warningThresholdPercent,proto3" json:"warning_threshold_percent,omitempty"`
+	RedemptionCodesEnabled           bool                   `protobuf:"varint,3,opt,name=redemption_codes_enabled,json=redemptionCodesEnabled,proto3" json:"redemption_codes_enabled,omitempty"`
+	ExpectedVersion                  int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
+}
+
+func (x *UpdateCreditPolicyRequest) Reset() {
+	*x = UpdateCreditPolicyRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCreditPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCreditPolicyRequest) ProtoMessage() {}
+
+func (x *UpdateCreditPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCreditPolicyRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCreditPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *UpdateCreditPolicyRequest) GetDefaultDailyAllocationHundredths() int64 {
+	if x != nil {
+		return x.DefaultDailyAllocationHundredths
+	}
+	return 0
+}
+
+func (x *UpdateCreditPolicyRequest) GetWarningThresholdPercent() int32 {
+	if x != nil {
+		return x.WarningThresholdPercent
+	}
+	return 0
+}
+
+func (x *UpdateCreditPolicyRequest) GetRedemptionCodesEnabled() bool {
+	if x != nil {
+		return x.RedemptionCodesEnabled
+	}
+	return false
+}
+
+func (x *UpdateCreditPolicyRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+type CreditPolicy struct {
+	state                            protoimpl.MessageState `protogen:"open.v1"`
+	DefaultDailyAllocationHundredths int64                  `protobuf:"varint,1,opt,name=default_daily_allocation_hundredths,json=defaultDailyAllocationHundredths,proto3" json:"default_daily_allocation_hundredths,omitempty"`
+	WarningThresholdPercent          int32                  `protobuf:"varint,2,opt,name=warning_threshold_percent,json=warningThresholdPercent,proto3" json:"warning_threshold_percent,omitempty"`
+	RedemptionCodesEnabled           bool                   `protobuf:"varint,3,opt,name=redemption_codes_enabled,json=redemptionCodesEnabled,proto3" json:"redemption_codes_enabled,omitempty"`
+	Version                          int64                  `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	UpdatedAt                        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedByUserId                  *string                `protobuf:"bytes,6,opt,name=updated_by_user_id,json=updatedByUserId,proto3,oneof" json:"updated_by_user_id,omitempty"`
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
+}
+
+func (x *CreditPolicy) Reset() {
+	*x = CreditPolicy{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreditPolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreditPolicy) ProtoMessage() {}
+
+func (x *CreditPolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreditPolicy.ProtoReflect.Descriptor instead.
+func (*CreditPolicy) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *CreditPolicy) GetDefaultDailyAllocationHundredths() int64 {
+	if x != nil {
+		return x.DefaultDailyAllocationHundredths
+	}
+	return 0
+}
+
+func (x *CreditPolicy) GetWarningThresholdPercent() int32 {
+	if x != nil {
+		return x.WarningThresholdPercent
+	}
+	return 0
+}
+
+func (x *CreditPolicy) GetRedemptionCodesEnabled() bool {
+	if x != nil {
+		return x.RedemptionCodesEnabled
+	}
+	return false
+}
+
+func (x *CreditPolicy) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *CreditPolicy) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *CreditPolicy) GetUpdatedByUserId() string {
+	if x != nil && x.UpdatedByUserId != nil {
+		return *x.UpdatedByUserId
+	}
+	return ""
+}
+
 type ListCreditLedgerRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -786,7 +2206,7 @@ type ListCreditLedgerRequest struct {
 
 func (x *ListCreditLedgerRequest) Reset() {
 	*x = ListCreditLedgerRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[12]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -798,7 +2218,7 @@ func (x *ListCreditLedgerRequest) String() string {
 func (*ListCreditLedgerRequest) ProtoMessage() {}
 
 func (x *ListCreditLedgerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[12]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -811,7 +2231,7 @@ func (x *ListCreditLedgerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCreditLedgerRequest.ProtoReflect.Descriptor instead.
 func (*ListCreditLedgerRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{12}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ListCreditLedgerRequest) GetCursor() string {
@@ -838,7 +2258,7 @@ type ListCreditLedgerResponse struct {
 
 func (x *ListCreditLedgerResponse) Reset() {
 	*x = ListCreditLedgerResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[13]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -850,7 +2270,7 @@ func (x *ListCreditLedgerResponse) String() string {
 func (*ListCreditLedgerResponse) ProtoMessage() {}
 
 func (x *ListCreditLedgerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[13]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -863,7 +2283,7 @@ func (x *ListCreditLedgerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCreditLedgerResponse.ProtoReflect.Descriptor instead.
 func (*ListCreditLedgerResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{13}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListCreditLedgerResponse) GetItems() []*CreditLedgerEntry {
@@ -895,7 +2315,7 @@ type CreditLedgerEntry struct {
 
 func (x *CreditLedgerEntry) Reset() {
 	*x = CreditLedgerEntry{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[14]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -907,7 +2327,7 @@ func (x *CreditLedgerEntry) String() string {
 func (*CreditLedgerEntry) ProtoMessage() {}
 
 func (x *CreditLedgerEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[14]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -920,7 +2340,7 @@ func (x *CreditLedgerEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreditLedgerEntry.ProtoReflect.Descriptor instead.
 func (*CreditLedgerEntry) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{14}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CreditLedgerEntry) GetId() string {
@@ -981,7 +2401,7 @@ type RedeemCreditCodeRequest struct {
 
 func (x *RedeemCreditCodeRequest) Reset() {
 	*x = RedeemCreditCodeRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[15]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -993,7 +2413,7 @@ func (x *RedeemCreditCodeRequest) String() string {
 func (*RedeemCreditCodeRequest) ProtoMessage() {}
 
 func (x *RedeemCreditCodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[15]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1006,7 +2426,7 @@ func (x *RedeemCreditCodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedeemCreditCodeRequest.ProtoReflect.Descriptor instead.
 func (*RedeemCreditCodeRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{15}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RedeemCreditCodeRequest) GetCode() string {
@@ -1026,7 +2446,7 @@ type ConfigureUserDailyCreditsRequest struct {
 
 func (x *ConfigureUserDailyCreditsRequest) Reset() {
 	*x = ConfigureUserDailyCreditsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[16]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1038,7 +2458,7 @@ func (x *ConfigureUserDailyCreditsRequest) String() string {
 func (*ConfigureUserDailyCreditsRequest) ProtoMessage() {}
 
 func (x *ConfigureUserDailyCreditsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[16]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1051,7 +2471,7 @@ func (x *ConfigureUserDailyCreditsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigureUserDailyCreditsRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureUserDailyCreditsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{16}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ConfigureUserDailyCreditsRequest) GetUserId() string {
@@ -1080,7 +2500,7 @@ type AdjustUserCreditsRequest struct {
 
 func (x *AdjustUserCreditsRequest) Reset() {
 	*x = AdjustUserCreditsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[17]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1092,7 +2512,7 @@ func (x *AdjustUserCreditsRequest) String() string {
 func (*AdjustUserCreditsRequest) ProtoMessage() {}
 
 func (x *AdjustUserCreditsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[17]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1105,7 +2525,7 @@ func (x *AdjustUserCreditsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdjustUserCreditsRequest.ProtoReflect.Descriptor instead.
 func (*AdjustUserCreditsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{17}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *AdjustUserCreditsRequest) GetUserId() string {
@@ -1144,7 +2564,7 @@ type ListModelCreditRatesRequest struct {
 
 func (x *ListModelCreditRatesRequest) Reset() {
 	*x = ListModelCreditRatesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[18]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1156,7 +2576,7 @@ func (x *ListModelCreditRatesRequest) String() string {
 func (*ListModelCreditRatesRequest) ProtoMessage() {}
 
 func (x *ListModelCreditRatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[18]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1169,7 +2589,7 @@ func (x *ListModelCreditRatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelCreditRatesRequest.ProtoReflect.Descriptor instead.
 func (*ListModelCreditRatesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{18}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{39}
 }
 
 type ListModelCreditRatesResponse struct {
@@ -1181,7 +2601,7 @@ type ListModelCreditRatesResponse struct {
 
 func (x *ListModelCreditRatesResponse) Reset() {
 	*x = ListModelCreditRatesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[19]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1193,7 +2613,7 @@ func (x *ListModelCreditRatesResponse) String() string {
 func (*ListModelCreditRatesResponse) ProtoMessage() {}
 
 func (x *ListModelCreditRatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[19]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1206,7 +2626,7 @@ func (x *ListModelCreditRatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelCreditRatesResponse.ProtoReflect.Descriptor instead.
 func (*ListModelCreditRatesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{19}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListModelCreditRatesResponse) GetItems() []*ModelCreditRate {
@@ -1233,7 +2653,7 @@ type ModelCreditRate struct {
 
 func (x *ModelCreditRate) Reset() {
 	*x = ModelCreditRate{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[20]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1245,7 +2665,7 @@ func (x *ModelCreditRate) String() string {
 func (*ModelCreditRate) ProtoMessage() {}
 
 func (x *ModelCreditRate) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[20]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1258,7 +2678,7 @@ func (x *ModelCreditRate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelCreditRate.ProtoReflect.Descriptor instead.
 func (*ModelCreditRate) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{20}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ModelCreditRate) GetRevisionId() string {
@@ -1339,7 +2759,7 @@ type CreateModelCreditRateRequest struct {
 
 func (x *CreateModelCreditRateRequest) Reset() {
 	*x = CreateModelCreditRateRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[21]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1351,7 +2771,7 @@ func (x *CreateModelCreditRateRequest) String() string {
 func (*CreateModelCreditRateRequest) ProtoMessage() {}
 
 func (x *CreateModelCreditRateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[21]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1364,7 +2784,7 @@ func (x *CreateModelCreditRateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateModelCreditRateRequest.ProtoReflect.Descriptor instead.
 func (*CreateModelCreditRateRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{21}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *CreateModelCreditRateRequest) GetProviderType() string {
@@ -1427,7 +2847,7 @@ type ImageCreditRate struct {
 
 func (x *ImageCreditRate) Reset() {
 	*x = ImageCreditRate{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[22]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1439,7 +2859,7 @@ func (x *ImageCreditRate) String() string {
 func (*ImageCreditRate) ProtoMessage() {}
 
 func (x *ImageCreditRate) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[22]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1452,7 +2872,7 @@ func (x *ImageCreditRate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageCreditRate.ProtoReflect.Descriptor instead.
 func (*ImageCreditRate) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{22}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ImageCreditRate) GetSize() string {
@@ -1506,7 +2926,7 @@ type ImageModel struct {
 
 func (x *ImageModel) Reset() {
 	*x = ImageModel{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[23]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1518,7 +2938,7 @@ func (x *ImageModel) String() string {
 func (*ImageModel) ProtoMessage() {}
 
 func (x *ImageModel) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[23]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1531,7 +2951,7 @@ func (x *ImageModel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageModel.ProtoReflect.Descriptor instead.
 func (*ImageModel) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{23}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ImageModel) GetId() string {
@@ -1696,7 +3116,7 @@ type ListImageGenerationOptionsRequest struct {
 
 func (x *ListImageGenerationOptionsRequest) Reset() {
 	*x = ListImageGenerationOptionsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[24]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1708,7 +3128,7 @@ func (x *ListImageGenerationOptionsRequest) String() string {
 func (*ListImageGenerationOptionsRequest) ProtoMessage() {}
 
 func (x *ListImageGenerationOptionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[24]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1721,7 +3141,7 @@ func (x *ListImageGenerationOptionsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListImageGenerationOptionsRequest.ProtoReflect.Descriptor instead.
 func (*ListImageGenerationOptionsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{24}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{45}
 }
 
 type PromptOptimizationCandidate struct {
@@ -1738,7 +3158,7 @@ type PromptOptimizationCandidate struct {
 
 func (x *PromptOptimizationCandidate) Reset() {
 	*x = PromptOptimizationCandidate{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[25]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1750,7 +3170,7 @@ func (x *PromptOptimizationCandidate) String() string {
 func (*PromptOptimizationCandidate) ProtoMessage() {}
 
 func (x *PromptOptimizationCandidate) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[25]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1763,7 +3183,7 @@ func (x *PromptOptimizationCandidate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromptOptimizationCandidate.ProtoReflect.Descriptor instead.
 func (*PromptOptimizationCandidate) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{25}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *PromptOptimizationCandidate) GetProviderModelId() string {
@@ -1818,7 +3238,7 @@ type ListImageGenerationOptionsResponse struct {
 
 func (x *ListImageGenerationOptionsResponse) Reset() {
 	*x = ListImageGenerationOptionsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[26]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1830,7 +3250,7 @@ func (x *ListImageGenerationOptionsResponse) String() string {
 func (*ListImageGenerationOptionsResponse) ProtoMessage() {}
 
 func (x *ListImageGenerationOptionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[26]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1843,7 +3263,7 @@ func (x *ListImageGenerationOptionsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListImageGenerationOptionsResponse.ProtoReflect.Descriptor instead.
 func (*ListImageGenerationOptionsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{26}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ListImageGenerationOptionsResponse) GetImageModels() []*ImageModel {
@@ -1868,7 +3288,7 @@ type ListImageModelsRequest struct {
 
 func (x *ListImageModelsRequest) Reset() {
 	*x = ListImageModelsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[27]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1880,7 +3300,7 @@ func (x *ListImageModelsRequest) String() string {
 func (*ListImageModelsRequest) ProtoMessage() {}
 
 func (x *ListImageModelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[27]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1893,7 +3313,7 @@ func (x *ListImageModelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListImageModelsRequest.ProtoReflect.Descriptor instead.
 func (*ListImageModelsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{27}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{48}
 }
 
 type ListImageModelsResponse struct {
@@ -1905,7 +3325,7 @@ type ListImageModelsResponse struct {
 
 func (x *ListImageModelsResponse) Reset() {
 	*x = ListImageModelsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[28]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1917,7 +3337,7 @@ func (x *ListImageModelsResponse) String() string {
 func (*ListImageModelsResponse) ProtoMessage() {}
 
 func (x *ListImageModelsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[28]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1930,7 +3350,7 @@ func (x *ListImageModelsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListImageModelsResponse.ProtoReflect.Descriptor instead.
 func (*ListImageModelsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{28}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListImageModelsResponse) GetItems() []*ImageModel {
@@ -1962,7 +3382,7 @@ type CreateImageModelRequest struct {
 
 func (x *CreateImageModelRequest) Reset() {
 	*x = CreateImageModelRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[29]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1974,7 +3394,7 @@ func (x *CreateImageModelRequest) String() string {
 func (*CreateImageModelRequest) ProtoMessage() {}
 
 func (x *CreateImageModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[29]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1987,7 +3407,7 @@ func (x *CreateImageModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateImageModelRequest.ProtoReflect.Descriptor instead.
 func (*CreateImageModelRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{29}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *CreateImageModelRequest) GetDisplayName() string {
@@ -2112,7 +3532,7 @@ type ReviseImageModelRequest struct {
 
 func (x *ReviseImageModelRequest) Reset() {
 	*x = ReviseImageModelRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[30]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2124,7 +3544,7 @@ func (x *ReviseImageModelRequest) String() string {
 func (*ReviseImageModelRequest) ProtoMessage() {}
 
 func (x *ReviseImageModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[30]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2137,7 +3557,7 @@ func (x *ReviseImageModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviseImageModelRequest.ProtoReflect.Descriptor instead.
 func (*ReviseImageModelRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{30}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ReviseImageModelRequest) GetImageModelId() string {
@@ -2262,7 +3682,7 @@ type DeleteImageModelRequest struct {
 
 func (x *DeleteImageModelRequest) Reset() {
 	*x = DeleteImageModelRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[31]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2274,7 +3694,7 @@ func (x *DeleteImageModelRequest) String() string {
 func (*DeleteImageModelRequest) ProtoMessage() {}
 
 func (x *DeleteImageModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[31]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2287,7 +3707,7 @@ func (x *DeleteImageModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageModelRequest.ProtoReflect.Descriptor instead.
 func (*DeleteImageModelRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{31}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *DeleteImageModelRequest) GetImageModelId() string {
@@ -2313,7 +3733,7 @@ type VerifyImageModelRequest struct {
 
 func (x *VerifyImageModelRequest) Reset() {
 	*x = VerifyImageModelRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[32]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2325,7 +3745,7 @@ func (x *VerifyImageModelRequest) String() string {
 func (*VerifyImageModelRequest) ProtoMessage() {}
 
 func (x *VerifyImageModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[32]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2338,7 +3758,7 @@ func (x *VerifyImageModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyImageModelRequest.ProtoReflect.Descriptor instead.
 func (*VerifyImageModelRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{32}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *VerifyImageModelRequest) GetImageModelId() string {
@@ -2358,7 +3778,7 @@ type SetImageModelAvailabilityRequest struct {
 
 func (x *SetImageModelAvailabilityRequest) Reset() {
 	*x = SetImageModelAvailabilityRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[33]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2370,7 +3790,7 @@ func (x *SetImageModelAvailabilityRequest) String() string {
 func (*SetImageModelAvailabilityRequest) ProtoMessage() {}
 
 func (x *SetImageModelAvailabilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[33]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2383,7 +3803,7 @@ func (x *SetImageModelAvailabilityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetImageModelAvailabilityRequest.ProtoReflect.Descriptor instead.
 func (*SetImageModelAvailabilityRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{33}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *SetImageModelAvailabilityRequest) GetImageModelId() string {
@@ -2419,7 +3839,7 @@ type SubmitImageGenerationRequest struct {
 
 func (x *SubmitImageGenerationRequest) Reset() {
 	*x = SubmitImageGenerationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[34]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2431,7 +3851,7 @@ func (x *SubmitImageGenerationRequest) String() string {
 func (*SubmitImageGenerationRequest) ProtoMessage() {}
 
 func (x *SubmitImageGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[34]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2444,7 +3864,7 @@ func (x *SubmitImageGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitImageGenerationRequest.ProtoReflect.Descriptor instead.
 func (*SubmitImageGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{34}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *SubmitImageGenerationRequest) GetImageModelId() string {
@@ -2538,7 +3958,7 @@ type GeneratedImage struct {
 
 func (x *GeneratedImage) Reset() {
 	*x = GeneratedImage{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[35]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2550,7 +3970,7 @@ func (x *GeneratedImage) String() string {
 func (*GeneratedImage) ProtoMessage() {}
 
 func (x *GeneratedImage) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[35]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2563,7 +3983,7 @@ func (x *GeneratedImage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GeneratedImage.ProtoReflect.Descriptor instead.
 func (*GeneratedImage) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{35}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *GeneratedImage) GetPosition() int32 {
@@ -2637,7 +4057,7 @@ type ImageGenerationRecord struct {
 
 func (x *ImageGenerationRecord) Reset() {
 	*x = ImageGenerationRecord{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[36]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2649,7 +4069,7 @@ func (x *ImageGenerationRecord) String() string {
 func (*ImageGenerationRecord) ProtoMessage() {}
 
 func (x *ImageGenerationRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[36]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2662,7 +4082,7 @@ func (x *ImageGenerationRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageGenerationRecord.ProtoReflect.Descriptor instead.
 func (*ImageGenerationRecord) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{36}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *ImageGenerationRecord) GetId() string {
@@ -2821,7 +4241,7 @@ type ListImageGenerationsRequest struct {
 
 func (x *ListImageGenerationsRequest) Reset() {
 	*x = ListImageGenerationsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2833,7 +4253,7 @@ func (x *ListImageGenerationsRequest) String() string {
 func (*ListImageGenerationsRequest) ProtoMessage() {}
 
 func (x *ListImageGenerationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[37]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2846,7 +4266,7 @@ func (x *ListImageGenerationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListImageGenerationsRequest.ProtoReflect.Descriptor instead.
 func (*ListImageGenerationsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{37}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListImageGenerationsRequest) GetLimit() int32 {
@@ -2865,7 +4285,7 @@ type ListImageGenerationsResponse struct {
 
 func (x *ListImageGenerationsResponse) Reset() {
 	*x = ListImageGenerationsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2877,7 +4297,7 @@ func (x *ListImageGenerationsResponse) String() string {
 func (*ListImageGenerationsResponse) ProtoMessage() {}
 
 func (x *ListImageGenerationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[38]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2890,7 +4310,7 @@ func (x *ListImageGenerationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListImageGenerationsResponse.ProtoReflect.Descriptor instead.
 func (*ListImageGenerationsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{38}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ListImageGenerationsResponse) GetItems() []*ImageGenerationRecord {
@@ -2909,7 +4329,7 @@ type GetImageGenerationRequest struct {
 
 func (x *GetImageGenerationRequest) Reset() {
 	*x = GetImageGenerationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2921,7 +4341,7 @@ func (x *GetImageGenerationRequest) String() string {
 func (*GetImageGenerationRequest) ProtoMessage() {}
 
 func (x *GetImageGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[39]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2934,7 +4354,7 @@ func (x *GetImageGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetImageGenerationRequest.ProtoReflect.Descriptor instead.
 func (*GetImageGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{39}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *GetImageGenerationRequest) GetRecordId() string {
@@ -2953,7 +4373,7 @@ type StopImageGenerationRequest struct {
 
 func (x *StopImageGenerationRequest) Reset() {
 	*x = StopImageGenerationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2965,7 +4385,7 @@ func (x *StopImageGenerationRequest) String() string {
 func (*StopImageGenerationRequest) ProtoMessage() {}
 
 func (x *StopImageGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[40]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2978,7 +4398,7 @@ func (x *StopImageGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopImageGenerationRequest.ProtoReflect.Descriptor instead.
 func (*StopImageGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{40}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *StopImageGenerationRequest) GetRecordId() string {
@@ -2998,7 +4418,7 @@ type RegenerateImageGenerationRequest struct {
 
 func (x *RegenerateImageGenerationRequest) Reset() {
 	*x = RegenerateImageGenerationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3010,7 +4430,7 @@ func (x *RegenerateImageGenerationRequest) String() string {
 func (*RegenerateImageGenerationRequest) ProtoMessage() {}
 
 func (x *RegenerateImageGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[41]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3023,7 +4443,7 @@ func (x *RegenerateImageGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegenerateImageGenerationRequest.ProtoReflect.Descriptor instead.
 func (*RegenerateImageGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{41}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *RegenerateImageGenerationRequest) GetRecordId() string {
@@ -3049,7 +4469,7 @@ type DeleteImageGenerationRequest struct {
 
 func (x *DeleteImageGenerationRequest) Reset() {
 	*x = DeleteImageGenerationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3061,7 +4481,7 @@ func (x *DeleteImageGenerationRequest) String() string {
 func (*DeleteImageGenerationRequest) ProtoMessage() {}
 
 func (x *DeleteImageGenerationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[42]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3074,7 +4494,7 @@ func (x *DeleteImageGenerationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImageGenerationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteImageGenerationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{42}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *DeleteImageGenerationRequest) GetRecordId() string {
@@ -3095,7 +4515,7 @@ type OptimizeImagePromptRequest struct {
 
 func (x *OptimizeImagePromptRequest) Reset() {
 	*x = OptimizeImagePromptRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3107,7 +4527,7 @@ func (x *OptimizeImagePromptRequest) String() string {
 func (*OptimizeImagePromptRequest) ProtoMessage() {}
 
 func (x *OptimizeImagePromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[43]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3120,7 +4540,7 @@ func (x *OptimizeImagePromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OptimizeImagePromptRequest.ProtoReflect.Descriptor instead.
 func (*OptimizeImagePromptRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{43}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *OptimizeImagePromptRequest) GetProviderModelId() string {
@@ -3155,7 +4575,7 @@ type OptimizeImagePromptResponse struct {
 
 func (x *OptimizeImagePromptResponse) Reset() {
 	*x = OptimizeImagePromptResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3167,7 +4587,7 @@ func (x *OptimizeImagePromptResponse) String() string {
 func (*OptimizeImagePromptResponse) ProtoMessage() {}
 
 func (x *OptimizeImagePromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[44]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3180,7 +4600,7 @@ func (x *OptimizeImagePromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OptimizeImagePromptResponse.ProtoReflect.Descriptor instead.
 func (*OptimizeImagePromptResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{44}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *OptimizeImagePromptResponse) GetPrompt() string {
@@ -3216,7 +4636,7 @@ type PromptOptimizationCandidateInput struct {
 
 func (x *PromptOptimizationCandidateInput) Reset() {
 	*x = PromptOptimizationCandidateInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3228,7 +4648,7 @@ func (x *PromptOptimizationCandidateInput) String() string {
 func (*PromptOptimizationCandidateInput) ProtoMessage() {}
 
 func (x *PromptOptimizationCandidateInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[45]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3241,7 +4661,7 @@ func (x *PromptOptimizationCandidateInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromptOptimizationCandidateInput.ProtoReflect.Descriptor instead.
 func (*PromptOptimizationCandidateInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{45}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *PromptOptimizationCandidateInput) GetProviderModelId() string {
@@ -3281,7 +4701,7 @@ type ReplacePromptOptimizationCandidatesRequest struct {
 
 func (x *ReplacePromptOptimizationCandidatesRequest) Reset() {
 	*x = ReplacePromptOptimizationCandidatesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3293,7 +4713,7 @@ func (x *ReplacePromptOptimizationCandidatesRequest) String() string {
 func (*ReplacePromptOptimizationCandidatesRequest) ProtoMessage() {}
 
 func (x *ReplacePromptOptimizationCandidatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[46]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3306,7 +4726,7 @@ func (x *ReplacePromptOptimizationCandidatesRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use ReplacePromptOptimizationCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*ReplacePromptOptimizationCandidatesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{46}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ReplacePromptOptimizationCandidatesRequest) GetItems() []*PromptOptimizationCandidateInput {
@@ -3324,7 +4744,7 @@ type ListPromptOptimizationCandidatesRequest struct {
 
 func (x *ListPromptOptimizationCandidatesRequest) Reset() {
 	*x = ListPromptOptimizationCandidatesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3336,7 +4756,7 @@ func (x *ListPromptOptimizationCandidatesRequest) String() string {
 func (*ListPromptOptimizationCandidatesRequest) ProtoMessage() {}
 
 func (x *ListPromptOptimizationCandidatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[47]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3349,7 +4769,7 @@ func (x *ListPromptOptimizationCandidatesRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ListPromptOptimizationCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*ListPromptOptimizationCandidatesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{47}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{68}
 }
 
 type ListPromptOptimizationCandidatesResponse struct {
@@ -3361,7 +4781,7 @@ type ListPromptOptimizationCandidatesResponse struct {
 
 func (x *ListPromptOptimizationCandidatesResponse) Reset() {
 	*x = ListPromptOptimizationCandidatesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3373,7 +4793,7 @@ func (x *ListPromptOptimizationCandidatesResponse) String() string {
 func (*ListPromptOptimizationCandidatesResponse) ProtoMessage() {}
 
 func (x *ListPromptOptimizationCandidatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[48]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3386,7 +4806,7 @@ func (x *ListPromptOptimizationCandidatesResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ListPromptOptimizationCandidatesResponse.ProtoReflect.Descriptor instead.
 func (*ListPromptOptimizationCandidatesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{48}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListPromptOptimizationCandidatesResponse) GetItems() []*PromptOptimizationCandidate {
@@ -3407,7 +4827,7 @@ type CreateRedemptionCodeBatchRequest struct {
 
 func (x *CreateRedemptionCodeBatchRequest) Reset() {
 	*x = CreateRedemptionCodeBatchRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3419,7 +4839,7 @@ func (x *CreateRedemptionCodeBatchRequest) String() string {
 func (*CreateRedemptionCodeBatchRequest) ProtoMessage() {}
 
 func (x *CreateRedemptionCodeBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[49]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3432,7 +4852,7 @@ func (x *CreateRedemptionCodeBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRedemptionCodeBatchRequest.ProtoReflect.Descriptor instead.
 func (*CreateRedemptionCodeBatchRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{49}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *CreateRedemptionCodeBatchRequest) GetCount() int32 {
@@ -3470,7 +4890,7 @@ type RedemptionCodeBatch struct {
 
 func (x *RedemptionCodeBatch) Reset() {
 	*x = RedemptionCodeBatch{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3482,7 +4902,7 @@ func (x *RedemptionCodeBatch) String() string {
 func (*RedemptionCodeBatch) ProtoMessage() {}
 
 func (x *RedemptionCodeBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[50]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3495,7 +4915,7 @@ func (x *RedemptionCodeBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedemptionCodeBatch.ProtoReflect.Descriptor instead.
 func (*RedemptionCodeBatch) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{50}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *RedemptionCodeBatch) GetId() string {
@@ -3552,7 +4972,7 @@ type RedemptionCode struct {
 
 func (x *RedemptionCode) Reset() {
 	*x = RedemptionCode{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3564,7 +4984,7 @@ func (x *RedemptionCode) String() string {
 func (*RedemptionCode) ProtoMessage() {}
 
 func (x *RedemptionCode) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[51]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3577,7 +4997,7 @@ func (x *RedemptionCode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedemptionCode.ProtoReflect.Descriptor instead.
 func (*RedemptionCode) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{51}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *RedemptionCode) GetId() string {
@@ -3618,7 +5038,7 @@ type ListRedemptionCodesRequest struct {
 
 func (x *ListRedemptionCodesRequest) Reset() {
 	*x = ListRedemptionCodesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3630,7 +5050,7 @@ func (x *ListRedemptionCodesRequest) String() string {
 func (*ListRedemptionCodesRequest) ProtoMessage() {}
 
 func (x *ListRedemptionCodesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[52]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3643,7 +5063,7 @@ func (x *ListRedemptionCodesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRedemptionCodesRequest.ProtoReflect.Descriptor instead.
 func (*ListRedemptionCodesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{52}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ListRedemptionCodesRequest) GetCursor() string {
@@ -3670,7 +5090,7 @@ type ListRedemptionCodesResponse struct {
 
 func (x *ListRedemptionCodesResponse) Reset() {
 	*x = ListRedemptionCodesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3682,7 +5102,7 @@ func (x *ListRedemptionCodesResponse) String() string {
 func (*ListRedemptionCodesResponse) ProtoMessage() {}
 
 func (x *ListRedemptionCodesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[53]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3695,7 +5115,7 @@ func (x *ListRedemptionCodesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRedemptionCodesResponse.ProtoReflect.Descriptor instead.
 func (*ListRedemptionCodesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{53}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ListRedemptionCodesResponse) GetItems() []*RedemptionCodeStatus {
@@ -3721,7 +5141,7 @@ type VoidRedemptionCodeRequest struct {
 
 func (x *VoidRedemptionCodeRequest) Reset() {
 	*x = VoidRedemptionCodeRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3733,7 +5153,7 @@ func (x *VoidRedemptionCodeRequest) String() string {
 func (*VoidRedemptionCodeRequest) ProtoMessage() {}
 
 func (x *VoidRedemptionCodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[54]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3746,7 +5166,7 @@ func (x *VoidRedemptionCodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoidRedemptionCodeRequest.ProtoReflect.Descriptor instead.
 func (*VoidRedemptionCodeRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{54}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *VoidRedemptionCodeRequest) GetCodeId() string {
@@ -3773,7 +5193,7 @@ type RedemptionCodeStatus struct {
 
 func (x *RedemptionCodeStatus) Reset() {
 	*x = RedemptionCodeStatus{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3785,7 +5205,7 @@ func (x *RedemptionCodeStatus) String() string {
 func (*RedemptionCodeStatus) ProtoMessage() {}
 
 func (x *RedemptionCodeStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[55]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3798,7 +5218,7 @@ func (x *RedemptionCodeStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedemptionCodeStatus.ProtoReflect.Descriptor instead.
 func (*RedemptionCodeStatus) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{55}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *RedemptionCodeStatus) GetId() string {
@@ -3873,7 +5293,7 @@ type ListSessionsRequest struct {
 
 func (x *ListSessionsRequest) Reset() {
 	*x = ListSessionsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3885,7 +5305,7 @@ func (x *ListSessionsRequest) String() string {
 func (*ListSessionsRequest) ProtoMessage() {}
 
 func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[56]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3898,7 +5318,7 @@ func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionsRequest.ProtoReflect.Descriptor instead.
 func (*ListSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{56}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ListSessionsRequest) GetArchived() bool {
@@ -3917,7 +5337,7 @@ type ListSessionsResponse struct {
 
 func (x *ListSessionsResponse) Reset() {
 	*x = ListSessionsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3929,7 +5349,7 @@ func (x *ListSessionsResponse) String() string {
 func (*ListSessionsResponse) ProtoMessage() {}
 
 func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[57]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3942,7 +5362,7 @@ func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionsResponse.ProtoReflect.Descriptor instead.
 func (*ListSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{57}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *ListSessionsResponse) GetItems() []*Session {
@@ -3962,7 +5382,7 @@ type CreateSessionRequest struct {
 
 func (x *CreateSessionRequest) Reset() {
 	*x = CreateSessionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3974,7 +5394,7 @@ func (x *CreateSessionRequest) String() string {
 func (*CreateSessionRequest) ProtoMessage() {}
 
 func (x *CreateSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[58]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3987,7 +5407,7 @@ func (x *CreateSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSessionRequest.ProtoReflect.Descriptor instead.
 func (*CreateSessionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{58}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *CreateSessionRequest) GetExpertId() string {
@@ -4013,7 +5433,7 @@ type GetSessionRequest struct {
 
 func (x *GetSessionRequest) Reset() {
 	*x = GetSessionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4025,7 +5445,7 @@ func (x *GetSessionRequest) String() string {
 func (*GetSessionRequest) ProtoMessage() {}
 
 func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[59]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4038,7 +5458,7 @@ func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetSessionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{59}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *GetSessionRequest) GetSessionId() string {
@@ -4059,7 +5479,7 @@ type UpdateSessionRequest struct {
 
 func (x *UpdateSessionRequest) Reset() {
 	*x = UpdateSessionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4071,7 +5491,7 @@ func (x *UpdateSessionRequest) String() string {
 func (*UpdateSessionRequest) ProtoMessage() {}
 
 func (x *UpdateSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[60]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4084,7 +5504,7 @@ func (x *UpdateSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSessionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSessionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{60}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *UpdateSessionRequest) GetSessionId() string {
@@ -4119,7 +5539,7 @@ type SetSessionArchivedRequest struct {
 
 func (x *SetSessionArchivedRequest) Reset() {
 	*x = SetSessionArchivedRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[61]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4131,7 +5551,7 @@ func (x *SetSessionArchivedRequest) String() string {
 func (*SetSessionArchivedRequest) ProtoMessage() {}
 
 func (x *SetSessionArchivedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[61]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4144,7 +5564,7 @@ func (x *SetSessionArchivedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSessionArchivedRequest.ProtoReflect.Descriptor instead.
 func (*SetSessionArchivedRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{61}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *SetSessionArchivedRequest) GetSessionId() string {
@@ -4180,7 +5600,7 @@ type SetSessionExpertSelectionRequest struct {
 
 func (x *SetSessionExpertSelectionRequest) Reset() {
 	*x = SetSessionExpertSelectionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[62]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4192,7 +5612,7 @@ func (x *SetSessionExpertSelectionRequest) String() string {
 func (*SetSessionExpertSelectionRequest) ProtoMessage() {}
 
 func (x *SetSessionExpertSelectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[62]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4205,7 +5625,7 @@ func (x *SetSessionExpertSelectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSessionExpertSelectionRequest.ProtoReflect.Descriptor instead.
 func (*SetSessionExpertSelectionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{62}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *SetSessionExpertSelectionRequest) GetSessionId() string {
@@ -4245,7 +5665,7 @@ type DeleteSessionRequest struct {
 
 func (x *DeleteSessionRequest) Reset() {
 	*x = DeleteSessionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[63]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4257,7 +5677,7 @@ func (x *DeleteSessionRequest) String() string {
 func (*DeleteSessionRequest) ProtoMessage() {}
 
 func (x *DeleteSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[63]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4270,7 +5690,7 @@ func (x *DeleteSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSessionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSessionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{63}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *DeleteSessionRequest) GetSessionId() string {
@@ -4296,7 +5716,7 @@ type Session struct {
 
 func (x *Session) Reset() {
 	*x = Session{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[64]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4308,7 +5728,7 @@ func (x *Session) String() string {
 func (*Session) ProtoMessage() {}
 
 func (x *Session) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[64]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4321,7 +5741,7 @@ func (x *Session) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Session.ProtoReflect.Descriptor instead.
 func (*Session) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{64}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *Session) GetId() string {
@@ -4391,7 +5811,7 @@ type ListSessionMessagesRequest struct {
 
 func (x *ListSessionMessagesRequest) Reset() {
 	*x = ListSessionMessagesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[65]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4403,7 +5823,7 @@ func (x *ListSessionMessagesRequest) String() string {
 func (*ListSessionMessagesRequest) ProtoMessage() {}
 
 func (x *ListSessionMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[65]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4416,7 +5836,7 @@ func (x *ListSessionMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListSessionMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{65}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *ListSessionMessagesRequest) GetSessionId() string {
@@ -4449,7 +5869,7 @@ type ListSessionMessagesResponse struct {
 
 func (x *ListSessionMessagesResponse) Reset() {
 	*x = ListSessionMessagesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[66]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4461,7 +5881,7 @@ func (x *ListSessionMessagesResponse) String() string {
 func (*ListSessionMessagesResponse) ProtoMessage() {}
 
 func (x *ListSessionMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[66]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4474,7 +5894,7 @@ func (x *ListSessionMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListSessionMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{66}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ListSessionMessagesResponse) GetItems() []*SessionMessage {
@@ -4491,13 +5911,14 @@ type SendSessionMessageRequest struct {
 	AttachmentIds  []string               `protobuf:"bytes,4,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
 	SelectionId    string                 `protobuf:"bytes,5,opt,name=selection_id,json=selectionId,proto3" json:"selection_id,omitempty"`
 	FileReferences []*FileReference       `protobuf:"bytes,6,rep,name=file_references,json=fileReferences,proto3" json:"file_references,omitempty"`
+	PlanPreference string                 `protobuf:"bytes,7,opt,name=plan_preference,json=planPreference,proto3" json:"plan_preference,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SendSessionMessageRequest) Reset() {
 	*x = SendSessionMessageRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[67]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4509,7 +5930,7 @@ func (x *SendSessionMessageRequest) String() string {
 func (*SendSessionMessageRequest) ProtoMessage() {}
 
 func (x *SendSessionMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[67]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4522,7 +5943,7 @@ func (x *SendSessionMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendSessionMessageRequest.ProtoReflect.Descriptor instead.
 func (*SendSessionMessageRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{67}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *SendSessionMessageRequest) GetSessionId() string {
@@ -4560,6 +5981,13 @@ func (x *SendSessionMessageRequest) GetFileReferences() []*FileReference {
 	return nil
 }
 
+func (x *SendSessionMessageRequest) GetPlanPreference() string {
+	if x != nil {
+		return x.PlanPreference
+	}
+	return ""
+}
+
 type SendSessionMessageResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	UserMessage      *SessionMessage        `protobuf:"bytes,1,opt,name=user_message,json=userMessage,proto3" json:"user_message,omitempty"`
@@ -4570,7 +5998,7 @@ type SendSessionMessageResponse struct {
 
 func (x *SendSessionMessageResponse) Reset() {
 	*x = SendSessionMessageResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[68]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4582,7 +6010,7 @@ func (x *SendSessionMessageResponse) String() string {
 func (*SendSessionMessageResponse) ProtoMessage() {}
 
 func (x *SendSessionMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[68]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4595,7 +6023,7 @@ func (x *SendSessionMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendSessionMessageResponse.ProtoReflect.Descriptor instead.
 func (*SendSessionMessageResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{68}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *SendSessionMessageResponse) GetUserMessage() *SessionMessage {
@@ -4622,7 +6050,7 @@ type RetrySessionMessageRequest struct {
 
 func (x *RetrySessionMessageRequest) Reset() {
 	*x = RetrySessionMessageRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[69]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4634,7 +6062,7 @@ func (x *RetrySessionMessageRequest) String() string {
 func (*RetrySessionMessageRequest) ProtoMessage() {}
 
 func (x *RetrySessionMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[69]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4647,7 +6075,7 @@ func (x *RetrySessionMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetrySessionMessageRequest.ProtoReflect.Descriptor instead.
 func (*RetrySessionMessageRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{69}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *RetrySessionMessageRequest) GetSessionId() string {
@@ -4674,7 +6102,7 @@ type CancelSessionMessageRequest struct {
 
 func (x *CancelSessionMessageRequest) Reset() {
 	*x = CancelSessionMessageRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[70]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4686,7 +6114,7 @@ func (x *CancelSessionMessageRequest) String() string {
 func (*CancelSessionMessageRequest) ProtoMessage() {}
 
 func (x *CancelSessionMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[70]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4699,7 +6127,7 @@ func (x *CancelSessionMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelSessionMessageRequest.ProtoReflect.Descriptor instead.
 func (*CancelSessionMessageRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{70}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *CancelSessionMessageRequest) GetSessionId() string {
@@ -4714,6 +6142,722 @@ func (x *CancelSessionMessageRequest) GetMessageId() int64 {
 		return x.MessageId
 	}
 	return 0
+}
+
+type DecideSessionExecutionPlanRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SessionId       string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	MessageId       int64                  `protobuf:"varint,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Decision        string                 `protobuf:"bytes,3,opt,name=decision,proto3" json:"decision,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DecideSessionExecutionPlanRequest) Reset() {
+	*x = DecideSessionExecutionPlanRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[92]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecideSessionExecutionPlanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecideSessionExecutionPlanRequest) ProtoMessage() {}
+
+func (x *DecideSessionExecutionPlanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[92]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecideSessionExecutionPlanRequest.ProtoReflect.Descriptor instead.
+func (*DecideSessionExecutionPlanRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{92}
+}
+
+func (x *DecideSessionExecutionPlanRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *DecideSessionExecutionPlanRequest) GetMessageId() int64 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+func (x *DecideSessionExecutionPlanRequest) GetDecision() string {
+	if x != nil {
+		return x.Decision
+	}
+	return ""
+}
+
+func (x *DecideSessionExecutionPlanRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+type PreviewSessionWorkflowDraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	MessageId     int64                  `protobuf:"varint,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreviewSessionWorkflowDraftRequest) Reset() {
+	*x = PreviewSessionWorkflowDraftRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[93]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreviewSessionWorkflowDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreviewSessionWorkflowDraftRequest) ProtoMessage() {}
+
+func (x *PreviewSessionWorkflowDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[93]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreviewSessionWorkflowDraftRequest.ProtoReflect.Descriptor instead.
+func (*PreviewSessionWorkflowDraftRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{93}
+}
+
+func (x *PreviewSessionWorkflowDraftRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *PreviewSessionWorkflowDraftRequest) GetMessageId() int64 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+type CreateWorkflowFromSessionRequest struct {
+	state         protoimpl.MessageState         `protogen:"open.v1"`
+	SessionId     string                         `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	MessageId     int64                          `protobuf:"varint,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Name          string                         `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Goal          string                         `protobuf:"bytes,4,opt,name=goal,proto3" json:"goal,omitempty"`
+	Files         []*SessionWorkflowFileDecision `protobuf:"bytes,5,rep,name=files,proto3" json:"files,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateWorkflowFromSessionRequest) Reset() {
+	*x = CreateWorkflowFromSessionRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[94]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateWorkflowFromSessionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateWorkflowFromSessionRequest) ProtoMessage() {}
+
+func (x *CreateWorkflowFromSessionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[94]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateWorkflowFromSessionRequest.ProtoReflect.Descriptor instead.
+func (*CreateWorkflowFromSessionRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{94}
+}
+
+func (x *CreateWorkflowFromSessionRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *CreateWorkflowFromSessionRequest) GetMessageId() int64 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+func (x *CreateWorkflowFromSessionRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateWorkflowFromSessionRequest) GetGoal() string {
+	if x != nil {
+		return x.Goal
+	}
+	return ""
+}
+
+func (x *CreateWorkflowFromSessionRequest) GetFiles() []*SessionWorkflowFileDecision {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+type CreateWorkflowFromSessionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workflow      *Workflow              `protobuf:"bytes,1,opt,name=workflow,proto3" json:"workflow,omitempty"`
+	ValidationRun *Run                   `protobuf:"bytes,2,opt,name=validation_run,json=validationRun,proto3" json:"validation_run,omitempty"`
+	Link          *SessionWorkflowLink   `protobuf:"bytes,3,opt,name=link,proto3" json:"link,omitempty"`
+	Replayed      bool                   `protobuf:"varint,4,opt,name=replayed,proto3" json:"replayed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateWorkflowFromSessionResponse) Reset() {
+	*x = CreateWorkflowFromSessionResponse{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[95]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateWorkflowFromSessionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateWorkflowFromSessionResponse) ProtoMessage() {}
+
+func (x *CreateWorkflowFromSessionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[95]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateWorkflowFromSessionResponse.ProtoReflect.Descriptor instead.
+func (*CreateWorkflowFromSessionResponse) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{95}
+}
+
+func (x *CreateWorkflowFromSessionResponse) GetWorkflow() *Workflow {
+	if x != nil {
+		return x.Workflow
+	}
+	return nil
+}
+
+func (x *CreateWorkflowFromSessionResponse) GetValidationRun() *Run {
+	if x != nil {
+		return x.ValidationRun
+	}
+	return nil
+}
+
+func (x *CreateWorkflowFromSessionResponse) GetLink() *SessionWorkflowLink {
+	if x != nil {
+		return x.Link
+	}
+	return nil
+}
+
+func (x *CreateWorkflowFromSessionResponse) GetReplayed() bool {
+	if x != nil {
+		return x.Replayed
+	}
+	return false
+}
+
+type ListSessionWorkflowLinksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionWorkflowLinksRequest) Reset() {
+	*x = ListSessionWorkflowLinksRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[96]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionWorkflowLinksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionWorkflowLinksRequest) ProtoMessage() {}
+
+func (x *ListSessionWorkflowLinksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[96]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionWorkflowLinksRequest.ProtoReflect.Descriptor instead.
+func (*ListSessionWorkflowLinksRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{96}
+}
+
+func (x *ListSessionWorkflowLinksRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type ListSessionWorkflowLinksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*SessionWorkflowLink `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionWorkflowLinksResponse) Reset() {
+	*x = ListSessionWorkflowLinksResponse{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[97]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionWorkflowLinksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionWorkflowLinksResponse) ProtoMessage() {}
+
+func (x *ListSessionWorkflowLinksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[97]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionWorkflowLinksResponse.ProtoReflect.Descriptor instead.
+func (*ListSessionWorkflowLinksResponse) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{97}
+}
+
+func (x *ListSessionWorkflowLinksResponse) GetItems() []*SessionWorkflowLink {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type SessionWorkflowDraft struct {
+	state          protoimpl.MessageState     `protogen:"open.v1"`
+	SuggestedName  string                     `protobuf:"bytes,1,opt,name=suggested_name,json=suggestedName,proto3" json:"suggested_name,omitempty"`
+	SuggestedGoal  string                     `protobuf:"bytes,2,opt,name=suggested_goal,json=suggestedGoal,proto3" json:"suggested_goal,omitempty"`
+	SpecialistName string                     `protobuf:"bytes,3,opt,name=specialist_name,json=specialistName,proto3" json:"specialist_name,omitempty"`
+	Resources      []*SessionWorkflowResource `protobuf:"bytes,4,rep,name=resources,proto3" json:"resources,omitempty"`
+	Files          []*SessionWorkflowFile     `protobuf:"bytes,5,rep,name=files,proto3" json:"files,omitempty"`
+	ExistingLink   *SessionWorkflowLink       `protobuf:"bytes,6,opt,name=existing_link,json=existingLink,proto3,oneof" json:"existing_link,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SessionWorkflowDraft) Reset() {
+	*x = SessionWorkflowDraft{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[98]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionWorkflowDraft) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionWorkflowDraft) ProtoMessage() {}
+
+func (x *SessionWorkflowDraft) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[98]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionWorkflowDraft.ProtoReflect.Descriptor instead.
+func (*SessionWorkflowDraft) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{98}
+}
+
+func (x *SessionWorkflowDraft) GetSuggestedName() string {
+	if x != nil {
+		return x.SuggestedName
+	}
+	return ""
+}
+
+func (x *SessionWorkflowDraft) GetSuggestedGoal() string {
+	if x != nil {
+		return x.SuggestedGoal
+	}
+	return ""
+}
+
+func (x *SessionWorkflowDraft) GetSpecialistName() string {
+	if x != nil {
+		return x.SpecialistName
+	}
+	return ""
+}
+
+func (x *SessionWorkflowDraft) GetResources() []*SessionWorkflowResource {
+	if x != nil {
+		return x.Resources
+	}
+	return nil
+}
+
+func (x *SessionWorkflowDraft) GetFiles() []*SessionWorkflowFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+func (x *SessionWorkflowDraft) GetExistingLink() *SessionWorkflowLink {
+	if x != nil {
+		return x.ExistingLink
+	}
+	return nil
+}
+
+type SessionWorkflowResource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionWorkflowResource) Reset() {
+	*x = SessionWorkflowResource{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[99]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionWorkflowResource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionWorkflowResource) ProtoMessage() {}
+
+func (x *SessionWorkflowResource) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[99]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionWorkflowResource.ProtoReflect.Descriptor instead.
+func (*SessionWorkflowResource) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{99}
+}
+
+func (x *SessionWorkflowResource) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *SessionWorkflowResource) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SessionWorkflowResource) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type SessionWorkflowFile struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SourceKey         string                 `protobuf:"bytes,1,opt,name=source_key,json=sourceKey,proto3" json:"source_key,omitempty"`
+	Kind              string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Name              string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Size              int64                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	Available         bool                   `protobuf:"varint,5,opt,name=available,proto3" json:"available,omitempty"`
+	UnavailableReason *string                `protobuf:"bytes,6,opt,name=unavailable_reason,json=unavailableReason,proto3,oneof" json:"unavailable_reason,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SessionWorkflowFile) Reset() {
+	*x = SessionWorkflowFile{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[100]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionWorkflowFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionWorkflowFile) ProtoMessage() {}
+
+func (x *SessionWorkflowFile) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[100]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionWorkflowFile.ProtoReflect.Descriptor instead.
+func (*SessionWorkflowFile) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{100}
+}
+
+func (x *SessionWorkflowFile) GetSourceKey() string {
+	if x != nil {
+		return x.SourceKey
+	}
+	return ""
+}
+
+func (x *SessionWorkflowFile) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *SessionWorkflowFile) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SessionWorkflowFile) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *SessionWorkflowFile) GetAvailable() bool {
+	if x != nil {
+		return x.Available
+	}
+	return false
+}
+
+func (x *SessionWorkflowFile) GetUnavailableReason() string {
+	if x != nil && x.UnavailableReason != nil {
+		return *x.UnavailableReason
+	}
+	return ""
+}
+
+type SessionWorkflowFileDecision struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceKey     string                 `protobuf:"bytes,1,opt,name=source_key,json=sourceKey,proto3" json:"source_key,omitempty"`
+	Destination   string                 `protobuf:"bytes,2,opt,name=destination,proto3" json:"destination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionWorkflowFileDecision) Reset() {
+	*x = SessionWorkflowFileDecision{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[101]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionWorkflowFileDecision) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionWorkflowFileDecision) ProtoMessage() {}
+
+func (x *SessionWorkflowFileDecision) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[101]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionWorkflowFileDecision.ProtoReflect.Descriptor instead.
+func (*SessionWorkflowFileDecision) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{101}
+}
+
+func (x *SessionWorkflowFileDecision) GetSourceKey() string {
+	if x != nil {
+		return x.SourceKey
+	}
+	return ""
+}
+
+func (x *SessionWorkflowFileDecision) GetDestination() string {
+	if x != nil {
+		return x.Destination
+	}
+	return ""
+}
+
+type SessionWorkflowLink struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SessionId       string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	MessageId       int64                  `protobuf:"varint,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	WorkflowId      string                 `protobuf:"bytes,3,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	WorkflowName    string                 `protobuf:"bytes,4,opt,name=workflow_name,json=workflowName,proto3" json:"workflow_name,omitempty"`
+	ValidationRunId string                 `protobuf:"bytes,5,opt,name=validation_run_id,json=validationRunId,proto3" json:"validation_run_id,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SessionWorkflowLink) Reset() {
+	*x = SessionWorkflowLink{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[102]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionWorkflowLink) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionWorkflowLink) ProtoMessage() {}
+
+func (x *SessionWorkflowLink) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[102]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionWorkflowLink.ProtoReflect.Descriptor instead.
+func (*SessionWorkflowLink) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{102}
+}
+
+func (x *SessionWorkflowLink) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionWorkflowLink) GetMessageId() int64 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+func (x *SessionWorkflowLink) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *SessionWorkflowLink) GetWorkflowName() string {
+	if x != nil {
+		return x.WorkflowName
+	}
+	return ""
+}
+
+func (x *SessionWorkflowLink) GetValidationRunId() string {
+	if x != nil {
+		return x.ValidationRunId
+	}
+	return ""
+}
+
+func (x *SessionWorkflowLink) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
 }
 
 type SessionMessage struct {
@@ -4733,13 +6877,15 @@ type SessionMessage struct {
 	Activities        []*ExecutionActivity    `protobuf:"bytes,13,rep,name=activities,proto3" json:"activities,omitempty"`
 	Artifacts         []*Artifact             `protobuf:"bytes,14,rep,name=artifacts,proto3" json:"artifacts,omitempty"`
 	ResourceAction    *ResourceCreationAction `protobuf:"bytes,15,opt,name=resource_action,json=resourceAction,proto3,oneof" json:"resource_action,omitempty"`
+	Evidence          []*Evidence             `protobuf:"bytes,16,rep,name=evidence,proto3" json:"evidence,omitempty"`
+	ExecutionPlan     *ExecutionPlan          `protobuf:"bytes,17,opt,name=execution_plan,json=executionPlan,proto3,oneof" json:"execution_plan,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SessionMessage) Reset() {
 	*x = SessionMessage{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[71]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4751,7 +6897,7 @@ func (x *SessionMessage) String() string {
 func (*SessionMessage) ProtoMessage() {}
 
 func (x *SessionMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[71]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4764,7 +6910,7 @@ func (x *SessionMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SessionMessage.ProtoReflect.Descriptor instead.
 func (*SessionMessage) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{71}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *SessionMessage) GetId() int64 {
@@ -4872,6 +7018,20 @@ func (x *SessionMessage) GetResourceAction() *ResourceCreationAction {
 	return nil
 }
 
+func (x *SessionMessage) GetEvidence() []*Evidence {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *SessionMessage) GetExecutionPlan() *ExecutionPlan {
+	if x != nil {
+		return x.ExecutionPlan
+	}
+	return nil
+}
+
 type ResourceCreationAction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -4889,7 +7049,7 @@ type ResourceCreationAction struct {
 
 func (x *ResourceCreationAction) Reset() {
 	*x = ResourceCreationAction{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[72]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4901,7 +7061,7 @@ func (x *ResourceCreationAction) String() string {
 func (*ResourceCreationAction) ProtoMessage() {}
 
 func (x *ResourceCreationAction) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[72]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4914,7 +7074,7 @@ func (x *ResourceCreationAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceCreationAction.ProtoReflect.Descriptor instead.
 func (*ResourceCreationAction) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{72}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ResourceCreationAction) GetId() string {
@@ -5001,7 +7161,7 @@ type ResponseSnapshot struct {
 
 func (x *ResponseSnapshot) Reset() {
 	*x = ResponseSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[73]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5013,7 +7173,7 @@ func (x *ResponseSnapshot) String() string {
 func (*ResponseSnapshot) ProtoMessage() {}
 
 func (x *ResponseSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[73]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5026,7 +7186,7 @@ func (x *ResponseSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseSnapshot.ProtoReflect.Descriptor instead.
 func (*ResponseSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{73}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ResponseSnapshot) GetProviderModelId() string {
@@ -5138,7 +7298,7 @@ type ExecutionStageSnapshot struct {
 
 func (x *ExecutionStageSnapshot) Reset() {
 	*x = ExecutionStageSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[74]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5150,7 +7310,7 @@ func (x *ExecutionStageSnapshot) String() string {
 func (*ExecutionStageSnapshot) ProtoMessage() {}
 
 func (x *ExecutionStageSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[74]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5163,7 +7323,7 @@ func (x *ExecutionStageSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionStageSnapshot.ProtoReflect.Descriptor instead.
 func (*ExecutionStageSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{74}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *ExecutionStageSnapshot) GetPosition() int32 {
@@ -5255,7 +7415,7 @@ type ExpertSnapshot struct {
 
 func (x *ExpertSnapshot) Reset() {
 	*x = ExpertSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[75]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5267,7 +7427,7 @@ func (x *ExpertSnapshot) String() string {
 func (*ExpertSnapshot) ProtoMessage() {}
 
 func (x *ExpertSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[75]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5280,7 +7440,7 @@ func (x *ExpertSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertSnapshot.ProtoReflect.Descriptor instead.
 func (*ExpertSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{75}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *ExpertSnapshot) GetId() string {
@@ -5378,7 +7538,7 @@ type ProviderModelSnapshot struct {
 
 func (x *ProviderModelSnapshot) Reset() {
 	*x = ProviderModelSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[76]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5390,7 +7550,7 @@ func (x *ProviderModelSnapshot) String() string {
 func (*ProviderModelSnapshot) ProtoMessage() {}
 
 func (x *ProviderModelSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[76]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5403,7 +7563,7 @@ func (x *ProviderModelSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderModelSnapshot.ProtoReflect.Descriptor instead.
 func (*ProviderModelSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{76}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *ProviderModelSnapshot) GetId() string {
@@ -5493,7 +7653,7 @@ type MCPServerSnapshot struct {
 
 func (x *MCPServerSnapshot) Reset() {
 	*x = MCPServerSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[77]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5505,7 +7665,7 @@ func (x *MCPServerSnapshot) String() string {
 func (*MCPServerSnapshot) ProtoMessage() {}
 
 func (x *MCPServerSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[77]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5518,7 +7678,7 @@ func (x *MCPServerSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MCPServerSnapshot.ProtoReflect.Descriptor instead.
 func (*MCPServerSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{77}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *MCPServerSnapshot) GetId() string {
@@ -5596,7 +7756,7 @@ type SkillSnapshot struct {
 
 func (x *SkillSnapshot) Reset() {
 	*x = SkillSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[78]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5608,7 +7768,7 @@ func (x *SkillSnapshot) String() string {
 func (*SkillSnapshot) ProtoMessage() {}
 
 func (x *SkillSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[78]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5621,7 +7781,7 @@ func (x *SkillSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillSnapshot.ProtoReflect.Descriptor instead.
 func (*SkillSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{78}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *SkillSnapshot) GetId() string {
@@ -5668,7 +7828,7 @@ type CLIConnectorSnapshot struct {
 
 func (x *CLIConnectorSnapshot) Reset() {
 	*x = CLIConnectorSnapshot{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[79]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5680,7 +7840,7 @@ func (x *CLIConnectorSnapshot) String() string {
 func (*CLIConnectorSnapshot) ProtoMessage() {}
 
 func (x *CLIConnectorSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[79]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5693,7 +7853,7 @@ func (x *CLIConnectorSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorSnapshot.ProtoReflect.Descriptor instead.
 func (*CLIConnectorSnapshot) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{79}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *CLIConnectorSnapshot) GetId() string {
@@ -5761,7 +7921,7 @@ type ListWorkflowsRequest struct {
 
 func (x *ListWorkflowsRequest) Reset() {
 	*x = ListWorkflowsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[80]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5773,7 +7933,7 @@ func (x *ListWorkflowsRequest) String() string {
 func (*ListWorkflowsRequest) ProtoMessage() {}
 
 func (x *ListWorkflowsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[80]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5786,7 +7946,7 @@ func (x *ListWorkflowsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkflowsRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkflowsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{80}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *ListWorkflowsRequest) GetDeleted() bool {
@@ -5805,7 +7965,7 @@ type ListWorkflowsResponse struct {
 
 func (x *ListWorkflowsResponse) Reset() {
 	*x = ListWorkflowsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[81]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5817,7 +7977,7 @@ func (x *ListWorkflowsResponse) String() string {
 func (*ListWorkflowsResponse) ProtoMessage() {}
 
 func (x *ListWorkflowsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[81]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5830,7 +7990,7 @@ func (x *ListWorkflowsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkflowsResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkflowsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{81}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *ListWorkflowsResponse) GetItems() []*Workflow {
@@ -5849,7 +8009,7 @@ type CreateWorkflowRequest struct {
 
 func (x *CreateWorkflowRequest) Reset() {
 	*x = CreateWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[82]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5861,7 +8021,7 @@ func (x *CreateWorkflowRequest) String() string {
 func (*CreateWorkflowRequest) ProtoMessage() {}
 
 func (x *CreateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[82]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5874,7 +8034,7 @@ func (x *CreateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*CreateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{82}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *CreateWorkflowRequest) GetWorkflow() *WorkflowInput {
@@ -5893,7 +8053,7 @@ type GetWorkflowRequest struct {
 
 func (x *GetWorkflowRequest) Reset() {
 	*x = GetWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[83]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5905,7 +8065,7 @@ func (x *GetWorkflowRequest) String() string {
 func (*GetWorkflowRequest) ProtoMessage() {}
 
 func (x *GetWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[83]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5918,7 +8078,7 @@ func (x *GetWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{83}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *GetWorkflowRequest) GetWorkflowId() string {
@@ -5939,7 +8099,7 @@ type UpdateWorkflowRequest struct {
 
 func (x *UpdateWorkflowRequest) Reset() {
 	*x = UpdateWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[84]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5951,7 +8111,7 @@ func (x *UpdateWorkflowRequest) String() string {
 func (*UpdateWorkflowRequest) ProtoMessage() {}
 
 func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[84]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5964,7 +8124,7 @@ func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*UpdateWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{84}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *UpdateWorkflowRequest) GetWorkflowId() string {
@@ -5997,7 +8157,7 @@ type DeleteWorkflowRequest struct {
 
 func (x *DeleteWorkflowRequest) Reset() {
 	*x = DeleteWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[85]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6009,7 +8169,7 @@ func (x *DeleteWorkflowRequest) String() string {
 func (*DeleteWorkflowRequest) ProtoMessage() {}
 
 func (x *DeleteWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[85]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6022,7 +8182,7 @@ func (x *DeleteWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{85}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *DeleteWorkflowRequest) GetWorkflowId() string {
@@ -6047,7 +8207,7 @@ type WorkflowInput struct {
 
 func (x *WorkflowInput) Reset() {
 	*x = WorkflowInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[86]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6059,7 +8219,7 @@ func (x *WorkflowInput) String() string {
 func (*WorkflowInput) ProtoMessage() {}
 
 func (x *WorkflowInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[86]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6072,7 +8232,7 @@ func (x *WorkflowInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowInput.ProtoReflect.Descriptor instead.
 func (*WorkflowInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{86}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *WorkflowInput) GetName() string {
@@ -6140,13 +8300,14 @@ type Workflow struct {
 	Version                 int64                  `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
 	ExpertTeamId            *string                `protobuf:"bytes,15,opt,name=expert_team_id,json=expertTeamId,proto3,oneof" json:"expert_team_id,omitempty"`
 	KnowledgeBaseIds        []string               `protobuf:"bytes,16,rep,name=knowledge_base_ids,json=knowledgeBaseIds,proto3" json:"knowledge_base_ids,omitempty"`
+	Origin                  *SessionWorkflowLink   `protobuf:"bytes,17,opt,name=origin,proto3,oneof" json:"origin,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
 
 func (x *Workflow) Reset() {
 	*x = Workflow{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[87]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6158,7 +8319,7 @@ func (x *Workflow) String() string {
 func (*Workflow) ProtoMessage() {}
 
 func (x *Workflow) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[87]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6171,7 +8332,7 @@ func (x *Workflow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Workflow.ProtoReflect.Descriptor instead.
 func (*Workflow) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{87}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *Workflow) GetId() string {
@@ -6272,6 +8433,13 @@ func (x *Workflow) GetKnowledgeBaseIds() []string {
 	return nil
 }
 
+func (x *Workflow) GetOrigin() *SessionWorkflowLink {
+	if x != nil {
+		return x.Origin
+	}
+	return nil
+}
+
 type EnvironmentVariable struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -6284,7 +8452,7 @@ type EnvironmentVariable struct {
 
 func (x *EnvironmentVariable) Reset() {
 	*x = EnvironmentVariable{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[88]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6296,7 +8464,7 @@ func (x *EnvironmentVariable) String() string {
 func (*EnvironmentVariable) ProtoMessage() {}
 
 func (x *EnvironmentVariable) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[88]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6309,7 +8477,7 @@ func (x *EnvironmentVariable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnvironmentVariable.ProtoReflect.Descriptor instead.
 func (*EnvironmentVariable) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{88}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *EnvironmentVariable) GetName() string {
@@ -6354,7 +8522,7 @@ type Schedule struct {
 
 func (x *Schedule) Reset() {
 	*x = Schedule{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[89]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6366,7 +8534,7 @@ func (x *Schedule) String() string {
 func (*Schedule) ProtoMessage() {}
 
 func (x *Schedule) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[89]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6379,7 +8547,7 @@ func (x *Schedule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Schedule.ProtoReflect.Descriptor instead.
 func (*Schedule) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{89}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *Schedule) GetEnabled() bool {
@@ -6434,7 +8602,7 @@ type GitConfigEntry struct {
 
 func (x *GitConfigEntry) Reset() {
 	*x = GitConfigEntry{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[90]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6446,7 +8614,7 @@ func (x *GitConfigEntry) String() string {
 func (*GitConfigEntry) ProtoMessage() {}
 
 func (x *GitConfigEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[90]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6459,7 +8627,7 @@ func (x *GitConfigEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitConfigEntry.ProtoReflect.Descriptor instead.
 func (*GitConfigEntry) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{90}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *GitConfigEntry) GetKey() string {
@@ -6491,7 +8659,7 @@ type GitSource struct {
 
 func (x *GitSource) Reset() {
 	*x = GitSource{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[91]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6503,7 +8671,7 @@ func (x *GitSource) String() string {
 func (*GitSource) ProtoMessage() {}
 
 func (x *GitSource) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[91]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6516,7 +8684,7 @@ func (x *GitSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitSource.ProtoReflect.Descriptor instead.
 func (*GitSource) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{91}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *GitSource) GetUrl() string {
@@ -6577,7 +8745,7 @@ type ListKnowledgeBasesRequest struct {
 
 func (x *ListKnowledgeBasesRequest) Reset() {
 	*x = ListKnowledgeBasesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[92]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6589,7 +8757,7 @@ func (x *ListKnowledgeBasesRequest) String() string {
 func (*ListKnowledgeBasesRequest) ProtoMessage() {}
 
 func (x *ListKnowledgeBasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[92]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6602,7 +8770,7 @@ func (x *ListKnowledgeBasesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKnowledgeBasesRequest.ProtoReflect.Descriptor instead.
 func (*ListKnowledgeBasesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{92}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *ListKnowledgeBasesRequest) GetDeleted() bool {
@@ -6621,7 +8789,7 @@ type ListKnowledgeBasesResponse struct {
 
 func (x *ListKnowledgeBasesResponse) Reset() {
 	*x = ListKnowledgeBasesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[93]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6633,7 +8801,7 @@ func (x *ListKnowledgeBasesResponse) String() string {
 func (*ListKnowledgeBasesResponse) ProtoMessage() {}
 
 func (x *ListKnowledgeBasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[93]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6646,7 +8814,7 @@ func (x *ListKnowledgeBasesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKnowledgeBasesResponse.ProtoReflect.Descriptor instead.
 func (*ListKnowledgeBasesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{93}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *ListKnowledgeBasesResponse) GetItems() []*KnowledgeBase {
@@ -6665,7 +8833,7 @@ type CreateKnowledgeBaseRequest struct {
 
 func (x *CreateKnowledgeBaseRequest) Reset() {
 	*x = CreateKnowledgeBaseRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[94]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6677,7 +8845,7 @@ func (x *CreateKnowledgeBaseRequest) String() string {
 func (*CreateKnowledgeBaseRequest) ProtoMessage() {}
 
 func (x *CreateKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[94]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6690,7 +8858,7 @@ func (x *CreateKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateKnowledgeBaseRequest.ProtoReflect.Descriptor instead.
 func (*CreateKnowledgeBaseRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{94}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *CreateKnowledgeBaseRequest) GetKnowledgeBase() *KnowledgeBaseInput {
@@ -6709,7 +8877,7 @@ type GetKnowledgeBaseRequest struct {
 
 func (x *GetKnowledgeBaseRequest) Reset() {
 	*x = GetKnowledgeBaseRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[95]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6721,7 +8889,7 @@ func (x *GetKnowledgeBaseRequest) String() string {
 func (*GetKnowledgeBaseRequest) ProtoMessage() {}
 
 func (x *GetKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[95]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6734,7 +8902,7 @@ func (x *GetKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetKnowledgeBaseRequest.ProtoReflect.Descriptor instead.
 func (*GetKnowledgeBaseRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{95}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *GetKnowledgeBaseRequest) GetKnowledgeBaseId() string {
@@ -6755,7 +8923,7 @@ type UpdateKnowledgeBaseRequest struct {
 
 func (x *UpdateKnowledgeBaseRequest) Reset() {
 	*x = UpdateKnowledgeBaseRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[96]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6767,7 +8935,7 @@ func (x *UpdateKnowledgeBaseRequest) String() string {
 func (*UpdateKnowledgeBaseRequest) ProtoMessage() {}
 
 func (x *UpdateKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[96]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6780,7 +8948,7 @@ func (x *UpdateKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateKnowledgeBaseRequest.ProtoReflect.Descriptor instead.
 func (*UpdateKnowledgeBaseRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{96}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *UpdateKnowledgeBaseRequest) GetKnowledgeBaseId() string {
@@ -6813,7 +8981,7 @@ type DeleteKnowledgeBaseRequest struct {
 
 func (x *DeleteKnowledgeBaseRequest) Reset() {
 	*x = DeleteKnowledgeBaseRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[97]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6825,7 +8993,7 @@ func (x *DeleteKnowledgeBaseRequest) String() string {
 func (*DeleteKnowledgeBaseRequest) ProtoMessage() {}
 
 func (x *DeleteKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[97]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6838,7 +9006,7 @@ func (x *DeleteKnowledgeBaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteKnowledgeBaseRequest.ProtoReflect.Descriptor instead.
 func (*DeleteKnowledgeBaseRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{97}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *DeleteKnowledgeBaseRequest) GetKnowledgeBaseId() string {
@@ -6854,13 +9022,15 @@ type KnowledgeBaseInput struct {
 	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 	Visibility    string                 `protobuf:"bytes,3,opt,name=visibility,proto3" json:"visibility,omitempty"`
 	Platform      bool                   `protobuf:"varint,4,opt,name=platform,proto3" json:"platform,omitempty"`
+	Scope         string                 `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"`
+	GroupId       *string                `protobuf:"bytes,6,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *KnowledgeBaseInput) Reset() {
 	*x = KnowledgeBaseInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[98]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6872,7 +9042,7 @@ func (x *KnowledgeBaseInput) String() string {
 func (*KnowledgeBaseInput) ProtoMessage() {}
 
 func (x *KnowledgeBaseInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[98]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6885,7 +9055,7 @@ func (x *KnowledgeBaseInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeBaseInput.ProtoReflect.Descriptor instead.
 func (*KnowledgeBaseInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{98}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *KnowledgeBaseInput) GetName() string {
@@ -6916,25 +9086,45 @@ func (x *KnowledgeBaseInput) GetPlatform() bool {
 	return false
 }
 
+func (x *KnowledgeBaseInput) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+func (x *KnowledgeBaseInput) GetGroupId() string {
+	if x != nil && x.GroupId != nil {
+		return *x.GroupId
+	}
+	return ""
+}
+
 type KnowledgeBase struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Visibility    string                 `protobuf:"bytes,5,opt,name=visibility,proto3" json:"visibility,omitempty"`
-	Platform      bool                   `protobuf:"varint,6,opt,name=platform,proto3" json:"platform,omitempty"`
-	Deleted       bool                   `protobuf:"varint,7,opt,name=deleted,proto3" json:"deleted,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Version       int64                  `protobuf:"varint,10,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OwnerId            string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	Name               string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description        string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Visibility         string                 `protobuf:"bytes,5,opt,name=visibility,proto3" json:"visibility,omitempty"`
+	Platform           bool                   `protobuf:"varint,6,opt,name=platform,proto3" json:"platform,omitempty"`
+	Deleted            bool                   `protobuf:"varint,7,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Version            int64                  `protobuf:"varint,10,opt,name=version,proto3" json:"version,omitempty"`
+	DocumentCount      int64                  `protobuf:"varint,11,opt,name=document_count,json=documentCount,proto3" json:"document_count,omitempty"`
+	ReadyDocumentCount int64                  `protobuf:"varint,12,opt,name=ready_document_count,json=readyDocumentCount,proto3" json:"ready_document_count,omitempty"`
+	LastReadyAt        *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=last_ready_at,json=lastReadyAt,proto3,oneof" json:"last_ready_at,omitempty"`
+	Scope              string                 `protobuf:"bytes,14,opt,name=scope,proto3" json:"scope,omitempty"`
+	GroupId            *string                `protobuf:"bytes,15,opt,name=group_id,json=groupId,proto3,oneof" json:"group_id,omitempty"`
+	GroupName          *string                `protobuf:"bytes,16,opt,name=group_name,json=groupName,proto3,oneof" json:"group_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *KnowledgeBase) Reset() {
 	*x = KnowledgeBase{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[99]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6946,7 +9136,7 @@ func (x *KnowledgeBase) String() string {
 func (*KnowledgeBase) ProtoMessage() {}
 
 func (x *KnowledgeBase) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[99]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6959,7 +9149,7 @@ func (x *KnowledgeBase) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeBase.ProtoReflect.Descriptor instead.
 func (*KnowledgeBase) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{99}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *KnowledgeBase) GetId() string {
@@ -7032,6 +9222,48 @@ func (x *KnowledgeBase) GetVersion() int64 {
 	return 0
 }
 
+func (x *KnowledgeBase) GetDocumentCount() int64 {
+	if x != nil {
+		return x.DocumentCount
+	}
+	return 0
+}
+
+func (x *KnowledgeBase) GetReadyDocumentCount() int64 {
+	if x != nil {
+		return x.ReadyDocumentCount
+	}
+	return 0
+}
+
+func (x *KnowledgeBase) GetLastReadyAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastReadyAt
+	}
+	return nil
+}
+
+func (x *KnowledgeBase) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+func (x *KnowledgeBase) GetGroupId() string {
+	if x != nil && x.GroupId != nil {
+		return *x.GroupId
+	}
+	return ""
+}
+
+func (x *KnowledgeBase) GetGroupName() string {
+	if x != nil && x.GroupName != nil {
+		return *x.GroupName
+	}
+	return ""
+}
+
 type ListKnowledgeCategoriesRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	KnowledgeBaseId string                 `protobuf:"bytes,1,opt,name=knowledge_base_id,json=knowledgeBaseId,proto3" json:"knowledge_base_id,omitempty"`
@@ -7041,7 +9273,7 @@ type ListKnowledgeCategoriesRequest struct {
 
 func (x *ListKnowledgeCategoriesRequest) Reset() {
 	*x = ListKnowledgeCategoriesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[100]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7053,7 +9285,7 @@ func (x *ListKnowledgeCategoriesRequest) String() string {
 func (*ListKnowledgeCategoriesRequest) ProtoMessage() {}
 
 func (x *ListKnowledgeCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[100]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7066,7 +9298,7 @@ func (x *ListKnowledgeCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKnowledgeCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListKnowledgeCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{100}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *ListKnowledgeCategoriesRequest) GetKnowledgeBaseId() string {
@@ -7085,7 +9317,7 @@ type ListKnowledgeCategoriesResponse struct {
 
 func (x *ListKnowledgeCategoriesResponse) Reset() {
 	*x = ListKnowledgeCategoriesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[101]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7097,7 +9329,7 @@ func (x *ListKnowledgeCategoriesResponse) String() string {
 func (*ListKnowledgeCategoriesResponse) ProtoMessage() {}
 
 func (x *ListKnowledgeCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[101]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7110,7 +9342,7 @@ func (x *ListKnowledgeCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKnowledgeCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListKnowledgeCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{101}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *ListKnowledgeCategoriesResponse) GetItems() []*KnowledgeCategory {
@@ -7130,7 +9362,7 @@ type CreateKnowledgeCategoryRequest struct {
 
 func (x *CreateKnowledgeCategoryRequest) Reset() {
 	*x = CreateKnowledgeCategoryRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[102]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7142,7 +9374,7 @@ func (x *CreateKnowledgeCategoryRequest) String() string {
 func (*CreateKnowledgeCategoryRequest) ProtoMessage() {}
 
 func (x *CreateKnowledgeCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[102]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7155,7 +9387,7 @@ func (x *CreateKnowledgeCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateKnowledgeCategoryRequest.ProtoReflect.Descriptor instead.
 func (*CreateKnowledgeCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{102}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *CreateKnowledgeCategoryRequest) GetKnowledgeBaseId() string {
@@ -7182,7 +9414,7 @@ type DeleteKnowledgeCategoryRequest struct {
 
 func (x *DeleteKnowledgeCategoryRequest) Reset() {
 	*x = DeleteKnowledgeCategoryRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[103]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7194,7 +9426,7 @@ func (x *DeleteKnowledgeCategoryRequest) String() string {
 func (*DeleteKnowledgeCategoryRequest) ProtoMessage() {}
 
 func (x *DeleteKnowledgeCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[103]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7207,7 +9439,7 @@ func (x *DeleteKnowledgeCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteKnowledgeCategoryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteKnowledgeCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{103}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *DeleteKnowledgeCategoryRequest) GetKnowledgeBaseId() string {
@@ -7239,7 +9471,7 @@ type KnowledgeCategory struct {
 
 func (x *KnowledgeCategory) Reset() {
 	*x = KnowledgeCategory{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[104]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7251,7 +9483,7 @@ func (x *KnowledgeCategory) String() string {
 func (*KnowledgeCategory) ProtoMessage() {}
 
 func (x *KnowledgeCategory) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[104]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7264,7 +9496,7 @@ func (x *KnowledgeCategory) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeCategory.ProtoReflect.Descriptor instead.
 func (*KnowledgeCategory) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{104}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *KnowledgeCategory) GetId() string {
@@ -7325,7 +9557,7 @@ type ListKnowledgeDocumentsRequest struct {
 
 func (x *ListKnowledgeDocumentsRequest) Reset() {
 	*x = ListKnowledgeDocumentsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[105]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7337,7 +9569,7 @@ func (x *ListKnowledgeDocumentsRequest) String() string {
 func (*ListKnowledgeDocumentsRequest) ProtoMessage() {}
 
 func (x *ListKnowledgeDocumentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[105]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7350,7 +9582,7 @@ func (x *ListKnowledgeDocumentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKnowledgeDocumentsRequest.ProtoReflect.Descriptor instead.
 func (*ListKnowledgeDocumentsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{105}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *ListKnowledgeDocumentsRequest) GetKnowledgeBaseId() string {
@@ -7369,7 +9601,7 @@ type ListKnowledgeDocumentsResponse struct {
 
 func (x *ListKnowledgeDocumentsResponse) Reset() {
 	*x = ListKnowledgeDocumentsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[106]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7381,7 +9613,7 @@ func (x *ListKnowledgeDocumentsResponse) String() string {
 func (*ListKnowledgeDocumentsResponse) ProtoMessage() {}
 
 func (x *ListKnowledgeDocumentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[106]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7394,7 +9626,7 @@ func (x *ListKnowledgeDocumentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListKnowledgeDocumentsResponse.ProtoReflect.Descriptor instead.
 func (*ListKnowledgeDocumentsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{106}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *ListKnowledgeDocumentsResponse) GetItems() []*KnowledgeDocument {
@@ -7423,7 +9655,7 @@ type KnowledgeDocumentRevision struct {
 
 func (x *KnowledgeDocumentRevision) Reset() {
 	*x = KnowledgeDocumentRevision{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[107]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7435,7 +9667,7 @@ func (x *KnowledgeDocumentRevision) String() string {
 func (*KnowledgeDocumentRevision) ProtoMessage() {}
 
 func (x *KnowledgeDocumentRevision) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[107]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7448,7 +9680,7 @@ func (x *KnowledgeDocumentRevision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeDocumentRevision.ProtoReflect.Descriptor instead.
 func (*KnowledgeDocumentRevision) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{107}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *KnowledgeDocumentRevision) GetId() string {
@@ -7549,7 +9781,7 @@ type KnowledgeDocument struct {
 
 func (x *KnowledgeDocument) Reset() {
 	*x = KnowledgeDocument{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[108]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7561,7 +9793,7 @@ func (x *KnowledgeDocument) String() string {
 func (*KnowledgeDocument) ProtoMessage() {}
 
 func (x *KnowledgeDocument) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[108]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7574,7 +9806,7 @@ func (x *KnowledgeDocument) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeDocument.ProtoReflect.Descriptor instead.
 func (*KnowledgeDocument) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{108}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *KnowledgeDocument) GetId() string {
@@ -7677,7 +9909,7 @@ type GenerateWorkflowCredentialRequest struct {
 
 func (x *GenerateWorkflowCredentialRequest) Reset() {
 	*x = GenerateWorkflowCredentialRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[109]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7689,7 +9921,7 @@ func (x *GenerateWorkflowCredentialRequest) String() string {
 func (*GenerateWorkflowCredentialRequest) ProtoMessage() {}
 
 func (x *GenerateWorkflowCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[109]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7702,7 +9934,7 @@ func (x *GenerateWorkflowCredentialRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GenerateWorkflowCredentialRequest.ProtoReflect.Descriptor instead.
 func (*GenerateWorkflowCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{109}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{141}
 }
 
 func (x *GenerateWorkflowCredentialRequest) GetWorkflowId() string {
@@ -7721,7 +9953,7 @@ type GetWorkflowCredentialRequest struct {
 
 func (x *GetWorkflowCredentialRequest) Reset() {
 	*x = GetWorkflowCredentialRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[110]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7733,7 +9965,7 @@ func (x *GetWorkflowCredentialRequest) String() string {
 func (*GetWorkflowCredentialRequest) ProtoMessage() {}
 
 func (x *GetWorkflowCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[110]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7746,7 +9978,7 @@ func (x *GetWorkflowCredentialRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkflowCredentialRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkflowCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{110}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *GetWorkflowCredentialRequest) GetWorkflowId() string {
@@ -7767,7 +9999,7 @@ type WorkflowCredential struct {
 
 func (x *WorkflowCredential) Reset() {
 	*x = WorkflowCredential{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[111]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7779,7 +10011,7 @@ func (x *WorkflowCredential) String() string {
 func (*WorkflowCredential) ProtoMessage() {}
 
 func (x *WorkflowCredential) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[111]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7792,7 +10024,7 @@ func (x *WorkflowCredential) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowCredential.ProtoReflect.Descriptor instead.
 func (*WorkflowCredential) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{111}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *WorkflowCredential) GetApiKey() string {
@@ -7825,7 +10057,7 @@ type ExchangeWorkflowCredentialRequest struct {
 
 func (x *ExchangeWorkflowCredentialRequest) Reset() {
 	*x = ExchangeWorkflowCredentialRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[112]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7837,7 +10069,7 @@ func (x *ExchangeWorkflowCredentialRequest) String() string {
 func (*ExchangeWorkflowCredentialRequest) ProtoMessage() {}
 
 func (x *ExchangeWorkflowCredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[112]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7850,7 +10082,7 @@ func (x *ExchangeWorkflowCredentialRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ExchangeWorkflowCredentialRequest.ProtoReflect.Descriptor instead.
 func (*ExchangeWorkflowCredentialRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{112}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{144}
 }
 
 func (x *ExchangeWorkflowCredentialRequest) GetWorkflowId() string {
@@ -7871,7 +10103,7 @@ type WorkflowAccessToken struct {
 
 func (x *WorkflowAccessToken) Reset() {
 	*x = WorkflowAccessToken{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[113]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7883,7 +10115,7 @@ func (x *WorkflowAccessToken) String() string {
 func (*WorkflowAccessToken) ProtoMessage() {}
 
 func (x *WorkflowAccessToken) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[113]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7896,7 +10128,7 @@ func (x *WorkflowAccessToken) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkflowAccessToken.ProtoReflect.Descriptor instead.
 func (*WorkflowAccessToken) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{113}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *WorkflowAccessToken) GetJwtToken() string {
@@ -7921,17 +10153,18 @@ func (x *WorkflowAccessToken) GetExpiresAt() *timestamppb.Timestamp {
 }
 
 type RunWorkflowRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	TextInput     *string                `protobuf:"bytes,2,opt,name=text_input,json=textInput,proto3,oneof" json:"text_input,omitempty"`
-	JsonInput     *structpb.Struct       `protobuf:"bytes,3,opt,name=json_input,json=jsonInput,proto3,oneof" json:"json_input,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId     string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	TextInput      *string                `protobuf:"bytes,2,opt,name=text_input,json=textInput,proto3,oneof" json:"text_input,omitempty"`
+	JsonInput      *structpb.Struct       `protobuf:"bytes,3,opt,name=json_input,json=jsonInput,proto3,oneof" json:"json_input,omitempty"`
+	PlanPreference string                 `protobuf:"bytes,4,opt,name=plan_preference,json=planPreference,proto3" json:"plan_preference,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RunWorkflowRequest) Reset() {
 	*x = RunWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[114]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7943,7 +10176,7 @@ func (x *RunWorkflowRequest) String() string {
 func (*RunWorkflowRequest) ProtoMessage() {}
 
 func (x *RunWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[114]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7956,7 +10189,7 @@ func (x *RunWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*RunWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{114}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *RunWorkflowRequest) GetWorkflowId() string {
@@ -7980,6 +10213,13 @@ func (x *RunWorkflowRequest) GetJsonInput() *structpb.Struct {
 	return nil
 }
 
+func (x *RunWorkflowRequest) GetPlanPreference() string {
+	if x != nil {
+		return x.PlanPreference
+	}
+	return ""
+}
+
 type ListRunsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
@@ -7989,7 +10229,7 @@ type ListRunsRequest struct {
 
 func (x *ListRunsRequest) Reset() {
 	*x = ListRunsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[115]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8001,7 +10241,7 @@ func (x *ListRunsRequest) String() string {
 func (*ListRunsRequest) ProtoMessage() {}
 
 func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[115]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8014,7 +10254,7 @@ func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{115}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{147}
 }
 
 func (x *ListRunsRequest) GetWorkflowId() string {
@@ -8033,7 +10273,7 @@ type ListRunsResponse struct {
 
 func (x *ListRunsResponse) Reset() {
 	*x = ListRunsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[116]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8045,7 +10285,7 @@ func (x *ListRunsResponse) String() string {
 func (*ListRunsResponse) ProtoMessage() {}
 
 func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[116]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8058,7 +10298,7 @@ func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListRunsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{116}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{148}
 }
 
 func (x *ListRunsResponse) GetItems() []*Run {
@@ -8078,7 +10318,7 @@ type GetRunRequest struct {
 
 func (x *GetRunRequest) Reset() {
 	*x = GetRunRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[117]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8090,7 +10330,7 @@ func (x *GetRunRequest) String() string {
 func (*GetRunRequest) ProtoMessage() {}
 
 func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[117]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8103,7 +10343,7 @@ func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRunRequest.ProtoReflect.Descriptor instead.
 func (*GetRunRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{117}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{149}
 }
 
 func (x *GetRunRequest) GetWorkflowId() string {
@@ -8130,7 +10370,7 @@ type ListRunTurnsRequest struct {
 
 func (x *ListRunTurnsRequest) Reset() {
 	*x = ListRunTurnsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[118]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8142,7 +10382,7 @@ func (x *ListRunTurnsRequest) String() string {
 func (*ListRunTurnsRequest) ProtoMessage() {}
 
 func (x *ListRunTurnsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[118]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8155,7 +10395,7 @@ func (x *ListRunTurnsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunTurnsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunTurnsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{118}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{150}
 }
 
 func (x *ListRunTurnsRequest) GetWorkflowId() string {
@@ -8180,13 +10420,14 @@ type ContinueRunConversationRequest struct {
 	AttachmentIds  []string               `protobuf:"bytes,4,rep,name=attachment_ids,json=attachmentIds,proto3" json:"attachment_ids,omitempty"`
 	SelectionId    string                 `protobuf:"bytes,5,opt,name=selection_id,json=selectionId,proto3" json:"selection_id,omitempty"`
 	FileReferences []*FileReference       `protobuf:"bytes,6,rep,name=file_references,json=fileReferences,proto3" json:"file_references,omitempty"`
+	PlanPreference string                 `protobuf:"bytes,7,opt,name=plan_preference,json=planPreference,proto3" json:"plan_preference,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ContinueRunConversationRequest) Reset() {
 	*x = ContinueRunConversationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[119]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8198,7 +10439,7 @@ func (x *ContinueRunConversationRequest) String() string {
 func (*ContinueRunConversationRequest) ProtoMessage() {}
 
 func (x *ContinueRunConversationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[119]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8211,7 +10452,7 @@ func (x *ContinueRunConversationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContinueRunConversationRequest.ProtoReflect.Descriptor instead.
 func (*ContinueRunConversationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{119}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{151}
 }
 
 func (x *ContinueRunConversationRequest) GetWorkflowId() string {
@@ -8256,6 +10497,13 @@ func (x *ContinueRunConversationRequest) GetFileReferences() []*FileReference {
 	return nil
 }
 
+func (x *ContinueRunConversationRequest) GetPlanPreference() string {
+	if x != nil {
+		return x.PlanPreference
+	}
+	return ""
+}
+
 type CancelRunRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
@@ -8266,7 +10514,7 @@ type CancelRunRequest struct {
 
 func (x *CancelRunRequest) Reset() {
 	*x = CancelRunRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[120]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8278,7 +10526,7 @@ func (x *CancelRunRequest) String() string {
 func (*CancelRunRequest) ProtoMessage() {}
 
 func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[120]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8291,7 +10539,7 @@ func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelRunRequest.ProtoReflect.Descriptor instead.
 func (*CancelRunRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{120}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{152}
 }
 
 func (x *CancelRunRequest) GetWorkflowId() string {
@@ -8318,7 +10566,7 @@ type RerunWorkflowRequest struct {
 
 func (x *RerunWorkflowRequest) Reset() {
 	*x = RerunWorkflowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[121]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8330,7 +10578,7 @@ func (x *RerunWorkflowRequest) String() string {
 func (*RerunWorkflowRequest) ProtoMessage() {}
 
 func (x *RerunWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[121]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8343,7 +10591,7 @@ func (x *RerunWorkflowRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RerunWorkflowRequest.ProtoReflect.Descriptor instead.
 func (*RerunWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{121}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{153}
 }
 
 func (x *RerunWorkflowRequest) GetWorkflowId() string {
@@ -8358,6 +10606,74 @@ func (x *RerunWorkflowRequest) GetRunId() string {
 		return x.RunId
 	}
 	return ""
+}
+
+type DecideRunExecutionPlanRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId      string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	RunId           string                 `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	Decision        string                 `protobuf:"bytes,3,opt,name=decision,proto3" json:"decision,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DecideRunExecutionPlanRequest) Reset() {
+	*x = DecideRunExecutionPlanRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecideRunExecutionPlanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecideRunExecutionPlanRequest) ProtoMessage() {}
+
+func (x *DecideRunExecutionPlanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecideRunExecutionPlanRequest.ProtoReflect.Descriptor instead.
+func (*DecideRunExecutionPlanRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{154}
+}
+
+func (x *DecideRunExecutionPlanRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *DecideRunExecutionPlanRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *DecideRunExecutionPlanRequest) GetDecision() string {
+	if x != nil {
+		return x.Decision
+	}
+	return ""
+}
+
+func (x *DecideRunExecutionPlanRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
 }
 
 type Run struct {
@@ -8383,13 +10699,15 @@ type Run struct {
 	ExpertStages      []*ExpertStage         `protobuf:"bytes,19,rep,name=expert_stages,json=expertStages,proto3" json:"expert_stages,omitempty"`
 	CreditConsumption *CreditConsumption     `protobuf:"bytes,20,opt,name=credit_consumption,json=creditConsumption,proto3,oneof" json:"credit_consumption,omitempty"`
 	QueuePosition     int32                  `protobuf:"varint,21,opt,name=queue_position,json=queuePosition,proto3" json:"queue_position,omitempty"`
+	Evidence          []*Evidence            `protobuf:"bytes,22,rep,name=evidence,proto3" json:"evidence,omitempty"`
+	ExecutionPlan     *ExecutionPlan         `protobuf:"bytes,23,opt,name=execution_plan,json=executionPlan,proto3,oneof" json:"execution_plan,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Run) Reset() {
 	*x = Run{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[122]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8401,7 +10719,7 @@ func (x *Run) String() string {
 func (*Run) ProtoMessage() {}
 
 func (x *Run) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[122]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8414,7 +10732,7 @@ func (x *Run) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Run.ProtoReflect.Descriptor instead.
 func (*Run) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{122}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{155}
 }
 
 func (x *Run) GetId() string {
@@ -8564,6 +10882,20 @@ func (x *Run) GetQueuePosition() int32 {
 	return 0
 }
 
+func (x *Run) GetEvidence() []*Evidence {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *Run) GetExecutionPlan() *ExecutionPlan {
+	if x != nil {
+		return x.ExecutionPlan
+	}
+	return nil
+}
+
 type ListArtifactsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
@@ -8573,7 +10905,7 @@ type ListArtifactsRequest struct {
 
 func (x *ListArtifactsRequest) Reset() {
 	*x = ListArtifactsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[123]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8585,7 +10917,7 @@ func (x *ListArtifactsRequest) String() string {
 func (*ListArtifactsRequest) ProtoMessage() {}
 
 func (x *ListArtifactsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[123]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8598,7 +10930,7 @@ func (x *ListArtifactsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtifactsRequest.ProtoReflect.Descriptor instead.
 func (*ListArtifactsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{123}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{156}
 }
 
 func (x *ListArtifactsRequest) GetWorkflowId() string {
@@ -8617,7 +10949,7 @@ type ListArtifactsResponse struct {
 
 func (x *ListArtifactsResponse) Reset() {
 	*x = ListArtifactsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[124]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8629,7 +10961,7 @@ func (x *ListArtifactsResponse) String() string {
 func (*ListArtifactsResponse) ProtoMessage() {}
 
 func (x *ListArtifactsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[124]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8642,7 +10974,7 @@ func (x *ListArtifactsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListArtifactsResponse.ProtoReflect.Descriptor instead.
 func (*ListArtifactsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{124}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{157}
 }
 
 func (x *ListArtifactsResponse) GetItems() []*Artifact {
@@ -8662,7 +10994,7 @@ type GetArtifactDownloadRequest struct {
 
 func (x *GetArtifactDownloadRequest) Reset() {
 	*x = GetArtifactDownloadRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[125]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8674,7 +11006,7 @@ func (x *GetArtifactDownloadRequest) String() string {
 func (*GetArtifactDownloadRequest) ProtoMessage() {}
 
 func (x *GetArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[125]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8687,7 +11019,7 @@ func (x *GetArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetArtifactDownloadRequest.ProtoReflect.Descriptor instead.
 func (*GetArtifactDownloadRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{125}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{158}
 }
 
 func (x *GetArtifactDownloadRequest) GetWorkflowId() string {
@@ -8714,7 +11046,7 @@ type ArtifactDownload struct {
 
 func (x *ArtifactDownload) Reset() {
 	*x = ArtifactDownload{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[126]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8726,7 +11058,7 @@ func (x *ArtifactDownload) String() string {
 func (*ArtifactDownload) ProtoMessage() {}
 
 func (x *ArtifactDownload) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[126]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8739,7 +11071,7 @@ func (x *ArtifactDownload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArtifactDownload.ProtoReflect.Descriptor instead.
 func (*ArtifactDownload) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{126}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{159}
 }
 
 func (x *ArtifactDownload) GetUrl() string {
@@ -8776,7 +11108,7 @@ type Artifact struct {
 
 func (x *Artifact) Reset() {
 	*x = Artifact{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[127]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8788,7 +11120,7 @@ func (x *Artifact) String() string {
 func (*Artifact) ProtoMessage() {}
 
 func (x *Artifact) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[127]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8801,7 +11133,7 @@ func (x *Artifact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Artifact.ProtoReflect.Descriptor instead.
 func (*Artifact) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{127}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{160}
 }
 
 func (x *Artifact) GetId() string {
@@ -8898,7 +11230,7 @@ type ListWorkspaceEntriesRequest struct {
 
 func (x *ListWorkspaceEntriesRequest) Reset() {
 	*x = ListWorkspaceEntriesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[128]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[161]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8910,7 +11242,7 @@ func (x *ListWorkspaceEntriesRequest) String() string {
 func (*ListWorkspaceEntriesRequest) ProtoMessage() {}
 
 func (x *ListWorkspaceEntriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[128]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[161]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8923,7 +11255,7 @@ func (x *ListWorkspaceEntriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkspaceEntriesRequest.ProtoReflect.Descriptor instead.
 func (*ListWorkspaceEntriesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{128}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{161}
 }
 
 func (x *ListWorkspaceEntriesRequest) GetWorkflowId() string {
@@ -8951,7 +11283,7 @@ type ListWorkspaceEntriesResponse struct {
 
 func (x *ListWorkspaceEntriesResponse) Reset() {
 	*x = ListWorkspaceEntriesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[129]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8963,7 +11295,7 @@ func (x *ListWorkspaceEntriesResponse) String() string {
 func (*ListWorkspaceEntriesResponse) ProtoMessage() {}
 
 func (x *ListWorkspaceEntriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[129]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8976,7 +11308,7 @@ func (x *ListWorkspaceEntriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWorkspaceEntriesResponse.ProtoReflect.Descriptor instead.
 func (*ListWorkspaceEntriesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{129}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{162}
 }
 
 func (x *ListWorkspaceEntriesResponse) GetItems() []*WorkspaceEntry {
@@ -9010,7 +11342,7 @@ type GetWorkspaceFileRequest struct {
 
 func (x *GetWorkspaceFileRequest) Reset() {
 	*x = GetWorkspaceFileRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[130]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[163]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9022,7 +11354,7 @@ func (x *GetWorkspaceFileRequest) String() string {
 func (*GetWorkspaceFileRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[130]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[163]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9035,7 +11367,7 @@ func (x *GetWorkspaceFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceFileRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceFileRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{130}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{163}
 }
 
 func (x *GetWorkspaceFileRequest) GetWorkflowId() string {
@@ -9065,7 +11397,7 @@ type WorkspaceFile struct {
 
 func (x *WorkspaceFile) Reset() {
 	*x = WorkspaceFile{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[131]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[164]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9077,7 +11409,7 @@ func (x *WorkspaceFile) String() string {
 func (*WorkspaceFile) ProtoMessage() {}
 
 func (x *WorkspaceFile) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[131]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[164]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9090,7 +11422,7 @@ func (x *WorkspaceFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceFile.ProtoReflect.Descriptor instead.
 func (*WorkspaceFile) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{131}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{164}
 }
 
 func (x *WorkspaceFile) GetPath() string {
@@ -9145,7 +11477,7 @@ type ConfigureWorkflowGitSourceRequest struct {
 
 func (x *ConfigureWorkflowGitSourceRequest) Reset() {
 	*x = ConfigureWorkflowGitSourceRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[132]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[165]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9157,7 +11489,7 @@ func (x *ConfigureWorkflowGitSourceRequest) String() string {
 func (*ConfigureWorkflowGitSourceRequest) ProtoMessage() {}
 
 func (x *ConfigureWorkflowGitSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[132]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[165]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9170,7 +11502,7 @@ func (x *ConfigureWorkflowGitSourceRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ConfigureWorkflowGitSourceRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureWorkflowGitSourceRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{132}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{165}
 }
 
 func (x *ConfigureWorkflowGitSourceRequest) GetWorkflowId() string {
@@ -9249,7 +11581,7 @@ type WorkspaceEntry struct {
 
 func (x *WorkspaceEntry) Reset() {
 	*x = WorkspaceEntry{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[166]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9261,7 +11593,7 @@ func (x *WorkspaceEntry) String() string {
 func (*WorkspaceEntry) ProtoMessage() {}
 
 func (x *WorkspaceEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[133]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[166]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9274,7 +11606,7 @@ func (x *WorkspaceEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceEntry.ProtoReflect.Descriptor instead.
 func (*WorkspaceEntry) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{133}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{166}
 }
 
 func (x *WorkspaceEntry) GetPath() string {
@@ -9320,7 +11652,7 @@ type ListExpertsRequest struct {
 
 func (x *ListExpertsRequest) Reset() {
 	*x = ListExpertsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[167]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9332,7 +11664,7 @@ func (x *ListExpertsRequest) String() string {
 func (*ListExpertsRequest) ProtoMessage() {}
 
 func (x *ListExpertsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[134]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[167]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9345,7 +11677,7 @@ func (x *ListExpertsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExpertsRequest.ProtoReflect.Descriptor instead.
 func (*ListExpertsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{134}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{167}
 }
 
 type ListExpertsResponse struct {
@@ -9357,7 +11689,7 @@ type ListExpertsResponse struct {
 
 func (x *ListExpertsResponse) Reset() {
 	*x = ListExpertsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[168]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9369,7 +11701,7 @@ func (x *ListExpertsResponse) String() string {
 func (*ListExpertsResponse) ProtoMessage() {}
 
 func (x *ListExpertsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[135]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[168]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9382,7 +11714,7 @@ func (x *ListExpertsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExpertsResponse.ProtoReflect.Descriptor instead.
 func (*ListExpertsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{135}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{168}
 }
 
 func (x *ListExpertsResponse) GetItems() []*Expert {
@@ -9401,7 +11733,7 @@ type GetExpertRequest struct {
 
 func (x *GetExpertRequest) Reset() {
 	*x = GetExpertRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[169]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9413,7 +11745,7 @@ func (x *GetExpertRequest) String() string {
 func (*GetExpertRequest) ProtoMessage() {}
 
 func (x *GetExpertRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[136]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[169]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9426,7 +11758,7 @@ func (x *GetExpertRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExpertRequest.ProtoReflect.Descriptor instead.
 func (*GetExpertRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{136}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{169}
 }
 
 func (x *GetExpertRequest) GetExpertId() string {
@@ -9445,7 +11777,7 @@ type CreateExpertRequest struct {
 
 func (x *CreateExpertRequest) Reset() {
 	*x = CreateExpertRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[170]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9457,7 +11789,7 @@ func (x *CreateExpertRequest) String() string {
 func (*CreateExpertRequest) ProtoMessage() {}
 
 func (x *CreateExpertRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[137]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[170]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9470,7 +11802,7 @@ func (x *CreateExpertRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateExpertRequest.ProtoReflect.Descriptor instead.
 func (*CreateExpertRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{137}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{170}
 }
 
 func (x *CreateExpertRequest) GetExpert() *ExpertInput {
@@ -9491,7 +11823,7 @@ type UpdateExpertRequest struct {
 
 func (x *UpdateExpertRequest) Reset() {
 	*x = UpdateExpertRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[171]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9503,7 +11835,7 @@ func (x *UpdateExpertRequest) String() string {
 func (*UpdateExpertRequest) ProtoMessage() {}
 
 func (x *UpdateExpertRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[138]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[171]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9516,7 +11848,7 @@ func (x *UpdateExpertRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateExpertRequest.ProtoReflect.Descriptor instead.
 func (*UpdateExpertRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{138}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{171}
 }
 
 func (x *UpdateExpertRequest) GetExpertId() string {
@@ -9549,7 +11881,7 @@ type DeleteExpertRequest struct {
 
 func (x *DeleteExpertRequest) Reset() {
 	*x = DeleteExpertRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[172]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9561,7 +11893,7 @@ func (x *DeleteExpertRequest) String() string {
 func (*DeleteExpertRequest) ProtoMessage() {}
 
 func (x *DeleteExpertRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[139]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[172]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9574,7 +11906,7 @@ func (x *DeleteExpertRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteExpertRequest.ProtoReflect.Descriptor instead.
 func (*DeleteExpertRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{139}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{172}
 }
 
 func (x *DeleteExpertRequest) GetExpertId() string {
@@ -9603,7 +11935,7 @@ type ExpertInput struct {
 
 func (x *ExpertInput) Reset() {
 	*x = ExpertInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[173]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9615,7 +11947,7 @@ func (x *ExpertInput) String() string {
 func (*ExpertInput) ProtoMessage() {}
 
 func (x *ExpertInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[140]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[173]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9628,7 +11960,7 @@ func (x *ExpertInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertInput.ProtoReflect.Descriptor instead.
 func (*ExpertInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{140}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{173}
 }
 
 func (x *ExpertInput) GetName() string {
@@ -9741,7 +12073,7 @@ type Expert struct {
 
 func (x *Expert) Reset() {
 	*x = Expert{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[174]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9753,7 +12085,7 @@ func (x *Expert) String() string {
 func (*Expert) ProtoMessage() {}
 
 func (x *Expert) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[141]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[174]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9766,7 +12098,7 @@ func (x *Expert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Expert.ProtoReflect.Descriptor instead.
 func (*Expert) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{141}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{174}
 }
 
 func (x *Expert) GetId() string {
@@ -9952,7 +12284,7 @@ type ListExpertTeamsRequest struct {
 
 func (x *ListExpertTeamsRequest) Reset() {
 	*x = ListExpertTeamsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[175]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9964,7 +12296,7 @@ func (x *ListExpertTeamsRequest) String() string {
 func (*ListExpertTeamsRequest) ProtoMessage() {}
 
 func (x *ListExpertTeamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[142]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[175]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9977,7 +12309,7 @@ func (x *ListExpertTeamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExpertTeamsRequest.ProtoReflect.Descriptor instead.
 func (*ListExpertTeamsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{142}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{175}
 }
 
 type ListExpertTeamsResponse struct {
@@ -9989,7 +12321,7 @@ type ListExpertTeamsResponse struct {
 
 func (x *ListExpertTeamsResponse) Reset() {
 	*x = ListExpertTeamsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[176]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10001,7 +12333,7 @@ func (x *ListExpertTeamsResponse) String() string {
 func (*ListExpertTeamsResponse) ProtoMessage() {}
 
 func (x *ListExpertTeamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[143]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[176]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10014,7 +12346,7 @@ func (x *ListExpertTeamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExpertTeamsResponse.ProtoReflect.Descriptor instead.
 func (*ListExpertTeamsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{143}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{176}
 }
 
 func (x *ListExpertTeamsResponse) GetItems() []*ExpertTeam {
@@ -10033,7 +12365,7 @@ type GetExpertTeamRequest struct {
 
 func (x *GetExpertTeamRequest) Reset() {
 	*x = GetExpertTeamRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[177]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10045,7 +12377,7 @@ func (x *GetExpertTeamRequest) String() string {
 func (*GetExpertTeamRequest) ProtoMessage() {}
 
 func (x *GetExpertTeamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[144]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[177]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10058,7 +12390,7 @@ func (x *GetExpertTeamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetExpertTeamRequest.ProtoReflect.Descriptor instead.
 func (*GetExpertTeamRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{144}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{177}
 }
 
 func (x *GetExpertTeamRequest) GetExpertTeamId() string {
@@ -10077,7 +12409,7 @@ type CreateExpertTeamRequest struct {
 
 func (x *CreateExpertTeamRequest) Reset() {
 	*x = CreateExpertTeamRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[178]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10089,7 +12421,7 @@ func (x *CreateExpertTeamRequest) String() string {
 func (*CreateExpertTeamRequest) ProtoMessage() {}
 
 func (x *CreateExpertTeamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[145]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[178]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10102,7 +12434,7 @@ func (x *CreateExpertTeamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateExpertTeamRequest.ProtoReflect.Descriptor instead.
 func (*CreateExpertTeamRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{145}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{178}
 }
 
 func (x *CreateExpertTeamRequest) GetExpertTeam() *ExpertTeamInput {
@@ -10123,7 +12455,7 @@ type UpdateExpertTeamRequest struct {
 
 func (x *UpdateExpertTeamRequest) Reset() {
 	*x = UpdateExpertTeamRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[179]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10135,7 +12467,7 @@ func (x *UpdateExpertTeamRequest) String() string {
 func (*UpdateExpertTeamRequest) ProtoMessage() {}
 
 func (x *UpdateExpertTeamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[146]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[179]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10148,7 +12480,7 @@ func (x *UpdateExpertTeamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateExpertTeamRequest.ProtoReflect.Descriptor instead.
 func (*UpdateExpertTeamRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{146}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{179}
 }
 
 func (x *UpdateExpertTeamRequest) GetExpertTeamId() string {
@@ -10181,7 +12513,7 @@ type DeleteExpertTeamRequest struct {
 
 func (x *DeleteExpertTeamRequest) Reset() {
 	*x = DeleteExpertTeamRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[180]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10193,7 +12525,7 @@ func (x *DeleteExpertTeamRequest) String() string {
 func (*DeleteExpertTeamRequest) ProtoMessage() {}
 
 func (x *DeleteExpertTeamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[147]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[180]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10206,7 +12538,7 @@ func (x *DeleteExpertTeamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteExpertTeamRequest.ProtoReflect.Descriptor instead.
 func (*DeleteExpertTeamRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{147}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{180}
 }
 
 func (x *DeleteExpertTeamRequest) GetExpertTeamId() string {
@@ -10230,7 +12562,7 @@ type ExpertTeamInput struct {
 
 func (x *ExpertTeamInput) Reset() {
 	*x = ExpertTeamInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[181]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10242,7 +12574,7 @@ func (x *ExpertTeamInput) String() string {
 func (*ExpertTeamInput) ProtoMessage() {}
 
 func (x *ExpertTeamInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[148]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[181]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10255,7 +12587,7 @@ func (x *ExpertTeamInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertTeamInput.ProtoReflect.Descriptor instead.
 func (*ExpertTeamInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{148}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{181}
 }
 
 func (x *ExpertTeamInput) GetName() string {
@@ -10312,7 +12644,7 @@ type ExpertTeamMemberInput struct {
 
 func (x *ExpertTeamMemberInput) Reset() {
 	*x = ExpertTeamMemberInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[182]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10324,7 +12656,7 @@ func (x *ExpertTeamMemberInput) String() string {
 func (*ExpertTeamMemberInput) ProtoMessage() {}
 
 func (x *ExpertTeamMemberInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[149]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[182]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10337,7 +12669,7 @@ func (x *ExpertTeamMemberInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertTeamMemberInput.ProtoReflect.Descriptor instead.
 func (*ExpertTeamMemberInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{149}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{182}
 }
 
 func (x *ExpertTeamMemberInput) GetId() string {
@@ -10381,7 +12713,7 @@ type ExpertTeamMember struct {
 
 func (x *ExpertTeamMember) Reset() {
 	*x = ExpertTeamMember{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[183]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10393,7 +12725,7 @@ func (x *ExpertTeamMember) String() string {
 func (*ExpertTeamMember) ProtoMessage() {}
 
 func (x *ExpertTeamMember) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[150]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[183]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10406,7 +12738,7 @@ func (x *ExpertTeamMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertTeamMember.ProtoReflect.Descriptor instead.
 func (*ExpertTeamMember) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{150}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{183}
 }
 
 func (x *ExpertTeamMember) GetId() string {
@@ -10466,7 +12798,7 @@ type ExpertTeam struct {
 
 func (x *ExpertTeam) Reset() {
 	*x = ExpertTeam{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[184]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10478,7 +12810,7 @@ func (x *ExpertTeam) String() string {
 func (*ExpertTeam) ProtoMessage() {}
 
 func (x *ExpertTeam) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[151]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[184]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10491,7 +12823,7 @@ func (x *ExpertTeam) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertTeam.ProtoReflect.Descriptor instead.
 func (*ExpertTeam) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{151}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{184}
 }
 
 func (x *ExpertTeam) GetId() string {
@@ -10612,7 +12944,7 @@ type ExpertStage struct {
 
 func (x *ExpertStage) Reset() {
 	*x = ExpertStage{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[185]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10624,7 +12956,7 @@ func (x *ExpertStage) String() string {
 func (*ExpertStage) ProtoMessage() {}
 
 func (x *ExpertStage) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[152]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[185]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10637,7 +12969,7 @@ func (x *ExpertStage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertStage.ProtoReflect.Descriptor instead.
 func (*ExpertStage) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{152}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{185}
 }
 
 func (x *ExpertStage) GetExpertId() string {
@@ -10734,7 +13066,7 @@ type CreditConsumption struct {
 
 func (x *CreditConsumption) Reset() {
 	*x = CreditConsumption{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[186]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10746,7 +13078,7 @@ func (x *CreditConsumption) String() string {
 func (*CreditConsumption) ProtoMessage() {}
 
 func (x *CreditConsumption) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[153]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[186]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10759,7 +13091,7 @@ func (x *CreditConsumption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreditConsumption.ProtoReflect.Descriptor instead.
 func (*CreditConsumption) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{153}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{186}
 }
 
 func (x *CreditConsumption) GetTotalHundredths() int64 {
@@ -10796,7 +13128,7 @@ type CreditStageConsumption struct {
 
 func (x *CreditStageConsumption) Reset() {
 	*x = CreditStageConsumption{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[187]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10808,7 +13140,7 @@ func (x *CreditStageConsumption) String() string {
 func (*CreditStageConsumption) ProtoMessage() {}
 
 func (x *CreditStageConsumption) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[154]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[187]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10821,7 +13153,7 @@ func (x *CreditStageConsumption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreditStageConsumption.ProtoReflect.Descriptor instead.
 func (*CreditStageConsumption) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{154}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{187}
 }
 
 func (x *CreditStageConsumption) GetStagePosition() int32 {
@@ -10916,7 +13248,7 @@ type GetSettingsRequest struct {
 
 func (x *GetSettingsRequest) Reset() {
 	*x = GetSettingsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[188]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10928,7 +13260,7 @@ func (x *GetSettingsRequest) String() string {
 func (*GetSettingsRequest) ProtoMessage() {}
 
 func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[155]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[188]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10941,25 +13273,26 @@ func (x *GetSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{155}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{188}
 }
 
 type UpdateSettingsRequest struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	Personality             string                 `protobuf:"bytes,1,opt,name=personality,proto3" json:"personality,omitempty"`
-	PersonalityInstructions string                 `protobuf:"bytes,2,opt,name=personality_instructions,json=personalityInstructions,proto3" json:"personality_instructions,omitempty"`
-	RuntimeModelDefaults    []*RuntimeModelDefault `protobuf:"bytes,3,rep,name=runtime_model_defaults,json=runtimeModelDefaults,proto3" json:"runtime_model_defaults,omitempty"`
-	DefaultRuntimeEngine    string                 `protobuf:"bytes,4,opt,name=default_runtime_engine,json=defaultRuntimeEngine,proto3" json:"default_runtime_engine,omitempty"`
-	Language                string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
-	Timezone                string                 `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	ExpectedVersion         int64                  `protobuf:"varint,7,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Personality              string                 `protobuf:"bytes,1,opt,name=personality,proto3" json:"personality,omitempty"`
+	PersonalityInstructions  string                 `protobuf:"bytes,2,opt,name=personality_instructions,json=personalityInstructions,proto3" json:"personality_instructions,omitempty"`
+	RuntimeModelDefaults     []*RuntimeModelDefault `protobuf:"bytes,3,rep,name=runtime_model_defaults,json=runtimeModelDefaults,proto3" json:"runtime_model_defaults,omitempty"`
+	DefaultRuntimeEngine     string                 `protobuf:"bytes,4,opt,name=default_runtime_engine,json=defaultRuntimeEngine,proto3" json:"default_runtime_engine,omitempty"`
+	Language                 string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
+	Timezone                 string                 `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	ExpectedVersion          int64                  `protobuf:"varint,7,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	InheritPlatformExecution *bool                  `protobuf:"varint,8,opt,name=inherit_platform_execution,json=inheritPlatformExecution,proto3,oneof" json:"inherit_platform_execution,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *UpdateSettingsRequest) Reset() {
 	*x = UpdateSettingsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[189]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10971,7 +13304,7 @@ func (x *UpdateSettingsRequest) String() string {
 func (*UpdateSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[156]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[189]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10984,7 +13317,7 @@ func (x *UpdateSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{156}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{189}
 }
 
 func (x *UpdateSettingsRequest) GetPersonality() string {
@@ -11036,22 +13369,31 @@ func (x *UpdateSettingsRequest) GetExpectedVersion() int64 {
 	return 0
 }
 
+func (x *UpdateSettingsRequest) GetInheritPlatformExecution() bool {
+	if x != nil && x.InheritPlatformExecution != nil {
+		return *x.InheritPlatformExecution
+	}
+	return false
+}
+
 type PersonalSettings struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	Personality             string                 `protobuf:"bytes,1,opt,name=personality,proto3" json:"personality,omitempty"`
-	PersonalityInstructions string                 `protobuf:"bytes,2,opt,name=personality_instructions,json=personalityInstructions,proto3" json:"personality_instructions,omitempty"`
-	RuntimeModelDefaults    []*RuntimeModelDefault `protobuf:"bytes,3,rep,name=runtime_model_defaults,json=runtimeModelDefaults,proto3" json:"runtime_model_defaults,omitempty"`
-	DefaultRuntimeEngine    string                 `protobuf:"bytes,4,opt,name=default_runtime_engine,json=defaultRuntimeEngine,proto3" json:"default_runtime_engine,omitempty"`
-	Language                string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
-	Timezone                string                 `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	Version                 int64                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	Personality                string                 `protobuf:"bytes,1,opt,name=personality,proto3" json:"personality,omitempty"`
+	PersonalityInstructions    string                 `protobuf:"bytes,2,opt,name=personality_instructions,json=personalityInstructions,proto3" json:"personality_instructions,omitempty"`
+	RuntimeModelDefaults       []*RuntimeModelDefault `protobuf:"bytes,3,rep,name=runtime_model_defaults,json=runtimeModelDefaults,proto3" json:"runtime_model_defaults,omitempty"`
+	DefaultRuntimeEngine       string                 `protobuf:"bytes,4,opt,name=default_runtime_engine,json=defaultRuntimeEngine,proto3" json:"default_runtime_engine,omitempty"`
+	Language                   string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
+	Timezone                   string                 `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Version                    int64                  `protobuf:"varint,7,opt,name=version,proto3" json:"version,omitempty"`
+	ExecutionInherited         bool                   `protobuf:"varint,8,opt,name=execution_inherited,json=executionInherited,proto3" json:"execution_inherited,omitempty"`
+	PlatformExecutionAvailable bool                   `protobuf:"varint,9,opt,name=platform_execution_available,json=platformExecutionAvailable,proto3" json:"platform_execution_available,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *PersonalSettings) Reset() {
 	*x = PersonalSettings{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[190]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11063,7 +13405,7 @@ func (x *PersonalSettings) String() string {
 func (*PersonalSettings) ProtoMessage() {}
 
 func (x *PersonalSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[157]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[190]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11076,7 +13418,7 @@ func (x *PersonalSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PersonalSettings.ProtoReflect.Descriptor instead.
 func (*PersonalSettings) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{157}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{190}
 }
 
 func (x *PersonalSettings) GetPersonality() string {
@@ -11128,6 +13470,208 @@ func (x *PersonalSettings) GetVersion() int64 {
 	return 0
 }
 
+func (x *PersonalSettings) GetExecutionInherited() bool {
+	if x != nil {
+		return x.ExecutionInherited
+	}
+	return false
+}
+
+func (x *PersonalSettings) GetPlatformExecutionAvailable() bool {
+	if x != nil {
+		return x.PlatformExecutionAvailable
+	}
+	return false
+}
+
+type GetPlatformExecutionDefaultRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPlatformExecutionDefaultRequest) Reset() {
+	*x = GetPlatformExecutionDefaultRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[191]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPlatformExecutionDefaultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPlatformExecutionDefaultRequest) ProtoMessage() {}
+
+func (x *GetPlatformExecutionDefaultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[191]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPlatformExecutionDefaultRequest.ProtoReflect.Descriptor instead.
+func (*GetPlatformExecutionDefaultRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{191}
+}
+
+type SetPlatformExecutionDefaultRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	RuntimeEngine   string                 `protobuf:"bytes,1,opt,name=runtime_engine,json=runtimeEngine,proto3" json:"runtime_engine,omitempty"`
+	ProviderModelId string                 `protobuf:"bytes,2,opt,name=provider_model_id,json=providerModelId,proto3" json:"provider_model_id,omitempty"`
+	ValidationRunId string                 `protobuf:"bytes,3,opt,name=validation_run_id,json=validationRunId,proto3" json:"validation_run_id,omitempty"`
+	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetPlatformExecutionDefaultRequest) Reset() {
+	*x = SetPlatformExecutionDefaultRequest{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[192]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPlatformExecutionDefaultRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPlatformExecutionDefaultRequest) ProtoMessage() {}
+
+func (x *SetPlatformExecutionDefaultRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[192]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPlatformExecutionDefaultRequest.ProtoReflect.Descriptor instead.
+func (*SetPlatformExecutionDefaultRequest) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{192}
+}
+
+func (x *SetPlatformExecutionDefaultRequest) GetRuntimeEngine() string {
+	if x != nil {
+		return x.RuntimeEngine
+	}
+	return ""
+}
+
+func (x *SetPlatformExecutionDefaultRequest) GetProviderModelId() string {
+	if x != nil {
+		return x.ProviderModelId
+	}
+	return ""
+}
+
+func (x *SetPlatformExecutionDefaultRequest) GetValidationRunId() string {
+	if x != nil {
+		return x.ValidationRunId
+	}
+	return ""
+}
+
+func (x *SetPlatformExecutionDefaultRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+type PlatformExecutionDefault struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	RuntimeEngine   string                 `protobuf:"bytes,1,opt,name=runtime_engine,json=runtimeEngine,proto3" json:"runtime_engine,omitempty"`
+	ProviderModelId string                 `protobuf:"bytes,2,opt,name=provider_model_id,json=providerModelId,proto3" json:"provider_model_id,omitempty"`
+	ValidationRunId string                 `protobuf:"bytes,3,opt,name=validation_run_id,json=validationRunId,proto3" json:"validation_run_id,omitempty"`
+	UpdatedByUserId string                 `protobuf:"bytes,4,opt,name=updated_by_user_id,json=updatedByUserId,proto3" json:"updated_by_user_id,omitempty"`
+	Version         int64                  `protobuf:"varint,5,opt,name=version,proto3" json:"version,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PlatformExecutionDefault) Reset() {
+	*x = PlatformExecutionDefault{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[193]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlatformExecutionDefault) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlatformExecutionDefault) ProtoMessage() {}
+
+func (x *PlatformExecutionDefault) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[193]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlatformExecutionDefault.ProtoReflect.Descriptor instead.
+func (*PlatformExecutionDefault) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{193}
+}
+
+func (x *PlatformExecutionDefault) GetRuntimeEngine() string {
+	if x != nil {
+		return x.RuntimeEngine
+	}
+	return ""
+}
+
+func (x *PlatformExecutionDefault) GetProviderModelId() string {
+	if x != nil {
+		return x.ProviderModelId
+	}
+	return ""
+}
+
+func (x *PlatformExecutionDefault) GetValidationRunId() string {
+	if x != nil {
+		return x.ValidationRunId
+	}
+	return ""
+}
+
+func (x *PlatformExecutionDefault) GetUpdatedByUserId() string {
+	if x != nil {
+		return x.UpdatedByUserId
+	}
+	return ""
+}
+
+func (x *PlatformExecutionDefault) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *PlatformExecutionDefault) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type RuntimeModelDefault struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	RuntimeEngine   string                 `protobuf:"bytes,1,opt,name=runtime_engine,json=runtimeEngine,proto3" json:"runtime_engine,omitempty"`
@@ -11138,7 +13682,7 @@ type RuntimeModelDefault struct {
 
 func (x *RuntimeModelDefault) Reset() {
 	*x = RuntimeModelDefault{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[194]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11150,7 +13694,7 @@ func (x *RuntimeModelDefault) String() string {
 func (*RuntimeModelDefault) ProtoMessage() {}
 
 func (x *RuntimeModelDefault) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[158]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[194]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11163,7 +13707,7 @@ func (x *RuntimeModelDefault) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeModelDefault.ProtoReflect.Descriptor instead.
 func (*RuntimeModelDefault) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{158}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{194}
 }
 
 func (x *RuntimeModelDefault) GetRuntimeEngine() string {
@@ -11188,7 +13732,7 @@ type ListRuntimeEnginesRequest struct {
 
 func (x *ListRuntimeEnginesRequest) Reset() {
 	*x = ListRuntimeEnginesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[195]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11200,7 +13744,7 @@ func (x *ListRuntimeEnginesRequest) String() string {
 func (*ListRuntimeEnginesRequest) ProtoMessage() {}
 
 func (x *ListRuntimeEnginesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[159]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[195]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11213,7 +13757,7 @@ func (x *ListRuntimeEnginesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuntimeEnginesRequest.ProtoReflect.Descriptor instead.
 func (*ListRuntimeEnginesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{159}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{195}
 }
 
 type ListRuntimeEnginesResponse struct {
@@ -11225,7 +13769,7 @@ type ListRuntimeEnginesResponse struct {
 
 func (x *ListRuntimeEnginesResponse) Reset() {
 	*x = ListRuntimeEnginesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[196]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11237,7 +13781,7 @@ func (x *ListRuntimeEnginesResponse) String() string {
 func (*ListRuntimeEnginesResponse) ProtoMessage() {}
 
 func (x *ListRuntimeEnginesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[160]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[196]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11250,7 +13794,7 @@ func (x *ListRuntimeEnginesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuntimeEnginesResponse.ProtoReflect.Descriptor instead.
 func (*ListRuntimeEnginesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{160}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{196}
 }
 
 func (x *ListRuntimeEnginesResponse) GetItems() []*RuntimeEngineStatus {
@@ -11272,7 +13816,7 @@ type RuntimeEngineStatus struct {
 
 func (x *RuntimeEngineStatus) Reset() {
 	*x = RuntimeEngineStatus{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[161]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[197]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11284,7 +13828,7 @@ func (x *RuntimeEngineStatus) String() string {
 func (*RuntimeEngineStatus) ProtoMessage() {}
 
 func (x *RuntimeEngineStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[161]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[197]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11297,7 +13841,7 @@ func (x *RuntimeEngineStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeEngineStatus.ProtoReflect.Descriptor instead.
 func (*RuntimeEngineStatus) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{161}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{197}
 }
 
 func (x *RuntimeEngineStatus) GetName() string {
@@ -11336,7 +13880,7 @@ type ListModelProviderPresetsRequest struct {
 
 func (x *ListModelProviderPresetsRequest) Reset() {
 	*x = ListModelProviderPresetsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[162]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11348,7 +13892,7 @@ func (x *ListModelProviderPresetsRequest) String() string {
 func (*ListModelProviderPresetsRequest) ProtoMessage() {}
 
 func (x *ListModelProviderPresetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[162]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11361,7 +13905,7 @@ func (x *ListModelProviderPresetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelProviderPresetsRequest.ProtoReflect.Descriptor instead.
 func (*ListModelProviderPresetsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{162}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{198}
 }
 
 type ListModelProviderPresetsResponse struct {
@@ -11373,7 +13917,7 @@ type ListModelProviderPresetsResponse struct {
 
 func (x *ListModelProviderPresetsResponse) Reset() {
 	*x = ListModelProviderPresetsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[163]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11385,7 +13929,7 @@ func (x *ListModelProviderPresetsResponse) String() string {
 func (*ListModelProviderPresetsResponse) ProtoMessage() {}
 
 func (x *ListModelProviderPresetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[163]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11398,7 +13942,7 @@ func (x *ListModelProviderPresetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListModelProviderPresetsResponse.ProtoReflect.Descriptor instead.
 func (*ListModelProviderPresetsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{163}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{199}
 }
 
 func (x *ListModelProviderPresetsResponse) GetItems() []*ModelProviderPreset {
@@ -11420,7 +13964,7 @@ type ModelProviderPreset struct {
 
 func (x *ModelProviderPreset) Reset() {
 	*x = ModelProviderPreset{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[164]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11432,7 +13976,7 @@ func (x *ModelProviderPreset) String() string {
 func (*ModelProviderPreset) ProtoMessage() {}
 
 func (x *ModelProviderPreset) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[164]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11445,7 +13989,7 @@ func (x *ModelProviderPreset) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelProviderPreset.ProtoReflect.Descriptor instead.
 func (*ModelProviderPreset) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{164}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{200}
 }
 
 func (x *ModelProviderPreset) GetProviderType() string {
@@ -11484,7 +14028,7 @@ type ListModelProviderConnectionsRequest struct {
 
 func (x *ListModelProviderConnectionsRequest) Reset() {
 	*x = ListModelProviderConnectionsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[165]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[201]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11496,7 +14040,7 @@ func (x *ListModelProviderConnectionsRequest) String() string {
 func (*ListModelProviderConnectionsRequest) ProtoMessage() {}
 
 func (x *ListModelProviderConnectionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[165]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[201]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11509,7 +14053,7 @@ func (x *ListModelProviderConnectionsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListModelProviderConnectionsRequest.ProtoReflect.Descriptor instead.
 func (*ListModelProviderConnectionsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{165}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{201}
 }
 
 type ListModelProviderConnectionsResponse struct {
@@ -11521,7 +14065,7 @@ type ListModelProviderConnectionsResponse struct {
 
 func (x *ListModelProviderConnectionsResponse) Reset() {
 	*x = ListModelProviderConnectionsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[166]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[202]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11533,7 +14077,7 @@ func (x *ListModelProviderConnectionsResponse) String() string {
 func (*ListModelProviderConnectionsResponse) ProtoMessage() {}
 
 func (x *ListModelProviderConnectionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[166]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[202]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11546,7 +14090,7 @@ func (x *ListModelProviderConnectionsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListModelProviderConnectionsResponse.ProtoReflect.Descriptor instead.
 func (*ListModelProviderConnectionsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{166}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{202}
 }
 
 func (x *ListModelProviderConnectionsResponse) GetItems() []*ModelProviderConnection {
@@ -11569,7 +14113,7 @@ type CreateModelProviderConnectionRequest struct {
 
 func (x *CreateModelProviderConnectionRequest) Reset() {
 	*x = CreateModelProviderConnectionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[167]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[203]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11581,7 +14125,7 @@ func (x *CreateModelProviderConnectionRequest) String() string {
 func (*CreateModelProviderConnectionRequest) ProtoMessage() {}
 
 func (x *CreateModelProviderConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[167]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[203]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11594,7 +14138,7 @@ func (x *CreateModelProviderConnectionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CreateModelProviderConnectionRequest.ProtoReflect.Descriptor instead.
 func (*CreateModelProviderConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{167}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{203}
 }
 
 func (x *CreateModelProviderConnectionRequest) GetName() string {
@@ -11646,7 +14190,7 @@ type UpdateModelProviderConnectionRequest struct {
 
 func (x *UpdateModelProviderConnectionRequest) Reset() {
 	*x = UpdateModelProviderConnectionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[168]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[204]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11658,7 +14202,7 @@ func (x *UpdateModelProviderConnectionRequest) String() string {
 func (*UpdateModelProviderConnectionRequest) ProtoMessage() {}
 
 func (x *UpdateModelProviderConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[168]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[204]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11671,7 +14215,7 @@ func (x *UpdateModelProviderConnectionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use UpdateModelProviderConnectionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateModelProviderConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{168}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{204}
 }
 
 func (x *UpdateModelProviderConnectionRequest) GetConnectionId() string {
@@ -11725,7 +14269,7 @@ type DeleteModelProviderConnectionRequest struct {
 
 func (x *DeleteModelProviderConnectionRequest) Reset() {
 	*x = DeleteModelProviderConnectionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[169]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[205]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11737,7 +14281,7 @@ func (x *DeleteModelProviderConnectionRequest) String() string {
 func (*DeleteModelProviderConnectionRequest) ProtoMessage() {}
 
 func (x *DeleteModelProviderConnectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[169]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[205]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11750,7 +14294,7 @@ func (x *DeleteModelProviderConnectionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use DeleteModelProviderConnectionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteModelProviderConnectionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{169}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{205}
 }
 
 func (x *DeleteModelProviderConnectionRequest) GetConnectionId() string {
@@ -11769,7 +14313,7 @@ type RefreshProviderModelsRequest struct {
 
 func (x *RefreshProviderModelsRequest) Reset() {
 	*x = RefreshProviderModelsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[170]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[206]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11781,7 +14325,7 @@ func (x *RefreshProviderModelsRequest) String() string {
 func (*RefreshProviderModelsRequest) ProtoMessage() {}
 
 func (x *RefreshProviderModelsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[170]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[206]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11794,7 +14338,7 @@ func (x *RefreshProviderModelsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshProviderModelsRequest.ProtoReflect.Descriptor instead.
 func (*RefreshProviderModelsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{170}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{206}
 }
 
 func (x *RefreshProviderModelsRequest) GetConnectionId() string {
@@ -11814,7 +14358,7 @@ type CreateProviderModelRequest struct {
 
 func (x *CreateProviderModelRequest) Reset() {
 	*x = CreateProviderModelRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[171]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[207]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11826,7 +14370,7 @@ func (x *CreateProviderModelRequest) String() string {
 func (*CreateProviderModelRequest) ProtoMessage() {}
 
 func (x *CreateProviderModelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[171]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[207]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11839,7 +14383,7 @@ func (x *CreateProviderModelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProviderModelRequest.ProtoReflect.Descriptor instead.
 func (*CreateProviderModelRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{171}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{207}
 }
 
 func (x *CreateProviderModelRequest) GetConnectionId() string {
@@ -11879,7 +14423,7 @@ type ModelProviderConnection struct {
 
 func (x *ModelProviderConnection) Reset() {
 	*x = ModelProviderConnection{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[172]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[208]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11891,7 +14435,7 @@ func (x *ModelProviderConnection) String() string {
 func (*ModelProviderConnection) ProtoMessage() {}
 
 func (x *ModelProviderConnection) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[172]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[208]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11904,7 +14448,7 @@ func (x *ModelProviderConnection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ModelProviderConnection.ProtoReflect.Descriptor instead.
 func (*ModelProviderConnection) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{172}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{208}
 }
 
 func (x *ModelProviderConnection) GetId() string {
@@ -12027,7 +14571,7 @@ type ProviderModel struct {
 
 func (x *ProviderModel) Reset() {
 	*x = ProviderModel{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[173]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[209]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12039,7 +14583,7 @@ func (x *ProviderModel) String() string {
 func (*ProviderModel) ProtoMessage() {}
 
 func (x *ProviderModel) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[173]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[209]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12052,7 +14596,7 @@ func (x *ProviderModel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderModel.ProtoReflect.Descriptor instead.
 func (*ProviderModel) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{173}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{209}
 }
 
 func (x *ProviderModel) GetId() string {
@@ -12115,7 +14659,7 @@ type RuntimeModelCompatibility struct {
 
 func (x *RuntimeModelCompatibility) Reset() {
 	*x = RuntimeModelCompatibility{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[174]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[210]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12127,7 +14671,7 @@ func (x *RuntimeModelCompatibility) String() string {
 func (*RuntimeModelCompatibility) ProtoMessage() {}
 
 func (x *RuntimeModelCompatibility) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[174]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[210]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12140,7 +14684,7 @@ func (x *RuntimeModelCompatibility) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeModelCompatibility.ProtoReflect.Descriptor instead.
 func (*RuntimeModelCompatibility) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{174}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{210}
 }
 
 func (x *RuntimeModelCompatibility) GetRuntimeEngine() string {
@@ -12172,7 +14716,7 @@ type ListMCPConnectorsRequest struct {
 
 func (x *ListMCPConnectorsRequest) Reset() {
 	*x = ListMCPConnectorsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[175]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[211]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12184,7 +14728,7 @@ func (x *ListMCPConnectorsRequest) String() string {
 func (*ListMCPConnectorsRequest) ProtoMessage() {}
 
 func (x *ListMCPConnectorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[175]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[211]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12197,7 +14741,7 @@ func (x *ListMCPConnectorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMCPConnectorsRequest.ProtoReflect.Descriptor instead.
 func (*ListMCPConnectorsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{175}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{211}
 }
 
 type ListMCPConnectorsResponse struct {
@@ -12209,7 +14753,7 @@ type ListMCPConnectorsResponse struct {
 
 func (x *ListMCPConnectorsResponse) Reset() {
 	*x = ListMCPConnectorsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[176]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[212]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12221,7 +14765,7 @@ func (x *ListMCPConnectorsResponse) String() string {
 func (*ListMCPConnectorsResponse) ProtoMessage() {}
 
 func (x *ListMCPConnectorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[176]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[212]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12234,7 +14778,7 @@ func (x *ListMCPConnectorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMCPConnectorsResponse.ProtoReflect.Descriptor instead.
 func (*ListMCPConnectorsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{176}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{212}
 }
 
 func (x *ListMCPConnectorsResponse) GetItems() []*MCPConnector {
@@ -12253,7 +14797,7 @@ type CreateMCPConnectorRequest struct {
 
 func (x *CreateMCPConnectorRequest) Reset() {
 	*x = CreateMCPConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[177]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[213]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12265,7 +14809,7 @@ func (x *CreateMCPConnectorRequest) String() string {
 func (*CreateMCPConnectorRequest) ProtoMessage() {}
 
 func (x *CreateMCPConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[177]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[213]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12278,7 +14822,7 @@ func (x *CreateMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMCPConnectorRequest.ProtoReflect.Descriptor instead.
 func (*CreateMCPConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{177}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{213}
 }
 
 func (x *CreateMCPConnectorRequest) GetMcpConnector() *MCPConnectorInput {
@@ -12299,7 +14843,7 @@ type UpdateMCPConnectorRequest struct {
 
 func (x *UpdateMCPConnectorRequest) Reset() {
 	*x = UpdateMCPConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[178]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[214]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12311,7 +14855,7 @@ func (x *UpdateMCPConnectorRequest) String() string {
 func (*UpdateMCPConnectorRequest) ProtoMessage() {}
 
 func (x *UpdateMCPConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[178]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[214]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12324,7 +14868,7 @@ func (x *UpdateMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMCPConnectorRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMCPConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{178}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{214}
 }
 
 func (x *UpdateMCPConnectorRequest) GetMcpConnectorId() string {
@@ -12357,7 +14901,7 @@ type TestMCPConnectorRequest struct {
 
 func (x *TestMCPConnectorRequest) Reset() {
 	*x = TestMCPConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[179]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[215]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12369,7 +14913,7 @@ func (x *TestMCPConnectorRequest) String() string {
 func (*TestMCPConnectorRequest) ProtoMessage() {}
 
 func (x *TestMCPConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[179]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[215]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12382,7 +14926,7 @@ func (x *TestMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TestMCPConnectorRequest.ProtoReflect.Descriptor instead.
 func (*TestMCPConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{179}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{215}
 }
 
 func (x *TestMCPConnectorRequest) GetMcpConnectorId() string {
@@ -12401,7 +14945,7 @@ type GetMCPConnectorDeletionImpactRequest struct {
 
 func (x *GetMCPConnectorDeletionImpactRequest) Reset() {
 	*x = GetMCPConnectorDeletionImpactRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[180]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[216]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12413,7 +14957,7 @@ func (x *GetMCPConnectorDeletionImpactRequest) String() string {
 func (*GetMCPConnectorDeletionImpactRequest) ProtoMessage() {}
 
 func (x *GetMCPConnectorDeletionImpactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[180]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[216]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12426,7 +14970,7 @@ func (x *GetMCPConnectorDeletionImpactRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetMCPConnectorDeletionImpactRequest.ProtoReflect.Descriptor instead.
 func (*GetMCPConnectorDeletionImpactRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{180}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{216}
 }
 
 func (x *GetMCPConnectorDeletionImpactRequest) GetMcpConnectorId() string {
@@ -12446,7 +14990,7 @@ type DeleteMCPConnectorRequest struct {
 
 func (x *DeleteMCPConnectorRequest) Reset() {
 	*x = DeleteMCPConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[181]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[217]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12458,7 +15002,7 @@ func (x *DeleteMCPConnectorRequest) String() string {
 func (*DeleteMCPConnectorRequest) ProtoMessage() {}
 
 func (x *DeleteMCPConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[181]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[217]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12471,7 +15015,7 @@ func (x *DeleteMCPConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMCPConnectorRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMCPConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{181}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{217}
 }
 
 func (x *DeleteMCPConnectorRequest) GetMcpConnectorId() string {
@@ -12505,7 +15049,7 @@ type MCPConnectorInput struct {
 
 func (x *MCPConnectorInput) Reset() {
 	*x = MCPConnectorInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[182]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[218]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12517,7 +15061,7 @@ func (x *MCPConnectorInput) String() string {
 func (*MCPConnectorInput) ProtoMessage() {}
 
 func (x *MCPConnectorInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[182]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[218]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12530,7 +15074,7 @@ func (x *MCPConnectorInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MCPConnectorInput.ProtoReflect.Descriptor instead.
 func (*MCPConnectorInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{182}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{218}
 }
 
 func (x *MCPConnectorInput) GetName() string {
@@ -12622,7 +15166,7 @@ type MCPConnector struct {
 
 func (x *MCPConnector) Reset() {
 	*x = MCPConnector{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[183]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[219]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12634,7 +15178,7 @@ func (x *MCPConnector) String() string {
 func (*MCPConnector) ProtoMessage() {}
 
 func (x *MCPConnector) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[183]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[219]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12647,7 +15191,7 @@ func (x *MCPConnector) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MCPConnector.ProtoReflect.Descriptor instead.
 func (*MCPConnector) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{183}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{219}
 }
 
 func (x *MCPConnector) GetId() string {
@@ -12784,7 +15328,7 @@ type ListSkillsRequest struct {
 
 func (x *ListSkillsRequest) Reset() {
 	*x = ListSkillsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[184]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[220]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12796,7 +15340,7 @@ func (x *ListSkillsRequest) String() string {
 func (*ListSkillsRequest) ProtoMessage() {}
 
 func (x *ListSkillsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[184]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[220]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12809,7 +15353,7 @@ func (x *ListSkillsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillsRequest.ProtoReflect.Descriptor instead.
 func (*ListSkillsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{184}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{220}
 }
 
 type ListSkillsResponse struct {
@@ -12821,7 +15365,7 @@ type ListSkillsResponse struct {
 
 func (x *ListSkillsResponse) Reset() {
 	*x = ListSkillsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[185]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[221]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12833,7 +15377,7 @@ func (x *ListSkillsResponse) String() string {
 func (*ListSkillsResponse) ProtoMessage() {}
 
 func (x *ListSkillsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[185]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[221]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12846,7 +15390,7 @@ func (x *ListSkillsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSkillsResponse.ProtoReflect.Descriptor instead.
 func (*ListSkillsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{185}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{221}
 }
 
 func (x *ListSkillsResponse) GetItems() []*Skill {
@@ -12870,7 +15414,7 @@ type CreateSkillRequest struct {
 
 func (x *CreateSkillRequest) Reset() {
 	*x = CreateSkillRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[186]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[222]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12882,7 +15426,7 @@ func (x *CreateSkillRequest) String() string {
 func (*CreateSkillRequest) ProtoMessage() {}
 
 func (x *CreateSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[186]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[222]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12895,7 +15439,7 @@ func (x *CreateSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSkillRequest.ProtoReflect.Descriptor instead.
 func (*CreateSkillRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{186}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{222}
 }
 
 func (x *CreateSkillRequest) GetName() string {
@@ -12953,7 +15497,7 @@ type UpdateSkillRequest struct {
 
 func (x *UpdateSkillRequest) Reset() {
 	*x = UpdateSkillRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[187]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[223]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12965,7 +15509,7 @@ func (x *UpdateSkillRequest) String() string {
 func (*UpdateSkillRequest) ProtoMessage() {}
 
 func (x *UpdateSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[187]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[223]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12978,7 +15522,7 @@ func (x *UpdateSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSkillRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSkillRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{187}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{223}
 }
 
 func (x *UpdateSkillRequest) GetSkillId() string {
@@ -13025,7 +15569,7 @@ type GetSkillDeletionImpactRequest struct {
 
 func (x *GetSkillDeletionImpactRequest) Reset() {
 	*x = GetSkillDeletionImpactRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[188]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[224]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13037,7 +15581,7 @@ func (x *GetSkillDeletionImpactRequest) String() string {
 func (*GetSkillDeletionImpactRequest) ProtoMessage() {}
 
 func (x *GetSkillDeletionImpactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[188]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[224]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13050,7 +15594,7 @@ func (x *GetSkillDeletionImpactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillDeletionImpactRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillDeletionImpactRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{188}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{224}
 }
 
 func (x *GetSkillDeletionImpactRequest) GetSkillId() string {
@@ -13070,7 +15614,7 @@ type DeleteSkillRequest struct {
 
 func (x *DeleteSkillRequest) Reset() {
 	*x = DeleteSkillRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[189]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[225]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13082,7 +15626,7 @@ func (x *DeleteSkillRequest) String() string {
 func (*DeleteSkillRequest) ProtoMessage() {}
 
 func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[189]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[225]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13095,7 +15639,7 @@ func (x *DeleteSkillRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSkillRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSkillRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{189}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{225}
 }
 
 func (x *DeleteSkillRequest) GetSkillId() string {
@@ -13133,7 +15677,7 @@ type Skill struct {
 
 func (x *Skill) Reset() {
 	*x = Skill{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[190]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[226]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13145,7 +15689,7 @@ func (x *Skill) String() string {
 func (*Skill) ProtoMessage() {}
 
 func (x *Skill) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[190]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[226]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13158,7 +15702,7 @@ func (x *Skill) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Skill.ProtoReflect.Descriptor instead.
 func (*Skill) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{190}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{226}
 }
 
 func (x *Skill) GetId() string {
@@ -13263,7 +15807,7 @@ type AffectedExpert struct {
 
 func (x *AffectedExpert) Reset() {
 	*x = AffectedExpert{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[191]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[227]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13275,7 +15819,7 @@ func (x *AffectedExpert) String() string {
 func (*AffectedExpert) ProtoMessage() {}
 
 func (x *AffectedExpert) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[191]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[227]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13288,7 +15832,7 @@ func (x *AffectedExpert) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AffectedExpert.ProtoReflect.Descriptor instead.
 func (*AffectedExpert) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{191}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{227}
 }
 
 func (x *AffectedExpert) GetId() string {
@@ -13322,7 +15866,7 @@ type ResourceDeletionImpact struct {
 
 func (x *ResourceDeletionImpact) Reset() {
 	*x = ResourceDeletionImpact{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[192]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[228]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13334,7 +15878,7 @@ func (x *ResourceDeletionImpact) String() string {
 func (*ResourceDeletionImpact) ProtoMessage() {}
 
 func (x *ResourceDeletionImpact) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[192]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[228]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13347,7 +15891,7 @@ func (x *ResourceDeletionImpact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceDeletionImpact.ProtoReflect.Descriptor instead.
 func (*ResourceDeletionImpact) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{192}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{228}
 }
 
 func (x *ResourceDeletionImpact) GetAffectedExperts() []*AffectedExpert {
@@ -13379,7 +15923,7 @@ type CLICapability struct {
 
 func (x *CLICapability) Reset() {
 	*x = CLICapability{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[193]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[229]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13391,7 +15935,7 @@ func (x *CLICapability) String() string {
 func (*CLICapability) ProtoMessage() {}
 
 func (x *CLICapability) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[193]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[229]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13404,7 +15948,7 @@ func (x *CLICapability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLICapability.ProtoReflect.Descriptor instead.
 func (*CLICapability) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{193}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{229}
 }
 
 func (x *CLICapability) GetId() string {
@@ -13467,7 +16011,7 @@ type CLIRecommendedSkill struct {
 
 func (x *CLIRecommendedSkill) Reset() {
 	*x = CLIRecommendedSkill{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[194]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[230]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13479,7 +16023,7 @@ func (x *CLIRecommendedSkill) String() string {
 func (*CLIRecommendedSkill) ProtoMessage() {}
 
 func (x *CLIRecommendedSkill) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[194]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[230]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13492,7 +16036,7 @@ func (x *CLIRecommendedSkill) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIRecommendedSkill.ProtoReflect.Descriptor instead.
 func (*CLIRecommendedSkill) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{194}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{230}
 }
 
 func (x *CLIRecommendedSkill) GetName() string {
@@ -13539,7 +16083,7 @@ type CLIConnectorDefinitionInput struct {
 
 func (x *CLIConnectorDefinitionInput) Reset() {
 	*x = CLIConnectorDefinitionInput{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[195]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[231]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13551,7 +16095,7 @@ func (x *CLIConnectorDefinitionInput) String() string {
 func (*CLIConnectorDefinitionInput) ProtoMessage() {}
 
 func (x *CLIConnectorDefinitionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[195]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[231]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13564,7 +16108,7 @@ func (x *CLIConnectorDefinitionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorDefinitionInput.ProtoReflect.Descriptor instead.
 func (*CLIConnectorDefinitionInput) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{195}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{231}
 }
 
 func (x *CLIConnectorDefinitionInput) GetName() string {
@@ -13697,7 +16241,7 @@ type CLIConnectorDefinition struct {
 
 func (x *CLIConnectorDefinition) Reset() {
 	*x = CLIConnectorDefinition{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[196]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[232]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13709,7 +16253,7 @@ func (x *CLIConnectorDefinition) String() string {
 func (*CLIConnectorDefinition) ProtoMessage() {}
 
 func (x *CLIConnectorDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[196]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[232]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13722,7 +16266,7 @@ func (x *CLIConnectorDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorDefinition.ProtoReflect.Descriptor instead.
 func (*CLIConnectorDefinition) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{196}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{232}
 }
 
 func (x *CLIConnectorDefinition) GetId() string {
@@ -13888,7 +16432,7 @@ type ListCLIConnectorDefinitionsRequest struct {
 
 func (x *ListCLIConnectorDefinitionsRequest) Reset() {
 	*x = ListCLIConnectorDefinitionsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[197]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[233]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13900,7 +16444,7 @@ func (x *ListCLIConnectorDefinitionsRequest) String() string {
 func (*ListCLIConnectorDefinitionsRequest) ProtoMessage() {}
 
 func (x *ListCLIConnectorDefinitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[197]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[233]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13913,7 +16457,7 @@ func (x *ListCLIConnectorDefinitionsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListCLIConnectorDefinitionsRequest.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorDefinitionsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{197}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{233}
 }
 
 type ListCLIConnectorDefinitionsResponse struct {
@@ -13925,7 +16469,7 @@ type ListCLIConnectorDefinitionsResponse struct {
 
 func (x *ListCLIConnectorDefinitionsResponse) Reset() {
 	*x = ListCLIConnectorDefinitionsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[198]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[234]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13937,7 +16481,7 @@ func (x *ListCLIConnectorDefinitionsResponse) String() string {
 func (*ListCLIConnectorDefinitionsResponse) ProtoMessage() {}
 
 func (x *ListCLIConnectorDefinitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[198]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[234]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13950,7 +16494,7 @@ func (x *ListCLIConnectorDefinitionsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListCLIConnectorDefinitionsResponse.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorDefinitionsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{198}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{234}
 }
 
 func (x *ListCLIConnectorDefinitionsResponse) GetItems() []*CLIConnectorDefinition {
@@ -13969,7 +16513,7 @@ type CreateCLIConnectorDefinitionRequest struct {
 
 func (x *CreateCLIConnectorDefinitionRequest) Reset() {
 	*x = CreateCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[199]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[235]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13981,7 +16525,7 @@ func (x *CreateCLIConnectorDefinitionRequest) String() string {
 func (*CreateCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *CreateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[199]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[235]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13994,7 +16538,7 @@ func (x *CreateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use CreateCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*CreateCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{199}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{235}
 }
 
 func (x *CreateCLIConnectorDefinitionRequest) GetDefinition() *CLIConnectorDefinitionInput {
@@ -14015,7 +16559,7 @@ type UpdateCLIConnectorDefinitionRequest struct {
 
 func (x *UpdateCLIConnectorDefinitionRequest) Reset() {
 	*x = UpdateCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[200]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[236]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14027,7 +16571,7 @@ func (x *UpdateCLIConnectorDefinitionRequest) String() string {
 func (*UpdateCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *UpdateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[200]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[236]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14040,7 +16584,7 @@ func (x *UpdateCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use UpdateCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{200}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{236}
 }
 
 func (x *UpdateCLIConnectorDefinitionRequest) GetDefinitionId() string {
@@ -14074,7 +16618,7 @@ type PublishCLIConnectorDefinitionRequest struct {
 
 func (x *PublishCLIConnectorDefinitionRequest) Reset() {
 	*x = PublishCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[201]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[237]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14086,7 +16630,7 @@ func (x *PublishCLIConnectorDefinitionRequest) String() string {
 func (*PublishCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *PublishCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[201]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[237]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14099,7 +16643,7 @@ func (x *PublishCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use PublishCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*PublishCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{201}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{237}
 }
 
 func (x *PublishCLIConnectorDefinitionRequest) GetDefinitionId() string {
@@ -14126,7 +16670,7 @@ type DisableCLIConnectorDefinitionRequest struct {
 
 func (x *DisableCLIConnectorDefinitionRequest) Reset() {
 	*x = DisableCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[202]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[238]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14138,7 +16682,7 @@ func (x *DisableCLIConnectorDefinitionRequest) String() string {
 func (*DisableCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *DisableCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[202]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[238]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14151,7 +16695,7 @@ func (x *DisableCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use DisableCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*DisableCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{202}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{238}
 }
 
 func (x *DisableCLIConnectorDefinitionRequest) GetDefinitionId() string {
@@ -14178,7 +16722,7 @@ type DeleteCLIConnectorDefinitionRequest struct {
 
 func (x *DeleteCLIConnectorDefinitionRequest) Reset() {
 	*x = DeleteCLIConnectorDefinitionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[203]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[239]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14190,7 +16734,7 @@ func (x *DeleteCLIConnectorDefinitionRequest) String() string {
 func (*DeleteCLIConnectorDefinitionRequest) ProtoMessage() {}
 
 func (x *DeleteCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[203]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[239]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14203,7 +16747,7 @@ func (x *DeleteCLIConnectorDefinitionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use DeleteCLIConnectorDefinitionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCLIConnectorDefinitionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{203}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{239}
 }
 
 func (x *DeleteCLIConnectorDefinitionRequest) GetDefinitionId() string {
@@ -14228,7 +16772,7 @@ type ListCLIConnectorHealthRequest struct {
 
 func (x *ListCLIConnectorHealthRequest) Reset() {
 	*x = ListCLIConnectorHealthRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[204]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[240]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14240,7 +16784,7 @@ func (x *ListCLIConnectorHealthRequest) String() string {
 func (*ListCLIConnectorHealthRequest) ProtoMessage() {}
 
 func (x *ListCLIConnectorHealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[204]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[240]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14253,7 +16797,7 @@ func (x *ListCLIConnectorHealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCLIConnectorHealthRequest.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorHealthRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{204}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{240}
 }
 
 type ListCLIConnectorHealthResponse struct {
@@ -14265,7 +16809,7 @@ type ListCLIConnectorHealthResponse struct {
 
 func (x *ListCLIConnectorHealthResponse) Reset() {
 	*x = ListCLIConnectorHealthResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[205]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[241]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14277,7 +16821,7 @@ func (x *ListCLIConnectorHealthResponse) String() string {
 func (*ListCLIConnectorHealthResponse) ProtoMessage() {}
 
 func (x *ListCLIConnectorHealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[205]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[241]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14290,7 +16834,7 @@ func (x *ListCLIConnectorHealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCLIConnectorHealthResponse.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorHealthResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{205}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{241}
 }
 
 func (x *ListCLIConnectorHealthResponse) GetItems() []*CLIConnectorHealth {
@@ -14316,7 +16860,7 @@ type CLIConnectorHealth struct {
 
 func (x *CLIConnectorHealth) Reset() {
 	*x = CLIConnectorHealth{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[206]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[242]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14328,7 +16872,7 @@ func (x *CLIConnectorHealth) String() string {
 func (*CLIConnectorHealth) ProtoMessage() {}
 
 func (x *CLIConnectorHealth) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[206]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[242]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14341,7 +16885,7 @@ func (x *CLIConnectorHealth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorHealth.ProtoReflect.Descriptor instead.
 func (*CLIConnectorHealth) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{206}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{242}
 }
 
 func (x *CLIConnectorHealth) GetDefinitionId() string {
@@ -14421,7 +16965,7 @@ type ConnectorRevision struct {
 
 func (x *ConnectorRevision) Reset() {
 	*x = ConnectorRevision{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[207]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[243]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14433,7 +16977,7 @@ func (x *ConnectorRevision) String() string {
 func (*ConnectorRevision) ProtoMessage() {}
 
 func (x *ConnectorRevision) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[207]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[243]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14446,7 +16990,7 @@ func (x *ConnectorRevision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorRevision.ProtoReflect.Descriptor instead.
 func (*ConnectorRevision) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{207}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{243}
 }
 
 func (x *ConnectorRevision) GetId() string {
@@ -14553,7 +17097,7 @@ type ConnectorPublication struct {
 
 func (x *ConnectorPublication) Reset() {
 	*x = ConnectorPublication{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[208]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[244]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14565,7 +17109,7 @@ func (x *ConnectorPublication) String() string {
 func (*ConnectorPublication) ProtoMessage() {}
 
 func (x *ConnectorPublication) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[208]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[244]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14578,7 +17122,7 @@ func (x *ConnectorPublication) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorPublication.ProtoReflect.Descriptor instead.
 func (*ConnectorPublication) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{208}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{244}
 }
 
 func (x *ConnectorPublication) GetSource() string {
@@ -14626,7 +17170,7 @@ type ConnectorPublicationRevision struct {
 
 func (x *ConnectorPublicationRevision) Reset() {
 	*x = ConnectorPublicationRevision{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[209]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[245]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14638,7 +17182,7 @@ func (x *ConnectorPublicationRevision) String() string {
 func (*ConnectorPublicationRevision) ProtoMessage() {}
 
 func (x *ConnectorPublicationRevision) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[209]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[245]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14651,7 +17195,7 @@ func (x *ConnectorPublicationRevision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorPublicationRevision.ProtoReflect.Descriptor instead.
 func (*ConnectorPublicationRevision) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{209}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{245}
 }
 
 func (x *ConnectorPublicationRevision) GetRevision() *ConnectorRevision {
@@ -14686,7 +17230,7 @@ type ConnectorPublicationHealth struct {
 
 func (x *ConnectorPublicationHealth) Reset() {
 	*x = ConnectorPublicationHealth{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[210]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[246]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14698,7 +17242,7 @@ func (x *ConnectorPublicationHealth) String() string {
 func (*ConnectorPublicationHealth) ProtoMessage() {}
 
 func (x *ConnectorPublicationHealth) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[210]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[246]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14711,7 +17255,7 @@ func (x *ConnectorPublicationHealth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorPublicationHealth.ProtoReflect.Descriptor instead.
 func (*ConnectorPublicationHealth) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{210}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{246}
 }
 
 func (x *ConnectorPublicationHealth) GetSource() string {
@@ -14804,7 +17348,7 @@ type ConnectorInstallation struct {
 
 func (x *ConnectorInstallation) Reset() {
 	*x = ConnectorInstallation{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[211]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[247]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14816,7 +17360,7 @@ func (x *ConnectorInstallation) String() string {
 func (*ConnectorInstallation) ProtoMessage() {}
 
 func (x *ConnectorInstallation) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[211]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[247]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14829,7 +17373,7 @@ func (x *ConnectorInstallation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorInstallation.ProtoReflect.Descriptor instead.
 func (*ConnectorInstallation) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{211}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{247}
 }
 
 func (x *ConnectorInstallation) GetId() string {
@@ -14934,7 +17478,7 @@ type ConnectorAuthorization struct {
 
 func (x *ConnectorAuthorization) Reset() {
 	*x = ConnectorAuthorization{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[212]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[248]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14946,7 +17490,7 @@ func (x *ConnectorAuthorization) String() string {
 func (*ConnectorAuthorization) ProtoMessage() {}
 
 func (x *ConnectorAuthorization) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[212]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[248]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14959,7 +17503,7 @@ func (x *ConnectorAuthorization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorAuthorization.ProtoReflect.Descriptor instead.
 func (*ConnectorAuthorization) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{212}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{248}
 }
 
 func (x *ConnectorAuthorization) GetId() string {
@@ -15040,7 +17584,7 @@ type ListConnectorPublicationsRequest struct {
 
 func (x *ListConnectorPublicationsRequest) Reset() {
 	*x = ListConnectorPublicationsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[213]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[249]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15052,7 +17596,7 @@ func (x *ListConnectorPublicationsRequest) String() string {
 func (*ListConnectorPublicationsRequest) ProtoMessage() {}
 
 func (x *ListConnectorPublicationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[213]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[249]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15065,7 +17609,7 @@ func (x *ListConnectorPublicationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectorPublicationsRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectorPublicationsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{213}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{249}
 }
 
 type ListConnectorPublicationsResponse struct {
@@ -15077,7 +17621,7 @@ type ListConnectorPublicationsResponse struct {
 
 func (x *ListConnectorPublicationsResponse) Reset() {
 	*x = ListConnectorPublicationsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[214]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[250]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15089,7 +17633,7 @@ func (x *ListConnectorPublicationsResponse) String() string {
 func (*ListConnectorPublicationsResponse) ProtoMessage() {}
 
 func (x *ListConnectorPublicationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[214]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[250]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15102,7 +17646,7 @@ func (x *ListConnectorPublicationsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListConnectorPublicationsResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectorPublicationsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{214}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{250}
 }
 
 func (x *ListConnectorPublicationsResponse) GetItems() []*ConnectorPublication {
@@ -15121,7 +17665,7 @@ type StageConnectorPackageRequest struct {
 
 func (x *StageConnectorPackageRequest) Reset() {
 	*x = StageConnectorPackageRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[215]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[251]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15133,7 +17677,7 @@ func (x *StageConnectorPackageRequest) String() string {
 func (*StageConnectorPackageRequest) ProtoMessage() {}
 
 func (x *StageConnectorPackageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[215]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[251]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15146,7 +17690,7 @@ func (x *StageConnectorPackageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StageConnectorPackageRequest.ProtoReflect.Descriptor instead.
 func (*StageConnectorPackageRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{215}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{251}
 }
 
 func (x *StageConnectorPackageRequest) GetArchive() []byte {
@@ -15164,7 +17708,7 @@ type ListConnectorPublicationRevisionsRequest struct {
 
 func (x *ListConnectorPublicationRevisionsRequest) Reset() {
 	*x = ListConnectorPublicationRevisionsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[216]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[252]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15176,7 +17720,7 @@ func (x *ListConnectorPublicationRevisionsRequest) String() string {
 func (*ListConnectorPublicationRevisionsRequest) ProtoMessage() {}
 
 func (x *ListConnectorPublicationRevisionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[216]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[252]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15189,7 +17733,7 @@ func (x *ListConnectorPublicationRevisionsRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ListConnectorPublicationRevisionsRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectorPublicationRevisionsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{216}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{252}
 }
 
 type ListConnectorPublicationRevisionsResponse struct {
@@ -15201,7 +17745,7 @@ type ListConnectorPublicationRevisionsResponse struct {
 
 func (x *ListConnectorPublicationRevisionsResponse) Reset() {
 	*x = ListConnectorPublicationRevisionsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[217]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[253]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15213,7 +17757,7 @@ func (x *ListConnectorPublicationRevisionsResponse) String() string {
 func (*ListConnectorPublicationRevisionsResponse) ProtoMessage() {}
 
 func (x *ListConnectorPublicationRevisionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[217]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[253]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15226,7 +17770,7 @@ func (x *ListConnectorPublicationRevisionsResponse) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListConnectorPublicationRevisionsResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectorPublicationRevisionsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{217}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{253}
 }
 
 func (x *ListConnectorPublicationRevisionsResponse) GetItems() []*ConnectorPublicationRevision {
@@ -15246,7 +17790,7 @@ type PublishConnectorRevisionRequest struct {
 
 func (x *PublishConnectorRevisionRequest) Reset() {
 	*x = PublishConnectorRevisionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[218]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[254]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15258,7 +17802,7 @@ func (x *PublishConnectorRevisionRequest) String() string {
 func (*PublishConnectorRevisionRequest) ProtoMessage() {}
 
 func (x *PublishConnectorRevisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[218]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[254]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15271,7 +17815,7 @@ func (x *PublishConnectorRevisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublishConnectorRevisionRequest.ProtoReflect.Descriptor instead.
 func (*PublishConnectorRevisionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{218}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{254}
 }
 
 func (x *PublishConnectorRevisionRequest) GetRevisionId() string {
@@ -15298,7 +17842,7 @@ type DisableConnectorPublicationRequest struct {
 
 func (x *DisableConnectorPublicationRequest) Reset() {
 	*x = DisableConnectorPublicationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[219]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[255]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15310,7 +17854,7 @@ func (x *DisableConnectorPublicationRequest) String() string {
 func (*DisableConnectorPublicationRequest) ProtoMessage() {}
 
 func (x *DisableConnectorPublicationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[219]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[255]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15323,7 +17867,7 @@ func (x *DisableConnectorPublicationRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use DisableConnectorPublicationRequest.ProtoReflect.Descriptor instead.
 func (*DisableConnectorPublicationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{219}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{255}
 }
 
 func (x *DisableConnectorPublicationRequest) GetSource() string {
@@ -15348,7 +17892,7 @@ type ListConnectorPublicationHealthRequest struct {
 
 func (x *ListConnectorPublicationHealthRequest) Reset() {
 	*x = ListConnectorPublicationHealthRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[220]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[256]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15360,7 +17904,7 @@ func (x *ListConnectorPublicationHealthRequest) String() string {
 func (*ListConnectorPublicationHealthRequest) ProtoMessage() {}
 
 func (x *ListConnectorPublicationHealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[220]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[256]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15373,7 +17917,7 @@ func (x *ListConnectorPublicationHealthRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ListConnectorPublicationHealthRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectorPublicationHealthRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{220}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{256}
 }
 
 type ListConnectorPublicationHealthResponse struct {
@@ -15385,7 +17929,7 @@ type ListConnectorPublicationHealthResponse struct {
 
 func (x *ListConnectorPublicationHealthResponse) Reset() {
 	*x = ListConnectorPublicationHealthResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[221]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[257]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15397,7 +17941,7 @@ func (x *ListConnectorPublicationHealthResponse) String() string {
 func (*ListConnectorPublicationHealthResponse) ProtoMessage() {}
 
 func (x *ListConnectorPublicationHealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[221]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[257]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15410,7 +17954,7 @@ func (x *ListConnectorPublicationHealthResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ListConnectorPublicationHealthResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectorPublicationHealthResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{221}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{257}
 }
 
 func (x *ListConnectorPublicationHealthResponse) GetItems() []*ConnectorPublicationHealth {
@@ -15429,7 +17973,7 @@ type InstallPublishedConnectorRequest struct {
 
 func (x *InstallPublishedConnectorRequest) Reset() {
 	*x = InstallPublishedConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[222]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[258]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15441,7 +17985,7 @@ func (x *InstallPublishedConnectorRequest) String() string {
 func (*InstallPublishedConnectorRequest) ProtoMessage() {}
 
 func (x *InstallPublishedConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[222]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[258]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15454,7 +17998,7 @@ func (x *InstallPublishedConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstallPublishedConnectorRequest.ProtoReflect.Descriptor instead.
 func (*InstallPublishedConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{222}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{258}
 }
 
 func (x *InstallPublishedConnectorRequest) GetSource() string {
@@ -15474,7 +18018,7 @@ type UpgradeConnectorInstallationRequest struct {
 
 func (x *UpgradeConnectorInstallationRequest) Reset() {
 	*x = UpgradeConnectorInstallationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[223]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[259]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15486,7 +18030,7 @@ func (x *UpgradeConnectorInstallationRequest) String() string {
 func (*UpgradeConnectorInstallationRequest) ProtoMessage() {}
 
 func (x *UpgradeConnectorInstallationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[223]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[259]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15499,7 +18043,7 @@ func (x *UpgradeConnectorInstallationRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use UpgradeConnectorInstallationRequest.ProtoReflect.Descriptor instead.
 func (*UpgradeConnectorInstallationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{223}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{259}
 }
 
 func (x *UpgradeConnectorInstallationRequest) GetInstallationId() string {
@@ -15525,7 +18069,7 @@ type ListConnectorAuthorizationsRequest struct {
 
 func (x *ListConnectorAuthorizationsRequest) Reset() {
 	*x = ListConnectorAuthorizationsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[224]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[260]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15537,7 +18081,7 @@ func (x *ListConnectorAuthorizationsRequest) String() string {
 func (*ListConnectorAuthorizationsRequest) ProtoMessage() {}
 
 func (x *ListConnectorAuthorizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[224]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[260]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15550,7 +18094,7 @@ func (x *ListConnectorAuthorizationsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListConnectorAuthorizationsRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectorAuthorizationsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{224}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{260}
 }
 
 func (x *ListConnectorAuthorizationsRequest) GetInstallationId() string {
@@ -15569,7 +18113,7 @@ type ListConnectorAuthorizationsResponse struct {
 
 func (x *ListConnectorAuthorizationsResponse) Reset() {
 	*x = ListConnectorAuthorizationsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[225]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[261]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15581,7 +18125,7 @@ func (x *ListConnectorAuthorizationsResponse) String() string {
 func (*ListConnectorAuthorizationsResponse) ProtoMessage() {}
 
 func (x *ListConnectorAuthorizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[225]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[261]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15594,7 +18138,7 @@ func (x *ListConnectorAuthorizationsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListConnectorAuthorizationsResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectorAuthorizationsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{225}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{261}
 }
 
 func (x *ListConnectorAuthorizationsResponse) GetItems() []*ConnectorAuthorization {
@@ -15615,7 +18159,7 @@ type SelectConnectorAuthorizationRequest struct {
 
 func (x *SelectConnectorAuthorizationRequest) Reset() {
 	*x = SelectConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[226]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[262]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15627,7 +18171,7 @@ func (x *SelectConnectorAuthorizationRequest) String() string {
 func (*SelectConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *SelectConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[226]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[262]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15640,7 +18184,7 @@ func (x *SelectConnectorAuthorizationRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use SelectConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*SelectConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{226}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{262}
 }
 
 func (x *SelectConnectorAuthorizationRequest) GetInstallationId() string {
@@ -15675,7 +18219,7 @@ type RefreshConnectorAuthorizationRequest struct {
 
 func (x *RefreshConnectorAuthorizationRequest) Reset() {
 	*x = RefreshConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[227]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[263]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15687,7 +18231,7 @@ func (x *RefreshConnectorAuthorizationRequest) String() string {
 func (*RefreshConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *RefreshConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[227]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[263]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15700,7 +18244,7 @@ func (x *RefreshConnectorAuthorizationRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use RefreshConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*RefreshConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{227}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{263}
 }
 
 func (x *RefreshConnectorAuthorizationRequest) GetInstallationId() string {
@@ -15733,7 +18277,7 @@ type DisconnectPublishedConnectorAuthorizationRequest struct {
 
 func (x *DisconnectPublishedConnectorAuthorizationRequest) Reset() {
 	*x = DisconnectPublishedConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[228]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[264]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15745,7 +18289,7 @@ func (x *DisconnectPublishedConnectorAuthorizationRequest) String() string {
 func (*DisconnectPublishedConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *DisconnectPublishedConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[228]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[264]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15758,7 +18302,7 @@ func (x *DisconnectPublishedConnectorAuthorizationRequest) ProtoReflect() protor
 
 // Deprecated: Use DisconnectPublishedConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*DisconnectPublishedConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{228}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{264}
 }
 
 func (x *DisconnectPublishedConnectorAuthorizationRequest) GetAuthorizationId() string {
@@ -15783,7 +18327,7 @@ type ConnectorSetup struct {
 
 func (x *ConnectorSetup) Reset() {
 	*x = ConnectorSetup{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[229]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[265]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15795,7 +18339,7 @@ func (x *ConnectorSetup) String() string {
 func (*ConnectorSetup) ProtoMessage() {}
 
 func (x *ConnectorSetup) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[229]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[265]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15808,7 +18352,7 @@ func (x *ConnectorSetup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorSetup.ProtoReflect.Descriptor instead.
 func (*ConnectorSetup) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{229}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{265}
 }
 
 func (x *ConnectorSetup) GetId() string {
@@ -15869,7 +18413,7 @@ type BeginConnectorSetupRequest struct {
 
 func (x *BeginConnectorSetupRequest) Reset() {
 	*x = BeginConnectorSetupRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[230]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[266]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15881,7 +18425,7 @@ func (x *BeginConnectorSetupRequest) String() string {
 func (*BeginConnectorSetupRequest) ProtoMessage() {}
 
 func (x *BeginConnectorSetupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[230]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[266]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15894,7 +18438,7 @@ func (x *BeginConnectorSetupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BeginConnectorSetupRequest.ProtoReflect.Descriptor instead.
 func (*BeginConnectorSetupRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{230}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{266}
 }
 
 func (x *BeginConnectorSetupRequest) GetInstallationId() string {
@@ -15913,7 +18457,7 @@ type CompleteConnectorSetupRequest struct {
 
 func (x *CompleteConnectorSetupRequest) Reset() {
 	*x = CompleteConnectorSetupRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[231]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[267]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15925,7 +18469,7 @@ func (x *CompleteConnectorSetupRequest) String() string {
 func (*CompleteConnectorSetupRequest) ProtoMessage() {}
 
 func (x *CompleteConnectorSetupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[231]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[267]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15938,7 +18482,7 @@ func (x *CompleteConnectorSetupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteConnectorSetupRequest.ProtoReflect.Descriptor instead.
 func (*CompleteConnectorSetupRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{231}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{267}
 }
 
 func (x *CompleteConnectorSetupRequest) GetFlowId() string {
@@ -15964,7 +18508,7 @@ type ConnectorAuthorizationFlow struct {
 
 func (x *ConnectorAuthorizationFlow) Reset() {
 	*x = ConnectorAuthorizationFlow{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[232]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[268]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15976,7 +18520,7 @@ func (x *ConnectorAuthorizationFlow) String() string {
 func (*ConnectorAuthorizationFlow) ProtoMessage() {}
 
 func (x *ConnectorAuthorizationFlow) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[232]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[268]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15989,7 +18533,7 @@ func (x *ConnectorAuthorizationFlow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorAuthorizationFlow.ProtoReflect.Descriptor instead.
 func (*ConnectorAuthorizationFlow) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{232}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{268}
 }
 
 func (x *ConnectorAuthorizationFlow) GetId() string {
@@ -16059,7 +18603,7 @@ type BeginConnectorAuthorizationFlowRequest struct {
 
 func (x *BeginConnectorAuthorizationFlowRequest) Reset() {
 	*x = BeginConnectorAuthorizationFlowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[233]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[269]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16071,7 +18615,7 @@ func (x *BeginConnectorAuthorizationFlowRequest) String() string {
 func (*BeginConnectorAuthorizationFlowRequest) ProtoMessage() {}
 
 func (x *BeginConnectorAuthorizationFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[233]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[269]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16084,7 +18628,7 @@ func (x *BeginConnectorAuthorizationFlowRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use BeginConnectorAuthorizationFlowRequest.ProtoReflect.Descriptor instead.
 func (*BeginConnectorAuthorizationFlowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{233}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{269}
 }
 
 func (x *BeginConnectorAuthorizationFlowRequest) GetInstallationId() string {
@@ -16117,7 +18661,7 @@ type CompleteConnectorAuthorizationFlowRequest struct {
 
 func (x *CompleteConnectorAuthorizationFlowRequest) Reset() {
 	*x = CompleteConnectorAuthorizationFlowRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[234]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[270]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16129,7 +18673,7 @@ func (x *CompleteConnectorAuthorizationFlowRequest) String() string {
 func (*CompleteConnectorAuthorizationFlowRequest) ProtoMessage() {}
 
 func (x *CompleteConnectorAuthorizationFlowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[234]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[270]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16142,7 +18686,7 @@ func (x *CompleteConnectorAuthorizationFlowRequest) ProtoReflect() protoreflect.
 
 // Deprecated: Use CompleteConnectorAuthorizationFlowRequest.ProtoReflect.Descriptor instead.
 func (*CompleteConnectorAuthorizationFlowRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{234}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{270}
 }
 
 func (x *CompleteConnectorAuthorizationFlowRequest) GetFlowId() string {
@@ -16160,7 +18704,7 @@ type ListConnectorInstallationsRequest struct {
 
 func (x *ListConnectorInstallationsRequest) Reset() {
 	*x = ListConnectorInstallationsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[235]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[271]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16172,7 +18716,7 @@ func (x *ListConnectorInstallationsRequest) String() string {
 func (*ListConnectorInstallationsRequest) ProtoMessage() {}
 
 func (x *ListConnectorInstallationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[235]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[271]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16185,7 +18729,7 @@ func (x *ListConnectorInstallationsRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListConnectorInstallationsRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectorInstallationsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{235}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{271}
 }
 
 type ListConnectorInstallationsResponse struct {
@@ -16197,7 +18741,7 @@ type ListConnectorInstallationsResponse struct {
 
 func (x *ListConnectorInstallationsResponse) Reset() {
 	*x = ListConnectorInstallationsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[236]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[272]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16209,7 +18753,7 @@ func (x *ListConnectorInstallationsResponse) String() string {
 func (*ListConnectorInstallationsResponse) ProtoMessage() {}
 
 func (x *ListConnectorInstallationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[236]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[272]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16222,7 +18766,7 @@ func (x *ListConnectorInstallationsResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListConnectorInstallationsResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectorInstallationsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{236}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{272}
 }
 
 func (x *ListConnectorInstallationsResponse) GetItems() []*ConnectorInstallation {
@@ -16241,7 +18785,7 @@ type UploadConnectorPackageRequest struct {
 
 func (x *UploadConnectorPackageRequest) Reset() {
 	*x = UploadConnectorPackageRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[237]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[273]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16253,7 +18797,7 @@ func (x *UploadConnectorPackageRequest) String() string {
 func (*UploadConnectorPackageRequest) ProtoMessage() {}
 
 func (x *UploadConnectorPackageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[237]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[273]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16266,7 +18810,7 @@ func (x *UploadConnectorPackageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadConnectorPackageRequest.ProtoReflect.Descriptor instead.
 func (*UploadConnectorPackageRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{237}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{273}
 }
 
 func (x *UploadConnectorPackageRequest) GetArchive() []byte {
@@ -16294,7 +18838,7 @@ type CreateConnectorPackageRequest struct {
 
 func (x *CreateConnectorPackageRequest) Reset() {
 	*x = CreateConnectorPackageRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[238]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[274]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16306,7 +18850,7 @@ func (x *CreateConnectorPackageRequest) String() string {
 func (*CreateConnectorPackageRequest) ProtoMessage() {}
 
 func (x *CreateConnectorPackageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[238]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[274]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16319,7 +18863,7 @@ func (x *CreateConnectorPackageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateConnectorPackageRequest.ProtoReflect.Descriptor instead.
 func (*CreateConnectorPackageRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{238}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{274}
 }
 
 func (x *CreateConnectorPackageRequest) GetSource() string {
@@ -16402,7 +18946,7 @@ type DisableConnectorInstallationRequest struct {
 
 func (x *DisableConnectorInstallationRequest) Reset() {
 	*x = DisableConnectorInstallationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[239]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[275]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16414,7 +18958,7 @@ func (x *DisableConnectorInstallationRequest) String() string {
 func (*DisableConnectorInstallationRequest) ProtoMessage() {}
 
 func (x *DisableConnectorInstallationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[239]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[275]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16427,7 +18971,7 @@ func (x *DisableConnectorInstallationRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use DisableConnectorInstallationRequest.ProtoReflect.Descriptor instead.
 func (*DisableConnectorInstallationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{239}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{275}
 }
 
 func (x *DisableConnectorInstallationRequest) GetInstallationId() string {
@@ -16454,7 +18998,7 @@ type UninstallConnectorRequest struct {
 
 func (x *UninstallConnectorRequest) Reset() {
 	*x = UninstallConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[240]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[276]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16466,7 +19010,7 @@ func (x *UninstallConnectorRequest) String() string {
 func (*UninstallConnectorRequest) ProtoMessage() {}
 
 func (x *UninstallConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[240]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[276]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16479,7 +19023,7 @@ func (x *UninstallConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UninstallConnectorRequest.ProtoReflect.Descriptor instead.
 func (*UninstallConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{240}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{276}
 }
 
 func (x *UninstallConnectorRequest) GetInstallationId() string {
@@ -16508,7 +19052,7 @@ type ConnectConnectorRequest struct {
 
 func (x *ConnectConnectorRequest) Reset() {
 	*x = ConnectConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[241]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[277]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16520,7 +19064,7 @@ func (x *ConnectConnectorRequest) String() string {
 func (*ConnectConnectorRequest) ProtoMessage() {}
 
 func (x *ConnectConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[241]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[277]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16533,7 +19077,7 @@ func (x *ConnectConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectConnectorRequest.ProtoReflect.Descriptor instead.
 func (*ConnectConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{241}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{277}
 }
 
 func (x *ConnectConnectorRequest) GetInstallationId() string {
@@ -16574,7 +19118,7 @@ type DisconnectConnectorAuthorizationRequest struct {
 
 func (x *DisconnectConnectorAuthorizationRequest) Reset() {
 	*x = DisconnectConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[242]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[278]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16586,7 +19130,7 @@ func (x *DisconnectConnectorAuthorizationRequest) String() string {
 func (*DisconnectConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *DisconnectConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[242]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[278]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16599,7 +19143,7 @@ func (x *DisconnectConnectorAuthorizationRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use DisconnectConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*DisconnectConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{242}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{278}
 }
 
 func (x *DisconnectConnectorAuthorizationRequest) GetInstallationId() string {
@@ -16625,7 +19169,7 @@ type EnableCLIConnectorRequest struct {
 
 func (x *EnableCLIConnectorRequest) Reset() {
 	*x = EnableCLIConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[243]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[279]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16637,7 +19181,7 @@ func (x *EnableCLIConnectorRequest) String() string {
 func (*EnableCLIConnectorRequest) ProtoMessage() {}
 
 func (x *EnableCLIConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[243]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[279]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16650,7 +19194,7 @@ func (x *EnableCLIConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableCLIConnectorRequest.ProtoReflect.Descriptor instead.
 func (*EnableCLIConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{243}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{279}
 }
 
 func (x *EnableCLIConnectorRequest) GetDefinitionId() string {
@@ -16670,7 +19214,7 @@ type DisableCLIConnectorRequest struct {
 
 func (x *DisableCLIConnectorRequest) Reset() {
 	*x = DisableCLIConnectorRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[244]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[280]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16682,7 +19226,7 @@ func (x *DisableCLIConnectorRequest) String() string {
 func (*DisableCLIConnectorRequest) ProtoMessage() {}
 
 func (x *DisableCLIConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[244]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[280]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16695,7 +19239,7 @@ func (x *DisableCLIConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisableCLIConnectorRequest.ProtoReflect.Descriptor instead.
 func (*DisableCLIConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{244}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{280}
 }
 
 func (x *DisableCLIConnectorRequest) GetDefinitionId() string {
@@ -16728,7 +19272,7 @@ type CLIConnectorEnablement struct {
 
 func (x *CLIConnectorEnablement) Reset() {
 	*x = CLIConnectorEnablement{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[245]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[281]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16740,7 +19284,7 @@ func (x *CLIConnectorEnablement) String() string {
 func (*CLIConnectorEnablement) ProtoMessage() {}
 
 func (x *CLIConnectorEnablement) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[245]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[281]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16753,7 +19297,7 @@ func (x *CLIConnectorEnablement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorEnablement.ProtoReflect.Descriptor instead.
 func (*CLIConnectorEnablement) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{245}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{281}
 }
 
 func (x *CLIConnectorEnablement) GetId() string {
@@ -16820,7 +19364,7 @@ type ListCLIConnectorEnablementsRequest struct {
 
 func (x *ListCLIConnectorEnablementsRequest) Reset() {
 	*x = ListCLIConnectorEnablementsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[246]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[282]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16832,7 +19376,7 @@ func (x *ListCLIConnectorEnablementsRequest) String() string {
 func (*ListCLIConnectorEnablementsRequest) ProtoMessage() {}
 
 func (x *ListCLIConnectorEnablementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[246]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[282]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16845,7 +19389,7 @@ func (x *ListCLIConnectorEnablementsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListCLIConnectorEnablementsRequest.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorEnablementsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{246}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{282}
 }
 
 type ListCLIConnectorEnablementsResponse struct {
@@ -16857,7 +19401,7 @@ type ListCLIConnectorEnablementsResponse struct {
 
 func (x *ListCLIConnectorEnablementsResponse) Reset() {
 	*x = ListCLIConnectorEnablementsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[247]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[283]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16869,7 +19413,7 @@ func (x *ListCLIConnectorEnablementsResponse) String() string {
 func (*ListCLIConnectorEnablementsResponse) ProtoMessage() {}
 
 func (x *ListCLIConnectorEnablementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[247]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[283]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16882,7 +19426,7 @@ func (x *ListCLIConnectorEnablementsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListCLIConnectorEnablementsResponse.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorEnablementsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{247}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{283}
 }
 
 func (x *ListCLIConnectorEnablementsResponse) GetItems() []*CLIConnectorEnablement {
@@ -16909,7 +19453,7 @@ type CLIConnectorAuthorization struct {
 
 func (x *CLIConnectorAuthorization) Reset() {
 	*x = CLIConnectorAuthorization{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[248]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[284]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16921,7 +19465,7 @@ func (x *CLIConnectorAuthorization) String() string {
 func (*CLIConnectorAuthorization) ProtoMessage() {}
 
 func (x *CLIConnectorAuthorization) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[248]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[284]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16934,7 +19478,7 @@ func (x *CLIConnectorAuthorization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorAuthorization.ProtoReflect.Descriptor instead.
 func (*CLIConnectorAuthorization) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{248}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{284}
 }
 
 func (x *CLIConnectorAuthorization) GetId() string {
@@ -17016,7 +19560,7 @@ type CLIConnectorAuthorizationFlow struct {
 
 func (x *CLIConnectorAuthorizationFlow) Reset() {
 	*x = CLIConnectorAuthorizationFlow{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[249]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[285]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17028,7 +19572,7 @@ func (x *CLIConnectorAuthorizationFlow) String() string {
 func (*CLIConnectorAuthorizationFlow) ProtoMessage() {}
 
 func (x *CLIConnectorAuthorizationFlow) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[249]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[285]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17041,7 +19585,7 @@ func (x *CLIConnectorAuthorizationFlow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CLIConnectorAuthorizationFlow.ProtoReflect.Descriptor instead.
 func (*CLIConnectorAuthorizationFlow) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{249}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{285}
 }
 
 func (x *CLIConnectorAuthorizationFlow) GetId() string {
@@ -17111,7 +19655,7 @@ type BeginCLIConnectorAuthorizationRequest struct {
 
 func (x *BeginCLIConnectorAuthorizationRequest) Reset() {
 	*x = BeginCLIConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[250]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[286]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17123,7 +19667,7 @@ func (x *BeginCLIConnectorAuthorizationRequest) String() string {
 func (*BeginCLIConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *BeginCLIConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[250]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[286]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17136,7 +19680,7 @@ func (x *BeginCLIConnectorAuthorizationRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use BeginCLIConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*BeginCLIConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{250}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{286}
 }
 
 func (x *BeginCLIConnectorAuthorizationRequest) GetEnablementId() string {
@@ -17169,7 +19713,7 @@ type CompleteCLIConnectorAuthorizationRequest struct {
 
 func (x *CompleteCLIConnectorAuthorizationRequest) Reset() {
 	*x = CompleteCLIConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[251]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[287]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17181,7 +19725,7 @@ func (x *CompleteCLIConnectorAuthorizationRequest) String() string {
 func (*CompleteCLIConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *CompleteCLIConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[251]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[287]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17194,7 +19738,7 @@ func (x *CompleteCLIConnectorAuthorizationRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use CompleteCLIConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*CompleteCLIConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{251}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{287}
 }
 
 func (x *CompleteCLIConnectorAuthorizationRequest) GetFlowId() string {
@@ -17213,7 +19757,7 @@ type ListCLIConnectorAuthorizationsRequest struct {
 
 func (x *ListCLIConnectorAuthorizationsRequest) Reset() {
 	*x = ListCLIConnectorAuthorizationsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[252]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[288]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17225,7 +19769,7 @@ func (x *ListCLIConnectorAuthorizationsRequest) String() string {
 func (*ListCLIConnectorAuthorizationsRequest) ProtoMessage() {}
 
 func (x *ListCLIConnectorAuthorizationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[252]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[288]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17238,7 +19782,7 @@ func (x *ListCLIConnectorAuthorizationsRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ListCLIConnectorAuthorizationsRequest.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorAuthorizationsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{252}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{288}
 }
 
 func (x *ListCLIConnectorAuthorizationsRequest) GetEnablementId() string {
@@ -17257,7 +19801,7 @@ type ListCLIConnectorAuthorizationsResponse struct {
 
 func (x *ListCLIConnectorAuthorizationsResponse) Reset() {
 	*x = ListCLIConnectorAuthorizationsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[253]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[289]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17269,7 +19813,7 @@ func (x *ListCLIConnectorAuthorizationsResponse) String() string {
 func (*ListCLIConnectorAuthorizationsResponse) ProtoMessage() {}
 
 func (x *ListCLIConnectorAuthorizationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[253]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[289]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17282,7 +19826,7 @@ func (x *ListCLIConnectorAuthorizationsResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ListCLIConnectorAuthorizationsResponse.ProtoReflect.Descriptor instead.
 func (*ListCLIConnectorAuthorizationsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{253}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{289}
 }
 
 func (x *ListCLIConnectorAuthorizationsResponse) GetItems() []*CLIConnectorAuthorization {
@@ -17302,7 +19846,7 @@ type DisconnectCLIConnectorAuthorizationRequest struct {
 
 func (x *DisconnectCLIConnectorAuthorizationRequest) Reset() {
 	*x = DisconnectCLIConnectorAuthorizationRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[254]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[290]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17314,7 +19858,7 @@ func (x *DisconnectCLIConnectorAuthorizationRequest) String() string {
 func (*DisconnectCLIConnectorAuthorizationRequest) ProtoMessage() {}
 
 func (x *DisconnectCLIConnectorAuthorizationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[254]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[290]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17327,7 +19871,7 @@ func (x *DisconnectCLIConnectorAuthorizationRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use DisconnectCLIConnectorAuthorizationRequest.ProtoReflect.Descriptor instead.
 func (*DisconnectCLIConnectorAuthorizationRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{254}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{290}
 }
 
 func (x *DisconnectCLIConnectorAuthorizationRequest) GetAuthorizationId() string {
@@ -17363,7 +19907,7 @@ type CommandApproval struct {
 
 func (x *CommandApproval) Reset() {
 	*x = CommandApproval{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[255]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[291]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17375,7 +19919,7 @@ func (x *CommandApproval) String() string {
 func (*CommandApproval) ProtoMessage() {}
 
 func (x *CommandApproval) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[255]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[291]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17388,7 +19932,7 @@ func (x *CommandApproval) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandApproval.ProtoReflect.Descriptor instead.
 func (*CommandApproval) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{255}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{291}
 }
 
 func (x *CommandApproval) GetId() string {
@@ -17476,7 +20020,7 @@ type ListCommandApprovalsRequest struct {
 
 func (x *ListCommandApprovalsRequest) Reset() {
 	*x = ListCommandApprovalsRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[256]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[292]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17488,7 +20032,7 @@ func (x *ListCommandApprovalsRequest) String() string {
 func (*ListCommandApprovalsRequest) ProtoMessage() {}
 
 func (x *ListCommandApprovalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[256]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[292]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17501,7 +20045,7 @@ func (x *ListCommandApprovalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommandApprovalsRequest.ProtoReflect.Descriptor instead.
 func (*ListCommandApprovalsRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{256}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{292}
 }
 
 type ListCommandApprovalsResponse struct {
@@ -17513,7 +20057,7 @@ type ListCommandApprovalsResponse struct {
 
 func (x *ListCommandApprovalsResponse) Reset() {
 	*x = ListCommandApprovalsResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[257]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[293]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17525,7 +20069,7 @@ func (x *ListCommandApprovalsResponse) String() string {
 func (*ListCommandApprovalsResponse) ProtoMessage() {}
 
 func (x *ListCommandApprovalsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[257]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[293]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17538,7 +20082,7 @@ func (x *ListCommandApprovalsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommandApprovalsResponse.ProtoReflect.Descriptor instead.
 func (*ListCommandApprovalsResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{257}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{293}
 }
 
 func (x *ListCommandApprovalsResponse) GetItems() []*CommandApproval {
@@ -17560,7 +20104,7 @@ type DecideCommandApprovalRequest struct {
 
 func (x *DecideCommandApprovalRequest) Reset() {
 	*x = DecideCommandApprovalRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[258]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[294]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17572,7 +20116,7 @@ func (x *DecideCommandApprovalRequest) String() string {
 func (*DecideCommandApprovalRequest) ProtoMessage() {}
 
 func (x *DecideCommandApprovalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[258]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[294]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17585,7 +20129,7 @@ func (x *DecideCommandApprovalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideCommandApprovalRequest.ProtoReflect.Descriptor instead.
 func (*DecideCommandApprovalRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{258}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{294}
 }
 
 func (x *DecideCommandApprovalRequest) GetApprovalId() string {
@@ -17625,7 +20169,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[259]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[295]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17637,7 +20181,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[259]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[295]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17650,7 +20194,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{259}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{295}
 }
 
 func (x *DeleteResponse) GetDeleted() bool {
@@ -17674,7 +20218,7 @@ type Attachment struct {
 
 func (x *Attachment) Reset() {
 	*x = Attachment{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[260]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[296]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17686,7 +20230,7 @@ func (x *Attachment) String() string {
 func (*Attachment) ProtoMessage() {}
 
 func (x *Attachment) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[260]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[296]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17699,7 +20243,7 @@ func (x *Attachment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Attachment.ProtoReflect.Descriptor instead.
 func (*Attachment) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{260}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{296}
 }
 
 func (x *Attachment) GetId() string {
@@ -17754,7 +20298,7 @@ type ExecutionActivity struct {
 
 func (x *ExecutionActivity) Reset() {
 	*x = ExecutionActivity{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[261]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[297]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17766,7 +20310,7 @@ func (x *ExecutionActivity) String() string {
 func (*ExecutionActivity) ProtoMessage() {}
 
 func (x *ExecutionActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[261]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[297]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17779,7 +20323,7 @@ func (x *ExecutionActivity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecutionActivity.ProtoReflect.Descriptor instead.
 func (*ExecutionActivity) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{261}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{297}
 }
 
 func (x *ExecutionActivity) GetType() string {
@@ -17796,6 +20340,466 @@ func (x *ExecutionActivity) GetDetail() string {
 	return ""
 }
 
+type EvidenceCitation struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	RevisionId     string                 `protobuf:"bytes,1,opt,name=revision_id,json=revisionId,proto3" json:"revision_id,omitempty"`
+	CategoryName   string                 `protobuf:"bytes,2,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
+	SourceLocation string                 `protobuf:"bytes,3,opt,name=source_location,json=sourceLocation,proto3" json:"source_location,omitempty"`
+	Relevance      float32                `protobuf:"fixed32,4,opt,name=relevance,proto3" json:"relevance,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EvidenceCitation) Reset() {
+	*x = EvidenceCitation{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[298]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvidenceCitation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvidenceCitation) ProtoMessage() {}
+
+func (x *EvidenceCitation) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[298]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvidenceCitation.ProtoReflect.Descriptor instead.
+func (*EvidenceCitation) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{298}
+}
+
+func (x *EvidenceCitation) GetRevisionId() string {
+	if x != nil {
+		return x.RevisionId
+	}
+	return ""
+}
+
+func (x *EvidenceCitation) GetCategoryName() string {
+	if x != nil {
+		return x.CategoryName
+	}
+	return ""
+}
+
+func (x *EvidenceCitation) GetSourceLocation() string {
+	if x != nil {
+		return x.SourceLocation
+	}
+	return ""
+}
+
+func (x *EvidenceCitation) GetRelevance() float32 {
+	if x != nil {
+		return x.Relevance
+	}
+	return 0
+}
+
+type Evidence struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	SourceId      string                 `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	SourceName    string                 `protobuf:"bytes,4,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	ContainerId   string                 `protobuf:"bytes,5,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	State         string                 `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"`
+	Action        string                 `protobuf:"bytes,7,opt,name=action,proto3" json:"action,omitempty"`
+	StagePosition int32                  `protobuf:"varint,8,opt,name=stage_position,json=stagePosition,proto3" json:"stage_position,omitempty"`
+	Citation      *EvidenceCitation      `protobuf:"bytes,9,opt,name=citation,proto3,oneof" json:"citation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Evidence) Reset() {
+	*x = Evidence{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[299]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Evidence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Evidence) ProtoMessage() {}
+
+func (x *Evidence) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[299]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Evidence.ProtoReflect.Descriptor instead.
+func (*Evidence) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{299}
+}
+
+func (x *Evidence) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Evidence) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *Evidence) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *Evidence) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *Evidence) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *Evidence) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Evidence) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *Evidence) GetStagePosition() int32 {
+	if x != nil {
+		return x.StagePosition
+	}
+	return 0
+}
+
+func (x *Evidence) GetCitation() *EvidenceCitation {
+	if x != nil {
+		return x.Citation
+	}
+	return nil
+}
+
+type ExecutionPlanStep struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	Position      int32                  `protobuf:"varint,4,opt,name=position,proto3" json:"position,omitempty"`
+	State         string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecutionPlanStep) Reset() {
+	*x = ExecutionPlanStep{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[300]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionPlanStep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionPlanStep) ProtoMessage() {}
+
+func (x *ExecutionPlanStep) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[300]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionPlanStep.ProtoReflect.Descriptor instead.
+func (*ExecutionPlanStep) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{300}
+}
+
+func (x *ExecutionPlanStep) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ExecutionPlanStep) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ExecutionPlanStep) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ExecutionPlanStep) GetPosition() int32 {
+	if x != nil {
+		return x.Position
+	}
+	return 0
+}
+
+func (x *ExecutionPlanStep) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+type ExecutionPlanResource struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecutionPlanResource) Reset() {
+	*x = ExecutionPlanResource{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[301]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionPlanResource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionPlanResource) ProtoMessage() {}
+
+func (x *ExecutionPlanResource) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[301]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionPlanResource.ProtoReflect.Descriptor instead.
+func (*ExecutionPlanResource) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{301}
+}
+
+func (x *ExecutionPlanResource) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *ExecutionPlanResource) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ExecutionPlanResource) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ExecutionPlan struct {
+	state                      protoimpl.MessageState   `protogen:"open.v1"`
+	Id                         string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	State                      string                   `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	Objective                  string                   `protobuf:"bytes,3,opt,name=objective,proto3" json:"objective,omitempty"`
+	Steps                      []*ExecutionPlanStep     `protobuf:"bytes,4,rep,name=steps,proto3" json:"steps,omitempty"`
+	Resources                  []*ExecutionPlanResource `protobuf:"bytes,5,rep,name=resources,proto3" json:"resources,omitempty"`
+	SideEffects                []string                 `protobuf:"bytes,6,rep,name=side_effects,json=sideEffects,proto3" json:"side_effects,omitempty"`
+	Reasons                    []string                 `protobuf:"bytes,7,rep,name=reasons,proto3" json:"reasons,omitempty"`
+	EstimatedModelCalls        int32                    `protobuf:"varint,8,opt,name=estimated_model_calls,json=estimatedModelCalls,proto3" json:"estimated_model_calls,omitempty"`
+	EstimatedCreditHundredths  int64                    `protobuf:"varint,9,opt,name=estimated_credit_hundredths,json=estimatedCreditHundredths,proto3" json:"estimated_credit_hundredths,omitempty"`
+	GenerationCreditHundredths int64                    `protobuf:"varint,10,opt,name=generation_credit_hundredths,json=generationCreditHundredths,proto3" json:"generation_credit_hundredths,omitempty"`
+	Generator                  string                   `protobuf:"bytes,11,opt,name=generator,proto3" json:"generator,omitempty"`
+	CreatedAt                  *timestamppb.Timestamp   `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	DecidedAt                  *timestamppb.Timestamp   `protobuf:"bytes,13,opt,name=decided_at,json=decidedAt,proto3,oneof" json:"decided_at,omitempty"`
+	Version                    int64                    `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *ExecutionPlan) Reset() {
+	*x = ExecutionPlan{}
+	mi := &file_workspace_v1_workspace_proto_msgTypes[302]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecutionPlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecutionPlan) ProtoMessage() {}
+
+func (x *ExecutionPlan) ProtoReflect() protoreflect.Message {
+	mi := &file_workspace_v1_workspace_proto_msgTypes[302]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecutionPlan.ProtoReflect.Descriptor instead.
+func (*ExecutionPlan) Descriptor() ([]byte, []int) {
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{302}
+}
+
+func (x *ExecutionPlan) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ExecutionPlan) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *ExecutionPlan) GetObjective() string {
+	if x != nil {
+		return x.Objective
+	}
+	return ""
+}
+
+func (x *ExecutionPlan) GetSteps() []*ExecutionPlanStep {
+	if x != nil {
+		return x.Steps
+	}
+	return nil
+}
+
+func (x *ExecutionPlan) GetResources() []*ExecutionPlanResource {
+	if x != nil {
+		return x.Resources
+	}
+	return nil
+}
+
+func (x *ExecutionPlan) GetSideEffects() []string {
+	if x != nil {
+		return x.SideEffects
+	}
+	return nil
+}
+
+func (x *ExecutionPlan) GetReasons() []string {
+	if x != nil {
+		return x.Reasons
+	}
+	return nil
+}
+
+func (x *ExecutionPlan) GetEstimatedModelCalls() int32 {
+	if x != nil {
+		return x.EstimatedModelCalls
+	}
+	return 0
+}
+
+func (x *ExecutionPlan) GetEstimatedCreditHundredths() int64 {
+	if x != nil {
+		return x.EstimatedCreditHundredths
+	}
+	return 0
+}
+
+func (x *ExecutionPlan) GetGenerationCreditHundredths() int64 {
+	if x != nil {
+		return x.GenerationCreditHundredths
+	}
+	return 0
+}
+
+func (x *ExecutionPlan) GetGenerator() string {
+	if x != nil {
+		return x.Generator
+	}
+	return ""
+}
+
+func (x *ExecutionPlan) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ExecutionPlan) GetDecidedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DecidedAt
+	}
+	return nil
+}
+
+func (x *ExecutionPlan) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
 type GetSessionArtifactDownloadRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -17806,7 +20810,7 @@ type GetSessionArtifactDownloadRequest struct {
 
 func (x *GetSessionArtifactDownloadRequest) Reset() {
 	*x = GetSessionArtifactDownloadRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[262]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[303]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17818,7 +20822,7 @@ func (x *GetSessionArtifactDownloadRequest) String() string {
 func (*GetSessionArtifactDownloadRequest) ProtoMessage() {}
 
 func (x *GetSessionArtifactDownloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[262]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[303]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17831,7 +20835,7 @@ func (x *GetSessionArtifactDownloadRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetSessionArtifactDownloadRequest.ProtoReflect.Descriptor instead.
 func (*GetSessionArtifactDownloadRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{262}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{303}
 }
 
 func (x *GetSessionArtifactDownloadRequest) GetSessionId() string {
@@ -17857,7 +20861,7 @@ type CompleteCLIConnectorEnablementRequest struct {
 
 func (x *CompleteCLIConnectorEnablementRequest) Reset() {
 	*x = CompleteCLIConnectorEnablementRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[263]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[304]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17869,7 +20873,7 @@ func (x *CompleteCLIConnectorEnablementRequest) String() string {
 func (*CompleteCLIConnectorEnablementRequest) ProtoMessage() {}
 
 func (x *CompleteCLIConnectorEnablementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[263]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[304]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17882,7 +20886,7 @@ func (x *CompleteCLIConnectorEnablementRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CompleteCLIConnectorEnablementRequest.ProtoReflect.Descriptor instead.
 func (*CompleteCLIConnectorEnablementRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{263}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{304}
 }
 
 func (x *CompleteCLIConnectorEnablementRequest) GetEnablementId() string {
@@ -17903,7 +20907,7 @@ type GetConversationSelectionRequest struct {
 
 func (x *GetConversationSelectionRequest) Reset() {
 	*x = GetConversationSelectionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[264]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[305]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17915,7 +20919,7 @@ func (x *GetConversationSelectionRequest) String() string {
 func (*GetConversationSelectionRequest) ProtoMessage() {}
 
 func (x *GetConversationSelectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[264]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[305]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17928,7 +20932,7 @@ func (x *GetConversationSelectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConversationSelectionRequest.ProtoReflect.Descriptor instead.
 func (*GetConversationSelectionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{264}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{305}
 }
 
 func (x *GetConversationSelectionRequest) GetSessionId() string {
@@ -17972,7 +20976,7 @@ type ResolveConversationSelectionRequest struct {
 
 func (x *ResolveConversationSelectionRequest) Reset() {
 	*x = ResolveConversationSelectionRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[265]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[306]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17984,7 +20988,7 @@ func (x *ResolveConversationSelectionRequest) String() string {
 func (*ResolveConversationSelectionRequest) ProtoMessage() {}
 
 func (x *ResolveConversationSelectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[265]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[306]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17997,7 +21001,7 @@ func (x *ResolveConversationSelectionRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveConversationSelectionRequest.ProtoReflect.Descriptor instead.
 func (*ResolveConversationSelectionRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{265}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{306}
 }
 
 func (x *ResolveConversationSelectionRequest) GetSessionId() string {
@@ -18106,7 +21110,7 @@ type ConversationSelection struct {
 
 func (x *ConversationSelection) Reset() {
 	*x = ConversationSelection{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[266]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[307]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18118,7 +21122,7 @@ func (x *ConversationSelection) String() string {
 func (*ConversationSelection) ProtoMessage() {}
 
 func (x *ConversationSelection) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[266]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[307]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18131,7 +21135,7 @@ func (x *ConversationSelection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationSelection.ProtoReflect.Descriptor instead.
 func (*ConversationSelection) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{266}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{307}
 }
 
 func (x *ConversationSelection) GetId() string {
@@ -18244,7 +21248,7 @@ type SelectedResource struct {
 
 func (x *SelectedResource) Reset() {
 	*x = SelectedResource{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[267]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[308]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18256,7 +21260,7 @@ func (x *SelectedResource) String() string {
 func (*SelectedResource) ProtoMessage() {}
 
 func (x *SelectedResource) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[267]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[308]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18269,7 +21273,7 @@ func (x *SelectedResource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SelectedResource.ProtoReflect.Descriptor instead.
 func (*SelectedResource) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{267}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{308}
 }
 
 func (x *SelectedResource) GetId() string {
@@ -18312,7 +21316,7 @@ type ListConversationFilesRequest struct {
 
 func (x *ListConversationFilesRequest) Reset() {
 	*x = ListConversationFilesRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[268]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[309]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18324,7 +21328,7 @@ func (x *ListConversationFilesRequest) String() string {
 func (*ListConversationFilesRequest) ProtoMessage() {}
 
 func (x *ListConversationFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[268]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[309]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18337,7 +21341,7 @@ func (x *ListConversationFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListConversationFilesRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{268}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{309}
 }
 
 func (x *ListConversationFilesRequest) GetSessionId() string {
@@ -18377,7 +21381,7 @@ type ListConversationFilesResponse struct {
 
 func (x *ListConversationFilesResponse) Reset() {
 	*x = ListConversationFilesResponse{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[269]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[310]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18389,7 +21393,7 @@ func (x *ListConversationFilesResponse) String() string {
 func (*ListConversationFilesResponse) ProtoMessage() {}
 
 func (x *ListConversationFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[269]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[310]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18402,7 +21406,7 @@ func (x *ListConversationFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConversationFilesResponse.ProtoReflect.Descriptor instead.
 func (*ListConversationFilesResponse) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{269}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{310}
 }
 
 func (x *ListConversationFilesResponse) GetItems() []*ConversationFile {
@@ -18427,7 +21431,7 @@ type ConversationFile struct {
 
 func (x *ConversationFile) Reset() {
 	*x = ConversationFile{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[270]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[311]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18439,7 +21443,7 @@ func (x *ConversationFile) String() string {
 func (*ConversationFile) ProtoMessage() {}
 
 func (x *ConversationFile) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[270]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[311]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18452,7 +21456,7 @@ func (x *ConversationFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConversationFile.ProtoReflect.Descriptor instead.
 func (*ConversationFile) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{270}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{311}
 }
 
 func (x *ConversationFile) GetKind() string {
@@ -18515,7 +21519,7 @@ type FileReference struct {
 
 func (x *FileReference) Reset() {
 	*x = FileReference{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[271]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[312]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18527,7 +21531,7 @@ func (x *FileReference) String() string {
 func (*FileReference) ProtoMessage() {}
 
 func (x *FileReference) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[271]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[312]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18540,7 +21544,7 @@ func (x *FileReference) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileReference.ProtoReflect.Descriptor instead.
 func (*FileReference) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{271}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{312}
 }
 
 func (x *FileReference) GetKind() string {
@@ -18573,7 +21577,7 @@ type GetSkillDocumentRequest struct {
 
 func (x *GetSkillDocumentRequest) Reset() {
 	*x = GetSkillDocumentRequest{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[272]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[313]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18585,7 +21589,7 @@ func (x *GetSkillDocumentRequest) String() string {
 func (*GetSkillDocumentRequest) ProtoMessage() {}
 
 func (x *GetSkillDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[272]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[313]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18598,7 +21602,7 @@ func (x *GetSkillDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSkillDocumentRequest.ProtoReflect.Descriptor instead.
 func (*GetSkillDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{272}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{313}
 }
 
 func (x *GetSkillDocumentRequest) GetSkillId() string {
@@ -18618,7 +21622,7 @@ type SkillDocument struct {
 
 func (x *SkillDocument) Reset() {
 	*x = SkillDocument{}
-	mi := &file_workspace_v1_workspace_proto_msgTypes[273]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[314]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18630,7 +21634,7 @@ func (x *SkillDocument) String() string {
 func (*SkillDocument) ProtoMessage() {}
 
 func (x *SkillDocument) ProtoReflect() protoreflect.Message {
-	mi := &file_workspace_v1_workspace_proto_msgTypes[273]
+	mi := &file_workspace_v1_workspace_proto_msgTypes[314]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18643,7 +21647,7 @@ func (x *SkillDocument) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillDocument.ProtoReflect.Descriptor instead.
 func (*SkillDocument) Descriptor() ([]byte, []int) {
-	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{273}
+	return file_workspace_v1_workspace_proto_rawDescGZIP(), []int{314}
 }
 
 func (x *SkillDocument) GetSkill() *Skill {
@@ -18664,8 +21668,38 @@ var File_workspace_v1_workspace_proto protoreflect.FileDescriptor
 
 const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x1cworkspace/v1/workspace.proto\x12\fworkspace.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x17\n" +
-	"\x15GetCurrentUserRequest\"\x9b\x02\n" +
+	"\x1cworkspace/v1/workspace.proto\x12\fworkspace.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x18\n" +
+	"\x16GetHomeOverviewRequest\"\xcd\x01\n" +
+	"\fHomeOverview\x129\n" +
+	"\frecent_tasks\x18\x01 \x03(\v2\x16.workspace.v1.HomeTaskR\vrecentTasks\x12E\n" +
+	"\x10common_workflows\x18\x02 \x03(\v2\x1a.workspace.v1.HomeWorkflowR\x0fcommonWorkflows\x12;\n" +
+	"\faction_items\x18\x03 \x03(\v2\x18.workspace.v1.HomeActionR\vactionItems\"\xb2\x01\n" +
+	"\bHomeTask\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1b\n" +
+	"\tparent_id\x18\x03 \x01(\tR\bparentId\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x14\n" +
+	"\x05state\x18\x05 \x01(\tR\x05state\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8a\x01\n" +
+	"\fHomeWorkflow\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
+	"\trun_count\x18\x03 \x01(\x03R\brunCount\x129\n" +
+	"\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xfe\x01\n" +
+	"\n" +
+	"HomeAction\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12%\n" +
+	"\x0eexecution_kind\x18\x03 \x01(\tR\rexecutionKind\x12!\n" +
+	"\fexecution_id\x18\x04 \x01(\tR\vexecutionId\x12\x1b\n" +
+	"\tparent_id\x18\x05 \x01(\tR\bparentId\x12\x14\n" +
+	"\x05title\x18\x06 \x01(\tR\x05title\x12\x14\n" +
+	"\x05state\x18\a \x01(\tR\x05state\x129\n" +
+	"\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x17\n" +
+	"\x15GetCurrentUserRequest\"\xb8\x03\n" +
 	"\vCurrentUser\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -18673,7 +21707,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12$\n" +
 	"\radministrator\x18\x05 \x01(\bR\radministrator\x12%\n" +
 	"\x0esettings_ready\x18\x06 \x01(\bR\rsettingsReady\x12G\n" +
-	"\x0ecredit_balance\x18\a \x01(\v2\x1b.workspace.v1.CreditBalanceH\x00R\rcreditBalance\x88\x01\x01B\x11\n" +
+	"\x0ecredit_balance\x18\a \x01(\v2\x1b.workspace.v1.CreditBalanceH\x00R\rcreditBalance\x88\x01\x01\x127\n" +
+	"\x17bootstrap_administrator\x18\b \x01(\bR\x16bootstrapAdministrator\x12-\n" +
+	"\x12resource_publisher\x18\t \x01(\bR\x11resourcePublisher\x123\n" +
+	"\x06groups\x18\n" +
+	" \x03(\v2\x1b.workspace.v1.IdentityGroupR\x06groupsB\x11\n" +
 	"\x0f_credit_balance\"\x12\n" +
 	"\x10ListUsersRequest\"D\n" +
 	"\x11ListUsersResponse\x12/\n" +
@@ -18684,15 +21722,16 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x05email\x18\x03 \x01(\tR\x05email\"r\n" +
 	"\x12CreateUserResponse\x12-\n" +
 	"\x04user\x18\x01 \x01(\v2\x19.workspace.v1.UserAccountR\x04user\x12-\n" +
-	"\x12temporary_password\x18\x02 \x01(\tR\x11temporaryPassword\"u\n" +
+	"\x12temporary_password\x18\x02 \x01(\tR\x11temporaryPassword\"\x8d\x01\n" +
 	"\x15SetUserEnabledRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x18\n" +
 	"\aenabled\x18\x02 \x01(\bR\aenabled\x12)\n" +
-	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\"3\n" +
+	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"3\n" +
 	"\x18ResetUserPasswordRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"J\n" +
 	"\x19ResetUserPasswordResponse\x12-\n" +
-	"\x12temporary_password\x18\x01 \x01(\tR\x11temporaryPassword\"\xe3\x02\n" +
+	"\x12temporary_password\x18\x01 \x01(\tR\x11temporaryPassword\"\x80\x04\n" +
 	"\vUserAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
@@ -18703,9 +21742,71 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x18\n" +
 	"\aversion\x18\b \x01(\x03R\aversion\x12G\n" +
-	"\x0ecredit_balance\x18\t \x01(\v2\x1b.workspace.v1.CreditBalanceH\x00R\rcreditBalance\x88\x01\x01B\x11\n" +
-	"\x0f_credit_balance\"\x19\n" +
-	"\x17GetCreditBalanceRequest\"\xfb\x05\n" +
+	"\x0ecredit_balance\x18\t \x01(\v2\x1b.workspace.v1.CreditBalanceH\x00R\rcreditBalance\x88\x01\x01\x127\n" +
+	"\x17bootstrap_administrator\x18\n" +
+	" \x01(\bR\x16bootstrapAdministrator\x12-\n" +
+	"\x12resource_publisher\x18\v \x01(\bR\x11resourcePublisher\x123\n" +
+	"\x06groups\x18\f \x03(\v2\x1b.workspace.v1.IdentityGroupR\x06groupsB\x11\n" +
+	"\x0f_credit_balance\"\xc6\x01\n" +
+	"\x13SetUserRolesRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12$\n" +
+	"\radministrator\x18\x02 \x01(\bR\radministrator\x12-\n" +
+	"\x12resource_publisher\x18\x03 \x01(\bR\x11resourcePublisher\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\"\x1b\n" +
+	"\x19ListIdentityGroupsRequest\"\x1b\n" +
+	"\x19SyncIdentityGroupsRequest\"O\n" +
+	"\x1aListIdentityGroupsResponse\x121\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.workspace.v1.IdentityGroupR\x05items\"\xea\x01\n" +
+	" UpdateIdentityGroupBudgetRequest\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12F\n" +
+	"\x1ddaily_credit_limit_hundredths\x18\x02 \x01(\x03H\x00R\x1adailyCreditLimitHundredths\x88\x01\x01\x12)\n" +
+	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reasonB \n" +
+	"\x1e_daily_credit_limit_hundredths\"\xf1\x02\n" +
+	"\rIdentityGroup\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vexternal_id\x18\x02 \x01(\tR\n" +
+	"externalId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
+	"\x04path\x18\x04 \x01(\tR\x04path\x12\x1e\n" +
+	"\n" +
+	"department\x18\x05 \x01(\bR\n" +
+	"department\x12F\n" +
+	"\x1ddaily_credit_limit_hundredths\x18\x06 \x01(\x03H\x00R\x1adailyCreditLimitHundredths\x88\x01\x01\x12!\n" +
+	"\fmember_count\x18\a \x01(\x03R\vmemberCount\x12@\n" +
+	"\x0elast_synced_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\flastSyncedAt\x12\x18\n" +
+	"\aversion\x18\t \x01(\x03R\aversionB \n" +
+	"\x1e_daily_credit_limit_hundredths\"G\n" +
+	" ListGovernanceAuditEventsRequest\x12\x19\n" +
+	"\x05limit\x18\x01 \x01(\x05H\x00R\x05limit\x88\x01\x01B\b\n" +
+	"\x06_limit\"]\n" +
+	"!ListGovernanceAuditEventsResponse\x128\n" +
+	"\x05items\x18\x01 \x03(\v2\".workspace.v1.GovernanceAuditEventR\x05items\"?\n" +
+	"\x15GovernanceAuditMetric\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value\"\xb4\x02\n" +
+	"\x14GovernanceAuditEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\"\n" +
+	"\ractor_user_id\x18\x02 \x01(\tR\vactorUserId\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x12\x1f\n" +
+	"\vtarget_type\x18\x04 \x01(\tR\n" +
+	"targetType\x12\x1b\n" +
+	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\x12=\n" +
+	"\ametrics\x18\a \x03(\v2#.workspace.v1.GovernanceAuditMetricR\ametrics\x12;\n" +
+	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\"\x92\x01\n" +
+	"\x1dTransferGroupResourcesRequest\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12 \n" +
+	"\ffrom_user_id\x18\x02 \x01(\tR\n" +
+	"fromUserId\x12\x1c\n" +
+	"\n" +
+	"to_user_id\x18\x03 \x01(\tR\btoUserId\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"R\n" +
+	"\x1eTransferGroupResourcesResponse\x120\n" +
+	"\x14knowledge_base_count\x18\x01 \x01(\x03R\x12knowledgeBaseCount\"\x19\n" +
+	"\x17GetCreditBalanceRequest\"\xcb\a\n" +
 	"\rCreditBalance\x12)\n" +
 	"\x10total_hundredths\x18\x01 \x01(\x03R\x0ftotalHundredths\x12<\n" +
 	"\x1adaily_remaining_hundredths\x18\x02 \x01(\x03R\x18dailyRemainingHundredths\x123\n" +
@@ -18721,9 +21822,36 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	" \x01(\tH\x01R\x13pendingEffectiveDay\x88\x01\x01\x12\x18\n" +
 	"\aversion\x18\v \x01(\x03R\aversion\x12/\n" +
 	"\x13reserved_hundredths\x18\f \x01(\x03R\x12reservedHundredths\x121\n" +
-	"\x14available_hundredths\x18\r \x01(\x03R\x13availableHundredthsB&\n" +
+	"\x14available_hundredths\x18\r \x01(\x03R\x13availableHundredths\x12:\n" +
+	"\x19warning_threshold_percent\x18\x0e \x01(\x05R\x17warningThresholdPercent\x128\n" +
+	"\x18redemption_codes_enabled\x18\x0f \x01(\bR\x16redemptionCodesEnabled\x12G\n" +
+	"\fgroup_budget\x18\x10 \x01(\v2\x1f.workspace.v1.GroupCreditBudgetH\x02R\vgroupBudget\x88\x01\x01B&\n" +
 	"$_pending_daily_allocation_hundredthsB\x18\n" +
-	"\x16_pending_effective_day\"f\n" +
+	"\x16_pending_effective_dayB\x0f\n" +
+	"\r_group_budget\"\x8d\x02\n" +
+	"\x11GroupCreditBudget\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x1d\n" +
+	"\n" +
+	"group_name\x18\x02 \x01(\tR\tgroupName\x12)\n" +
+	"\x10limit_hundredths\x18\x03 \x01(\x03R\x0flimitHundredths\x12/\n" +
+	"\x13consumed_hundredths\x18\x04 \x01(\x03R\x12consumedHundredths\x12/\n" +
+	"\x13reserved_hundredths\x18\x05 \x01(\x03R\x12reservedHundredths\x121\n" +
+	"\x14available_hundredths\x18\x06 \x01(\x03R\x13availableHundredths\"\x18\n" +
+	"\x16GetCreditPolicyRequest\"\x8b\x02\n" +
+	"\x19UpdateCreditPolicyRequest\x12M\n" +
+	"#default_daily_allocation_hundredths\x18\x01 \x01(\x03R defaultDailyAllocationHundredths\x12:\n" +
+	"\x19warning_threshold_percent\x18\x02 \x01(\x05R\x17warningThresholdPercent\x128\n" +
+	"\x18redemption_codes_enabled\x18\x03 \x01(\bR\x16redemptionCodesEnabled\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"\xf1\x02\n" +
+	"\fCreditPolicy\x12M\n" +
+	"#default_daily_allocation_hundredths\x18\x01 \x01(\x03R defaultDailyAllocationHundredths\x12:\n" +
+	"\x19warning_threshold_percent\x18\x02 \x01(\x05R\x17warningThresholdPercent\x128\n" +
+	"\x18redemption_codes_enabled\x18\x03 \x01(\bR\x16redemptionCodesEnabled\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\x03R\aversion\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x120\n" +
+	"\x12updated_by_user_id\x18\x06 \x01(\tH\x00R\x0fupdatedByUserId\x88\x01\x01B\x15\n" +
+	"\x13_updated_by_user_id\"f\n" +
 	"\x17ListCreditLedgerRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x19\n" +
 	"\x05limit\x18\x02 \x01(\x05H\x01R\x05limit\x88\x01\x01B\t\n" +
@@ -19080,14 +22208,15 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x06_afterB\b\n" +
 	"\x06_limit\"Q\n" +
 	"\x1bListSessionMessagesResponse\x122\n" +
-	"\x05items\x18\x01 \x03(\v2\x1c.workspace.v1.SessionMessageR\x05items\"\xfd\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x1c.workspace.v1.SessionMessageR\x05items\"\xa6\x02\n" +
 	"\x19SendSessionMessageRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12%\n" +
 	"\x0eattachment_ids\x18\x04 \x03(\tR\rattachmentIds\x12!\n" +
 	"\fselection_id\x18\x05 \x01(\tR\vselectionId\x12D\n" +
-	"\x0ffile_references\x18\x06 \x03(\v2\x1b.workspace.v1.FileReferenceR\x0efileReferencesJ\x04\b\x03\x10\x04R\x11provider_model_id\"\xa8\x01\n" +
+	"\x0ffile_references\x18\x06 \x03(\v2\x1b.workspace.v1.FileReferenceR\x0efileReferences\x12'\n" +
+	"\x0fplan_preference\x18\a \x01(\tR\x0eplanPreferenceJ\x04\b\x03\x10\x04R\x11provider_model_id\"\xa8\x01\n" +
 	"\x1aSendSessionMessageResponse\x12?\n" +
 	"\fuser_message\x18\x01 \x01(\v2\x1c.workspace.v1.SessionMessageR\vuserMessage\x12I\n" +
 	"\x11assistant_message\x18\x02 \x01(\v2\x1c.workspace.v1.SessionMessageR\x10assistantMessage\"Z\n" +
@@ -19100,7 +22229,73 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
 	"\n" +
-	"message_id\x18\x02 \x01(\x03R\tmessageId\"\xb9\x06\n" +
+	"message_id\x18\x02 \x01(\x03R\tmessageId\"\xa8\x01\n" +
+	"!DecideSessionExecutionPlanRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\x03R\tmessageId\x12\x1a\n" +
+	"\bdecision\x18\x03 \x01(\tR\bdecision\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"b\n" +
+	"\"PreviewSessionWorkflowDraftRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\x03R\tmessageId\"\xc9\x01\n" +
+	" CreateWorkflowFromSessionRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\x03R\tmessageId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
+	"\x04goal\x18\x04 \x01(\tR\x04goal\x12?\n" +
+	"\x05files\x18\x05 \x03(\v2).workspace.v1.SessionWorkflowFileDecisionR\x05files\"\xe4\x01\n" +
+	"!CreateWorkflowFromSessionResponse\x122\n" +
+	"\bworkflow\x18\x01 \x01(\v2\x16.workspace.v1.WorkflowR\bworkflow\x128\n" +
+	"\x0evalidation_run\x18\x02 \x01(\v2\x11.workspace.v1.RunR\rvalidationRun\x125\n" +
+	"\x04link\x18\x03 \x01(\v2!.workspace.v1.SessionWorkflowLinkR\x04link\x12\x1a\n" +
+	"\breplayed\x18\x04 \x01(\bR\breplayed\"@\n" +
+	"\x1fListSessionWorkflowLinksRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"[\n" +
+	" ListSessionWorkflowLinksResponse\x127\n" +
+	"\x05items\x18\x01 \x03(\v2!.workspace.v1.SessionWorkflowLinkR\x05items\"\xea\x02\n" +
+	"\x14SessionWorkflowDraft\x12%\n" +
+	"\x0esuggested_name\x18\x01 \x01(\tR\rsuggestedName\x12%\n" +
+	"\x0esuggested_goal\x18\x02 \x01(\tR\rsuggestedGoal\x12'\n" +
+	"\x0fspecialist_name\x18\x03 \x01(\tR\x0especialistName\x12C\n" +
+	"\tresources\x18\x04 \x03(\v2%.workspace.v1.SessionWorkflowResourceR\tresources\x127\n" +
+	"\x05files\x18\x05 \x03(\v2!.workspace.v1.SessionWorkflowFileR\x05files\x12K\n" +
+	"\rexisting_link\x18\x06 \x01(\v2!.workspace.v1.SessionWorkflowLinkH\x00R\fexistingLink\x88\x01\x01B\x10\n" +
+	"\x0e_existing_link\"Q\n" +
+	"\x17SessionWorkflowResource\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\xd9\x01\n" +
+	"\x13SessionWorkflowFile\x12\x1d\n" +
+	"\n" +
+	"source_key\x18\x01 \x01(\tR\tsourceKey\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x03R\x04size\x12\x1c\n" +
+	"\tavailable\x18\x05 \x01(\bR\tavailable\x122\n" +
+	"\x12unavailable_reason\x18\x06 \x01(\tH\x00R\x11unavailableReason\x88\x01\x01B\x15\n" +
+	"\x13_unavailable_reason\"^\n" +
+	"\x1bSessionWorkflowFileDecision\x12\x1d\n" +
+	"\n" +
+	"source_key\x18\x01 \x01(\tR\tsourceKey\x12 \n" +
+	"\vdestination\x18\x02 \x01(\tR\vdestination\"\x80\x02\n" +
+	"\x13SessionWorkflowLink\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x02 \x01(\x03R\tmessageId\x12\x1f\n" +
+	"\vworkflow_id\x18\x03 \x01(\tR\n" +
+	"workflowId\x12#\n" +
+	"\rworkflow_name\x18\x04 \x01(\tR\fworkflowName\x12*\n" +
+	"\x11validation_run_id\x18\x05 \x01(\tR\x0fvalidationRunId\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xc9\a\n" +
 	"\x0eSessionMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x14\n" +
@@ -19121,11 +22316,14 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"activities\x18\r \x03(\v2\x1f.workspace.v1.ExecutionActivityR\n" +
 	"activities\x124\n" +
 	"\tartifacts\x18\x0e \x03(\v2\x16.workspace.v1.ArtifactR\tartifacts\x12R\n" +
-	"\x0fresource_action\x18\x0f \x01(\v2$.workspace.v1.ResourceCreationActionH\x03R\x0eresourceAction\x88\x01\x01B\b\n" +
+	"\x0fresource_action\x18\x0f \x01(\v2$.workspace.v1.ResourceCreationActionH\x03R\x0eresourceAction\x88\x01\x01\x122\n" +
+	"\bevidence\x18\x10 \x03(\v2\x16.workspace.v1.EvidenceR\bevidence\x12G\n" +
+	"\x0eexecution_plan\x18\x11 \x01(\v2\x1b.workspace.v1.ExecutionPlanH\x04R\rexecutionPlan\x88\x01\x01B\b\n" +
 	"\x06_errorB\x14\n" +
 	"\x12_response_snapshotB\x15\n" +
 	"\x13_credit_consumptionB\x12\n" +
-	"\x10_resource_action\"\xa3\x02\n" +
+	"\x10_resource_actionB\x11\n" +
+	"\x0f_execution_plan\"\xa3\x02\n" +
 	"\x16ResourceCreationAction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n" +
@@ -19256,7 +22454,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"_expert_idB\v\n" +
 	"\t_scheduleB\x11\n" +
-	"\x0f_expert_team_idJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\x11provider_model_idR\x0eruntime_engine\"\xca\x05\n" +
+	"\x0f_expert_team_idJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\x11provider_model_idR\x0eruntime_engine\"\x95\x06\n" +
 	"\bWorkflow\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -19275,12 +22473,14 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\x0e \x01(\x03R\aversion\x12)\n" +
 	"\x0eexpert_team_id\x18\x0f \x01(\tH\x03R\fexpertTeamId\x88\x01\x01\x12,\n" +
-	"\x12knowledge_base_ids\x18\x10 \x03(\tR\x10knowledgeBaseIdsB\f\n" +
+	"\x12knowledge_base_ids\x18\x10 \x03(\tR\x10knowledgeBaseIds\x12>\n" +
+	"\x06origin\x18\x11 \x01(\v2!.workspace.v1.SessionWorkflowLinkH\x04R\x06origin\x88\x01\x01B\f\n" +
 	"\n" +
 	"_expert_idB\v\n" +
 	"\t_scheduleB\r\n" +
 	"\v_git_sourceB\x11\n" +
-	"\x0f_expert_team_idJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x11provider_model_idR\x0eruntime_engine\"\x86\x01\n" +
+	"\x0f_expert_team_idB\t\n" +
+	"\a_originJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x11provider_model_idR\x0eruntime_engine\"\x86\x01\n" +
 	"\x13EnvironmentVariable\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05value\x18\x02 \x01(\tH\x00R\x05value\x88\x01\x01\x12\x16\n" +
@@ -19322,14 +22522,17 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x0eknowledge_base\x18\x02 \x01(\v2 .workspace.v1.KnowledgeBaseInputR\rknowledgeBase\x12)\n" +
 	"\x10expected_version\x18\x03 \x01(\x03R\x0fexpectedVersion\"H\n" +
 	"\x1aDeleteKnowledgeBaseRequest\x12*\n" +
-	"\x11knowledge_base_id\x18\x01 \x01(\tR\x0fknowledgeBaseId\"\x86\x01\n" +
+	"\x11knowledge_base_id\x18\x01 \x01(\tR\x0fknowledgeBaseId\"\xc9\x01\n" +
 	"\x12KnowledgeBaseInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1e\n" +
 	"\n" +
 	"visibility\x18\x03 \x01(\tR\n" +
 	"visibility\x12\x1a\n" +
-	"\bplatform\x18\x04 \x01(\bR\bplatform\"\xd6\x02\n" +
+	"\bplatform\x18\x04 \x01(\bR\bplatform\x12\x14\n" +
+	"\x05scope\x18\x05 \x01(\tR\x05scope\x12\x1e\n" +
+	"\bgroup_id\x18\x06 \x01(\tH\x00R\agroupId\x88\x01\x01B\v\n" +
+	"\t_group_id\"\xfc\x04\n" +
 	"\rKnowledgeBase\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x12\n" +
@@ -19345,7 +22548,17 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x18\n" +
 	"\aversion\x18\n" +
-	" \x01(\x03R\aversion\"L\n" +
+	" \x01(\x03R\aversion\x12%\n" +
+	"\x0edocument_count\x18\v \x01(\x03R\rdocumentCount\x120\n" +
+	"\x14ready_document_count\x18\f \x01(\x03R\x12readyDocumentCount\x12C\n" +
+	"\rlast_ready_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vlastReadyAt\x88\x01\x01\x12\x14\n" +
+	"\x05scope\x18\x0e \x01(\tR\x05scope\x12\x1e\n" +
+	"\bgroup_id\x18\x0f \x01(\tH\x01R\agroupId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"group_name\x18\x10 \x01(\tH\x02R\tgroupName\x88\x01\x01B\x10\n" +
+	"\x0e_last_ready_atB\v\n" +
+	"\t_group_idB\r\n" +
+	"\v_group_name\"L\n" +
 	"\x1eListKnowledgeCategoriesRequest\x12*\n" +
 	"\x11knowledge_base_id\x18\x01 \x01(\tR\x0fknowledgeBaseId\"X\n" +
 	"\x1fListKnowledgeCategoriesResponse\x125\n" +
@@ -19433,14 +22646,15 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"token_type\x18\x02 \x01(\tR\ttokenType\x129\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xb4\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xdd\x01\n" +
 	"\x12RunWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\"\n" +
 	"\n" +
 	"text_input\x18\x02 \x01(\tH\x00R\ttextInput\x88\x01\x01\x12;\n" +
 	"\n" +
-	"json_input\x18\x03 \x01(\v2\x17.google.protobuf.StructH\x01R\tjsonInput\x88\x01\x01B\r\n" +
+	"json_input\x18\x03 \x01(\v2\x17.google.protobuf.StructH\x01R\tjsonInput\x88\x01\x01\x12'\n" +
+	"\x0fplan_preference\x18\x04 \x01(\tR\x0eplanPreferenceB\r\n" +
 	"\v_text_inputB\r\n" +
 	"\v_json_input\"2\n" +
 	"\x0fListRunsRequest\x12\x1f\n" +
@@ -19455,7 +22669,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13ListRunTurnsRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\x82\x02\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\xab\x02\n" +
 	"\x1eContinueRunConversationRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
@@ -19463,7 +22677,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12%\n" +
 	"\x0eattachment_ids\x18\x04 \x03(\tR\rattachmentIds\x12!\n" +
 	"\fselection_id\x18\x05 \x01(\tR\vselectionId\x12D\n" +
-	"\x0ffile_references\x18\x06 \x03(\v2\x1b.workspace.v1.FileReferenceR\x0efileReferences\"J\n" +
+	"\x0ffile_references\x18\x06 \x03(\v2\x1b.workspace.v1.FileReferenceR\x0efileReferences\x12'\n" +
+	"\x0fplan_preference\x18\a \x01(\tR\x0eplanPreference\"J\n" +
 	"\x10CancelRunRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
@@ -19471,7 +22686,13 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x14RerunWorkflowRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\x12\x15\n" +
-	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\xd8\b\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\"\x9e\x01\n" +
+	"\x1dDecideRunExecutionPlanRequest\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\x12\x15\n" +
+	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x1a\n" +
+	"\bdecision\x18\x03 \x01(\tR\bdecision\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"\xe8\t\n" +
 	"\x03Run\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -19502,7 +22723,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\vattachments\x18\x12 \x03(\v2\x18.workspace.v1.AttachmentR\vattachments\x12>\n" +
 	"\rexpert_stages\x18\x13 \x03(\v2\x19.workspace.v1.ExpertStageR\fexpertStages\x12S\n" +
 	"\x12credit_consumption\x18\x14 \x01(\v2\x1f.workspace.v1.CreditConsumptionH\bR\x11creditConsumption\x88\x01\x01\x12%\n" +
-	"\x0equeue_position\x18\x15 \x01(\x05R\rqueuePositionB\r\n" +
+	"\x0equeue_position\x18\x15 \x01(\x05R\rqueuePosition\x122\n" +
+	"\bevidence\x18\x16 \x03(\v2\x16.workspace.v1.EvidenceR\bevidence\x12G\n" +
+	"\x0eexecution_plan\x18\x17 \x01(\v2\x1b.workspace.v1.ExecutionPlanH\tR\rexecutionPlan\x88\x01\x01B\r\n" +
 	"\v_text_inputB\r\n" +
 	"\v_json_inputB\r\n" +
 	"\v_final_textB\r\n" +
@@ -19511,7 +22734,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\v_started_atB\v\n" +
 	"\t_ended_atB\x14\n" +
 	"\x12_workflow_snapshotB\x15\n" +
-	"\x13_credit_consumption\"7\n" +
+	"\x13_credit_consumptionB\x11\n" +
+	"\x0f_execution_plan\"7\n" +
 	"\x14ListArtifactsRequest\x12\x1f\n" +
 	"\vworkflow_id\x18\x01 \x01(\tR\n" +
 	"workflowId\"E\n" +
@@ -19738,7 +22962,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	" \x01(\x03R\x10amountHundredths\x12\x1c\n" +
 	"\testimated\x18\v \x01(\bR\testimated\x12(\n" +
 	"\x10rate_revision_id\x18\f \x01(\tR\x0erateRevisionId\"\x14\n" +
-	"\x12GetSettingsRequest\"\xe6\x02\n" +
+	"\x12GetSettingsRequest\"\xc8\x03\n" +
 	"\x15UpdateSettingsRequest\x12 \n" +
 	"\vpersonality\x18\x01 \x01(\tR\vpersonality\x129\n" +
 	"\x18personality_instructions\x18\x02 \x01(\tR\x17personalityInstructions\x12W\n" +
@@ -19746,7 +22970,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x16default_runtime_engine\x18\x04 \x01(\tR\x14defaultRuntimeEngine\x12\x1a\n" +
 	"\blanguage\x18\x05 \x01(\tR\blanguage\x12\x1a\n" +
 	"\btimezone\x18\x06 \x01(\tR\btimezone\x12)\n" +
-	"\x10expected_version\x18\a \x01(\x03R\x0fexpectedVersion\"\xd0\x02\n" +
+	"\x10expected_version\x18\a \x01(\x03R\x0fexpectedVersion\x12A\n" +
+	"\x1ainherit_platform_execution\x18\b \x01(\bH\x00R\x18inheritPlatformExecution\x88\x01\x01B\x1d\n" +
+	"\x1b_inherit_platform_execution\"\xc3\x03\n" +
 	"\x10PersonalSettings\x12 \n" +
 	"\vpersonality\x18\x01 \x01(\tR\vpersonality\x129\n" +
 	"\x18personality_instructions\x18\x02 \x01(\tR\x17personalityInstructions\x12W\n" +
@@ -19754,7 +22980,23 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x16default_runtime_engine\x18\x04 \x01(\tR\x14defaultRuntimeEngine\x12\x1a\n" +
 	"\blanguage\x18\x05 \x01(\tR\blanguage\x12\x1a\n" +
 	"\btimezone\x18\x06 \x01(\tR\btimezone\x12\x18\n" +
-	"\aversion\x18\a \x01(\x03R\aversion\"h\n" +
+	"\aversion\x18\a \x01(\x03R\aversion\x12/\n" +
+	"\x13execution_inherited\x18\b \x01(\bR\x12executionInherited\x12@\n" +
+	"\x1cplatform_execution_available\x18\t \x01(\bR\x1aplatformExecutionAvailable\"$\n" +
+	"\"GetPlatformExecutionDefaultRequest\"\xce\x01\n" +
+	"\"SetPlatformExecutionDefaultRequest\x12%\n" +
+	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12*\n" +
+	"\x11provider_model_id\x18\x02 \x01(\tR\x0fproviderModelId\x12*\n" +
+	"\x11validation_run_id\x18\x03 \x01(\tR\x0fvalidationRunId\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"\x9b\x02\n" +
+	"\x18PlatformExecutionDefault\x12%\n" +
+	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12*\n" +
+	"\x11provider_model_id\x18\x02 \x01(\tR\x0fproviderModelId\x12*\n" +
+	"\x11validation_run_id\x18\x03 \x01(\tR\x0fvalidationRunId\x12+\n" +
+	"\x12updated_by_user_id\x18\x04 \x01(\tR\x0fupdatedByUserId\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\x03R\aversion\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"h\n" +
 	"\x13RuntimeModelDefault\x12%\n" +
 	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12*\n" +
 	"\x11provider_model_id\x18\x02 \x01(\tR\x0fproviderModelId\"\x1b\n" +
@@ -20330,7 +23572,54 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x05image\x18\x06 \x01(\bR\x05image\"?\n" +
 	"\x11ExecutionActivity\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
-	"\x06detail\x18\x02 \x01(\tR\x06detail\"c\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail\"\x9f\x01\n" +
+	"\x10EvidenceCitation\x12\x1f\n" +
+	"\vrevision_id\x18\x01 \x01(\tR\n" +
+	"revisionId\x12#\n" +
+	"\rcategory_name\x18\x02 \x01(\tR\fcategoryName\x12'\n" +
+	"\x0fsource_location\x18\x03 \x01(\tR\x0esourceLocation\x12\x1c\n" +
+	"\trelevance\x18\x04 \x01(\x02R\trelevance\"\xb2\x02\n" +
+	"\bEvidence\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x1b\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12\x1f\n" +
+	"\vsource_name\x18\x04 \x01(\tR\n" +
+	"sourceName\x12!\n" +
+	"\fcontainer_id\x18\x05 \x01(\tR\vcontainerId\x12\x14\n" +
+	"\x05state\x18\x06 \x01(\tR\x05state\x12\x16\n" +
+	"\x06action\x18\a \x01(\tR\x06action\x12%\n" +
+	"\x0estage_position\x18\b \x01(\x05R\rstagePosition\x12?\n" +
+	"\bcitation\x18\t \x01(\v2\x1e.workspace.v1.EvidenceCitationH\x00R\bcitation\x88\x01\x01B\v\n" +
+	"\t_citation\"\x7f\n" +
+	"\x11ExecutionPlanStep\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12\x1a\n" +
+	"\bposition\x18\x04 \x01(\x05R\bposition\x12\x14\n" +
+	"\x05state\x18\x05 \x01(\tR\x05state\"O\n" +
+	"\x15ExecutionPlanResource\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\x82\x05\n" +
+	"\rExecutionPlan\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\x12\x1c\n" +
+	"\tobjective\x18\x03 \x01(\tR\tobjective\x125\n" +
+	"\x05steps\x18\x04 \x03(\v2\x1f.workspace.v1.ExecutionPlanStepR\x05steps\x12A\n" +
+	"\tresources\x18\x05 \x03(\v2#.workspace.v1.ExecutionPlanResourceR\tresources\x12!\n" +
+	"\fside_effects\x18\x06 \x03(\tR\vsideEffects\x12\x18\n" +
+	"\areasons\x18\a \x03(\tR\areasons\x122\n" +
+	"\x15estimated_model_calls\x18\b \x01(\x05R\x13estimatedModelCalls\x12>\n" +
+	"\x1bestimated_credit_hundredths\x18\t \x01(\x03R\x19estimatedCreditHundredths\x12@\n" +
+	"\x1cgeneration_credit_hundredths\x18\n" +
+	" \x01(\x03R\x1agenerationCreditHundredths\x12\x1c\n" +
+	"\tgenerator\x18\v \x01(\tR\tgenerator\x129\n" +
+	"\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12>\n" +
+	"\n" +
+	"decided_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tdecidedAt\x88\x01\x01\x12\x18\n" +
+	"\aversion\x18\x0e \x01(\x03R\aversionB\r\n" +
+	"\v_decided_at\"c\n" +
 	"!GetSessionArtifactDownloadRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
@@ -20409,8 +23698,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bskill_id\x18\x01 \x01(\tR\askillId\"T\n" +
 	"\rSkillDocument\x12)\n" +
 	"\x05skill\x18\x01 \x01(\v2\x13.workspace.v1.SkillR\x05skill\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent2ٯ\x01\n" +
-	"\x15AgentWorkspaceService\x12\x96\x01\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent2\x87\xc4\x01\n" +
+	"\x15AgentWorkspaceService\x12r\n" +
+	"\x0fGetHomeOverview\x12$.workspace.v1.GetHomeOverviewRequest\x1a\x1a.workspace.v1.HomeOverview\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/v1/home-overview\x12\x96\x01\n" +
 	"\x18GetConversationSelection\x12-.workspace.v1.GetConversationSelectionRequest\x1a#.workspace.v1.ConversationSelection\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/conversation-selection\x12\xa1\x01\n" +
 	"\x1cResolveConversationSelection\x121.workspace.v1.ResolveConversationSelectionRequest\x1a#.workspace.v1.ConversationSelection\")\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/api/v1/conversation-selection\x12\x94\x01\n" +
 	"\x15ListConversationFiles\x12*.workspace.v1.ListConversationFilesRequest\x1a+.workspace.v1.ListConversationFilesResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/v1/conversation-files\x12\x82\x01\n" +
@@ -20421,8 +23711,16 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\n" +
 	"CreateUser\x12\x1f.workspace.v1.CreateUserRequest\x1a .workspace.v1.CreateUserResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/admin/users\x12\x82\x01\n" +
 	"\x0eSetUserEnabled\x12#.workspace.v1.SetUserEnabledRequest\x1a\x19.workspace.v1.UserAccount\"0\x82\xd3\xe4\x93\x02*:\x01*2%/api/v1/admin/users/{user_id}/enabled\x12\x9d\x01\n" +
-	"\x11ResetUserPassword\x12&.workspace.v1.ResetUserPasswordRequest\x1a'.workspace.v1.ResetUserPasswordResponse\"7\x82\xd3\xe4\x93\x021:\x01*\",/api/v1/admin/users/{user_id}/password-reset\x12w\n" +
-	"\x10GetCreditBalance\x12%.workspace.v1.GetCreditBalanceRequest\x1a\x1b.workspace.v1.CreditBalance\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v1/credits/balance\x12\x81\x01\n" +
+	"\x11ResetUserPassword\x12&.workspace.v1.ResetUserPasswordRequest\x1a'.workspace.v1.ResetUserPasswordResponse\"7\x82\xd3\xe4\x93\x021:\x01*\",/api/v1/admin/users/{user_id}/password-reset\x12|\n" +
+	"\fSetUserRoles\x12!.workspace.v1.SetUserRolesRequest\x1a\x19.workspace.v1.UserAccount\".\x82\xd3\xe4\x93\x02(:\x01*2#/api/v1/admin/users/{user_id}/roles\x12\x8e\x01\n" +
+	"\x12ListIdentityGroups\x12'.workspace.v1.ListIdentityGroupsRequest\x1a(.workspace.v1.ListIdentityGroupsResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/v1/admin/identity-groups\x12\xa1\x01\n" +
+	"\x12SyncIdentityGroups\x12'.workspace.v1.SyncIdentityGroupsRequest\x1a(.workspace.v1.ListIdentityGroupsResponse\"8\x82\xd3\xe4\x93\x022:\x01*\"-/api/v1/admin/identity-groups/synchronization\x12\xa4\x01\n" +
+	"\x19UpdateIdentityGroupBudget\x12..workspace.v1.UpdateIdentityGroupBudgetRequest\x1a\x1b.workspace.v1.IdentityGroup\":\x82\xd3\xe4\x93\x024:\x01*2//api/v1/admin/identity-groups/{group_id}/budget\x12\xab\x01\n" +
+	"\x19ListGovernanceAuditEvents\x12..workspace.v1.ListGovernanceAuditEventsRequest\x1a/.workspace.v1.ListGovernanceAuditEventsResponse\"-\x82\xd3\xe4\x93\x02'\x12%/api/v1/admin/governance-audit-events\x12\xbb\x01\n" +
+	"\x16TransferGroupResources\x12+.workspace.v1.TransferGroupResourcesRequest\x1a,.workspace.v1.TransferGroupResourcesResponse\"F\x82\xd3\xe4\x93\x02@:\x01*\";/api/v1/admin/identity-groups/{group_id}/resource-transfers\x12w\n" +
+	"\x10GetCreditBalance\x12%.workspace.v1.GetCreditBalanceRequest\x1a\x1b.workspace.v1.CreditBalance\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v1/credits/balance\x12x\n" +
+	"\x0fGetCreditPolicy\x12$.workspace.v1.GetCreditPolicyRequest\x1a\x1a.workspace.v1.CreditPolicy\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v1/admin/credit-policy\x12\x81\x01\n" +
+	"\x12UpdateCreditPolicy\x12'.workspace.v1.UpdateCreditPolicyRequest\x1a\x1a.workspace.v1.CreditPolicy\"&\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/api/v1/admin/credit-policy\x12\x81\x01\n" +
 	"\x10ListCreditLedger\x12%.workspace.v1.ListCreditLedgerRequest\x1a&.workspace.v1.ListCreditLedgerResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/credits/ledger\x12~\n" +
 	"\x10RedeemCreditCode\x12%.workspace.v1.RedeemCreditCodeRequest\x1a\x1b.workspace.v1.CreditBalance\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/credits/redemptions\x12\xa0\x01\n" +
 	"\x19ConfigureUserDailyCredits\x12..workspace.v1.ConfigureUserDailyCreditsRequest\x1a\x1b.workspace.v1.CreditBalance\"6\x82\xd3\xe4\x93\x020:\x01*2+/api/v1/admin/users/{user_id}/daily-credits\x12\x95\x01\n" +
@@ -20459,7 +23757,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x13ListSessionMessages\x12(.workspace.v1.ListSessionMessagesRequest\x1a).workspace.v1.ListSessionMessagesResponse\".\x82\xd3\xe4\x93\x02(\x12&/api/v1/sessions/{session_id}/messages\x12\x9a\x01\n" +
 	"\x12SendSessionMessage\x12'.workspace.v1.SendSessionMessageRequest\x1a(.workspace.v1.SendSessionMessageResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/api/v1/sessions/{session_id}/messages\x12\xaf\x01\n" +
 	"\x13RetrySessionMessage\x12(.workspace.v1.RetrySessionMessageRequest\x1a(.workspace.v1.SendSessionMessageResponse\"D\x82\xd3\xe4\x93\x02>:\x01*\"9/api/v1/sessions/{session_id}/messages/{message_id}/retry\x12\xac\x01\n" +
-	"\x14CancelSessionMessage\x12).workspace.v1.CancelSessionMessageRequest\x1a\x1c.workspace.v1.SessionMessage\"K\x82\xd3\xe4\x93\x02E:\x01*\"@/api/v1/sessions/{session_id}/messages/{message_id}/cancellation\x12s\n" +
+	"\x14CancelSessionMessage\x12).workspace.v1.CancelSessionMessageRequest\x1a\x1c.workspace.v1.SessionMessage\"K\x82\xd3\xe4\x93\x02E:\x01*\"@/api/v1/sessions/{session_id}/messages/{message_id}/cancellation\x12\xb9\x01\n" +
+	"\x1aDecideSessionExecutionPlan\x12/.workspace.v1.DecideSessionExecutionPlanRequest\x1a\x1c.workspace.v1.SessionMessage\"L\x82\xd3\xe4\x93\x02F:\x01*\"A/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision\x12\xbf\x01\n" +
+	"\x1bPreviewSessionWorkflowDraft\x120.workspace.v1.PreviewSessionWorkflowDraftRequest\x1a\".workspace.v1.SessionWorkflowDraft\"J\x82\xd3\xe4\x93\x02D\x12B/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft\x12\xc5\x01\n" +
+	"\x19CreateWorkflowFromSession\x12..workspace.v1.CreateWorkflowFromSessionRequest\x1a/.workspace.v1.CreateWorkflowFromSessionResponse\"G\x82\xd3\xe4\x93\x02A:\x01*\"</api/v1/sessions/{session_id}/messages/{message_id}/workflow\x12\xaf\x01\n" +
+	"\x18ListSessionWorkflowLinks\x12-.workspace.v1.ListSessionWorkflowLinksRequest\x1a..workspace.v1.ListSessionWorkflowLinksResponse\"4\x82\xd3\xe4\x93\x02.\x12,/api/v1/sessions/{session_id}/workflow-links\x12s\n" +
 	"\rListWorkflows\x12\".workspace.v1.ListWorkflowsRequest\x1a#.workspace.v1.ListWorkflowsResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/v1/workflows\x12k\n" +
 	"\x0eCreateWorkflow\x12#.workspace.v1.CreateWorkflowRequest\x1a\x16.workspace.v1.Workflow\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/api/v1/workflows\x12p\n" +
 	"\vGetWorkflow\x12 .workspace.v1.GetWorkflowRequest\x1a\x16.workspace.v1.Workflow\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/v1/workflows/{workflow_id}\x12y\n" +
@@ -20474,7 +23776,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\fListRunTurns\x12!.workspace.v1.ListRunTurnsRequest\x1a\x1e.workspace.v1.ListRunsResponse\";\x82\xd3\xe4\x93\x025\x123/api/v1/workflows/{workflow_id}/runs/{run_id}/turns\x12\x9a\x01\n" +
 	"\x17ContinueRunConversation\x12,.workspace.v1.ContinueRunConversationRequest\x1a\x11.workspace.v1.Run\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/workflows/{workflow_id}/runs/{run_id}/turns\x12\x85\x01\n" +
 	"\tCancelRun\x12\x1e.workspace.v1.CancelRunRequest\x1a\x11.workspace.v1.Run\"E\x82\xd3\xe4\x93\x02?:\x01*\":/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation\x12\x86\x01\n" +
-	"\rRerunWorkflow\x12\".workspace.v1.RerunWorkflowRequest\x1a\x11.workspace.v1.Run\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun\x12\x8b\x01\n" +
+	"\rRerunWorkflow\x12\".workspace.v1.RerunWorkflowRequest\x1a\x11.workspace.v1.Run\">\x82\xd3\xe4\x93\x028:\x01*\"3/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun\x12\xa0\x01\n" +
+	"\x16DecideRunExecutionPlan\x12+.workspace.v1.DecideRunExecutionPlanRequest\x1a\x11.workspace.v1.Run\"F\x82\xd3\xe4\x93\x02@:\x01*\";/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision\x12\x8b\x01\n" +
 	"\rListArtifacts\x12\".workspace.v1.ListArtifactsRequest\x1a#.workspace.v1.ListArtifactsResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/artifacts\x12\xa0\x01\n" +
 	"\x14ListWorkspaceEntries\x12).workspace.v1.ListWorkspaceEntriesRequest\x1a*.workspace.v1.ListWorkspaceEntriesResponse\"1\x82\xd3\xe4\x93\x02+\x12)/api/v1/workflows/{workflow_id}/workspace\x12\x8e\x01\n" +
 	"\x10GetWorkspaceFile\x12%.workspace.v1.GetWorkspaceFileRequest\x1a\x1b.workspace.v1.WorkspaceFile\"6\x82\xd3\xe4\x93\x020\x12./api/v1/workflows/{workflow_id}/workspace/file\x12\x9c\x01\n" +
@@ -20499,7 +23802,9 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x10UpdateExpertTeam\x12%.workspace.v1.UpdateExpertTeamRequest\x1a\x18.workspace.v1.ExpertTeam\"0\x82\xd3\xe4\x93\x02*:\x01*2%/api/v1/expert-teams/{expert_team_id}\x12\x86\x01\n" +
 	"\x10DeleteExpertTeam\x12%.workspace.v1.DeleteExpertTeamRequest\x1a\x1c.workspace.v1.DeleteResponse\"-\x82\xd3\xe4\x93\x02'*%/api/v1/expert-teams/{expert_team_id}\x12i\n" +
 	"\vGetSettings\x12 .workspace.v1.GetSettingsRequest\x1a\x1e.workspace.v1.PersonalSettings\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/v1/settings\x12r\n" +
-	"\x0eUpdateSettings\x12#.workspace.v1.UpdateSettingsRequest\x1a\x1e.workspace.v1.PersonalSettings\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*2\x10/api/v1/settings\x12\x88\x01\n" +
+	"\x0eUpdateSettings\x12#.workspace.v1.UpdateSettingsRequest\x1a\x1e.workspace.v1.PersonalSettings\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*2\x10/api/v1/settings\x12\xa9\x01\n" +
+	"\x1bGetPlatformExecutionDefault\x120.workspace.v1.GetPlatformExecutionDefaultRequest\x1a&.workspace.v1.PlatformExecutionDefault\"0\x82\xd3\xe4\x93\x02*\x12(/api/v1/admin/platform-execution-default\x12\xac\x01\n" +
+	"\x1bSetPlatformExecutionDefault\x120.workspace.v1.SetPlatformExecutionDefaultRequest\x1a&.workspace.v1.PlatformExecutionDefault\"3\x82\xd3\xe4\x93\x02-:\x01*\x1a(/api/v1/admin/platform-execution-default\x12\x88\x01\n" +
 	"\x12ListRuntimeEngines\x12'.workspace.v1.ListRuntimeEnginesRequest\x1a(.workspace.v1.ListRuntimeEnginesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v1/runtime-engines\x12\xa1\x01\n" +
 	"\x18ListModelProviderPresets\x12-.workspace.v1.ListModelProviderPresetsRequest\x1a..workspace.v1.ListModelProviderPresetsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/api/v1/model-provider-presets\x12\xb1\x01\n" +
 	"\x1cListModelProviderConnections\x121.workspace.v1.ListModelProviderConnectionsRequest\x1a2.workspace.v1.ListModelProviderConnectionsResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/api/v1/model-provider-connections\x12\xa9\x01\n" +
@@ -20573,760 +23878,869 @@ func file_workspace_v1_workspace_proto_rawDescGZIP() []byte {
 	return file_workspace_v1_workspace_proto_rawDescData
 }
 
-var file_workspace_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 274)
+var file_workspace_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 315)
 var file_workspace_v1_workspace_proto_goTypes = []any{
-	(*GetCurrentUserRequest)(nil),                            // 0: workspace.v1.GetCurrentUserRequest
-	(*CurrentUser)(nil),                                      // 1: workspace.v1.CurrentUser
-	(*ListUsersRequest)(nil),                                 // 2: workspace.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),                                // 3: workspace.v1.ListUsersResponse
-	(*CreateUserRequest)(nil),                                // 4: workspace.v1.CreateUserRequest
-	(*CreateUserResponse)(nil),                               // 5: workspace.v1.CreateUserResponse
-	(*SetUserEnabledRequest)(nil),                            // 6: workspace.v1.SetUserEnabledRequest
-	(*ResetUserPasswordRequest)(nil),                         // 7: workspace.v1.ResetUserPasswordRequest
-	(*ResetUserPasswordResponse)(nil),                        // 8: workspace.v1.ResetUserPasswordResponse
-	(*UserAccount)(nil),                                      // 9: workspace.v1.UserAccount
-	(*GetCreditBalanceRequest)(nil),                          // 10: workspace.v1.GetCreditBalanceRequest
-	(*CreditBalance)(nil),                                    // 11: workspace.v1.CreditBalance
-	(*ListCreditLedgerRequest)(nil),                          // 12: workspace.v1.ListCreditLedgerRequest
-	(*ListCreditLedgerResponse)(nil),                         // 13: workspace.v1.ListCreditLedgerResponse
-	(*CreditLedgerEntry)(nil),                                // 14: workspace.v1.CreditLedgerEntry
-	(*RedeemCreditCodeRequest)(nil),                          // 15: workspace.v1.RedeemCreditCodeRequest
-	(*ConfigureUserDailyCreditsRequest)(nil),                 // 16: workspace.v1.ConfigureUserDailyCreditsRequest
-	(*AdjustUserCreditsRequest)(nil),                         // 17: workspace.v1.AdjustUserCreditsRequest
-	(*ListModelCreditRatesRequest)(nil),                      // 18: workspace.v1.ListModelCreditRatesRequest
-	(*ListModelCreditRatesResponse)(nil),                     // 19: workspace.v1.ListModelCreditRatesResponse
-	(*ModelCreditRate)(nil),                                  // 20: workspace.v1.ModelCreditRate
-	(*CreateModelCreditRateRequest)(nil),                     // 21: workspace.v1.CreateModelCreditRateRequest
-	(*ImageCreditRate)(nil),                                  // 22: workspace.v1.ImageCreditRate
-	(*ImageModel)(nil),                                       // 23: workspace.v1.ImageModel
-	(*ListImageGenerationOptionsRequest)(nil),                // 24: workspace.v1.ListImageGenerationOptionsRequest
-	(*PromptOptimizationCandidate)(nil),                      // 25: workspace.v1.PromptOptimizationCandidate
-	(*ListImageGenerationOptionsResponse)(nil),               // 26: workspace.v1.ListImageGenerationOptionsResponse
-	(*ListImageModelsRequest)(nil),                           // 27: workspace.v1.ListImageModelsRequest
-	(*ListImageModelsResponse)(nil),                          // 28: workspace.v1.ListImageModelsResponse
-	(*CreateImageModelRequest)(nil),                          // 29: workspace.v1.CreateImageModelRequest
-	(*ReviseImageModelRequest)(nil),                          // 30: workspace.v1.ReviseImageModelRequest
-	(*DeleteImageModelRequest)(nil),                          // 31: workspace.v1.DeleteImageModelRequest
-	(*VerifyImageModelRequest)(nil),                          // 32: workspace.v1.VerifyImageModelRequest
-	(*SetImageModelAvailabilityRequest)(nil),                 // 33: workspace.v1.SetImageModelAvailabilityRequest
-	(*SubmitImageGenerationRequest)(nil),                     // 34: workspace.v1.SubmitImageGenerationRequest
-	(*GeneratedImage)(nil),                                   // 35: workspace.v1.GeneratedImage
-	(*ImageGenerationRecord)(nil),                            // 36: workspace.v1.ImageGenerationRecord
-	(*ListImageGenerationsRequest)(nil),                      // 37: workspace.v1.ListImageGenerationsRequest
-	(*ListImageGenerationsResponse)(nil),                     // 38: workspace.v1.ListImageGenerationsResponse
-	(*GetImageGenerationRequest)(nil),                        // 39: workspace.v1.GetImageGenerationRequest
-	(*StopImageGenerationRequest)(nil),                       // 40: workspace.v1.StopImageGenerationRequest
-	(*RegenerateImageGenerationRequest)(nil),                 // 41: workspace.v1.RegenerateImageGenerationRequest
-	(*DeleteImageGenerationRequest)(nil),                     // 42: workspace.v1.DeleteImageGenerationRequest
-	(*OptimizeImagePromptRequest)(nil),                       // 43: workspace.v1.OptimizeImagePromptRequest
-	(*OptimizeImagePromptResponse)(nil),                      // 44: workspace.v1.OptimizeImagePromptResponse
-	(*PromptOptimizationCandidateInput)(nil),                 // 45: workspace.v1.PromptOptimizationCandidateInput
-	(*ReplacePromptOptimizationCandidatesRequest)(nil),       // 46: workspace.v1.ReplacePromptOptimizationCandidatesRequest
-	(*ListPromptOptimizationCandidatesRequest)(nil),          // 47: workspace.v1.ListPromptOptimizationCandidatesRequest
-	(*ListPromptOptimizationCandidatesResponse)(nil),         // 48: workspace.v1.ListPromptOptimizationCandidatesResponse
-	(*CreateRedemptionCodeBatchRequest)(nil),                 // 49: workspace.v1.CreateRedemptionCodeBatchRequest
-	(*RedemptionCodeBatch)(nil),                              // 50: workspace.v1.RedemptionCodeBatch
-	(*RedemptionCode)(nil),                                   // 51: workspace.v1.RedemptionCode
-	(*ListRedemptionCodesRequest)(nil),                       // 52: workspace.v1.ListRedemptionCodesRequest
-	(*ListRedemptionCodesResponse)(nil),                      // 53: workspace.v1.ListRedemptionCodesResponse
-	(*VoidRedemptionCodeRequest)(nil),                        // 54: workspace.v1.VoidRedemptionCodeRequest
-	(*RedemptionCodeStatus)(nil),                             // 55: workspace.v1.RedemptionCodeStatus
-	(*ListSessionsRequest)(nil),                              // 56: workspace.v1.ListSessionsRequest
-	(*ListSessionsResponse)(nil),                             // 57: workspace.v1.ListSessionsResponse
-	(*CreateSessionRequest)(nil),                             // 58: workspace.v1.CreateSessionRequest
-	(*GetSessionRequest)(nil),                                // 59: workspace.v1.GetSessionRequest
-	(*UpdateSessionRequest)(nil),                             // 60: workspace.v1.UpdateSessionRequest
-	(*SetSessionArchivedRequest)(nil),                        // 61: workspace.v1.SetSessionArchivedRequest
-	(*SetSessionExpertSelectionRequest)(nil),                 // 62: workspace.v1.SetSessionExpertSelectionRequest
-	(*DeleteSessionRequest)(nil),                             // 63: workspace.v1.DeleteSessionRequest
-	(*Session)(nil),                                          // 64: workspace.v1.Session
-	(*ListSessionMessagesRequest)(nil),                       // 65: workspace.v1.ListSessionMessagesRequest
-	(*ListSessionMessagesResponse)(nil),                      // 66: workspace.v1.ListSessionMessagesResponse
-	(*SendSessionMessageRequest)(nil),                        // 67: workspace.v1.SendSessionMessageRequest
-	(*SendSessionMessageResponse)(nil),                       // 68: workspace.v1.SendSessionMessageResponse
-	(*RetrySessionMessageRequest)(nil),                       // 69: workspace.v1.RetrySessionMessageRequest
-	(*CancelSessionMessageRequest)(nil),                      // 70: workspace.v1.CancelSessionMessageRequest
-	(*SessionMessage)(nil),                                   // 71: workspace.v1.SessionMessage
-	(*ResourceCreationAction)(nil),                           // 72: workspace.v1.ResourceCreationAction
-	(*ResponseSnapshot)(nil),                                 // 73: workspace.v1.ResponseSnapshot
-	(*ExecutionStageSnapshot)(nil),                           // 74: workspace.v1.ExecutionStageSnapshot
-	(*ExpertSnapshot)(nil),                                   // 75: workspace.v1.ExpertSnapshot
-	(*ProviderModelSnapshot)(nil),                            // 76: workspace.v1.ProviderModelSnapshot
-	(*MCPServerSnapshot)(nil),                                // 77: workspace.v1.MCPServerSnapshot
-	(*SkillSnapshot)(nil),                                    // 78: workspace.v1.SkillSnapshot
-	(*CLIConnectorSnapshot)(nil),                             // 79: workspace.v1.CLIConnectorSnapshot
-	(*ListWorkflowsRequest)(nil),                             // 80: workspace.v1.ListWorkflowsRequest
-	(*ListWorkflowsResponse)(nil),                            // 81: workspace.v1.ListWorkflowsResponse
-	(*CreateWorkflowRequest)(nil),                            // 82: workspace.v1.CreateWorkflowRequest
-	(*GetWorkflowRequest)(nil),                               // 83: workspace.v1.GetWorkflowRequest
-	(*UpdateWorkflowRequest)(nil),                            // 84: workspace.v1.UpdateWorkflowRequest
-	(*DeleteWorkflowRequest)(nil),                            // 85: workspace.v1.DeleteWorkflowRequest
-	(*WorkflowInput)(nil),                                    // 86: workspace.v1.WorkflowInput
-	(*Workflow)(nil),                                         // 87: workspace.v1.Workflow
-	(*EnvironmentVariable)(nil),                              // 88: workspace.v1.EnvironmentVariable
-	(*Schedule)(nil),                                         // 89: workspace.v1.Schedule
-	(*GitConfigEntry)(nil),                                   // 90: workspace.v1.GitConfigEntry
-	(*GitSource)(nil),                                        // 91: workspace.v1.GitSource
-	(*ListKnowledgeBasesRequest)(nil),                        // 92: workspace.v1.ListKnowledgeBasesRequest
-	(*ListKnowledgeBasesResponse)(nil),                       // 93: workspace.v1.ListKnowledgeBasesResponse
-	(*CreateKnowledgeBaseRequest)(nil),                       // 94: workspace.v1.CreateKnowledgeBaseRequest
-	(*GetKnowledgeBaseRequest)(nil),                          // 95: workspace.v1.GetKnowledgeBaseRequest
-	(*UpdateKnowledgeBaseRequest)(nil),                       // 96: workspace.v1.UpdateKnowledgeBaseRequest
-	(*DeleteKnowledgeBaseRequest)(nil),                       // 97: workspace.v1.DeleteKnowledgeBaseRequest
-	(*KnowledgeBaseInput)(nil),                               // 98: workspace.v1.KnowledgeBaseInput
-	(*KnowledgeBase)(nil),                                    // 99: workspace.v1.KnowledgeBase
-	(*ListKnowledgeCategoriesRequest)(nil),                   // 100: workspace.v1.ListKnowledgeCategoriesRequest
-	(*ListKnowledgeCategoriesResponse)(nil),                  // 101: workspace.v1.ListKnowledgeCategoriesResponse
-	(*CreateKnowledgeCategoryRequest)(nil),                   // 102: workspace.v1.CreateKnowledgeCategoryRequest
-	(*DeleteKnowledgeCategoryRequest)(nil),                   // 103: workspace.v1.DeleteKnowledgeCategoryRequest
-	(*KnowledgeCategory)(nil),                                // 104: workspace.v1.KnowledgeCategory
-	(*ListKnowledgeDocumentsRequest)(nil),                    // 105: workspace.v1.ListKnowledgeDocumentsRequest
-	(*ListKnowledgeDocumentsResponse)(nil),                   // 106: workspace.v1.ListKnowledgeDocumentsResponse
-	(*KnowledgeDocumentRevision)(nil),                        // 107: workspace.v1.KnowledgeDocumentRevision
-	(*KnowledgeDocument)(nil),                                // 108: workspace.v1.KnowledgeDocument
-	(*GenerateWorkflowCredentialRequest)(nil),                // 109: workspace.v1.GenerateWorkflowCredentialRequest
-	(*GetWorkflowCredentialRequest)(nil),                     // 110: workspace.v1.GetWorkflowCredentialRequest
-	(*WorkflowCredential)(nil),                               // 111: workspace.v1.WorkflowCredential
-	(*ExchangeWorkflowCredentialRequest)(nil),                // 112: workspace.v1.ExchangeWorkflowCredentialRequest
-	(*WorkflowAccessToken)(nil),                              // 113: workspace.v1.WorkflowAccessToken
-	(*RunWorkflowRequest)(nil),                               // 114: workspace.v1.RunWorkflowRequest
-	(*ListRunsRequest)(nil),                                  // 115: workspace.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),                                 // 116: workspace.v1.ListRunsResponse
-	(*GetRunRequest)(nil),                                    // 117: workspace.v1.GetRunRequest
-	(*ListRunTurnsRequest)(nil),                              // 118: workspace.v1.ListRunTurnsRequest
-	(*ContinueRunConversationRequest)(nil),                   // 119: workspace.v1.ContinueRunConversationRequest
-	(*CancelRunRequest)(nil),                                 // 120: workspace.v1.CancelRunRequest
-	(*RerunWorkflowRequest)(nil),                             // 121: workspace.v1.RerunWorkflowRequest
-	(*Run)(nil),                                              // 122: workspace.v1.Run
-	(*ListArtifactsRequest)(nil),                             // 123: workspace.v1.ListArtifactsRequest
-	(*ListArtifactsResponse)(nil),                            // 124: workspace.v1.ListArtifactsResponse
-	(*GetArtifactDownloadRequest)(nil),                       // 125: workspace.v1.GetArtifactDownloadRequest
-	(*ArtifactDownload)(nil),                                 // 126: workspace.v1.ArtifactDownload
-	(*Artifact)(nil),                                         // 127: workspace.v1.Artifact
-	(*ListWorkspaceEntriesRequest)(nil),                      // 128: workspace.v1.ListWorkspaceEntriesRequest
-	(*ListWorkspaceEntriesResponse)(nil),                     // 129: workspace.v1.ListWorkspaceEntriesResponse
-	(*GetWorkspaceFileRequest)(nil),                          // 130: workspace.v1.GetWorkspaceFileRequest
-	(*WorkspaceFile)(nil),                                    // 131: workspace.v1.WorkspaceFile
-	(*ConfigureWorkflowGitSourceRequest)(nil),                // 132: workspace.v1.ConfigureWorkflowGitSourceRequest
-	(*WorkspaceEntry)(nil),                                   // 133: workspace.v1.WorkspaceEntry
-	(*ListExpertsRequest)(nil),                               // 134: workspace.v1.ListExpertsRequest
-	(*ListExpertsResponse)(nil),                              // 135: workspace.v1.ListExpertsResponse
-	(*GetExpertRequest)(nil),                                 // 136: workspace.v1.GetExpertRequest
-	(*CreateExpertRequest)(nil),                              // 137: workspace.v1.CreateExpertRequest
-	(*UpdateExpertRequest)(nil),                              // 138: workspace.v1.UpdateExpertRequest
-	(*DeleteExpertRequest)(nil),                              // 139: workspace.v1.DeleteExpertRequest
-	(*ExpertInput)(nil),                                      // 140: workspace.v1.ExpertInput
-	(*Expert)(nil),                                           // 141: workspace.v1.Expert
-	(*ListExpertTeamsRequest)(nil),                           // 142: workspace.v1.ListExpertTeamsRequest
-	(*ListExpertTeamsResponse)(nil),                          // 143: workspace.v1.ListExpertTeamsResponse
-	(*GetExpertTeamRequest)(nil),                             // 144: workspace.v1.GetExpertTeamRequest
-	(*CreateExpertTeamRequest)(nil),                          // 145: workspace.v1.CreateExpertTeamRequest
-	(*UpdateExpertTeamRequest)(nil),                          // 146: workspace.v1.UpdateExpertTeamRequest
-	(*DeleteExpertTeamRequest)(nil),                          // 147: workspace.v1.DeleteExpertTeamRequest
-	(*ExpertTeamInput)(nil),                                  // 148: workspace.v1.ExpertTeamInput
-	(*ExpertTeamMemberInput)(nil),                            // 149: workspace.v1.ExpertTeamMemberInput
-	(*ExpertTeamMember)(nil),                                 // 150: workspace.v1.ExpertTeamMember
-	(*ExpertTeam)(nil),                                       // 151: workspace.v1.ExpertTeam
-	(*ExpertStage)(nil),                                      // 152: workspace.v1.ExpertStage
-	(*CreditConsumption)(nil),                                // 153: workspace.v1.CreditConsumption
-	(*CreditStageConsumption)(nil),                           // 154: workspace.v1.CreditStageConsumption
-	(*GetSettingsRequest)(nil),                               // 155: workspace.v1.GetSettingsRequest
-	(*UpdateSettingsRequest)(nil),                            // 156: workspace.v1.UpdateSettingsRequest
-	(*PersonalSettings)(nil),                                 // 157: workspace.v1.PersonalSettings
-	(*RuntimeModelDefault)(nil),                              // 158: workspace.v1.RuntimeModelDefault
-	(*ListRuntimeEnginesRequest)(nil),                        // 159: workspace.v1.ListRuntimeEnginesRequest
-	(*ListRuntimeEnginesResponse)(nil),                       // 160: workspace.v1.ListRuntimeEnginesResponse
-	(*RuntimeEngineStatus)(nil),                              // 161: workspace.v1.RuntimeEngineStatus
-	(*ListModelProviderPresetsRequest)(nil),                  // 162: workspace.v1.ListModelProviderPresetsRequest
-	(*ListModelProviderPresetsResponse)(nil),                 // 163: workspace.v1.ListModelProviderPresetsResponse
-	(*ModelProviderPreset)(nil),                              // 164: workspace.v1.ModelProviderPreset
-	(*ListModelProviderConnectionsRequest)(nil),              // 165: workspace.v1.ListModelProviderConnectionsRequest
-	(*ListModelProviderConnectionsResponse)(nil),             // 166: workspace.v1.ListModelProviderConnectionsResponse
-	(*CreateModelProviderConnectionRequest)(nil),             // 167: workspace.v1.CreateModelProviderConnectionRequest
-	(*UpdateModelProviderConnectionRequest)(nil),             // 168: workspace.v1.UpdateModelProviderConnectionRequest
-	(*DeleteModelProviderConnectionRequest)(nil),             // 169: workspace.v1.DeleteModelProviderConnectionRequest
-	(*RefreshProviderModelsRequest)(nil),                     // 170: workspace.v1.RefreshProviderModelsRequest
-	(*CreateProviderModelRequest)(nil),                       // 171: workspace.v1.CreateProviderModelRequest
-	(*ModelProviderConnection)(nil),                          // 172: workspace.v1.ModelProviderConnection
-	(*ProviderModel)(nil),                                    // 173: workspace.v1.ProviderModel
-	(*RuntimeModelCompatibility)(nil),                        // 174: workspace.v1.RuntimeModelCompatibility
-	(*ListMCPConnectorsRequest)(nil),                         // 175: workspace.v1.ListMCPConnectorsRequest
-	(*ListMCPConnectorsResponse)(nil),                        // 176: workspace.v1.ListMCPConnectorsResponse
-	(*CreateMCPConnectorRequest)(nil),                        // 177: workspace.v1.CreateMCPConnectorRequest
-	(*UpdateMCPConnectorRequest)(nil),                        // 178: workspace.v1.UpdateMCPConnectorRequest
-	(*TestMCPConnectorRequest)(nil),                          // 179: workspace.v1.TestMCPConnectorRequest
-	(*GetMCPConnectorDeletionImpactRequest)(nil),             // 180: workspace.v1.GetMCPConnectorDeletionImpactRequest
-	(*DeleteMCPConnectorRequest)(nil),                        // 181: workspace.v1.DeleteMCPConnectorRequest
-	(*MCPConnectorInput)(nil),                                // 182: workspace.v1.MCPConnectorInput
-	(*MCPConnector)(nil),                                     // 183: workspace.v1.MCPConnector
-	(*ListSkillsRequest)(nil),                                // 184: workspace.v1.ListSkillsRequest
-	(*ListSkillsResponse)(nil),                               // 185: workspace.v1.ListSkillsResponse
-	(*CreateSkillRequest)(nil),                               // 186: workspace.v1.CreateSkillRequest
-	(*UpdateSkillRequest)(nil),                               // 187: workspace.v1.UpdateSkillRequest
-	(*GetSkillDeletionImpactRequest)(nil),                    // 188: workspace.v1.GetSkillDeletionImpactRequest
-	(*DeleteSkillRequest)(nil),                               // 189: workspace.v1.DeleteSkillRequest
-	(*Skill)(nil),                                            // 190: workspace.v1.Skill
-	(*AffectedExpert)(nil),                                   // 191: workspace.v1.AffectedExpert
-	(*ResourceDeletionImpact)(nil),                           // 192: workspace.v1.ResourceDeletionImpact
-	(*CLICapability)(nil),                                    // 193: workspace.v1.CLICapability
-	(*CLIRecommendedSkill)(nil),                              // 194: workspace.v1.CLIRecommendedSkill
-	(*CLIConnectorDefinitionInput)(nil),                      // 195: workspace.v1.CLIConnectorDefinitionInput
-	(*CLIConnectorDefinition)(nil),                           // 196: workspace.v1.CLIConnectorDefinition
-	(*ListCLIConnectorDefinitionsRequest)(nil),               // 197: workspace.v1.ListCLIConnectorDefinitionsRequest
-	(*ListCLIConnectorDefinitionsResponse)(nil),              // 198: workspace.v1.ListCLIConnectorDefinitionsResponse
-	(*CreateCLIConnectorDefinitionRequest)(nil),              // 199: workspace.v1.CreateCLIConnectorDefinitionRequest
-	(*UpdateCLIConnectorDefinitionRequest)(nil),              // 200: workspace.v1.UpdateCLIConnectorDefinitionRequest
-	(*PublishCLIConnectorDefinitionRequest)(nil),             // 201: workspace.v1.PublishCLIConnectorDefinitionRequest
-	(*DisableCLIConnectorDefinitionRequest)(nil),             // 202: workspace.v1.DisableCLIConnectorDefinitionRequest
-	(*DeleteCLIConnectorDefinitionRequest)(nil),              // 203: workspace.v1.DeleteCLIConnectorDefinitionRequest
-	(*ListCLIConnectorHealthRequest)(nil),                    // 204: workspace.v1.ListCLIConnectorHealthRequest
-	(*ListCLIConnectorHealthResponse)(nil),                   // 205: workspace.v1.ListCLIConnectorHealthResponse
-	(*CLIConnectorHealth)(nil),                               // 206: workspace.v1.CLIConnectorHealth
-	(*ConnectorRevision)(nil),                                // 207: workspace.v1.ConnectorRevision
-	(*ConnectorPublication)(nil),                             // 208: workspace.v1.ConnectorPublication
-	(*ConnectorPublicationRevision)(nil),                     // 209: workspace.v1.ConnectorPublicationRevision
-	(*ConnectorPublicationHealth)(nil),                       // 210: workspace.v1.ConnectorPublicationHealth
-	(*ConnectorInstallation)(nil),                            // 211: workspace.v1.ConnectorInstallation
-	(*ConnectorAuthorization)(nil),                           // 212: workspace.v1.ConnectorAuthorization
-	(*ListConnectorPublicationsRequest)(nil),                 // 213: workspace.v1.ListConnectorPublicationsRequest
-	(*ListConnectorPublicationsResponse)(nil),                // 214: workspace.v1.ListConnectorPublicationsResponse
-	(*StageConnectorPackageRequest)(nil),                     // 215: workspace.v1.StageConnectorPackageRequest
-	(*ListConnectorPublicationRevisionsRequest)(nil),         // 216: workspace.v1.ListConnectorPublicationRevisionsRequest
-	(*ListConnectorPublicationRevisionsResponse)(nil),        // 217: workspace.v1.ListConnectorPublicationRevisionsResponse
-	(*PublishConnectorRevisionRequest)(nil),                  // 218: workspace.v1.PublishConnectorRevisionRequest
-	(*DisableConnectorPublicationRequest)(nil),               // 219: workspace.v1.DisableConnectorPublicationRequest
-	(*ListConnectorPublicationHealthRequest)(nil),            // 220: workspace.v1.ListConnectorPublicationHealthRequest
-	(*ListConnectorPublicationHealthResponse)(nil),           // 221: workspace.v1.ListConnectorPublicationHealthResponse
-	(*InstallPublishedConnectorRequest)(nil),                 // 222: workspace.v1.InstallPublishedConnectorRequest
-	(*UpgradeConnectorInstallationRequest)(nil),              // 223: workspace.v1.UpgradeConnectorInstallationRequest
-	(*ListConnectorAuthorizationsRequest)(nil),               // 224: workspace.v1.ListConnectorAuthorizationsRequest
-	(*ListConnectorAuthorizationsResponse)(nil),              // 225: workspace.v1.ListConnectorAuthorizationsResponse
-	(*SelectConnectorAuthorizationRequest)(nil),              // 226: workspace.v1.SelectConnectorAuthorizationRequest
-	(*RefreshConnectorAuthorizationRequest)(nil),             // 227: workspace.v1.RefreshConnectorAuthorizationRequest
-	(*DisconnectPublishedConnectorAuthorizationRequest)(nil), // 228: workspace.v1.DisconnectPublishedConnectorAuthorizationRequest
-	(*ConnectorSetup)(nil),                                   // 229: workspace.v1.ConnectorSetup
-	(*BeginConnectorSetupRequest)(nil),                       // 230: workspace.v1.BeginConnectorSetupRequest
-	(*CompleteConnectorSetupRequest)(nil),                    // 231: workspace.v1.CompleteConnectorSetupRequest
-	(*ConnectorAuthorizationFlow)(nil),                       // 232: workspace.v1.ConnectorAuthorizationFlow
-	(*BeginConnectorAuthorizationFlowRequest)(nil),           // 233: workspace.v1.BeginConnectorAuthorizationFlowRequest
-	(*CompleteConnectorAuthorizationFlowRequest)(nil),        // 234: workspace.v1.CompleteConnectorAuthorizationFlowRequest
-	(*ListConnectorInstallationsRequest)(nil),                // 235: workspace.v1.ListConnectorInstallationsRequest
-	(*ListConnectorInstallationsResponse)(nil),               // 236: workspace.v1.ListConnectorInstallationsResponse
-	(*UploadConnectorPackageRequest)(nil),                    // 237: workspace.v1.UploadConnectorPackageRequest
-	(*CreateConnectorPackageRequest)(nil),                    // 238: workspace.v1.CreateConnectorPackageRequest
-	(*DisableConnectorInstallationRequest)(nil),              // 239: workspace.v1.DisableConnectorInstallationRequest
-	(*UninstallConnectorRequest)(nil),                        // 240: workspace.v1.UninstallConnectorRequest
-	(*ConnectConnectorRequest)(nil),                          // 241: workspace.v1.ConnectConnectorRequest
-	(*DisconnectConnectorAuthorizationRequest)(nil),          // 242: workspace.v1.DisconnectConnectorAuthorizationRequest
-	(*EnableCLIConnectorRequest)(nil),                        // 243: workspace.v1.EnableCLIConnectorRequest
-	(*DisableCLIConnectorRequest)(nil),                       // 244: workspace.v1.DisableCLIConnectorRequest
-	(*CLIConnectorEnablement)(nil),                           // 245: workspace.v1.CLIConnectorEnablement
-	(*ListCLIConnectorEnablementsRequest)(nil),               // 246: workspace.v1.ListCLIConnectorEnablementsRequest
-	(*ListCLIConnectorEnablementsResponse)(nil),              // 247: workspace.v1.ListCLIConnectorEnablementsResponse
-	(*CLIConnectorAuthorization)(nil),                        // 248: workspace.v1.CLIConnectorAuthorization
-	(*CLIConnectorAuthorizationFlow)(nil),                    // 249: workspace.v1.CLIConnectorAuthorizationFlow
-	(*BeginCLIConnectorAuthorizationRequest)(nil),            // 250: workspace.v1.BeginCLIConnectorAuthorizationRequest
-	(*CompleteCLIConnectorAuthorizationRequest)(nil),         // 251: workspace.v1.CompleteCLIConnectorAuthorizationRequest
-	(*ListCLIConnectorAuthorizationsRequest)(nil),            // 252: workspace.v1.ListCLIConnectorAuthorizationsRequest
-	(*ListCLIConnectorAuthorizationsResponse)(nil),           // 253: workspace.v1.ListCLIConnectorAuthorizationsResponse
-	(*DisconnectCLIConnectorAuthorizationRequest)(nil),       // 254: workspace.v1.DisconnectCLIConnectorAuthorizationRequest
-	(*CommandApproval)(nil),                                  // 255: workspace.v1.CommandApproval
-	(*ListCommandApprovalsRequest)(nil),                      // 256: workspace.v1.ListCommandApprovalsRequest
-	(*ListCommandApprovalsResponse)(nil),                     // 257: workspace.v1.ListCommandApprovalsResponse
-	(*DecideCommandApprovalRequest)(nil),                     // 258: workspace.v1.DecideCommandApprovalRequest
-	(*DeleteResponse)(nil),                                   // 259: workspace.v1.DeleteResponse
-	(*Attachment)(nil),                                       // 260: workspace.v1.Attachment
-	(*ExecutionActivity)(nil),                                // 261: workspace.v1.ExecutionActivity
-	(*GetSessionArtifactDownloadRequest)(nil),                // 262: workspace.v1.GetSessionArtifactDownloadRequest
-	(*CompleteCLIConnectorEnablementRequest)(nil),            // 263: workspace.v1.CompleteCLIConnectorEnablementRequest
-	(*GetConversationSelectionRequest)(nil),                  // 264: workspace.v1.GetConversationSelectionRequest
-	(*ResolveConversationSelectionRequest)(nil),              // 265: workspace.v1.ResolveConversationSelectionRequest
-	(*ConversationSelection)(nil),                            // 266: workspace.v1.ConversationSelection
-	(*SelectedResource)(nil),                                 // 267: workspace.v1.SelectedResource
-	(*ListConversationFilesRequest)(nil),                     // 268: workspace.v1.ListConversationFilesRequest
-	(*ListConversationFilesResponse)(nil),                    // 269: workspace.v1.ListConversationFilesResponse
-	(*ConversationFile)(nil),                                 // 270: workspace.v1.ConversationFile
-	(*FileReference)(nil),                                    // 271: workspace.v1.FileReference
-	(*GetSkillDocumentRequest)(nil),                          // 272: workspace.v1.GetSkillDocumentRequest
-	(*SkillDocument)(nil),                                    // 273: workspace.v1.SkillDocument
-	(*timestamppb.Timestamp)(nil),                            // 274: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                                  // 275: google.protobuf.Struct
+	(*GetHomeOverviewRequest)(nil),                           // 0: workspace.v1.GetHomeOverviewRequest
+	(*HomeOverview)(nil),                                     // 1: workspace.v1.HomeOverview
+	(*HomeTask)(nil),                                         // 2: workspace.v1.HomeTask
+	(*HomeWorkflow)(nil),                                     // 3: workspace.v1.HomeWorkflow
+	(*HomeAction)(nil),                                       // 4: workspace.v1.HomeAction
+	(*GetCurrentUserRequest)(nil),                            // 5: workspace.v1.GetCurrentUserRequest
+	(*CurrentUser)(nil),                                      // 6: workspace.v1.CurrentUser
+	(*ListUsersRequest)(nil),                                 // 7: workspace.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),                                // 8: workspace.v1.ListUsersResponse
+	(*CreateUserRequest)(nil),                                // 9: workspace.v1.CreateUserRequest
+	(*CreateUserResponse)(nil),                               // 10: workspace.v1.CreateUserResponse
+	(*SetUserEnabledRequest)(nil),                            // 11: workspace.v1.SetUserEnabledRequest
+	(*ResetUserPasswordRequest)(nil),                         // 12: workspace.v1.ResetUserPasswordRequest
+	(*ResetUserPasswordResponse)(nil),                        // 13: workspace.v1.ResetUserPasswordResponse
+	(*UserAccount)(nil),                                      // 14: workspace.v1.UserAccount
+	(*SetUserRolesRequest)(nil),                              // 15: workspace.v1.SetUserRolesRequest
+	(*ListIdentityGroupsRequest)(nil),                        // 16: workspace.v1.ListIdentityGroupsRequest
+	(*SyncIdentityGroupsRequest)(nil),                        // 17: workspace.v1.SyncIdentityGroupsRequest
+	(*ListIdentityGroupsResponse)(nil),                       // 18: workspace.v1.ListIdentityGroupsResponse
+	(*UpdateIdentityGroupBudgetRequest)(nil),                 // 19: workspace.v1.UpdateIdentityGroupBudgetRequest
+	(*IdentityGroup)(nil),                                    // 20: workspace.v1.IdentityGroup
+	(*ListGovernanceAuditEventsRequest)(nil),                 // 21: workspace.v1.ListGovernanceAuditEventsRequest
+	(*ListGovernanceAuditEventsResponse)(nil),                // 22: workspace.v1.ListGovernanceAuditEventsResponse
+	(*GovernanceAuditMetric)(nil),                            // 23: workspace.v1.GovernanceAuditMetric
+	(*GovernanceAuditEvent)(nil),                             // 24: workspace.v1.GovernanceAuditEvent
+	(*TransferGroupResourcesRequest)(nil),                    // 25: workspace.v1.TransferGroupResourcesRequest
+	(*TransferGroupResourcesResponse)(nil),                   // 26: workspace.v1.TransferGroupResourcesResponse
+	(*GetCreditBalanceRequest)(nil),                          // 27: workspace.v1.GetCreditBalanceRequest
+	(*CreditBalance)(nil),                                    // 28: workspace.v1.CreditBalance
+	(*GroupCreditBudget)(nil),                                // 29: workspace.v1.GroupCreditBudget
+	(*GetCreditPolicyRequest)(nil),                           // 30: workspace.v1.GetCreditPolicyRequest
+	(*UpdateCreditPolicyRequest)(nil),                        // 31: workspace.v1.UpdateCreditPolicyRequest
+	(*CreditPolicy)(nil),                                     // 32: workspace.v1.CreditPolicy
+	(*ListCreditLedgerRequest)(nil),                          // 33: workspace.v1.ListCreditLedgerRequest
+	(*ListCreditLedgerResponse)(nil),                         // 34: workspace.v1.ListCreditLedgerResponse
+	(*CreditLedgerEntry)(nil),                                // 35: workspace.v1.CreditLedgerEntry
+	(*RedeemCreditCodeRequest)(nil),                          // 36: workspace.v1.RedeemCreditCodeRequest
+	(*ConfigureUserDailyCreditsRequest)(nil),                 // 37: workspace.v1.ConfigureUserDailyCreditsRequest
+	(*AdjustUserCreditsRequest)(nil),                         // 38: workspace.v1.AdjustUserCreditsRequest
+	(*ListModelCreditRatesRequest)(nil),                      // 39: workspace.v1.ListModelCreditRatesRequest
+	(*ListModelCreditRatesResponse)(nil),                     // 40: workspace.v1.ListModelCreditRatesResponse
+	(*ModelCreditRate)(nil),                                  // 41: workspace.v1.ModelCreditRate
+	(*CreateModelCreditRateRequest)(nil),                     // 42: workspace.v1.CreateModelCreditRateRequest
+	(*ImageCreditRate)(nil),                                  // 43: workspace.v1.ImageCreditRate
+	(*ImageModel)(nil),                                       // 44: workspace.v1.ImageModel
+	(*ListImageGenerationOptionsRequest)(nil),                // 45: workspace.v1.ListImageGenerationOptionsRequest
+	(*PromptOptimizationCandidate)(nil),                      // 46: workspace.v1.PromptOptimizationCandidate
+	(*ListImageGenerationOptionsResponse)(nil),               // 47: workspace.v1.ListImageGenerationOptionsResponse
+	(*ListImageModelsRequest)(nil),                           // 48: workspace.v1.ListImageModelsRequest
+	(*ListImageModelsResponse)(nil),                          // 49: workspace.v1.ListImageModelsResponse
+	(*CreateImageModelRequest)(nil),                          // 50: workspace.v1.CreateImageModelRequest
+	(*ReviseImageModelRequest)(nil),                          // 51: workspace.v1.ReviseImageModelRequest
+	(*DeleteImageModelRequest)(nil),                          // 52: workspace.v1.DeleteImageModelRequest
+	(*VerifyImageModelRequest)(nil),                          // 53: workspace.v1.VerifyImageModelRequest
+	(*SetImageModelAvailabilityRequest)(nil),                 // 54: workspace.v1.SetImageModelAvailabilityRequest
+	(*SubmitImageGenerationRequest)(nil),                     // 55: workspace.v1.SubmitImageGenerationRequest
+	(*GeneratedImage)(nil),                                   // 56: workspace.v1.GeneratedImage
+	(*ImageGenerationRecord)(nil),                            // 57: workspace.v1.ImageGenerationRecord
+	(*ListImageGenerationsRequest)(nil),                      // 58: workspace.v1.ListImageGenerationsRequest
+	(*ListImageGenerationsResponse)(nil),                     // 59: workspace.v1.ListImageGenerationsResponse
+	(*GetImageGenerationRequest)(nil),                        // 60: workspace.v1.GetImageGenerationRequest
+	(*StopImageGenerationRequest)(nil),                       // 61: workspace.v1.StopImageGenerationRequest
+	(*RegenerateImageGenerationRequest)(nil),                 // 62: workspace.v1.RegenerateImageGenerationRequest
+	(*DeleteImageGenerationRequest)(nil),                     // 63: workspace.v1.DeleteImageGenerationRequest
+	(*OptimizeImagePromptRequest)(nil),                       // 64: workspace.v1.OptimizeImagePromptRequest
+	(*OptimizeImagePromptResponse)(nil),                      // 65: workspace.v1.OptimizeImagePromptResponse
+	(*PromptOptimizationCandidateInput)(nil),                 // 66: workspace.v1.PromptOptimizationCandidateInput
+	(*ReplacePromptOptimizationCandidatesRequest)(nil),       // 67: workspace.v1.ReplacePromptOptimizationCandidatesRequest
+	(*ListPromptOptimizationCandidatesRequest)(nil),          // 68: workspace.v1.ListPromptOptimizationCandidatesRequest
+	(*ListPromptOptimizationCandidatesResponse)(nil),         // 69: workspace.v1.ListPromptOptimizationCandidatesResponse
+	(*CreateRedemptionCodeBatchRequest)(nil),                 // 70: workspace.v1.CreateRedemptionCodeBatchRequest
+	(*RedemptionCodeBatch)(nil),                              // 71: workspace.v1.RedemptionCodeBatch
+	(*RedemptionCode)(nil),                                   // 72: workspace.v1.RedemptionCode
+	(*ListRedemptionCodesRequest)(nil),                       // 73: workspace.v1.ListRedemptionCodesRequest
+	(*ListRedemptionCodesResponse)(nil),                      // 74: workspace.v1.ListRedemptionCodesResponse
+	(*VoidRedemptionCodeRequest)(nil),                        // 75: workspace.v1.VoidRedemptionCodeRequest
+	(*RedemptionCodeStatus)(nil),                             // 76: workspace.v1.RedemptionCodeStatus
+	(*ListSessionsRequest)(nil),                              // 77: workspace.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),                             // 78: workspace.v1.ListSessionsResponse
+	(*CreateSessionRequest)(nil),                             // 79: workspace.v1.CreateSessionRequest
+	(*GetSessionRequest)(nil),                                // 80: workspace.v1.GetSessionRequest
+	(*UpdateSessionRequest)(nil),                             // 81: workspace.v1.UpdateSessionRequest
+	(*SetSessionArchivedRequest)(nil),                        // 82: workspace.v1.SetSessionArchivedRequest
+	(*SetSessionExpertSelectionRequest)(nil),                 // 83: workspace.v1.SetSessionExpertSelectionRequest
+	(*DeleteSessionRequest)(nil),                             // 84: workspace.v1.DeleteSessionRequest
+	(*Session)(nil),                                          // 85: workspace.v1.Session
+	(*ListSessionMessagesRequest)(nil),                       // 86: workspace.v1.ListSessionMessagesRequest
+	(*ListSessionMessagesResponse)(nil),                      // 87: workspace.v1.ListSessionMessagesResponse
+	(*SendSessionMessageRequest)(nil),                        // 88: workspace.v1.SendSessionMessageRequest
+	(*SendSessionMessageResponse)(nil),                       // 89: workspace.v1.SendSessionMessageResponse
+	(*RetrySessionMessageRequest)(nil),                       // 90: workspace.v1.RetrySessionMessageRequest
+	(*CancelSessionMessageRequest)(nil),                      // 91: workspace.v1.CancelSessionMessageRequest
+	(*DecideSessionExecutionPlanRequest)(nil),                // 92: workspace.v1.DecideSessionExecutionPlanRequest
+	(*PreviewSessionWorkflowDraftRequest)(nil),               // 93: workspace.v1.PreviewSessionWorkflowDraftRequest
+	(*CreateWorkflowFromSessionRequest)(nil),                 // 94: workspace.v1.CreateWorkflowFromSessionRequest
+	(*CreateWorkflowFromSessionResponse)(nil),                // 95: workspace.v1.CreateWorkflowFromSessionResponse
+	(*ListSessionWorkflowLinksRequest)(nil),                  // 96: workspace.v1.ListSessionWorkflowLinksRequest
+	(*ListSessionWorkflowLinksResponse)(nil),                 // 97: workspace.v1.ListSessionWorkflowLinksResponse
+	(*SessionWorkflowDraft)(nil),                             // 98: workspace.v1.SessionWorkflowDraft
+	(*SessionWorkflowResource)(nil),                          // 99: workspace.v1.SessionWorkflowResource
+	(*SessionWorkflowFile)(nil),                              // 100: workspace.v1.SessionWorkflowFile
+	(*SessionWorkflowFileDecision)(nil),                      // 101: workspace.v1.SessionWorkflowFileDecision
+	(*SessionWorkflowLink)(nil),                              // 102: workspace.v1.SessionWorkflowLink
+	(*SessionMessage)(nil),                                   // 103: workspace.v1.SessionMessage
+	(*ResourceCreationAction)(nil),                           // 104: workspace.v1.ResourceCreationAction
+	(*ResponseSnapshot)(nil),                                 // 105: workspace.v1.ResponseSnapshot
+	(*ExecutionStageSnapshot)(nil),                           // 106: workspace.v1.ExecutionStageSnapshot
+	(*ExpertSnapshot)(nil),                                   // 107: workspace.v1.ExpertSnapshot
+	(*ProviderModelSnapshot)(nil),                            // 108: workspace.v1.ProviderModelSnapshot
+	(*MCPServerSnapshot)(nil),                                // 109: workspace.v1.MCPServerSnapshot
+	(*SkillSnapshot)(nil),                                    // 110: workspace.v1.SkillSnapshot
+	(*CLIConnectorSnapshot)(nil),                             // 111: workspace.v1.CLIConnectorSnapshot
+	(*ListWorkflowsRequest)(nil),                             // 112: workspace.v1.ListWorkflowsRequest
+	(*ListWorkflowsResponse)(nil),                            // 113: workspace.v1.ListWorkflowsResponse
+	(*CreateWorkflowRequest)(nil),                            // 114: workspace.v1.CreateWorkflowRequest
+	(*GetWorkflowRequest)(nil),                               // 115: workspace.v1.GetWorkflowRequest
+	(*UpdateWorkflowRequest)(nil),                            // 116: workspace.v1.UpdateWorkflowRequest
+	(*DeleteWorkflowRequest)(nil),                            // 117: workspace.v1.DeleteWorkflowRequest
+	(*WorkflowInput)(nil),                                    // 118: workspace.v1.WorkflowInput
+	(*Workflow)(nil),                                         // 119: workspace.v1.Workflow
+	(*EnvironmentVariable)(nil),                              // 120: workspace.v1.EnvironmentVariable
+	(*Schedule)(nil),                                         // 121: workspace.v1.Schedule
+	(*GitConfigEntry)(nil),                                   // 122: workspace.v1.GitConfigEntry
+	(*GitSource)(nil),                                        // 123: workspace.v1.GitSource
+	(*ListKnowledgeBasesRequest)(nil),                        // 124: workspace.v1.ListKnowledgeBasesRequest
+	(*ListKnowledgeBasesResponse)(nil),                       // 125: workspace.v1.ListKnowledgeBasesResponse
+	(*CreateKnowledgeBaseRequest)(nil),                       // 126: workspace.v1.CreateKnowledgeBaseRequest
+	(*GetKnowledgeBaseRequest)(nil),                          // 127: workspace.v1.GetKnowledgeBaseRequest
+	(*UpdateKnowledgeBaseRequest)(nil),                       // 128: workspace.v1.UpdateKnowledgeBaseRequest
+	(*DeleteKnowledgeBaseRequest)(nil),                       // 129: workspace.v1.DeleteKnowledgeBaseRequest
+	(*KnowledgeBaseInput)(nil),                               // 130: workspace.v1.KnowledgeBaseInput
+	(*KnowledgeBase)(nil),                                    // 131: workspace.v1.KnowledgeBase
+	(*ListKnowledgeCategoriesRequest)(nil),                   // 132: workspace.v1.ListKnowledgeCategoriesRequest
+	(*ListKnowledgeCategoriesResponse)(nil),                  // 133: workspace.v1.ListKnowledgeCategoriesResponse
+	(*CreateKnowledgeCategoryRequest)(nil),                   // 134: workspace.v1.CreateKnowledgeCategoryRequest
+	(*DeleteKnowledgeCategoryRequest)(nil),                   // 135: workspace.v1.DeleteKnowledgeCategoryRequest
+	(*KnowledgeCategory)(nil),                                // 136: workspace.v1.KnowledgeCategory
+	(*ListKnowledgeDocumentsRequest)(nil),                    // 137: workspace.v1.ListKnowledgeDocumentsRequest
+	(*ListKnowledgeDocumentsResponse)(nil),                   // 138: workspace.v1.ListKnowledgeDocumentsResponse
+	(*KnowledgeDocumentRevision)(nil),                        // 139: workspace.v1.KnowledgeDocumentRevision
+	(*KnowledgeDocument)(nil),                                // 140: workspace.v1.KnowledgeDocument
+	(*GenerateWorkflowCredentialRequest)(nil),                // 141: workspace.v1.GenerateWorkflowCredentialRequest
+	(*GetWorkflowCredentialRequest)(nil),                     // 142: workspace.v1.GetWorkflowCredentialRequest
+	(*WorkflowCredential)(nil),                               // 143: workspace.v1.WorkflowCredential
+	(*ExchangeWorkflowCredentialRequest)(nil),                // 144: workspace.v1.ExchangeWorkflowCredentialRequest
+	(*WorkflowAccessToken)(nil),                              // 145: workspace.v1.WorkflowAccessToken
+	(*RunWorkflowRequest)(nil),                               // 146: workspace.v1.RunWorkflowRequest
+	(*ListRunsRequest)(nil),                                  // 147: workspace.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),                                 // 148: workspace.v1.ListRunsResponse
+	(*GetRunRequest)(nil),                                    // 149: workspace.v1.GetRunRequest
+	(*ListRunTurnsRequest)(nil),                              // 150: workspace.v1.ListRunTurnsRequest
+	(*ContinueRunConversationRequest)(nil),                   // 151: workspace.v1.ContinueRunConversationRequest
+	(*CancelRunRequest)(nil),                                 // 152: workspace.v1.CancelRunRequest
+	(*RerunWorkflowRequest)(nil),                             // 153: workspace.v1.RerunWorkflowRequest
+	(*DecideRunExecutionPlanRequest)(nil),                    // 154: workspace.v1.DecideRunExecutionPlanRequest
+	(*Run)(nil),                                              // 155: workspace.v1.Run
+	(*ListArtifactsRequest)(nil),                             // 156: workspace.v1.ListArtifactsRequest
+	(*ListArtifactsResponse)(nil),                            // 157: workspace.v1.ListArtifactsResponse
+	(*GetArtifactDownloadRequest)(nil),                       // 158: workspace.v1.GetArtifactDownloadRequest
+	(*ArtifactDownload)(nil),                                 // 159: workspace.v1.ArtifactDownload
+	(*Artifact)(nil),                                         // 160: workspace.v1.Artifact
+	(*ListWorkspaceEntriesRequest)(nil),                      // 161: workspace.v1.ListWorkspaceEntriesRequest
+	(*ListWorkspaceEntriesResponse)(nil),                     // 162: workspace.v1.ListWorkspaceEntriesResponse
+	(*GetWorkspaceFileRequest)(nil),                          // 163: workspace.v1.GetWorkspaceFileRequest
+	(*WorkspaceFile)(nil),                                    // 164: workspace.v1.WorkspaceFile
+	(*ConfigureWorkflowGitSourceRequest)(nil),                // 165: workspace.v1.ConfigureWorkflowGitSourceRequest
+	(*WorkspaceEntry)(nil),                                   // 166: workspace.v1.WorkspaceEntry
+	(*ListExpertsRequest)(nil),                               // 167: workspace.v1.ListExpertsRequest
+	(*ListExpertsResponse)(nil),                              // 168: workspace.v1.ListExpertsResponse
+	(*GetExpertRequest)(nil),                                 // 169: workspace.v1.GetExpertRequest
+	(*CreateExpertRequest)(nil),                              // 170: workspace.v1.CreateExpertRequest
+	(*UpdateExpertRequest)(nil),                              // 171: workspace.v1.UpdateExpertRequest
+	(*DeleteExpertRequest)(nil),                              // 172: workspace.v1.DeleteExpertRequest
+	(*ExpertInput)(nil),                                      // 173: workspace.v1.ExpertInput
+	(*Expert)(nil),                                           // 174: workspace.v1.Expert
+	(*ListExpertTeamsRequest)(nil),                           // 175: workspace.v1.ListExpertTeamsRequest
+	(*ListExpertTeamsResponse)(nil),                          // 176: workspace.v1.ListExpertTeamsResponse
+	(*GetExpertTeamRequest)(nil),                             // 177: workspace.v1.GetExpertTeamRequest
+	(*CreateExpertTeamRequest)(nil),                          // 178: workspace.v1.CreateExpertTeamRequest
+	(*UpdateExpertTeamRequest)(nil),                          // 179: workspace.v1.UpdateExpertTeamRequest
+	(*DeleteExpertTeamRequest)(nil),                          // 180: workspace.v1.DeleteExpertTeamRequest
+	(*ExpertTeamInput)(nil),                                  // 181: workspace.v1.ExpertTeamInput
+	(*ExpertTeamMemberInput)(nil),                            // 182: workspace.v1.ExpertTeamMemberInput
+	(*ExpertTeamMember)(nil),                                 // 183: workspace.v1.ExpertTeamMember
+	(*ExpertTeam)(nil),                                       // 184: workspace.v1.ExpertTeam
+	(*ExpertStage)(nil),                                      // 185: workspace.v1.ExpertStage
+	(*CreditConsumption)(nil),                                // 186: workspace.v1.CreditConsumption
+	(*CreditStageConsumption)(nil),                           // 187: workspace.v1.CreditStageConsumption
+	(*GetSettingsRequest)(nil),                               // 188: workspace.v1.GetSettingsRequest
+	(*UpdateSettingsRequest)(nil),                            // 189: workspace.v1.UpdateSettingsRequest
+	(*PersonalSettings)(nil),                                 // 190: workspace.v1.PersonalSettings
+	(*GetPlatformExecutionDefaultRequest)(nil),               // 191: workspace.v1.GetPlatformExecutionDefaultRequest
+	(*SetPlatformExecutionDefaultRequest)(nil),               // 192: workspace.v1.SetPlatformExecutionDefaultRequest
+	(*PlatformExecutionDefault)(nil),                         // 193: workspace.v1.PlatformExecutionDefault
+	(*RuntimeModelDefault)(nil),                              // 194: workspace.v1.RuntimeModelDefault
+	(*ListRuntimeEnginesRequest)(nil),                        // 195: workspace.v1.ListRuntimeEnginesRequest
+	(*ListRuntimeEnginesResponse)(nil),                       // 196: workspace.v1.ListRuntimeEnginesResponse
+	(*RuntimeEngineStatus)(nil),                              // 197: workspace.v1.RuntimeEngineStatus
+	(*ListModelProviderPresetsRequest)(nil),                  // 198: workspace.v1.ListModelProviderPresetsRequest
+	(*ListModelProviderPresetsResponse)(nil),                 // 199: workspace.v1.ListModelProviderPresetsResponse
+	(*ModelProviderPreset)(nil),                              // 200: workspace.v1.ModelProviderPreset
+	(*ListModelProviderConnectionsRequest)(nil),              // 201: workspace.v1.ListModelProviderConnectionsRequest
+	(*ListModelProviderConnectionsResponse)(nil),             // 202: workspace.v1.ListModelProviderConnectionsResponse
+	(*CreateModelProviderConnectionRequest)(nil),             // 203: workspace.v1.CreateModelProviderConnectionRequest
+	(*UpdateModelProviderConnectionRequest)(nil),             // 204: workspace.v1.UpdateModelProviderConnectionRequest
+	(*DeleteModelProviderConnectionRequest)(nil),             // 205: workspace.v1.DeleteModelProviderConnectionRequest
+	(*RefreshProviderModelsRequest)(nil),                     // 206: workspace.v1.RefreshProviderModelsRequest
+	(*CreateProviderModelRequest)(nil),                       // 207: workspace.v1.CreateProviderModelRequest
+	(*ModelProviderConnection)(nil),                          // 208: workspace.v1.ModelProviderConnection
+	(*ProviderModel)(nil),                                    // 209: workspace.v1.ProviderModel
+	(*RuntimeModelCompatibility)(nil),                        // 210: workspace.v1.RuntimeModelCompatibility
+	(*ListMCPConnectorsRequest)(nil),                         // 211: workspace.v1.ListMCPConnectorsRequest
+	(*ListMCPConnectorsResponse)(nil),                        // 212: workspace.v1.ListMCPConnectorsResponse
+	(*CreateMCPConnectorRequest)(nil),                        // 213: workspace.v1.CreateMCPConnectorRequest
+	(*UpdateMCPConnectorRequest)(nil),                        // 214: workspace.v1.UpdateMCPConnectorRequest
+	(*TestMCPConnectorRequest)(nil),                          // 215: workspace.v1.TestMCPConnectorRequest
+	(*GetMCPConnectorDeletionImpactRequest)(nil),             // 216: workspace.v1.GetMCPConnectorDeletionImpactRequest
+	(*DeleteMCPConnectorRequest)(nil),                        // 217: workspace.v1.DeleteMCPConnectorRequest
+	(*MCPConnectorInput)(nil),                                // 218: workspace.v1.MCPConnectorInput
+	(*MCPConnector)(nil),                                     // 219: workspace.v1.MCPConnector
+	(*ListSkillsRequest)(nil),                                // 220: workspace.v1.ListSkillsRequest
+	(*ListSkillsResponse)(nil),                               // 221: workspace.v1.ListSkillsResponse
+	(*CreateSkillRequest)(nil),                               // 222: workspace.v1.CreateSkillRequest
+	(*UpdateSkillRequest)(nil),                               // 223: workspace.v1.UpdateSkillRequest
+	(*GetSkillDeletionImpactRequest)(nil),                    // 224: workspace.v1.GetSkillDeletionImpactRequest
+	(*DeleteSkillRequest)(nil),                               // 225: workspace.v1.DeleteSkillRequest
+	(*Skill)(nil),                                            // 226: workspace.v1.Skill
+	(*AffectedExpert)(nil),                                   // 227: workspace.v1.AffectedExpert
+	(*ResourceDeletionImpact)(nil),                           // 228: workspace.v1.ResourceDeletionImpact
+	(*CLICapability)(nil),                                    // 229: workspace.v1.CLICapability
+	(*CLIRecommendedSkill)(nil),                              // 230: workspace.v1.CLIRecommendedSkill
+	(*CLIConnectorDefinitionInput)(nil),                      // 231: workspace.v1.CLIConnectorDefinitionInput
+	(*CLIConnectorDefinition)(nil),                           // 232: workspace.v1.CLIConnectorDefinition
+	(*ListCLIConnectorDefinitionsRequest)(nil),               // 233: workspace.v1.ListCLIConnectorDefinitionsRequest
+	(*ListCLIConnectorDefinitionsResponse)(nil),              // 234: workspace.v1.ListCLIConnectorDefinitionsResponse
+	(*CreateCLIConnectorDefinitionRequest)(nil),              // 235: workspace.v1.CreateCLIConnectorDefinitionRequest
+	(*UpdateCLIConnectorDefinitionRequest)(nil),              // 236: workspace.v1.UpdateCLIConnectorDefinitionRequest
+	(*PublishCLIConnectorDefinitionRequest)(nil),             // 237: workspace.v1.PublishCLIConnectorDefinitionRequest
+	(*DisableCLIConnectorDefinitionRequest)(nil),             // 238: workspace.v1.DisableCLIConnectorDefinitionRequest
+	(*DeleteCLIConnectorDefinitionRequest)(nil),              // 239: workspace.v1.DeleteCLIConnectorDefinitionRequest
+	(*ListCLIConnectorHealthRequest)(nil),                    // 240: workspace.v1.ListCLIConnectorHealthRequest
+	(*ListCLIConnectorHealthResponse)(nil),                   // 241: workspace.v1.ListCLIConnectorHealthResponse
+	(*CLIConnectorHealth)(nil),                               // 242: workspace.v1.CLIConnectorHealth
+	(*ConnectorRevision)(nil),                                // 243: workspace.v1.ConnectorRevision
+	(*ConnectorPublication)(nil),                             // 244: workspace.v1.ConnectorPublication
+	(*ConnectorPublicationRevision)(nil),                     // 245: workspace.v1.ConnectorPublicationRevision
+	(*ConnectorPublicationHealth)(nil),                       // 246: workspace.v1.ConnectorPublicationHealth
+	(*ConnectorInstallation)(nil),                            // 247: workspace.v1.ConnectorInstallation
+	(*ConnectorAuthorization)(nil),                           // 248: workspace.v1.ConnectorAuthorization
+	(*ListConnectorPublicationsRequest)(nil),                 // 249: workspace.v1.ListConnectorPublicationsRequest
+	(*ListConnectorPublicationsResponse)(nil),                // 250: workspace.v1.ListConnectorPublicationsResponse
+	(*StageConnectorPackageRequest)(nil),                     // 251: workspace.v1.StageConnectorPackageRequest
+	(*ListConnectorPublicationRevisionsRequest)(nil),         // 252: workspace.v1.ListConnectorPublicationRevisionsRequest
+	(*ListConnectorPublicationRevisionsResponse)(nil),        // 253: workspace.v1.ListConnectorPublicationRevisionsResponse
+	(*PublishConnectorRevisionRequest)(nil),                  // 254: workspace.v1.PublishConnectorRevisionRequest
+	(*DisableConnectorPublicationRequest)(nil),               // 255: workspace.v1.DisableConnectorPublicationRequest
+	(*ListConnectorPublicationHealthRequest)(nil),            // 256: workspace.v1.ListConnectorPublicationHealthRequest
+	(*ListConnectorPublicationHealthResponse)(nil),           // 257: workspace.v1.ListConnectorPublicationHealthResponse
+	(*InstallPublishedConnectorRequest)(nil),                 // 258: workspace.v1.InstallPublishedConnectorRequest
+	(*UpgradeConnectorInstallationRequest)(nil),              // 259: workspace.v1.UpgradeConnectorInstallationRequest
+	(*ListConnectorAuthorizationsRequest)(nil),               // 260: workspace.v1.ListConnectorAuthorizationsRequest
+	(*ListConnectorAuthorizationsResponse)(nil),              // 261: workspace.v1.ListConnectorAuthorizationsResponse
+	(*SelectConnectorAuthorizationRequest)(nil),              // 262: workspace.v1.SelectConnectorAuthorizationRequest
+	(*RefreshConnectorAuthorizationRequest)(nil),             // 263: workspace.v1.RefreshConnectorAuthorizationRequest
+	(*DisconnectPublishedConnectorAuthorizationRequest)(nil), // 264: workspace.v1.DisconnectPublishedConnectorAuthorizationRequest
+	(*ConnectorSetup)(nil),                                   // 265: workspace.v1.ConnectorSetup
+	(*BeginConnectorSetupRequest)(nil),                       // 266: workspace.v1.BeginConnectorSetupRequest
+	(*CompleteConnectorSetupRequest)(nil),                    // 267: workspace.v1.CompleteConnectorSetupRequest
+	(*ConnectorAuthorizationFlow)(nil),                       // 268: workspace.v1.ConnectorAuthorizationFlow
+	(*BeginConnectorAuthorizationFlowRequest)(nil),           // 269: workspace.v1.BeginConnectorAuthorizationFlowRequest
+	(*CompleteConnectorAuthorizationFlowRequest)(nil),        // 270: workspace.v1.CompleteConnectorAuthorizationFlowRequest
+	(*ListConnectorInstallationsRequest)(nil),                // 271: workspace.v1.ListConnectorInstallationsRequest
+	(*ListConnectorInstallationsResponse)(nil),               // 272: workspace.v1.ListConnectorInstallationsResponse
+	(*UploadConnectorPackageRequest)(nil),                    // 273: workspace.v1.UploadConnectorPackageRequest
+	(*CreateConnectorPackageRequest)(nil),                    // 274: workspace.v1.CreateConnectorPackageRequest
+	(*DisableConnectorInstallationRequest)(nil),              // 275: workspace.v1.DisableConnectorInstallationRequest
+	(*UninstallConnectorRequest)(nil),                        // 276: workspace.v1.UninstallConnectorRequest
+	(*ConnectConnectorRequest)(nil),                          // 277: workspace.v1.ConnectConnectorRequest
+	(*DisconnectConnectorAuthorizationRequest)(nil),          // 278: workspace.v1.DisconnectConnectorAuthorizationRequest
+	(*EnableCLIConnectorRequest)(nil),                        // 279: workspace.v1.EnableCLIConnectorRequest
+	(*DisableCLIConnectorRequest)(nil),                       // 280: workspace.v1.DisableCLIConnectorRequest
+	(*CLIConnectorEnablement)(nil),                           // 281: workspace.v1.CLIConnectorEnablement
+	(*ListCLIConnectorEnablementsRequest)(nil),               // 282: workspace.v1.ListCLIConnectorEnablementsRequest
+	(*ListCLIConnectorEnablementsResponse)(nil),              // 283: workspace.v1.ListCLIConnectorEnablementsResponse
+	(*CLIConnectorAuthorization)(nil),                        // 284: workspace.v1.CLIConnectorAuthorization
+	(*CLIConnectorAuthorizationFlow)(nil),                    // 285: workspace.v1.CLIConnectorAuthorizationFlow
+	(*BeginCLIConnectorAuthorizationRequest)(nil),            // 286: workspace.v1.BeginCLIConnectorAuthorizationRequest
+	(*CompleteCLIConnectorAuthorizationRequest)(nil),         // 287: workspace.v1.CompleteCLIConnectorAuthorizationRequest
+	(*ListCLIConnectorAuthorizationsRequest)(nil),            // 288: workspace.v1.ListCLIConnectorAuthorizationsRequest
+	(*ListCLIConnectorAuthorizationsResponse)(nil),           // 289: workspace.v1.ListCLIConnectorAuthorizationsResponse
+	(*DisconnectCLIConnectorAuthorizationRequest)(nil),       // 290: workspace.v1.DisconnectCLIConnectorAuthorizationRequest
+	(*CommandApproval)(nil),                                  // 291: workspace.v1.CommandApproval
+	(*ListCommandApprovalsRequest)(nil),                      // 292: workspace.v1.ListCommandApprovalsRequest
+	(*ListCommandApprovalsResponse)(nil),                     // 293: workspace.v1.ListCommandApprovalsResponse
+	(*DecideCommandApprovalRequest)(nil),                     // 294: workspace.v1.DecideCommandApprovalRequest
+	(*DeleteResponse)(nil),                                   // 295: workspace.v1.DeleteResponse
+	(*Attachment)(nil),                                       // 296: workspace.v1.Attachment
+	(*ExecutionActivity)(nil),                                // 297: workspace.v1.ExecutionActivity
+	(*EvidenceCitation)(nil),                                 // 298: workspace.v1.EvidenceCitation
+	(*Evidence)(nil),                                         // 299: workspace.v1.Evidence
+	(*ExecutionPlanStep)(nil),                                // 300: workspace.v1.ExecutionPlanStep
+	(*ExecutionPlanResource)(nil),                            // 301: workspace.v1.ExecutionPlanResource
+	(*ExecutionPlan)(nil),                                    // 302: workspace.v1.ExecutionPlan
+	(*GetSessionArtifactDownloadRequest)(nil),                // 303: workspace.v1.GetSessionArtifactDownloadRequest
+	(*CompleteCLIConnectorEnablementRequest)(nil),            // 304: workspace.v1.CompleteCLIConnectorEnablementRequest
+	(*GetConversationSelectionRequest)(nil),                  // 305: workspace.v1.GetConversationSelectionRequest
+	(*ResolveConversationSelectionRequest)(nil),              // 306: workspace.v1.ResolveConversationSelectionRequest
+	(*ConversationSelection)(nil),                            // 307: workspace.v1.ConversationSelection
+	(*SelectedResource)(nil),                                 // 308: workspace.v1.SelectedResource
+	(*ListConversationFilesRequest)(nil),                     // 309: workspace.v1.ListConversationFilesRequest
+	(*ListConversationFilesResponse)(nil),                    // 310: workspace.v1.ListConversationFilesResponse
+	(*ConversationFile)(nil),                                 // 311: workspace.v1.ConversationFile
+	(*FileReference)(nil),                                    // 312: workspace.v1.FileReference
+	(*GetSkillDocumentRequest)(nil),                          // 313: workspace.v1.GetSkillDocumentRequest
+	(*SkillDocument)(nil),                                    // 314: workspace.v1.SkillDocument
+	(*timestamppb.Timestamp)(nil),                            // 315: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                                  // 316: google.protobuf.Struct
 }
 var file_workspace_v1_workspace_proto_depIdxs = []int32{
-	11,  // 0: workspace.v1.CurrentUser.credit_balance:type_name -> workspace.v1.CreditBalance
-	9,   // 1: workspace.v1.ListUsersResponse.items:type_name -> workspace.v1.UserAccount
-	9,   // 2: workspace.v1.CreateUserResponse.user:type_name -> workspace.v1.UserAccount
-	274, // 3: workspace.v1.UserAccount.created_at:type_name -> google.protobuf.Timestamp
-	11,  // 4: workspace.v1.UserAccount.credit_balance:type_name -> workspace.v1.CreditBalance
-	274, // 5: workspace.v1.CreditBalance.next_allocation_at:type_name -> google.protobuf.Timestamp
-	14,  // 6: workspace.v1.ListCreditLedgerResponse.items:type_name -> workspace.v1.CreditLedgerEntry
-	274, // 7: workspace.v1.CreditLedgerEntry.created_at:type_name -> google.protobuf.Timestamp
-	20,  // 8: workspace.v1.ListModelCreditRatesResponse.items:type_name -> workspace.v1.ModelCreditRate
-	274, // 9: workspace.v1.ModelCreditRate.created_at:type_name -> google.protobuf.Timestamp
-	274, // 10: workspace.v1.ModelCreditRate.superseded_at:type_name -> google.protobuf.Timestamp
-	22,  // 11: workspace.v1.ImageModel.rates:type_name -> workspace.v1.ImageCreditRate
-	274, // 12: workspace.v1.ImageModel.verified_at:type_name -> google.protobuf.Timestamp
-	274, // 13: workspace.v1.ImageModel.created_at:type_name -> google.protobuf.Timestamp
-	274, // 14: workspace.v1.ImageModel.updated_at:type_name -> google.protobuf.Timestamp
-	23,  // 15: workspace.v1.ListImageGenerationOptionsResponse.image_models:type_name -> workspace.v1.ImageModel
-	25,  // 16: workspace.v1.ListImageGenerationOptionsResponse.prompt_optimization_models:type_name -> workspace.v1.PromptOptimizationCandidate
-	23,  // 17: workspace.v1.ListImageModelsResponse.items:type_name -> workspace.v1.ImageModel
-	22,  // 18: workspace.v1.CreateImageModelRequest.rates:type_name -> workspace.v1.ImageCreditRate
-	22,  // 19: workspace.v1.ReviseImageModelRequest.rates:type_name -> workspace.v1.ImageCreditRate
-	274, // 20: workspace.v1.GeneratedImage.expires_at:type_name -> google.protobuf.Timestamp
-	35,  // 21: workspace.v1.ImageGenerationRecord.images:type_name -> workspace.v1.GeneratedImage
-	274, // 22: workspace.v1.ImageGenerationRecord.created_at:type_name -> google.protobuf.Timestamp
-	274, // 23: workspace.v1.ImageGenerationRecord.started_at:type_name -> google.protobuf.Timestamp
-	274, // 24: workspace.v1.ImageGenerationRecord.completed_at:type_name -> google.protobuf.Timestamp
-	36,  // 25: workspace.v1.ListImageGenerationsResponse.items:type_name -> workspace.v1.ImageGenerationRecord
-	45,  // 26: workspace.v1.ReplacePromptOptimizationCandidatesRequest.items:type_name -> workspace.v1.PromptOptimizationCandidateInput
-	25,  // 27: workspace.v1.ListPromptOptimizationCandidatesResponse.items:type_name -> workspace.v1.PromptOptimizationCandidate
-	274, // 28: workspace.v1.CreateRedemptionCodeBatchRequest.expires_at:type_name -> google.protobuf.Timestamp
-	274, // 29: workspace.v1.RedemptionCodeBatch.expires_at:type_name -> google.protobuf.Timestamp
-	274, // 30: workspace.v1.RedemptionCodeBatch.created_at:type_name -> google.protobuf.Timestamp
-	51,  // 31: workspace.v1.RedemptionCodeBatch.codes:type_name -> workspace.v1.RedemptionCode
-	55,  // 32: workspace.v1.ListRedemptionCodesResponse.items:type_name -> workspace.v1.RedemptionCodeStatus
-	274, // 33: workspace.v1.RedemptionCodeStatus.expires_at:type_name -> google.protobuf.Timestamp
-	274, // 34: workspace.v1.RedemptionCodeStatus.redeemed_at:type_name -> google.protobuf.Timestamp
-	274, // 35: workspace.v1.RedemptionCodeStatus.voided_at:type_name -> google.protobuf.Timestamp
-	274, // 36: workspace.v1.RedemptionCodeStatus.created_at:type_name -> google.protobuf.Timestamp
-	64,  // 37: workspace.v1.ListSessionsResponse.items:type_name -> workspace.v1.Session
-	274, // 38: workspace.v1.Session.created_at:type_name -> google.protobuf.Timestamp
-	274, // 39: workspace.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
-	71,  // 40: workspace.v1.ListSessionMessagesResponse.items:type_name -> workspace.v1.SessionMessage
-	271, // 41: workspace.v1.SendSessionMessageRequest.file_references:type_name -> workspace.v1.FileReference
-	71,  // 42: workspace.v1.SendSessionMessageResponse.user_message:type_name -> workspace.v1.SessionMessage
-	71,  // 43: workspace.v1.SendSessionMessageResponse.assistant_message:type_name -> workspace.v1.SessionMessage
-	274, // 44: workspace.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
-	73,  // 45: workspace.v1.SessionMessage.response_snapshot:type_name -> workspace.v1.ResponseSnapshot
-	260, // 46: workspace.v1.SessionMessage.attachments:type_name -> workspace.v1.Attachment
-	152, // 47: workspace.v1.SessionMessage.expert_stages:type_name -> workspace.v1.ExpertStage
-	153, // 48: workspace.v1.SessionMessage.credit_consumption:type_name -> workspace.v1.CreditConsumption
-	261, // 49: workspace.v1.SessionMessage.activities:type_name -> workspace.v1.ExecutionActivity
-	127, // 50: workspace.v1.SessionMessage.artifacts:type_name -> workspace.v1.Artifact
-	72,  // 51: workspace.v1.SessionMessage.resource_action:type_name -> workspace.v1.ResourceCreationAction
-	274, // 52: workspace.v1.ResourceCreationAction.expires_at:type_name -> google.protobuf.Timestamp
-	74,  // 53: workspace.v1.ResponseSnapshot.stages:type_name -> workspace.v1.ExecutionStageSnapshot
-	75,  // 54: workspace.v1.ExecutionStageSnapshot.expert:type_name -> workspace.v1.ExpertSnapshot
-	76,  // 55: workspace.v1.ExecutionStageSnapshot.provider_model:type_name -> workspace.v1.ProviderModelSnapshot
-	77,  // 56: workspace.v1.ExecutionStageSnapshot.mcp_servers:type_name -> workspace.v1.MCPServerSnapshot
-	78,  // 57: workspace.v1.ExecutionStageSnapshot.skills:type_name -> workspace.v1.SkillSnapshot
-	79,  // 58: workspace.v1.ExecutionStageSnapshot.cli_connectors:type_name -> workspace.v1.CLIConnectorSnapshot
-	87,  // 59: workspace.v1.ListWorkflowsResponse.items:type_name -> workspace.v1.Workflow
-	86,  // 60: workspace.v1.CreateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
-	86,  // 61: workspace.v1.UpdateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
-	88,  // 62: workspace.v1.WorkflowInput.environment:type_name -> workspace.v1.EnvironmentVariable
-	89,  // 63: workspace.v1.WorkflowInput.schedule:type_name -> workspace.v1.Schedule
-	88,  // 64: workspace.v1.Workflow.environment:type_name -> workspace.v1.EnvironmentVariable
-	89,  // 65: workspace.v1.Workflow.schedule:type_name -> workspace.v1.Schedule
-	91,  // 66: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
-	274, // 67: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
-	274, // 68: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
-	90,  // 69: workspace.v1.GitSource.config:type_name -> workspace.v1.GitConfigEntry
-	99,  // 70: workspace.v1.ListKnowledgeBasesResponse.items:type_name -> workspace.v1.KnowledgeBase
-	98,  // 71: workspace.v1.CreateKnowledgeBaseRequest.knowledge_base:type_name -> workspace.v1.KnowledgeBaseInput
-	98,  // 72: workspace.v1.UpdateKnowledgeBaseRequest.knowledge_base:type_name -> workspace.v1.KnowledgeBaseInput
-	274, // 73: workspace.v1.KnowledgeBase.created_at:type_name -> google.protobuf.Timestamp
-	274, // 74: workspace.v1.KnowledgeBase.updated_at:type_name -> google.protobuf.Timestamp
-	104, // 75: workspace.v1.ListKnowledgeCategoriesResponse.items:type_name -> workspace.v1.KnowledgeCategory
-	274, // 76: workspace.v1.KnowledgeCategory.created_at:type_name -> google.protobuf.Timestamp
-	274, // 77: workspace.v1.KnowledgeCategory.updated_at:type_name -> google.protobuf.Timestamp
-	108, // 78: workspace.v1.ListKnowledgeDocumentsResponse.items:type_name -> workspace.v1.KnowledgeDocument
-	274, // 79: workspace.v1.KnowledgeDocumentRevision.created_at:type_name -> google.protobuf.Timestamp
-	274, // 80: workspace.v1.KnowledgeDocumentRevision.ready_at:type_name -> google.protobuf.Timestamp
-	274, // 81: workspace.v1.KnowledgeDocument.created_at:type_name -> google.protobuf.Timestamp
-	274, // 82: workspace.v1.KnowledgeDocument.updated_at:type_name -> google.protobuf.Timestamp
-	107, // 83: workspace.v1.KnowledgeDocument.latest_revision:type_name -> workspace.v1.KnowledgeDocumentRevision
-	274, // 84: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
-	274, // 85: workspace.v1.WorkflowAccessToken.expires_at:type_name -> google.protobuf.Timestamp
-	275, // 86: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
-	122, // 87: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
-	271, // 88: workspace.v1.ContinueRunConversationRequest.file_references:type_name -> workspace.v1.FileReference
-	275, // 89: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
-	275, // 90: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
-	274, // 91: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
-	274, // 92: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
-	274, // 93: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
-	275, // 94: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
-	260, // 95: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
-	152, // 96: workspace.v1.Run.expert_stages:type_name -> workspace.v1.ExpertStage
-	153, // 97: workspace.v1.Run.credit_consumption:type_name -> workspace.v1.CreditConsumption
-	127, // 98: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
-	274, // 99: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
-	274, // 100: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
-	274, // 101: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
-	133, // 102: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
-	274, // 103: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
-	90,  // 104: workspace.v1.ConfigureWorkflowGitSourceRequest.config:type_name -> workspace.v1.GitConfigEntry
-	274, // 105: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
-	141, // 106: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
-	140, // 107: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	140, // 108: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
-	274, // 109: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
-	274, // 110: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
-	151, // 111: workspace.v1.ListExpertTeamsResponse.items:type_name -> workspace.v1.ExpertTeam
-	148, // 112: workspace.v1.CreateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
-	148, // 113: workspace.v1.UpdateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
-	149, // 114: workspace.v1.ExpertTeamInput.members:type_name -> workspace.v1.ExpertTeamMemberInput
-	141, // 115: workspace.v1.ExpertTeamMember.expert:type_name -> workspace.v1.Expert
-	141, // 116: workspace.v1.ExpertTeam.experts:type_name -> workspace.v1.Expert
-	274, // 117: workspace.v1.ExpertTeam.created_at:type_name -> google.protobuf.Timestamp
-	274, // 118: workspace.v1.ExpertTeam.updated_at:type_name -> google.protobuf.Timestamp
-	150, // 119: workspace.v1.ExpertTeam.members:type_name -> workspace.v1.ExpertTeamMember
-	154, // 120: workspace.v1.ExpertStage.credit_consumption:type_name -> workspace.v1.CreditStageConsumption
-	154, // 121: workspace.v1.CreditConsumption.stages:type_name -> workspace.v1.CreditStageConsumption
-	158, // 122: workspace.v1.UpdateSettingsRequest.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
-	158, // 123: workspace.v1.PersonalSettings.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
-	161, // 124: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
-	164, // 125: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
-	172, // 126: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
-	274, // 127: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
-	173, // 128: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
-	274, // 129: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
-	274, // 130: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
-	174, // 131: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
-	183, // 132: workspace.v1.ListMCPConnectorsResponse.items:type_name -> workspace.v1.MCPConnector
-	182, // 133: workspace.v1.CreateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
-	182, // 134: workspace.v1.UpdateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
-	88,  // 135: workspace.v1.MCPConnectorInput.environment:type_name -> workspace.v1.EnvironmentVariable
-	88,  // 136: workspace.v1.MCPConnector.environment:type_name -> workspace.v1.EnvironmentVariable
-	274, // 137: workspace.v1.MCPConnector.created_at:type_name -> google.protobuf.Timestamp
-	274, // 138: workspace.v1.MCPConnector.updated_at:type_name -> google.protobuf.Timestamp
-	190, // 139: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
-	274, // 140: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
-	274, // 141: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
-	191, // 142: workspace.v1.ResourceDeletionImpact.affected_experts:type_name -> workspace.v1.AffectedExpert
-	193, // 143: workspace.v1.CLIConnectorDefinitionInput.capabilities:type_name -> workspace.v1.CLICapability
-	194, // 144: workspace.v1.CLIConnectorDefinitionInput.recommended_skills:type_name -> workspace.v1.CLIRecommendedSkill
-	193, // 145: workspace.v1.CLIConnectorDefinition.capabilities:type_name -> workspace.v1.CLICapability
-	194, // 146: workspace.v1.CLIConnectorDefinition.recommended_skills:type_name -> workspace.v1.CLIRecommendedSkill
-	196, // 147: workspace.v1.ListCLIConnectorDefinitionsResponse.items:type_name -> workspace.v1.CLIConnectorDefinition
-	195, // 148: workspace.v1.CreateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
-	195, // 149: workspace.v1.UpdateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
-	206, // 150: workspace.v1.ListCLIConnectorHealthResponse.items:type_name -> workspace.v1.CLIConnectorHealth
-	207, // 151: workspace.v1.ConnectorPublication.revision:type_name -> workspace.v1.ConnectorRevision
-	207, // 152: workspace.v1.ConnectorPublicationRevision.revision:type_name -> workspace.v1.ConnectorRevision
-	208, // 153: workspace.v1.ConnectorPublicationRevision.publication:type_name -> workspace.v1.ConnectorPublication
-	274, // 154: workspace.v1.ConnectorAuthorization.expires_at:type_name -> google.protobuf.Timestamp
-	208, // 155: workspace.v1.ListConnectorPublicationsResponse.items:type_name -> workspace.v1.ConnectorPublication
-	209, // 156: workspace.v1.ListConnectorPublicationRevisionsResponse.items:type_name -> workspace.v1.ConnectorPublicationRevision
-	210, // 157: workspace.v1.ListConnectorPublicationHealthResponse.items:type_name -> workspace.v1.ConnectorPublicationHealth
-	212, // 158: workspace.v1.ListConnectorAuthorizationsResponse.items:type_name -> workspace.v1.ConnectorAuthorization
-	274, // 159: workspace.v1.ConnectorSetup.expires_at:type_name -> google.protobuf.Timestamp
-	274, // 160: workspace.v1.ConnectorAuthorizationFlow.expires_at:type_name -> google.protobuf.Timestamp
-	212, // 161: workspace.v1.ConnectorAuthorizationFlow.authorization:type_name -> workspace.v1.ConnectorAuthorization
-	211, // 162: workspace.v1.ListConnectorInstallationsResponse.items:type_name -> workspace.v1.ConnectorInstallation
-	274, // 163: workspace.v1.CLIConnectorEnablement.action_expires_at:type_name -> google.protobuf.Timestamp
-	245, // 164: workspace.v1.ListCLIConnectorEnablementsResponse.items:type_name -> workspace.v1.CLIConnectorEnablement
-	274, // 165: workspace.v1.CLIConnectorAuthorization.expires_at:type_name -> google.protobuf.Timestamp
-	274, // 166: workspace.v1.CLIConnectorAuthorizationFlow.expires_at:type_name -> google.protobuf.Timestamp
-	248, // 167: workspace.v1.CLIConnectorAuthorizationFlow.authorization:type_name -> workspace.v1.CLIConnectorAuthorization
-	248, // 168: workspace.v1.ListCLIConnectorAuthorizationsResponse.items:type_name -> workspace.v1.CLIConnectorAuthorization
-	274, // 169: workspace.v1.CommandApproval.expires_at:type_name -> google.protobuf.Timestamp
-	255, // 170: workspace.v1.ListCommandApprovalsResponse.items:type_name -> workspace.v1.CommandApproval
-	267, // 171: workspace.v1.ConversationSelection.skills:type_name -> workspace.v1.SelectedResource
-	267, // 172: workspace.v1.ConversationSelection.mcp_servers:type_name -> workspace.v1.SelectedResource
-	267, // 173: workspace.v1.ConversationSelection.cli_connectors:type_name -> workspace.v1.SelectedResource
-	267, // 174: workspace.v1.ConversationSelection.inherited_skills:type_name -> workspace.v1.SelectedResource
-	267, // 175: workspace.v1.ConversationSelection.inherited_mcp_servers:type_name -> workspace.v1.SelectedResource
-	267, // 176: workspace.v1.ConversationSelection.inherited_cli_connectors:type_name -> workspace.v1.SelectedResource
-	270, // 177: workspace.v1.ListConversationFilesResponse.items:type_name -> workspace.v1.ConversationFile
-	190, // 178: workspace.v1.SkillDocument.skill:type_name -> workspace.v1.Skill
-	264, // 179: workspace.v1.AgentWorkspaceService.GetConversationSelection:input_type -> workspace.v1.GetConversationSelectionRequest
-	265, // 180: workspace.v1.AgentWorkspaceService.ResolveConversationSelection:input_type -> workspace.v1.ResolveConversationSelectionRequest
-	268, // 181: workspace.v1.AgentWorkspaceService.ListConversationFiles:input_type -> workspace.v1.ListConversationFilesRequest
-	272, // 182: workspace.v1.AgentWorkspaceService.GetSkillDocument:input_type -> workspace.v1.GetSkillDocumentRequest
-	0,   // 183: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
-	2,   // 184: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
-	4,   // 185: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
-	6,   // 186: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
-	7,   // 187: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
-	10,  // 188: workspace.v1.AgentWorkspaceService.GetCreditBalance:input_type -> workspace.v1.GetCreditBalanceRequest
-	12,  // 189: workspace.v1.AgentWorkspaceService.ListCreditLedger:input_type -> workspace.v1.ListCreditLedgerRequest
-	15,  // 190: workspace.v1.AgentWorkspaceService.RedeemCreditCode:input_type -> workspace.v1.RedeemCreditCodeRequest
-	16,  // 191: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:input_type -> workspace.v1.ConfigureUserDailyCreditsRequest
-	17,  // 192: workspace.v1.AgentWorkspaceService.AdjustUserCredits:input_type -> workspace.v1.AdjustUserCreditsRequest
-	18,  // 193: workspace.v1.AgentWorkspaceService.ListModelCreditRates:input_type -> workspace.v1.ListModelCreditRatesRequest
-	21,  // 194: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:input_type -> workspace.v1.CreateModelCreditRateRequest
-	49,  // 195: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:input_type -> workspace.v1.CreateRedemptionCodeBatchRequest
-	52,  // 196: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:input_type -> workspace.v1.ListRedemptionCodesRequest
-	54,  // 197: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:input_type -> workspace.v1.VoidRedemptionCodeRequest
-	24,  // 198: workspace.v1.AgentWorkspaceService.ListImageGenerationOptions:input_type -> workspace.v1.ListImageGenerationOptionsRequest
-	34,  // 199: workspace.v1.AgentWorkspaceService.SubmitImageGeneration:input_type -> workspace.v1.SubmitImageGenerationRequest
-	37,  // 200: workspace.v1.AgentWorkspaceService.ListImageGenerations:input_type -> workspace.v1.ListImageGenerationsRequest
-	39,  // 201: workspace.v1.AgentWorkspaceService.GetImageGeneration:input_type -> workspace.v1.GetImageGenerationRequest
-	40,  // 202: workspace.v1.AgentWorkspaceService.StopImageGeneration:input_type -> workspace.v1.StopImageGenerationRequest
-	41,  // 203: workspace.v1.AgentWorkspaceService.RegenerateImageGeneration:input_type -> workspace.v1.RegenerateImageGenerationRequest
-	42,  // 204: workspace.v1.AgentWorkspaceService.DeleteImageGeneration:input_type -> workspace.v1.DeleteImageGenerationRequest
-	43,  // 205: workspace.v1.AgentWorkspaceService.OptimizeImagePrompt:input_type -> workspace.v1.OptimizeImagePromptRequest
-	27,  // 206: workspace.v1.AgentWorkspaceService.ListImageModels:input_type -> workspace.v1.ListImageModelsRequest
-	29,  // 207: workspace.v1.AgentWorkspaceService.CreateImageModel:input_type -> workspace.v1.CreateImageModelRequest
-	30,  // 208: workspace.v1.AgentWorkspaceService.ReviseImageModel:input_type -> workspace.v1.ReviseImageModelRequest
-	31,  // 209: workspace.v1.AgentWorkspaceService.DeleteImageModel:input_type -> workspace.v1.DeleteImageModelRequest
-	32,  // 210: workspace.v1.AgentWorkspaceService.VerifyImageModel:input_type -> workspace.v1.VerifyImageModelRequest
-	33,  // 211: workspace.v1.AgentWorkspaceService.SetImageModelAvailability:input_type -> workspace.v1.SetImageModelAvailabilityRequest
-	46,  // 212: workspace.v1.AgentWorkspaceService.ReplacePromptOptimizationCandidates:input_type -> workspace.v1.ReplacePromptOptimizationCandidatesRequest
-	47,  // 213: workspace.v1.AgentWorkspaceService.ListPromptOptimizationCandidates:input_type -> workspace.v1.ListPromptOptimizationCandidatesRequest
-	56,  // 214: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
-	58,  // 215: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
-	59,  // 216: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
-	60,  // 217: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
-	61,  // 218: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
-	62,  // 219: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:input_type -> workspace.v1.SetSessionExpertSelectionRequest
-	63,  // 220: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
-	65,  // 221: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
-	67,  // 222: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
-	69,  // 223: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
-	70,  // 224: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
-	80,  // 225: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
-	82,  // 226: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
-	83,  // 227: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
-	84,  // 228: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
-	85,  // 229: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
-	109, // 230: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
-	110, // 231: workspace.v1.AgentWorkspaceService.GetWorkflowCredential:input_type -> workspace.v1.GetWorkflowCredentialRequest
-	112, // 232: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
-	114, // 233: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
-	115, // 234: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
-	117, // 235: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
-	118, // 236: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
-	119, // 237: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
-	120, // 238: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
-	121, // 239: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
-	123, // 240: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
-	128, // 241: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
-	130, // 242: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
-	132, // 243: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
-	92,  // 244: workspace.v1.AgentWorkspaceService.ListKnowledgeBases:input_type -> workspace.v1.ListKnowledgeBasesRequest
-	94,  // 245: workspace.v1.AgentWorkspaceService.CreateKnowledgeBase:input_type -> workspace.v1.CreateKnowledgeBaseRequest
-	95,  // 246: workspace.v1.AgentWorkspaceService.GetKnowledgeBase:input_type -> workspace.v1.GetKnowledgeBaseRequest
-	96,  // 247: workspace.v1.AgentWorkspaceService.UpdateKnowledgeBase:input_type -> workspace.v1.UpdateKnowledgeBaseRequest
-	97,  // 248: workspace.v1.AgentWorkspaceService.DeleteKnowledgeBase:input_type -> workspace.v1.DeleteKnowledgeBaseRequest
-	100, // 249: workspace.v1.AgentWorkspaceService.ListKnowledgeCategories:input_type -> workspace.v1.ListKnowledgeCategoriesRequest
-	102, // 250: workspace.v1.AgentWorkspaceService.CreateKnowledgeCategory:input_type -> workspace.v1.CreateKnowledgeCategoryRequest
-	103, // 251: workspace.v1.AgentWorkspaceService.DeleteKnowledgeCategory:input_type -> workspace.v1.DeleteKnowledgeCategoryRequest
-	105, // 252: workspace.v1.AgentWorkspaceService.ListKnowledgeDocuments:input_type -> workspace.v1.ListKnowledgeDocumentsRequest
-	134, // 253: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
-	136, // 254: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
-	137, // 255: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
-	138, // 256: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
-	139, // 257: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
-	142, // 258: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
-	144, // 259: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
-	145, // 260: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
-	146, // 261: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
-	147, // 262: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
-	155, // 263: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
-	156, // 264: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
-	159, // 265: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
-	162, // 266: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
-	165, // 267: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
-	167, // 268: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
-	168, // 269: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
-	169, // 270: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
-	170, // 271: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
-	171, // 272: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
-	175, // 273: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
-	177, // 274: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
-	178, // 275: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
-	179, // 276: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
-	180, // 277: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:input_type -> workspace.v1.GetMCPConnectorDeletionImpactRequest
-	181, // 278: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
-	184, // 279: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
-	186, // 280: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
-	187, // 281: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
-	188, // 282: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:input_type -> workspace.v1.GetSkillDeletionImpactRequest
-	189, // 283: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
-	197, // 284: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:input_type -> workspace.v1.ListCLIConnectorDefinitionsRequest
-	235, // 285: workspace.v1.AgentWorkspaceService.ListConnectorInstallations:input_type -> workspace.v1.ListConnectorInstallationsRequest
-	213, // 286: workspace.v1.AgentWorkspaceService.ListConnectorPublications:input_type -> workspace.v1.ListConnectorPublicationsRequest
-	222, // 287: workspace.v1.AgentWorkspaceService.InstallPublishedConnector:input_type -> workspace.v1.InstallPublishedConnectorRequest
-	223, // 288: workspace.v1.AgentWorkspaceService.UpgradeConnectorInstallation:input_type -> workspace.v1.UpgradeConnectorInstallationRequest
-	224, // 289: workspace.v1.AgentWorkspaceService.ListConnectorAuthorizations:input_type -> workspace.v1.ListConnectorAuthorizationsRequest
-	226, // 290: workspace.v1.AgentWorkspaceService.SelectConnectorAuthorization:input_type -> workspace.v1.SelectConnectorAuthorizationRequest
-	227, // 291: workspace.v1.AgentWorkspaceService.RefreshConnectorAuthorization:input_type -> workspace.v1.RefreshConnectorAuthorizationRequest
-	228, // 292: workspace.v1.AgentWorkspaceService.DisconnectPublishedConnectorAuthorization:input_type -> workspace.v1.DisconnectPublishedConnectorAuthorizationRequest
-	230, // 293: workspace.v1.AgentWorkspaceService.BeginConnectorSetup:input_type -> workspace.v1.BeginConnectorSetupRequest
-	231, // 294: workspace.v1.AgentWorkspaceService.CompleteConnectorSetup:input_type -> workspace.v1.CompleteConnectorSetupRequest
-	233, // 295: workspace.v1.AgentWorkspaceService.BeginConnectorAuthorizationFlow:input_type -> workspace.v1.BeginConnectorAuthorizationFlowRequest
-	234, // 296: workspace.v1.AgentWorkspaceService.CompleteConnectorAuthorizationFlow:input_type -> workspace.v1.CompleteConnectorAuthorizationFlowRequest
-	237, // 297: workspace.v1.AgentWorkspaceService.UploadConnectorPackage:input_type -> workspace.v1.UploadConnectorPackageRequest
-	238, // 298: workspace.v1.AgentWorkspaceService.CreateConnectorPackage:input_type -> workspace.v1.CreateConnectorPackageRequest
-	239, // 299: workspace.v1.AgentWorkspaceService.DisableConnectorInstallation:input_type -> workspace.v1.DisableConnectorInstallationRequest
-	240, // 300: workspace.v1.AgentWorkspaceService.UninstallConnector:input_type -> workspace.v1.UninstallConnectorRequest
-	241, // 301: workspace.v1.AgentWorkspaceService.ConnectConnector:input_type -> workspace.v1.ConnectConnectorRequest
-	242, // 302: workspace.v1.AgentWorkspaceService.DisconnectConnectorAuthorization:input_type -> workspace.v1.DisconnectConnectorAuthorizationRequest
-	215, // 303: workspace.v1.AgentWorkspaceService.StageConnectorPackage:input_type -> workspace.v1.StageConnectorPackageRequest
-	216, // 304: workspace.v1.AgentWorkspaceService.ListConnectorPublicationRevisions:input_type -> workspace.v1.ListConnectorPublicationRevisionsRequest
-	218, // 305: workspace.v1.AgentWorkspaceService.PublishConnectorRevision:input_type -> workspace.v1.PublishConnectorRevisionRequest
-	219, // 306: workspace.v1.AgentWorkspaceService.DisableConnectorPublication:input_type -> workspace.v1.DisableConnectorPublicationRequest
-	220, // 307: workspace.v1.AgentWorkspaceService.ListConnectorPublicationHealth:input_type -> workspace.v1.ListConnectorPublicationHealthRequest
-	199, // 308: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:input_type -> workspace.v1.CreateCLIConnectorDefinitionRequest
-	200, // 309: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:input_type -> workspace.v1.UpdateCLIConnectorDefinitionRequest
-	201, // 310: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:input_type -> workspace.v1.PublishCLIConnectorDefinitionRequest
-	202, // 311: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:input_type -> workspace.v1.DisableCLIConnectorDefinitionRequest
-	203, // 312: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:input_type -> workspace.v1.DeleteCLIConnectorDefinitionRequest
-	204, // 313: workspace.v1.AgentWorkspaceService.ListCLIConnectorHealth:input_type -> workspace.v1.ListCLIConnectorHealthRequest
-	243, // 314: workspace.v1.AgentWorkspaceService.EnableCLIConnector:input_type -> workspace.v1.EnableCLIConnectorRequest
-	244, // 315: workspace.v1.AgentWorkspaceService.DisableCLIConnector:input_type -> workspace.v1.DisableCLIConnectorRequest
-	246, // 316: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:input_type -> workspace.v1.ListCLIConnectorEnablementsRequest
-	256, // 317: workspace.v1.AgentWorkspaceService.ListCommandApprovals:input_type -> workspace.v1.ListCommandApprovalsRequest
-	258, // 318: workspace.v1.AgentWorkspaceService.DecideCommandApproval:input_type -> workspace.v1.DecideCommandApprovalRequest
-	263, // 319: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorEnablement:input_type -> workspace.v1.CompleteCLIConnectorEnablementRequest
-	250, // 320: workspace.v1.AgentWorkspaceService.BeginCLIConnectorAuthorization:input_type -> workspace.v1.BeginCLIConnectorAuthorizationRequest
-	251, // 321: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorAuthorization:input_type -> workspace.v1.CompleteCLIConnectorAuthorizationRequest
-	252, // 322: workspace.v1.AgentWorkspaceService.ListCLIConnectorAuthorizations:input_type -> workspace.v1.ListCLIConnectorAuthorizationsRequest
-	254, // 323: workspace.v1.AgentWorkspaceService.DisconnectCLIConnectorAuthorization:input_type -> workspace.v1.DisconnectCLIConnectorAuthorizationRequest
-	266, // 324: workspace.v1.AgentWorkspaceService.GetConversationSelection:output_type -> workspace.v1.ConversationSelection
-	266, // 325: workspace.v1.AgentWorkspaceService.ResolveConversationSelection:output_type -> workspace.v1.ConversationSelection
-	269, // 326: workspace.v1.AgentWorkspaceService.ListConversationFiles:output_type -> workspace.v1.ListConversationFilesResponse
-	273, // 327: workspace.v1.AgentWorkspaceService.GetSkillDocument:output_type -> workspace.v1.SkillDocument
-	1,   // 328: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
-	3,   // 329: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
-	5,   // 330: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
-	9,   // 331: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
-	8,   // 332: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
-	11,  // 333: workspace.v1.AgentWorkspaceService.GetCreditBalance:output_type -> workspace.v1.CreditBalance
-	13,  // 334: workspace.v1.AgentWorkspaceService.ListCreditLedger:output_type -> workspace.v1.ListCreditLedgerResponse
-	11,  // 335: workspace.v1.AgentWorkspaceService.RedeemCreditCode:output_type -> workspace.v1.CreditBalance
-	11,  // 336: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:output_type -> workspace.v1.CreditBalance
-	11,  // 337: workspace.v1.AgentWorkspaceService.AdjustUserCredits:output_type -> workspace.v1.CreditBalance
-	19,  // 338: workspace.v1.AgentWorkspaceService.ListModelCreditRates:output_type -> workspace.v1.ListModelCreditRatesResponse
-	20,  // 339: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:output_type -> workspace.v1.ModelCreditRate
-	50,  // 340: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:output_type -> workspace.v1.RedemptionCodeBatch
-	53,  // 341: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:output_type -> workspace.v1.ListRedemptionCodesResponse
-	55,  // 342: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:output_type -> workspace.v1.RedemptionCodeStatus
-	26,  // 343: workspace.v1.AgentWorkspaceService.ListImageGenerationOptions:output_type -> workspace.v1.ListImageGenerationOptionsResponse
-	36,  // 344: workspace.v1.AgentWorkspaceService.SubmitImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
-	38,  // 345: workspace.v1.AgentWorkspaceService.ListImageGenerations:output_type -> workspace.v1.ListImageGenerationsResponse
-	36,  // 346: workspace.v1.AgentWorkspaceService.GetImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
-	36,  // 347: workspace.v1.AgentWorkspaceService.StopImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
-	36,  // 348: workspace.v1.AgentWorkspaceService.RegenerateImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
-	259, // 349: workspace.v1.AgentWorkspaceService.DeleteImageGeneration:output_type -> workspace.v1.DeleteResponse
-	44,  // 350: workspace.v1.AgentWorkspaceService.OptimizeImagePrompt:output_type -> workspace.v1.OptimizeImagePromptResponse
-	28,  // 351: workspace.v1.AgentWorkspaceService.ListImageModels:output_type -> workspace.v1.ListImageModelsResponse
-	23,  // 352: workspace.v1.AgentWorkspaceService.CreateImageModel:output_type -> workspace.v1.ImageModel
-	23,  // 353: workspace.v1.AgentWorkspaceService.ReviseImageModel:output_type -> workspace.v1.ImageModel
-	259, // 354: workspace.v1.AgentWorkspaceService.DeleteImageModel:output_type -> workspace.v1.DeleteResponse
-	23,  // 355: workspace.v1.AgentWorkspaceService.VerifyImageModel:output_type -> workspace.v1.ImageModel
-	23,  // 356: workspace.v1.AgentWorkspaceService.SetImageModelAvailability:output_type -> workspace.v1.ImageModel
-	48,  // 357: workspace.v1.AgentWorkspaceService.ReplacePromptOptimizationCandidates:output_type -> workspace.v1.ListPromptOptimizationCandidatesResponse
-	48,  // 358: workspace.v1.AgentWorkspaceService.ListPromptOptimizationCandidates:output_type -> workspace.v1.ListPromptOptimizationCandidatesResponse
-	57,  // 359: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
-	64,  // 360: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
-	64,  // 361: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
-	64,  // 362: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
-	64,  // 363: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
-	64,  // 364: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
-	259, // 365: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
-	66,  // 366: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
-	68,  // 367: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	68,  // 368: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
-	71,  // 369: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
-	81,  // 370: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
-	87,  // 371: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
-	87,  // 372: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
-	87,  // 373: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
-	259, // 374: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
-	111, // 375: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
-	111, // 376: workspace.v1.AgentWorkspaceService.GetWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
-	113, // 377: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
-	122, // 378: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
-	116, // 379: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
-	122, // 380: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
-	116, // 381: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
-	122, // 382: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
-	122, // 383: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
-	122, // 384: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
-	124, // 385: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
-	129, // 386: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
-	131, // 387: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
-	87,  // 388: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
-	93,  // 389: workspace.v1.AgentWorkspaceService.ListKnowledgeBases:output_type -> workspace.v1.ListKnowledgeBasesResponse
-	99,  // 390: workspace.v1.AgentWorkspaceService.CreateKnowledgeBase:output_type -> workspace.v1.KnowledgeBase
-	99,  // 391: workspace.v1.AgentWorkspaceService.GetKnowledgeBase:output_type -> workspace.v1.KnowledgeBase
-	99,  // 392: workspace.v1.AgentWorkspaceService.UpdateKnowledgeBase:output_type -> workspace.v1.KnowledgeBase
-	259, // 393: workspace.v1.AgentWorkspaceService.DeleteKnowledgeBase:output_type -> workspace.v1.DeleteResponse
-	101, // 394: workspace.v1.AgentWorkspaceService.ListKnowledgeCategories:output_type -> workspace.v1.ListKnowledgeCategoriesResponse
-	104, // 395: workspace.v1.AgentWorkspaceService.CreateKnowledgeCategory:output_type -> workspace.v1.KnowledgeCategory
-	259, // 396: workspace.v1.AgentWorkspaceService.DeleteKnowledgeCategory:output_type -> workspace.v1.DeleteResponse
-	106, // 397: workspace.v1.AgentWorkspaceService.ListKnowledgeDocuments:output_type -> workspace.v1.ListKnowledgeDocumentsResponse
-	135, // 398: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
-	141, // 399: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
-	141, // 400: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
-	141, // 401: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
-	259, // 402: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
-	143, // 403: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
-	151, // 404: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
-	151, // 405: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	151, // 406: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
-	259, // 407: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
-	157, // 408: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
-	157, // 409: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
-	160, // 410: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
-	163, // 411: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
-	166, // 412: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
-	172, // 413: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	172, // 414: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
-	259, // 415: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
-	172, // 416: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
-	173, // 417: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
-	176, // 418: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
-	183, // 419: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
-	183, // 420: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
-	183, // 421: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
-	192, // 422: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
-	259, // 423: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
-	185, // 424: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
-	190, // 425: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
-	190, // 426: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
-	192, // 427: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
-	259, // 428: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
-	198, // 429: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:output_type -> workspace.v1.ListCLIConnectorDefinitionsResponse
-	236, // 430: workspace.v1.AgentWorkspaceService.ListConnectorInstallations:output_type -> workspace.v1.ListConnectorInstallationsResponse
-	214, // 431: workspace.v1.AgentWorkspaceService.ListConnectorPublications:output_type -> workspace.v1.ListConnectorPublicationsResponse
-	211, // 432: workspace.v1.AgentWorkspaceService.InstallPublishedConnector:output_type -> workspace.v1.ConnectorInstallation
-	211, // 433: workspace.v1.AgentWorkspaceService.UpgradeConnectorInstallation:output_type -> workspace.v1.ConnectorInstallation
-	225, // 434: workspace.v1.AgentWorkspaceService.ListConnectorAuthorizations:output_type -> workspace.v1.ListConnectorAuthorizationsResponse
-	211, // 435: workspace.v1.AgentWorkspaceService.SelectConnectorAuthorization:output_type -> workspace.v1.ConnectorInstallation
-	212, // 436: workspace.v1.AgentWorkspaceService.RefreshConnectorAuthorization:output_type -> workspace.v1.ConnectorAuthorization
-	212, // 437: workspace.v1.AgentWorkspaceService.DisconnectPublishedConnectorAuthorization:output_type -> workspace.v1.ConnectorAuthorization
-	229, // 438: workspace.v1.AgentWorkspaceService.BeginConnectorSetup:output_type -> workspace.v1.ConnectorSetup
-	229, // 439: workspace.v1.AgentWorkspaceService.CompleteConnectorSetup:output_type -> workspace.v1.ConnectorSetup
-	232, // 440: workspace.v1.AgentWorkspaceService.BeginConnectorAuthorizationFlow:output_type -> workspace.v1.ConnectorAuthorizationFlow
-	232, // 441: workspace.v1.AgentWorkspaceService.CompleteConnectorAuthorizationFlow:output_type -> workspace.v1.ConnectorAuthorizationFlow
-	211, // 442: workspace.v1.AgentWorkspaceService.UploadConnectorPackage:output_type -> workspace.v1.ConnectorInstallation
-	211, // 443: workspace.v1.AgentWorkspaceService.CreateConnectorPackage:output_type -> workspace.v1.ConnectorInstallation
-	211, // 444: workspace.v1.AgentWorkspaceService.DisableConnectorInstallation:output_type -> workspace.v1.ConnectorInstallation
-	259, // 445: workspace.v1.AgentWorkspaceService.UninstallConnector:output_type -> workspace.v1.DeleteResponse
-	211, // 446: workspace.v1.AgentWorkspaceService.ConnectConnector:output_type -> workspace.v1.ConnectorInstallation
-	211, // 447: workspace.v1.AgentWorkspaceService.DisconnectConnectorAuthorization:output_type -> workspace.v1.ConnectorInstallation
-	207, // 448: workspace.v1.AgentWorkspaceService.StageConnectorPackage:output_type -> workspace.v1.ConnectorRevision
-	217, // 449: workspace.v1.AgentWorkspaceService.ListConnectorPublicationRevisions:output_type -> workspace.v1.ListConnectorPublicationRevisionsResponse
-	208, // 450: workspace.v1.AgentWorkspaceService.PublishConnectorRevision:output_type -> workspace.v1.ConnectorPublication
-	208, // 451: workspace.v1.AgentWorkspaceService.DisableConnectorPublication:output_type -> workspace.v1.ConnectorPublication
-	221, // 452: workspace.v1.AgentWorkspaceService.ListConnectorPublicationHealth:output_type -> workspace.v1.ListConnectorPublicationHealthResponse
-	196, // 453: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	196, // 454: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	196, // 455: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	196, // 456: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
-	259, // 457: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:output_type -> workspace.v1.DeleteResponse
-	205, // 458: workspace.v1.AgentWorkspaceService.ListCLIConnectorHealth:output_type -> workspace.v1.ListCLIConnectorHealthResponse
-	245, // 459: workspace.v1.AgentWorkspaceService.EnableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
-	245, // 460: workspace.v1.AgentWorkspaceService.DisableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
-	247, // 461: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:output_type -> workspace.v1.ListCLIConnectorEnablementsResponse
-	257, // 462: workspace.v1.AgentWorkspaceService.ListCommandApprovals:output_type -> workspace.v1.ListCommandApprovalsResponse
-	255, // 463: workspace.v1.AgentWorkspaceService.DecideCommandApproval:output_type -> workspace.v1.CommandApproval
-	245, // 464: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorEnablement:output_type -> workspace.v1.CLIConnectorEnablement
-	249, // 465: workspace.v1.AgentWorkspaceService.BeginCLIConnectorAuthorization:output_type -> workspace.v1.CLIConnectorAuthorizationFlow
-	249, // 466: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorAuthorization:output_type -> workspace.v1.CLIConnectorAuthorizationFlow
-	253, // 467: workspace.v1.AgentWorkspaceService.ListCLIConnectorAuthorizations:output_type -> workspace.v1.ListCLIConnectorAuthorizationsResponse
-	248, // 468: workspace.v1.AgentWorkspaceService.DisconnectCLIConnectorAuthorization:output_type -> workspace.v1.CLIConnectorAuthorization
-	324, // [324:469] is the sub-list for method output_type
-	179, // [179:324] is the sub-list for method input_type
-	179, // [179:179] is the sub-list for extension type_name
-	179, // [179:179] is the sub-list for extension extendee
-	0,   // [0:179] is the sub-list for field type_name
+	2,   // 0: workspace.v1.HomeOverview.recent_tasks:type_name -> workspace.v1.HomeTask
+	3,   // 1: workspace.v1.HomeOverview.common_workflows:type_name -> workspace.v1.HomeWorkflow
+	4,   // 2: workspace.v1.HomeOverview.action_items:type_name -> workspace.v1.HomeAction
+	315, // 3: workspace.v1.HomeTask.updated_at:type_name -> google.protobuf.Timestamp
+	315, // 4: workspace.v1.HomeWorkflow.updated_at:type_name -> google.protobuf.Timestamp
+	315, // 5: workspace.v1.HomeAction.created_at:type_name -> google.protobuf.Timestamp
+	28,  // 6: workspace.v1.CurrentUser.credit_balance:type_name -> workspace.v1.CreditBalance
+	20,  // 7: workspace.v1.CurrentUser.groups:type_name -> workspace.v1.IdentityGroup
+	14,  // 8: workspace.v1.ListUsersResponse.items:type_name -> workspace.v1.UserAccount
+	14,  // 9: workspace.v1.CreateUserResponse.user:type_name -> workspace.v1.UserAccount
+	315, // 10: workspace.v1.UserAccount.created_at:type_name -> google.protobuf.Timestamp
+	28,  // 11: workspace.v1.UserAccount.credit_balance:type_name -> workspace.v1.CreditBalance
+	20,  // 12: workspace.v1.UserAccount.groups:type_name -> workspace.v1.IdentityGroup
+	20,  // 13: workspace.v1.ListIdentityGroupsResponse.items:type_name -> workspace.v1.IdentityGroup
+	315, // 14: workspace.v1.IdentityGroup.last_synced_at:type_name -> google.protobuf.Timestamp
+	24,  // 15: workspace.v1.ListGovernanceAuditEventsResponse.items:type_name -> workspace.v1.GovernanceAuditEvent
+	23,  // 16: workspace.v1.GovernanceAuditEvent.metrics:type_name -> workspace.v1.GovernanceAuditMetric
+	315, // 17: workspace.v1.GovernanceAuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	315, // 18: workspace.v1.CreditBalance.next_allocation_at:type_name -> google.protobuf.Timestamp
+	29,  // 19: workspace.v1.CreditBalance.group_budget:type_name -> workspace.v1.GroupCreditBudget
+	315, // 20: workspace.v1.CreditPolicy.updated_at:type_name -> google.protobuf.Timestamp
+	35,  // 21: workspace.v1.ListCreditLedgerResponse.items:type_name -> workspace.v1.CreditLedgerEntry
+	315, // 22: workspace.v1.CreditLedgerEntry.created_at:type_name -> google.protobuf.Timestamp
+	41,  // 23: workspace.v1.ListModelCreditRatesResponse.items:type_name -> workspace.v1.ModelCreditRate
+	315, // 24: workspace.v1.ModelCreditRate.created_at:type_name -> google.protobuf.Timestamp
+	315, // 25: workspace.v1.ModelCreditRate.superseded_at:type_name -> google.protobuf.Timestamp
+	43,  // 26: workspace.v1.ImageModel.rates:type_name -> workspace.v1.ImageCreditRate
+	315, // 27: workspace.v1.ImageModel.verified_at:type_name -> google.protobuf.Timestamp
+	315, // 28: workspace.v1.ImageModel.created_at:type_name -> google.protobuf.Timestamp
+	315, // 29: workspace.v1.ImageModel.updated_at:type_name -> google.protobuf.Timestamp
+	44,  // 30: workspace.v1.ListImageGenerationOptionsResponse.image_models:type_name -> workspace.v1.ImageModel
+	46,  // 31: workspace.v1.ListImageGenerationOptionsResponse.prompt_optimization_models:type_name -> workspace.v1.PromptOptimizationCandidate
+	44,  // 32: workspace.v1.ListImageModelsResponse.items:type_name -> workspace.v1.ImageModel
+	43,  // 33: workspace.v1.CreateImageModelRequest.rates:type_name -> workspace.v1.ImageCreditRate
+	43,  // 34: workspace.v1.ReviseImageModelRequest.rates:type_name -> workspace.v1.ImageCreditRate
+	315, // 35: workspace.v1.GeneratedImage.expires_at:type_name -> google.protobuf.Timestamp
+	56,  // 36: workspace.v1.ImageGenerationRecord.images:type_name -> workspace.v1.GeneratedImage
+	315, // 37: workspace.v1.ImageGenerationRecord.created_at:type_name -> google.protobuf.Timestamp
+	315, // 38: workspace.v1.ImageGenerationRecord.started_at:type_name -> google.protobuf.Timestamp
+	315, // 39: workspace.v1.ImageGenerationRecord.completed_at:type_name -> google.protobuf.Timestamp
+	57,  // 40: workspace.v1.ListImageGenerationsResponse.items:type_name -> workspace.v1.ImageGenerationRecord
+	66,  // 41: workspace.v1.ReplacePromptOptimizationCandidatesRequest.items:type_name -> workspace.v1.PromptOptimizationCandidateInput
+	46,  // 42: workspace.v1.ListPromptOptimizationCandidatesResponse.items:type_name -> workspace.v1.PromptOptimizationCandidate
+	315, // 43: workspace.v1.CreateRedemptionCodeBatchRequest.expires_at:type_name -> google.protobuf.Timestamp
+	315, // 44: workspace.v1.RedemptionCodeBatch.expires_at:type_name -> google.protobuf.Timestamp
+	315, // 45: workspace.v1.RedemptionCodeBatch.created_at:type_name -> google.protobuf.Timestamp
+	72,  // 46: workspace.v1.RedemptionCodeBatch.codes:type_name -> workspace.v1.RedemptionCode
+	76,  // 47: workspace.v1.ListRedemptionCodesResponse.items:type_name -> workspace.v1.RedemptionCodeStatus
+	315, // 48: workspace.v1.RedemptionCodeStatus.expires_at:type_name -> google.protobuf.Timestamp
+	315, // 49: workspace.v1.RedemptionCodeStatus.redeemed_at:type_name -> google.protobuf.Timestamp
+	315, // 50: workspace.v1.RedemptionCodeStatus.voided_at:type_name -> google.protobuf.Timestamp
+	315, // 51: workspace.v1.RedemptionCodeStatus.created_at:type_name -> google.protobuf.Timestamp
+	85,  // 52: workspace.v1.ListSessionsResponse.items:type_name -> workspace.v1.Session
+	315, // 53: workspace.v1.Session.created_at:type_name -> google.protobuf.Timestamp
+	315, // 54: workspace.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
+	103, // 55: workspace.v1.ListSessionMessagesResponse.items:type_name -> workspace.v1.SessionMessage
+	312, // 56: workspace.v1.SendSessionMessageRequest.file_references:type_name -> workspace.v1.FileReference
+	103, // 57: workspace.v1.SendSessionMessageResponse.user_message:type_name -> workspace.v1.SessionMessage
+	103, // 58: workspace.v1.SendSessionMessageResponse.assistant_message:type_name -> workspace.v1.SessionMessage
+	101, // 59: workspace.v1.CreateWorkflowFromSessionRequest.files:type_name -> workspace.v1.SessionWorkflowFileDecision
+	119, // 60: workspace.v1.CreateWorkflowFromSessionResponse.workflow:type_name -> workspace.v1.Workflow
+	155, // 61: workspace.v1.CreateWorkflowFromSessionResponse.validation_run:type_name -> workspace.v1.Run
+	102, // 62: workspace.v1.CreateWorkflowFromSessionResponse.link:type_name -> workspace.v1.SessionWorkflowLink
+	102, // 63: workspace.v1.ListSessionWorkflowLinksResponse.items:type_name -> workspace.v1.SessionWorkflowLink
+	99,  // 64: workspace.v1.SessionWorkflowDraft.resources:type_name -> workspace.v1.SessionWorkflowResource
+	100, // 65: workspace.v1.SessionWorkflowDraft.files:type_name -> workspace.v1.SessionWorkflowFile
+	102, // 66: workspace.v1.SessionWorkflowDraft.existing_link:type_name -> workspace.v1.SessionWorkflowLink
+	315, // 67: workspace.v1.SessionWorkflowLink.created_at:type_name -> google.protobuf.Timestamp
+	315, // 68: workspace.v1.SessionMessage.created_at:type_name -> google.protobuf.Timestamp
+	105, // 69: workspace.v1.SessionMessage.response_snapshot:type_name -> workspace.v1.ResponseSnapshot
+	296, // 70: workspace.v1.SessionMessage.attachments:type_name -> workspace.v1.Attachment
+	185, // 71: workspace.v1.SessionMessage.expert_stages:type_name -> workspace.v1.ExpertStage
+	186, // 72: workspace.v1.SessionMessage.credit_consumption:type_name -> workspace.v1.CreditConsumption
+	297, // 73: workspace.v1.SessionMessage.activities:type_name -> workspace.v1.ExecutionActivity
+	160, // 74: workspace.v1.SessionMessage.artifacts:type_name -> workspace.v1.Artifact
+	104, // 75: workspace.v1.SessionMessage.resource_action:type_name -> workspace.v1.ResourceCreationAction
+	299, // 76: workspace.v1.SessionMessage.evidence:type_name -> workspace.v1.Evidence
+	302, // 77: workspace.v1.SessionMessage.execution_plan:type_name -> workspace.v1.ExecutionPlan
+	315, // 78: workspace.v1.ResourceCreationAction.expires_at:type_name -> google.protobuf.Timestamp
+	106, // 79: workspace.v1.ResponseSnapshot.stages:type_name -> workspace.v1.ExecutionStageSnapshot
+	107, // 80: workspace.v1.ExecutionStageSnapshot.expert:type_name -> workspace.v1.ExpertSnapshot
+	108, // 81: workspace.v1.ExecutionStageSnapshot.provider_model:type_name -> workspace.v1.ProviderModelSnapshot
+	109, // 82: workspace.v1.ExecutionStageSnapshot.mcp_servers:type_name -> workspace.v1.MCPServerSnapshot
+	110, // 83: workspace.v1.ExecutionStageSnapshot.skills:type_name -> workspace.v1.SkillSnapshot
+	111, // 84: workspace.v1.ExecutionStageSnapshot.cli_connectors:type_name -> workspace.v1.CLIConnectorSnapshot
+	119, // 85: workspace.v1.ListWorkflowsResponse.items:type_name -> workspace.v1.Workflow
+	118, // 86: workspace.v1.CreateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
+	118, // 87: workspace.v1.UpdateWorkflowRequest.workflow:type_name -> workspace.v1.WorkflowInput
+	120, // 88: workspace.v1.WorkflowInput.environment:type_name -> workspace.v1.EnvironmentVariable
+	121, // 89: workspace.v1.WorkflowInput.schedule:type_name -> workspace.v1.Schedule
+	120, // 90: workspace.v1.Workflow.environment:type_name -> workspace.v1.EnvironmentVariable
+	121, // 91: workspace.v1.Workflow.schedule:type_name -> workspace.v1.Schedule
+	123, // 92: workspace.v1.Workflow.git_source:type_name -> workspace.v1.GitSource
+	315, // 93: workspace.v1.Workflow.created_at:type_name -> google.protobuf.Timestamp
+	315, // 94: workspace.v1.Workflow.updated_at:type_name -> google.protobuf.Timestamp
+	102, // 95: workspace.v1.Workflow.origin:type_name -> workspace.v1.SessionWorkflowLink
+	122, // 96: workspace.v1.GitSource.config:type_name -> workspace.v1.GitConfigEntry
+	131, // 97: workspace.v1.ListKnowledgeBasesResponse.items:type_name -> workspace.v1.KnowledgeBase
+	130, // 98: workspace.v1.CreateKnowledgeBaseRequest.knowledge_base:type_name -> workspace.v1.KnowledgeBaseInput
+	130, // 99: workspace.v1.UpdateKnowledgeBaseRequest.knowledge_base:type_name -> workspace.v1.KnowledgeBaseInput
+	315, // 100: workspace.v1.KnowledgeBase.created_at:type_name -> google.protobuf.Timestamp
+	315, // 101: workspace.v1.KnowledgeBase.updated_at:type_name -> google.protobuf.Timestamp
+	315, // 102: workspace.v1.KnowledgeBase.last_ready_at:type_name -> google.protobuf.Timestamp
+	136, // 103: workspace.v1.ListKnowledgeCategoriesResponse.items:type_name -> workspace.v1.KnowledgeCategory
+	315, // 104: workspace.v1.KnowledgeCategory.created_at:type_name -> google.protobuf.Timestamp
+	315, // 105: workspace.v1.KnowledgeCategory.updated_at:type_name -> google.protobuf.Timestamp
+	140, // 106: workspace.v1.ListKnowledgeDocumentsResponse.items:type_name -> workspace.v1.KnowledgeDocument
+	315, // 107: workspace.v1.KnowledgeDocumentRevision.created_at:type_name -> google.protobuf.Timestamp
+	315, // 108: workspace.v1.KnowledgeDocumentRevision.ready_at:type_name -> google.protobuf.Timestamp
+	315, // 109: workspace.v1.KnowledgeDocument.created_at:type_name -> google.protobuf.Timestamp
+	315, // 110: workspace.v1.KnowledgeDocument.updated_at:type_name -> google.protobuf.Timestamp
+	139, // 111: workspace.v1.KnowledgeDocument.latest_revision:type_name -> workspace.v1.KnowledgeDocumentRevision
+	315, // 112: workspace.v1.WorkflowCredential.created_at:type_name -> google.protobuf.Timestamp
+	315, // 113: workspace.v1.WorkflowAccessToken.expires_at:type_name -> google.protobuf.Timestamp
+	316, // 114: workspace.v1.RunWorkflowRequest.json_input:type_name -> google.protobuf.Struct
+	155, // 115: workspace.v1.ListRunsResponse.items:type_name -> workspace.v1.Run
+	312, // 116: workspace.v1.ContinueRunConversationRequest.file_references:type_name -> workspace.v1.FileReference
+	316, // 117: workspace.v1.Run.json_input:type_name -> google.protobuf.Struct
+	316, // 118: workspace.v1.Run.final_json:type_name -> google.protobuf.Struct
+	315, // 119: workspace.v1.Run.queued_at:type_name -> google.protobuf.Timestamp
+	315, // 120: workspace.v1.Run.started_at:type_name -> google.protobuf.Timestamp
+	315, // 121: workspace.v1.Run.ended_at:type_name -> google.protobuf.Timestamp
+	316, // 122: workspace.v1.Run.workflow_snapshot:type_name -> google.protobuf.Struct
+	296, // 123: workspace.v1.Run.attachments:type_name -> workspace.v1.Attachment
+	185, // 124: workspace.v1.Run.expert_stages:type_name -> workspace.v1.ExpertStage
+	186, // 125: workspace.v1.Run.credit_consumption:type_name -> workspace.v1.CreditConsumption
+	299, // 126: workspace.v1.Run.evidence:type_name -> workspace.v1.Evidence
+	302, // 127: workspace.v1.Run.execution_plan:type_name -> workspace.v1.ExecutionPlan
+	160, // 128: workspace.v1.ListArtifactsResponse.items:type_name -> workspace.v1.Artifact
+	315, // 129: workspace.v1.ArtifactDownload.expires_at:type_name -> google.protobuf.Timestamp
+	315, // 130: workspace.v1.Artifact.created_at:type_name -> google.protobuf.Timestamp
+	315, // 131: workspace.v1.Artifact.expires_at:type_name -> google.protobuf.Timestamp
+	166, // 132: workspace.v1.ListWorkspaceEntriesResponse.items:type_name -> workspace.v1.WorkspaceEntry
+	315, // 133: workspace.v1.WorkspaceFile.modified_at:type_name -> google.protobuf.Timestamp
+	122, // 134: workspace.v1.ConfigureWorkflowGitSourceRequest.config:type_name -> workspace.v1.GitConfigEntry
+	315, // 135: workspace.v1.WorkspaceEntry.modified_at:type_name -> google.protobuf.Timestamp
+	174, // 136: workspace.v1.ListExpertsResponse.items:type_name -> workspace.v1.Expert
+	173, // 137: workspace.v1.CreateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
+	173, // 138: workspace.v1.UpdateExpertRequest.expert:type_name -> workspace.v1.ExpertInput
+	315, // 139: workspace.v1.Expert.created_at:type_name -> google.protobuf.Timestamp
+	315, // 140: workspace.v1.Expert.updated_at:type_name -> google.protobuf.Timestamp
+	184, // 141: workspace.v1.ListExpertTeamsResponse.items:type_name -> workspace.v1.ExpertTeam
+	181, // 142: workspace.v1.CreateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
+	181, // 143: workspace.v1.UpdateExpertTeamRequest.expert_team:type_name -> workspace.v1.ExpertTeamInput
+	182, // 144: workspace.v1.ExpertTeamInput.members:type_name -> workspace.v1.ExpertTeamMemberInput
+	174, // 145: workspace.v1.ExpertTeamMember.expert:type_name -> workspace.v1.Expert
+	174, // 146: workspace.v1.ExpertTeam.experts:type_name -> workspace.v1.Expert
+	315, // 147: workspace.v1.ExpertTeam.created_at:type_name -> google.protobuf.Timestamp
+	315, // 148: workspace.v1.ExpertTeam.updated_at:type_name -> google.protobuf.Timestamp
+	183, // 149: workspace.v1.ExpertTeam.members:type_name -> workspace.v1.ExpertTeamMember
+	187, // 150: workspace.v1.ExpertStage.credit_consumption:type_name -> workspace.v1.CreditStageConsumption
+	187, // 151: workspace.v1.CreditConsumption.stages:type_name -> workspace.v1.CreditStageConsumption
+	194, // 152: workspace.v1.UpdateSettingsRequest.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
+	194, // 153: workspace.v1.PersonalSettings.runtime_model_defaults:type_name -> workspace.v1.RuntimeModelDefault
+	315, // 154: workspace.v1.PlatformExecutionDefault.updated_at:type_name -> google.protobuf.Timestamp
+	197, // 155: workspace.v1.ListRuntimeEnginesResponse.items:type_name -> workspace.v1.RuntimeEngineStatus
+	200, // 156: workspace.v1.ListModelProviderPresetsResponse.items:type_name -> workspace.v1.ModelProviderPreset
+	208, // 157: workspace.v1.ListModelProviderConnectionsResponse.items:type_name -> workspace.v1.ModelProviderConnection
+	315, // 158: workspace.v1.ModelProviderConnection.last_synced_at:type_name -> google.protobuf.Timestamp
+	209, // 159: workspace.v1.ModelProviderConnection.models:type_name -> workspace.v1.ProviderModel
+	315, // 160: workspace.v1.ModelProviderConnection.created_at:type_name -> google.protobuf.Timestamp
+	315, // 161: workspace.v1.ModelProviderConnection.updated_at:type_name -> google.protobuf.Timestamp
+	210, // 162: workspace.v1.ProviderModel.compatibility:type_name -> workspace.v1.RuntimeModelCompatibility
+	219, // 163: workspace.v1.ListMCPConnectorsResponse.items:type_name -> workspace.v1.MCPConnector
+	218, // 164: workspace.v1.CreateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
+	218, // 165: workspace.v1.UpdateMCPConnectorRequest.mcp_connector:type_name -> workspace.v1.MCPConnectorInput
+	120, // 166: workspace.v1.MCPConnectorInput.environment:type_name -> workspace.v1.EnvironmentVariable
+	120, // 167: workspace.v1.MCPConnector.environment:type_name -> workspace.v1.EnvironmentVariable
+	315, // 168: workspace.v1.MCPConnector.created_at:type_name -> google.protobuf.Timestamp
+	315, // 169: workspace.v1.MCPConnector.updated_at:type_name -> google.protobuf.Timestamp
+	226, // 170: workspace.v1.ListSkillsResponse.items:type_name -> workspace.v1.Skill
+	315, // 171: workspace.v1.Skill.created_at:type_name -> google.protobuf.Timestamp
+	315, // 172: workspace.v1.Skill.updated_at:type_name -> google.protobuf.Timestamp
+	227, // 173: workspace.v1.ResourceDeletionImpact.affected_experts:type_name -> workspace.v1.AffectedExpert
+	229, // 174: workspace.v1.CLIConnectorDefinitionInput.capabilities:type_name -> workspace.v1.CLICapability
+	230, // 175: workspace.v1.CLIConnectorDefinitionInput.recommended_skills:type_name -> workspace.v1.CLIRecommendedSkill
+	229, // 176: workspace.v1.CLIConnectorDefinition.capabilities:type_name -> workspace.v1.CLICapability
+	230, // 177: workspace.v1.CLIConnectorDefinition.recommended_skills:type_name -> workspace.v1.CLIRecommendedSkill
+	232, // 178: workspace.v1.ListCLIConnectorDefinitionsResponse.items:type_name -> workspace.v1.CLIConnectorDefinition
+	231, // 179: workspace.v1.CreateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
+	231, // 180: workspace.v1.UpdateCLIConnectorDefinitionRequest.definition:type_name -> workspace.v1.CLIConnectorDefinitionInput
+	242, // 181: workspace.v1.ListCLIConnectorHealthResponse.items:type_name -> workspace.v1.CLIConnectorHealth
+	243, // 182: workspace.v1.ConnectorPublication.revision:type_name -> workspace.v1.ConnectorRevision
+	243, // 183: workspace.v1.ConnectorPublicationRevision.revision:type_name -> workspace.v1.ConnectorRevision
+	244, // 184: workspace.v1.ConnectorPublicationRevision.publication:type_name -> workspace.v1.ConnectorPublication
+	315, // 185: workspace.v1.ConnectorAuthorization.expires_at:type_name -> google.protobuf.Timestamp
+	244, // 186: workspace.v1.ListConnectorPublicationsResponse.items:type_name -> workspace.v1.ConnectorPublication
+	245, // 187: workspace.v1.ListConnectorPublicationRevisionsResponse.items:type_name -> workspace.v1.ConnectorPublicationRevision
+	246, // 188: workspace.v1.ListConnectorPublicationHealthResponse.items:type_name -> workspace.v1.ConnectorPublicationHealth
+	248, // 189: workspace.v1.ListConnectorAuthorizationsResponse.items:type_name -> workspace.v1.ConnectorAuthorization
+	315, // 190: workspace.v1.ConnectorSetup.expires_at:type_name -> google.protobuf.Timestamp
+	315, // 191: workspace.v1.ConnectorAuthorizationFlow.expires_at:type_name -> google.protobuf.Timestamp
+	248, // 192: workspace.v1.ConnectorAuthorizationFlow.authorization:type_name -> workspace.v1.ConnectorAuthorization
+	247, // 193: workspace.v1.ListConnectorInstallationsResponse.items:type_name -> workspace.v1.ConnectorInstallation
+	315, // 194: workspace.v1.CLIConnectorEnablement.action_expires_at:type_name -> google.protobuf.Timestamp
+	281, // 195: workspace.v1.ListCLIConnectorEnablementsResponse.items:type_name -> workspace.v1.CLIConnectorEnablement
+	315, // 196: workspace.v1.CLIConnectorAuthorization.expires_at:type_name -> google.protobuf.Timestamp
+	315, // 197: workspace.v1.CLIConnectorAuthorizationFlow.expires_at:type_name -> google.protobuf.Timestamp
+	284, // 198: workspace.v1.CLIConnectorAuthorizationFlow.authorization:type_name -> workspace.v1.CLIConnectorAuthorization
+	284, // 199: workspace.v1.ListCLIConnectorAuthorizationsResponse.items:type_name -> workspace.v1.CLIConnectorAuthorization
+	315, // 200: workspace.v1.CommandApproval.expires_at:type_name -> google.protobuf.Timestamp
+	291, // 201: workspace.v1.ListCommandApprovalsResponse.items:type_name -> workspace.v1.CommandApproval
+	298, // 202: workspace.v1.Evidence.citation:type_name -> workspace.v1.EvidenceCitation
+	300, // 203: workspace.v1.ExecutionPlan.steps:type_name -> workspace.v1.ExecutionPlanStep
+	301, // 204: workspace.v1.ExecutionPlan.resources:type_name -> workspace.v1.ExecutionPlanResource
+	315, // 205: workspace.v1.ExecutionPlan.created_at:type_name -> google.protobuf.Timestamp
+	315, // 206: workspace.v1.ExecutionPlan.decided_at:type_name -> google.protobuf.Timestamp
+	308, // 207: workspace.v1.ConversationSelection.skills:type_name -> workspace.v1.SelectedResource
+	308, // 208: workspace.v1.ConversationSelection.mcp_servers:type_name -> workspace.v1.SelectedResource
+	308, // 209: workspace.v1.ConversationSelection.cli_connectors:type_name -> workspace.v1.SelectedResource
+	308, // 210: workspace.v1.ConversationSelection.inherited_skills:type_name -> workspace.v1.SelectedResource
+	308, // 211: workspace.v1.ConversationSelection.inherited_mcp_servers:type_name -> workspace.v1.SelectedResource
+	308, // 212: workspace.v1.ConversationSelection.inherited_cli_connectors:type_name -> workspace.v1.SelectedResource
+	311, // 213: workspace.v1.ListConversationFilesResponse.items:type_name -> workspace.v1.ConversationFile
+	226, // 214: workspace.v1.SkillDocument.skill:type_name -> workspace.v1.Skill
+	0,   // 215: workspace.v1.AgentWorkspaceService.GetHomeOverview:input_type -> workspace.v1.GetHomeOverviewRequest
+	305, // 216: workspace.v1.AgentWorkspaceService.GetConversationSelection:input_type -> workspace.v1.GetConversationSelectionRequest
+	306, // 217: workspace.v1.AgentWorkspaceService.ResolveConversationSelection:input_type -> workspace.v1.ResolveConversationSelectionRequest
+	309, // 218: workspace.v1.AgentWorkspaceService.ListConversationFiles:input_type -> workspace.v1.ListConversationFilesRequest
+	313, // 219: workspace.v1.AgentWorkspaceService.GetSkillDocument:input_type -> workspace.v1.GetSkillDocumentRequest
+	5,   // 220: workspace.v1.AgentWorkspaceService.GetCurrentUser:input_type -> workspace.v1.GetCurrentUserRequest
+	7,   // 221: workspace.v1.AgentWorkspaceService.ListUsers:input_type -> workspace.v1.ListUsersRequest
+	9,   // 222: workspace.v1.AgentWorkspaceService.CreateUser:input_type -> workspace.v1.CreateUserRequest
+	11,  // 223: workspace.v1.AgentWorkspaceService.SetUserEnabled:input_type -> workspace.v1.SetUserEnabledRequest
+	12,  // 224: workspace.v1.AgentWorkspaceService.ResetUserPassword:input_type -> workspace.v1.ResetUserPasswordRequest
+	15,  // 225: workspace.v1.AgentWorkspaceService.SetUserRoles:input_type -> workspace.v1.SetUserRolesRequest
+	16,  // 226: workspace.v1.AgentWorkspaceService.ListIdentityGroups:input_type -> workspace.v1.ListIdentityGroupsRequest
+	17,  // 227: workspace.v1.AgentWorkspaceService.SyncIdentityGroups:input_type -> workspace.v1.SyncIdentityGroupsRequest
+	19,  // 228: workspace.v1.AgentWorkspaceService.UpdateIdentityGroupBudget:input_type -> workspace.v1.UpdateIdentityGroupBudgetRequest
+	21,  // 229: workspace.v1.AgentWorkspaceService.ListGovernanceAuditEvents:input_type -> workspace.v1.ListGovernanceAuditEventsRequest
+	25,  // 230: workspace.v1.AgentWorkspaceService.TransferGroupResources:input_type -> workspace.v1.TransferGroupResourcesRequest
+	27,  // 231: workspace.v1.AgentWorkspaceService.GetCreditBalance:input_type -> workspace.v1.GetCreditBalanceRequest
+	30,  // 232: workspace.v1.AgentWorkspaceService.GetCreditPolicy:input_type -> workspace.v1.GetCreditPolicyRequest
+	31,  // 233: workspace.v1.AgentWorkspaceService.UpdateCreditPolicy:input_type -> workspace.v1.UpdateCreditPolicyRequest
+	33,  // 234: workspace.v1.AgentWorkspaceService.ListCreditLedger:input_type -> workspace.v1.ListCreditLedgerRequest
+	36,  // 235: workspace.v1.AgentWorkspaceService.RedeemCreditCode:input_type -> workspace.v1.RedeemCreditCodeRequest
+	37,  // 236: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:input_type -> workspace.v1.ConfigureUserDailyCreditsRequest
+	38,  // 237: workspace.v1.AgentWorkspaceService.AdjustUserCredits:input_type -> workspace.v1.AdjustUserCreditsRequest
+	39,  // 238: workspace.v1.AgentWorkspaceService.ListModelCreditRates:input_type -> workspace.v1.ListModelCreditRatesRequest
+	42,  // 239: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:input_type -> workspace.v1.CreateModelCreditRateRequest
+	70,  // 240: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:input_type -> workspace.v1.CreateRedemptionCodeBatchRequest
+	73,  // 241: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:input_type -> workspace.v1.ListRedemptionCodesRequest
+	75,  // 242: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:input_type -> workspace.v1.VoidRedemptionCodeRequest
+	45,  // 243: workspace.v1.AgentWorkspaceService.ListImageGenerationOptions:input_type -> workspace.v1.ListImageGenerationOptionsRequest
+	55,  // 244: workspace.v1.AgentWorkspaceService.SubmitImageGeneration:input_type -> workspace.v1.SubmitImageGenerationRequest
+	58,  // 245: workspace.v1.AgentWorkspaceService.ListImageGenerations:input_type -> workspace.v1.ListImageGenerationsRequest
+	60,  // 246: workspace.v1.AgentWorkspaceService.GetImageGeneration:input_type -> workspace.v1.GetImageGenerationRequest
+	61,  // 247: workspace.v1.AgentWorkspaceService.StopImageGeneration:input_type -> workspace.v1.StopImageGenerationRequest
+	62,  // 248: workspace.v1.AgentWorkspaceService.RegenerateImageGeneration:input_type -> workspace.v1.RegenerateImageGenerationRequest
+	63,  // 249: workspace.v1.AgentWorkspaceService.DeleteImageGeneration:input_type -> workspace.v1.DeleteImageGenerationRequest
+	64,  // 250: workspace.v1.AgentWorkspaceService.OptimizeImagePrompt:input_type -> workspace.v1.OptimizeImagePromptRequest
+	48,  // 251: workspace.v1.AgentWorkspaceService.ListImageModels:input_type -> workspace.v1.ListImageModelsRequest
+	50,  // 252: workspace.v1.AgentWorkspaceService.CreateImageModel:input_type -> workspace.v1.CreateImageModelRequest
+	51,  // 253: workspace.v1.AgentWorkspaceService.ReviseImageModel:input_type -> workspace.v1.ReviseImageModelRequest
+	52,  // 254: workspace.v1.AgentWorkspaceService.DeleteImageModel:input_type -> workspace.v1.DeleteImageModelRequest
+	53,  // 255: workspace.v1.AgentWorkspaceService.VerifyImageModel:input_type -> workspace.v1.VerifyImageModelRequest
+	54,  // 256: workspace.v1.AgentWorkspaceService.SetImageModelAvailability:input_type -> workspace.v1.SetImageModelAvailabilityRequest
+	67,  // 257: workspace.v1.AgentWorkspaceService.ReplacePromptOptimizationCandidates:input_type -> workspace.v1.ReplacePromptOptimizationCandidatesRequest
+	68,  // 258: workspace.v1.AgentWorkspaceService.ListPromptOptimizationCandidates:input_type -> workspace.v1.ListPromptOptimizationCandidatesRequest
+	77,  // 259: workspace.v1.AgentWorkspaceService.ListSessions:input_type -> workspace.v1.ListSessionsRequest
+	79,  // 260: workspace.v1.AgentWorkspaceService.CreateSession:input_type -> workspace.v1.CreateSessionRequest
+	80,  // 261: workspace.v1.AgentWorkspaceService.GetSession:input_type -> workspace.v1.GetSessionRequest
+	81,  // 262: workspace.v1.AgentWorkspaceService.UpdateSession:input_type -> workspace.v1.UpdateSessionRequest
+	82,  // 263: workspace.v1.AgentWorkspaceService.SetSessionArchived:input_type -> workspace.v1.SetSessionArchivedRequest
+	83,  // 264: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:input_type -> workspace.v1.SetSessionExpertSelectionRequest
+	84,  // 265: workspace.v1.AgentWorkspaceService.DeleteSession:input_type -> workspace.v1.DeleteSessionRequest
+	86,  // 266: workspace.v1.AgentWorkspaceService.ListSessionMessages:input_type -> workspace.v1.ListSessionMessagesRequest
+	88,  // 267: workspace.v1.AgentWorkspaceService.SendSessionMessage:input_type -> workspace.v1.SendSessionMessageRequest
+	90,  // 268: workspace.v1.AgentWorkspaceService.RetrySessionMessage:input_type -> workspace.v1.RetrySessionMessageRequest
+	91,  // 269: workspace.v1.AgentWorkspaceService.CancelSessionMessage:input_type -> workspace.v1.CancelSessionMessageRequest
+	92,  // 270: workspace.v1.AgentWorkspaceService.DecideSessionExecutionPlan:input_type -> workspace.v1.DecideSessionExecutionPlanRequest
+	93,  // 271: workspace.v1.AgentWorkspaceService.PreviewSessionWorkflowDraft:input_type -> workspace.v1.PreviewSessionWorkflowDraftRequest
+	94,  // 272: workspace.v1.AgentWorkspaceService.CreateWorkflowFromSession:input_type -> workspace.v1.CreateWorkflowFromSessionRequest
+	96,  // 273: workspace.v1.AgentWorkspaceService.ListSessionWorkflowLinks:input_type -> workspace.v1.ListSessionWorkflowLinksRequest
+	112, // 274: workspace.v1.AgentWorkspaceService.ListWorkflows:input_type -> workspace.v1.ListWorkflowsRequest
+	114, // 275: workspace.v1.AgentWorkspaceService.CreateWorkflow:input_type -> workspace.v1.CreateWorkflowRequest
+	115, // 276: workspace.v1.AgentWorkspaceService.GetWorkflow:input_type -> workspace.v1.GetWorkflowRequest
+	116, // 277: workspace.v1.AgentWorkspaceService.UpdateWorkflow:input_type -> workspace.v1.UpdateWorkflowRequest
+	117, // 278: workspace.v1.AgentWorkspaceService.DeleteWorkflow:input_type -> workspace.v1.DeleteWorkflowRequest
+	141, // 279: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:input_type -> workspace.v1.GenerateWorkflowCredentialRequest
+	142, // 280: workspace.v1.AgentWorkspaceService.GetWorkflowCredential:input_type -> workspace.v1.GetWorkflowCredentialRequest
+	144, // 281: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:input_type -> workspace.v1.ExchangeWorkflowCredentialRequest
+	146, // 282: workspace.v1.AgentWorkspaceService.RunWorkflow:input_type -> workspace.v1.RunWorkflowRequest
+	147, // 283: workspace.v1.AgentWorkspaceService.ListRuns:input_type -> workspace.v1.ListRunsRequest
+	149, // 284: workspace.v1.AgentWorkspaceService.GetRun:input_type -> workspace.v1.GetRunRequest
+	150, // 285: workspace.v1.AgentWorkspaceService.ListRunTurns:input_type -> workspace.v1.ListRunTurnsRequest
+	151, // 286: workspace.v1.AgentWorkspaceService.ContinueRunConversation:input_type -> workspace.v1.ContinueRunConversationRequest
+	152, // 287: workspace.v1.AgentWorkspaceService.CancelRun:input_type -> workspace.v1.CancelRunRequest
+	153, // 288: workspace.v1.AgentWorkspaceService.RerunWorkflow:input_type -> workspace.v1.RerunWorkflowRequest
+	154, // 289: workspace.v1.AgentWorkspaceService.DecideRunExecutionPlan:input_type -> workspace.v1.DecideRunExecutionPlanRequest
+	156, // 290: workspace.v1.AgentWorkspaceService.ListArtifacts:input_type -> workspace.v1.ListArtifactsRequest
+	161, // 291: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:input_type -> workspace.v1.ListWorkspaceEntriesRequest
+	163, // 292: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:input_type -> workspace.v1.GetWorkspaceFileRequest
+	165, // 293: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:input_type -> workspace.v1.ConfigureWorkflowGitSourceRequest
+	124, // 294: workspace.v1.AgentWorkspaceService.ListKnowledgeBases:input_type -> workspace.v1.ListKnowledgeBasesRequest
+	126, // 295: workspace.v1.AgentWorkspaceService.CreateKnowledgeBase:input_type -> workspace.v1.CreateKnowledgeBaseRequest
+	127, // 296: workspace.v1.AgentWorkspaceService.GetKnowledgeBase:input_type -> workspace.v1.GetKnowledgeBaseRequest
+	128, // 297: workspace.v1.AgentWorkspaceService.UpdateKnowledgeBase:input_type -> workspace.v1.UpdateKnowledgeBaseRequest
+	129, // 298: workspace.v1.AgentWorkspaceService.DeleteKnowledgeBase:input_type -> workspace.v1.DeleteKnowledgeBaseRequest
+	132, // 299: workspace.v1.AgentWorkspaceService.ListKnowledgeCategories:input_type -> workspace.v1.ListKnowledgeCategoriesRequest
+	134, // 300: workspace.v1.AgentWorkspaceService.CreateKnowledgeCategory:input_type -> workspace.v1.CreateKnowledgeCategoryRequest
+	135, // 301: workspace.v1.AgentWorkspaceService.DeleteKnowledgeCategory:input_type -> workspace.v1.DeleteKnowledgeCategoryRequest
+	137, // 302: workspace.v1.AgentWorkspaceService.ListKnowledgeDocuments:input_type -> workspace.v1.ListKnowledgeDocumentsRequest
+	167, // 303: workspace.v1.AgentWorkspaceService.ListExperts:input_type -> workspace.v1.ListExpertsRequest
+	169, // 304: workspace.v1.AgentWorkspaceService.GetExpert:input_type -> workspace.v1.GetExpertRequest
+	170, // 305: workspace.v1.AgentWorkspaceService.CreateExpert:input_type -> workspace.v1.CreateExpertRequest
+	171, // 306: workspace.v1.AgentWorkspaceService.UpdateExpert:input_type -> workspace.v1.UpdateExpertRequest
+	172, // 307: workspace.v1.AgentWorkspaceService.DeleteExpert:input_type -> workspace.v1.DeleteExpertRequest
+	175, // 308: workspace.v1.AgentWorkspaceService.ListExpertTeams:input_type -> workspace.v1.ListExpertTeamsRequest
+	177, // 309: workspace.v1.AgentWorkspaceService.GetExpertTeam:input_type -> workspace.v1.GetExpertTeamRequest
+	178, // 310: workspace.v1.AgentWorkspaceService.CreateExpertTeam:input_type -> workspace.v1.CreateExpertTeamRequest
+	179, // 311: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:input_type -> workspace.v1.UpdateExpertTeamRequest
+	180, // 312: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:input_type -> workspace.v1.DeleteExpertTeamRequest
+	188, // 313: workspace.v1.AgentWorkspaceService.GetSettings:input_type -> workspace.v1.GetSettingsRequest
+	189, // 314: workspace.v1.AgentWorkspaceService.UpdateSettings:input_type -> workspace.v1.UpdateSettingsRequest
+	191, // 315: workspace.v1.AgentWorkspaceService.GetPlatformExecutionDefault:input_type -> workspace.v1.GetPlatformExecutionDefaultRequest
+	192, // 316: workspace.v1.AgentWorkspaceService.SetPlatformExecutionDefault:input_type -> workspace.v1.SetPlatformExecutionDefaultRequest
+	195, // 317: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:input_type -> workspace.v1.ListRuntimeEnginesRequest
+	198, // 318: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:input_type -> workspace.v1.ListModelProviderPresetsRequest
+	201, // 319: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:input_type -> workspace.v1.ListModelProviderConnectionsRequest
+	203, // 320: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:input_type -> workspace.v1.CreateModelProviderConnectionRequest
+	204, // 321: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:input_type -> workspace.v1.UpdateModelProviderConnectionRequest
+	205, // 322: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:input_type -> workspace.v1.DeleteModelProviderConnectionRequest
+	206, // 323: workspace.v1.AgentWorkspaceService.RefreshProviderModels:input_type -> workspace.v1.RefreshProviderModelsRequest
+	207, // 324: workspace.v1.AgentWorkspaceService.CreateProviderModel:input_type -> workspace.v1.CreateProviderModelRequest
+	211, // 325: workspace.v1.AgentWorkspaceService.ListMCPConnectors:input_type -> workspace.v1.ListMCPConnectorsRequest
+	213, // 326: workspace.v1.AgentWorkspaceService.CreateMCPConnector:input_type -> workspace.v1.CreateMCPConnectorRequest
+	214, // 327: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:input_type -> workspace.v1.UpdateMCPConnectorRequest
+	215, // 328: workspace.v1.AgentWorkspaceService.TestMCPConnector:input_type -> workspace.v1.TestMCPConnectorRequest
+	216, // 329: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:input_type -> workspace.v1.GetMCPConnectorDeletionImpactRequest
+	217, // 330: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:input_type -> workspace.v1.DeleteMCPConnectorRequest
+	220, // 331: workspace.v1.AgentWorkspaceService.ListSkills:input_type -> workspace.v1.ListSkillsRequest
+	222, // 332: workspace.v1.AgentWorkspaceService.CreateSkill:input_type -> workspace.v1.CreateSkillRequest
+	223, // 333: workspace.v1.AgentWorkspaceService.UpdateSkill:input_type -> workspace.v1.UpdateSkillRequest
+	224, // 334: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:input_type -> workspace.v1.GetSkillDeletionImpactRequest
+	225, // 335: workspace.v1.AgentWorkspaceService.DeleteSkill:input_type -> workspace.v1.DeleteSkillRequest
+	233, // 336: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:input_type -> workspace.v1.ListCLIConnectorDefinitionsRequest
+	271, // 337: workspace.v1.AgentWorkspaceService.ListConnectorInstallations:input_type -> workspace.v1.ListConnectorInstallationsRequest
+	249, // 338: workspace.v1.AgentWorkspaceService.ListConnectorPublications:input_type -> workspace.v1.ListConnectorPublicationsRequest
+	258, // 339: workspace.v1.AgentWorkspaceService.InstallPublishedConnector:input_type -> workspace.v1.InstallPublishedConnectorRequest
+	259, // 340: workspace.v1.AgentWorkspaceService.UpgradeConnectorInstallation:input_type -> workspace.v1.UpgradeConnectorInstallationRequest
+	260, // 341: workspace.v1.AgentWorkspaceService.ListConnectorAuthorizations:input_type -> workspace.v1.ListConnectorAuthorizationsRequest
+	262, // 342: workspace.v1.AgentWorkspaceService.SelectConnectorAuthorization:input_type -> workspace.v1.SelectConnectorAuthorizationRequest
+	263, // 343: workspace.v1.AgentWorkspaceService.RefreshConnectorAuthorization:input_type -> workspace.v1.RefreshConnectorAuthorizationRequest
+	264, // 344: workspace.v1.AgentWorkspaceService.DisconnectPublishedConnectorAuthorization:input_type -> workspace.v1.DisconnectPublishedConnectorAuthorizationRequest
+	266, // 345: workspace.v1.AgentWorkspaceService.BeginConnectorSetup:input_type -> workspace.v1.BeginConnectorSetupRequest
+	267, // 346: workspace.v1.AgentWorkspaceService.CompleteConnectorSetup:input_type -> workspace.v1.CompleteConnectorSetupRequest
+	269, // 347: workspace.v1.AgentWorkspaceService.BeginConnectorAuthorizationFlow:input_type -> workspace.v1.BeginConnectorAuthorizationFlowRequest
+	270, // 348: workspace.v1.AgentWorkspaceService.CompleteConnectorAuthorizationFlow:input_type -> workspace.v1.CompleteConnectorAuthorizationFlowRequest
+	273, // 349: workspace.v1.AgentWorkspaceService.UploadConnectorPackage:input_type -> workspace.v1.UploadConnectorPackageRequest
+	274, // 350: workspace.v1.AgentWorkspaceService.CreateConnectorPackage:input_type -> workspace.v1.CreateConnectorPackageRequest
+	275, // 351: workspace.v1.AgentWorkspaceService.DisableConnectorInstallation:input_type -> workspace.v1.DisableConnectorInstallationRequest
+	276, // 352: workspace.v1.AgentWorkspaceService.UninstallConnector:input_type -> workspace.v1.UninstallConnectorRequest
+	277, // 353: workspace.v1.AgentWorkspaceService.ConnectConnector:input_type -> workspace.v1.ConnectConnectorRequest
+	278, // 354: workspace.v1.AgentWorkspaceService.DisconnectConnectorAuthorization:input_type -> workspace.v1.DisconnectConnectorAuthorizationRequest
+	251, // 355: workspace.v1.AgentWorkspaceService.StageConnectorPackage:input_type -> workspace.v1.StageConnectorPackageRequest
+	252, // 356: workspace.v1.AgentWorkspaceService.ListConnectorPublicationRevisions:input_type -> workspace.v1.ListConnectorPublicationRevisionsRequest
+	254, // 357: workspace.v1.AgentWorkspaceService.PublishConnectorRevision:input_type -> workspace.v1.PublishConnectorRevisionRequest
+	255, // 358: workspace.v1.AgentWorkspaceService.DisableConnectorPublication:input_type -> workspace.v1.DisableConnectorPublicationRequest
+	256, // 359: workspace.v1.AgentWorkspaceService.ListConnectorPublicationHealth:input_type -> workspace.v1.ListConnectorPublicationHealthRequest
+	235, // 360: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:input_type -> workspace.v1.CreateCLIConnectorDefinitionRequest
+	236, // 361: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:input_type -> workspace.v1.UpdateCLIConnectorDefinitionRequest
+	237, // 362: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:input_type -> workspace.v1.PublishCLIConnectorDefinitionRequest
+	238, // 363: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:input_type -> workspace.v1.DisableCLIConnectorDefinitionRequest
+	239, // 364: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:input_type -> workspace.v1.DeleteCLIConnectorDefinitionRequest
+	240, // 365: workspace.v1.AgentWorkspaceService.ListCLIConnectorHealth:input_type -> workspace.v1.ListCLIConnectorHealthRequest
+	279, // 366: workspace.v1.AgentWorkspaceService.EnableCLIConnector:input_type -> workspace.v1.EnableCLIConnectorRequest
+	280, // 367: workspace.v1.AgentWorkspaceService.DisableCLIConnector:input_type -> workspace.v1.DisableCLIConnectorRequest
+	282, // 368: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:input_type -> workspace.v1.ListCLIConnectorEnablementsRequest
+	292, // 369: workspace.v1.AgentWorkspaceService.ListCommandApprovals:input_type -> workspace.v1.ListCommandApprovalsRequest
+	294, // 370: workspace.v1.AgentWorkspaceService.DecideCommandApproval:input_type -> workspace.v1.DecideCommandApprovalRequest
+	304, // 371: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorEnablement:input_type -> workspace.v1.CompleteCLIConnectorEnablementRequest
+	286, // 372: workspace.v1.AgentWorkspaceService.BeginCLIConnectorAuthorization:input_type -> workspace.v1.BeginCLIConnectorAuthorizationRequest
+	287, // 373: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorAuthorization:input_type -> workspace.v1.CompleteCLIConnectorAuthorizationRequest
+	288, // 374: workspace.v1.AgentWorkspaceService.ListCLIConnectorAuthorizations:input_type -> workspace.v1.ListCLIConnectorAuthorizationsRequest
+	290, // 375: workspace.v1.AgentWorkspaceService.DisconnectCLIConnectorAuthorization:input_type -> workspace.v1.DisconnectCLIConnectorAuthorizationRequest
+	1,   // 376: workspace.v1.AgentWorkspaceService.GetHomeOverview:output_type -> workspace.v1.HomeOverview
+	307, // 377: workspace.v1.AgentWorkspaceService.GetConversationSelection:output_type -> workspace.v1.ConversationSelection
+	307, // 378: workspace.v1.AgentWorkspaceService.ResolveConversationSelection:output_type -> workspace.v1.ConversationSelection
+	310, // 379: workspace.v1.AgentWorkspaceService.ListConversationFiles:output_type -> workspace.v1.ListConversationFilesResponse
+	314, // 380: workspace.v1.AgentWorkspaceService.GetSkillDocument:output_type -> workspace.v1.SkillDocument
+	6,   // 381: workspace.v1.AgentWorkspaceService.GetCurrentUser:output_type -> workspace.v1.CurrentUser
+	8,   // 382: workspace.v1.AgentWorkspaceService.ListUsers:output_type -> workspace.v1.ListUsersResponse
+	10,  // 383: workspace.v1.AgentWorkspaceService.CreateUser:output_type -> workspace.v1.CreateUserResponse
+	14,  // 384: workspace.v1.AgentWorkspaceService.SetUserEnabled:output_type -> workspace.v1.UserAccount
+	13,  // 385: workspace.v1.AgentWorkspaceService.ResetUserPassword:output_type -> workspace.v1.ResetUserPasswordResponse
+	14,  // 386: workspace.v1.AgentWorkspaceService.SetUserRoles:output_type -> workspace.v1.UserAccount
+	18,  // 387: workspace.v1.AgentWorkspaceService.ListIdentityGroups:output_type -> workspace.v1.ListIdentityGroupsResponse
+	18,  // 388: workspace.v1.AgentWorkspaceService.SyncIdentityGroups:output_type -> workspace.v1.ListIdentityGroupsResponse
+	20,  // 389: workspace.v1.AgentWorkspaceService.UpdateIdentityGroupBudget:output_type -> workspace.v1.IdentityGroup
+	22,  // 390: workspace.v1.AgentWorkspaceService.ListGovernanceAuditEvents:output_type -> workspace.v1.ListGovernanceAuditEventsResponse
+	26,  // 391: workspace.v1.AgentWorkspaceService.TransferGroupResources:output_type -> workspace.v1.TransferGroupResourcesResponse
+	28,  // 392: workspace.v1.AgentWorkspaceService.GetCreditBalance:output_type -> workspace.v1.CreditBalance
+	32,  // 393: workspace.v1.AgentWorkspaceService.GetCreditPolicy:output_type -> workspace.v1.CreditPolicy
+	32,  // 394: workspace.v1.AgentWorkspaceService.UpdateCreditPolicy:output_type -> workspace.v1.CreditPolicy
+	34,  // 395: workspace.v1.AgentWorkspaceService.ListCreditLedger:output_type -> workspace.v1.ListCreditLedgerResponse
+	28,  // 396: workspace.v1.AgentWorkspaceService.RedeemCreditCode:output_type -> workspace.v1.CreditBalance
+	28,  // 397: workspace.v1.AgentWorkspaceService.ConfigureUserDailyCredits:output_type -> workspace.v1.CreditBalance
+	28,  // 398: workspace.v1.AgentWorkspaceService.AdjustUserCredits:output_type -> workspace.v1.CreditBalance
+	40,  // 399: workspace.v1.AgentWorkspaceService.ListModelCreditRates:output_type -> workspace.v1.ListModelCreditRatesResponse
+	41,  // 400: workspace.v1.AgentWorkspaceService.CreateModelCreditRate:output_type -> workspace.v1.ModelCreditRate
+	71,  // 401: workspace.v1.AgentWorkspaceService.CreateRedemptionCodeBatch:output_type -> workspace.v1.RedemptionCodeBatch
+	74,  // 402: workspace.v1.AgentWorkspaceService.ListRedemptionCodes:output_type -> workspace.v1.ListRedemptionCodesResponse
+	76,  // 403: workspace.v1.AgentWorkspaceService.VoidRedemptionCode:output_type -> workspace.v1.RedemptionCodeStatus
+	47,  // 404: workspace.v1.AgentWorkspaceService.ListImageGenerationOptions:output_type -> workspace.v1.ListImageGenerationOptionsResponse
+	57,  // 405: workspace.v1.AgentWorkspaceService.SubmitImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
+	59,  // 406: workspace.v1.AgentWorkspaceService.ListImageGenerations:output_type -> workspace.v1.ListImageGenerationsResponse
+	57,  // 407: workspace.v1.AgentWorkspaceService.GetImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
+	57,  // 408: workspace.v1.AgentWorkspaceService.StopImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
+	57,  // 409: workspace.v1.AgentWorkspaceService.RegenerateImageGeneration:output_type -> workspace.v1.ImageGenerationRecord
+	295, // 410: workspace.v1.AgentWorkspaceService.DeleteImageGeneration:output_type -> workspace.v1.DeleteResponse
+	65,  // 411: workspace.v1.AgentWorkspaceService.OptimizeImagePrompt:output_type -> workspace.v1.OptimizeImagePromptResponse
+	49,  // 412: workspace.v1.AgentWorkspaceService.ListImageModels:output_type -> workspace.v1.ListImageModelsResponse
+	44,  // 413: workspace.v1.AgentWorkspaceService.CreateImageModel:output_type -> workspace.v1.ImageModel
+	44,  // 414: workspace.v1.AgentWorkspaceService.ReviseImageModel:output_type -> workspace.v1.ImageModel
+	295, // 415: workspace.v1.AgentWorkspaceService.DeleteImageModel:output_type -> workspace.v1.DeleteResponse
+	44,  // 416: workspace.v1.AgentWorkspaceService.VerifyImageModel:output_type -> workspace.v1.ImageModel
+	44,  // 417: workspace.v1.AgentWorkspaceService.SetImageModelAvailability:output_type -> workspace.v1.ImageModel
+	69,  // 418: workspace.v1.AgentWorkspaceService.ReplacePromptOptimizationCandidates:output_type -> workspace.v1.ListPromptOptimizationCandidatesResponse
+	69,  // 419: workspace.v1.AgentWorkspaceService.ListPromptOptimizationCandidates:output_type -> workspace.v1.ListPromptOptimizationCandidatesResponse
+	78,  // 420: workspace.v1.AgentWorkspaceService.ListSessions:output_type -> workspace.v1.ListSessionsResponse
+	85,  // 421: workspace.v1.AgentWorkspaceService.CreateSession:output_type -> workspace.v1.Session
+	85,  // 422: workspace.v1.AgentWorkspaceService.GetSession:output_type -> workspace.v1.Session
+	85,  // 423: workspace.v1.AgentWorkspaceService.UpdateSession:output_type -> workspace.v1.Session
+	85,  // 424: workspace.v1.AgentWorkspaceService.SetSessionArchived:output_type -> workspace.v1.Session
+	85,  // 425: workspace.v1.AgentWorkspaceService.SetSessionExpertSelection:output_type -> workspace.v1.Session
+	295, // 426: workspace.v1.AgentWorkspaceService.DeleteSession:output_type -> workspace.v1.DeleteResponse
+	87,  // 427: workspace.v1.AgentWorkspaceService.ListSessionMessages:output_type -> workspace.v1.ListSessionMessagesResponse
+	89,  // 428: workspace.v1.AgentWorkspaceService.SendSessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	89,  // 429: workspace.v1.AgentWorkspaceService.RetrySessionMessage:output_type -> workspace.v1.SendSessionMessageResponse
+	103, // 430: workspace.v1.AgentWorkspaceService.CancelSessionMessage:output_type -> workspace.v1.SessionMessage
+	103, // 431: workspace.v1.AgentWorkspaceService.DecideSessionExecutionPlan:output_type -> workspace.v1.SessionMessage
+	98,  // 432: workspace.v1.AgentWorkspaceService.PreviewSessionWorkflowDraft:output_type -> workspace.v1.SessionWorkflowDraft
+	95,  // 433: workspace.v1.AgentWorkspaceService.CreateWorkflowFromSession:output_type -> workspace.v1.CreateWorkflowFromSessionResponse
+	97,  // 434: workspace.v1.AgentWorkspaceService.ListSessionWorkflowLinks:output_type -> workspace.v1.ListSessionWorkflowLinksResponse
+	113, // 435: workspace.v1.AgentWorkspaceService.ListWorkflows:output_type -> workspace.v1.ListWorkflowsResponse
+	119, // 436: workspace.v1.AgentWorkspaceService.CreateWorkflow:output_type -> workspace.v1.Workflow
+	119, // 437: workspace.v1.AgentWorkspaceService.GetWorkflow:output_type -> workspace.v1.Workflow
+	119, // 438: workspace.v1.AgentWorkspaceService.UpdateWorkflow:output_type -> workspace.v1.Workflow
+	295, // 439: workspace.v1.AgentWorkspaceService.DeleteWorkflow:output_type -> workspace.v1.DeleteResponse
+	143, // 440: workspace.v1.AgentWorkspaceService.GenerateWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
+	143, // 441: workspace.v1.AgentWorkspaceService.GetWorkflowCredential:output_type -> workspace.v1.WorkflowCredential
+	145, // 442: workspace.v1.AgentWorkspaceService.ExchangeWorkflowCredential:output_type -> workspace.v1.WorkflowAccessToken
+	155, // 443: workspace.v1.AgentWorkspaceService.RunWorkflow:output_type -> workspace.v1.Run
+	148, // 444: workspace.v1.AgentWorkspaceService.ListRuns:output_type -> workspace.v1.ListRunsResponse
+	155, // 445: workspace.v1.AgentWorkspaceService.GetRun:output_type -> workspace.v1.Run
+	148, // 446: workspace.v1.AgentWorkspaceService.ListRunTurns:output_type -> workspace.v1.ListRunsResponse
+	155, // 447: workspace.v1.AgentWorkspaceService.ContinueRunConversation:output_type -> workspace.v1.Run
+	155, // 448: workspace.v1.AgentWorkspaceService.CancelRun:output_type -> workspace.v1.Run
+	155, // 449: workspace.v1.AgentWorkspaceService.RerunWorkflow:output_type -> workspace.v1.Run
+	155, // 450: workspace.v1.AgentWorkspaceService.DecideRunExecutionPlan:output_type -> workspace.v1.Run
+	157, // 451: workspace.v1.AgentWorkspaceService.ListArtifacts:output_type -> workspace.v1.ListArtifactsResponse
+	162, // 452: workspace.v1.AgentWorkspaceService.ListWorkspaceEntries:output_type -> workspace.v1.ListWorkspaceEntriesResponse
+	164, // 453: workspace.v1.AgentWorkspaceService.GetWorkspaceFile:output_type -> workspace.v1.WorkspaceFile
+	119, // 454: workspace.v1.AgentWorkspaceService.ConfigureWorkflowGitSource:output_type -> workspace.v1.Workflow
+	125, // 455: workspace.v1.AgentWorkspaceService.ListKnowledgeBases:output_type -> workspace.v1.ListKnowledgeBasesResponse
+	131, // 456: workspace.v1.AgentWorkspaceService.CreateKnowledgeBase:output_type -> workspace.v1.KnowledgeBase
+	131, // 457: workspace.v1.AgentWorkspaceService.GetKnowledgeBase:output_type -> workspace.v1.KnowledgeBase
+	131, // 458: workspace.v1.AgentWorkspaceService.UpdateKnowledgeBase:output_type -> workspace.v1.KnowledgeBase
+	295, // 459: workspace.v1.AgentWorkspaceService.DeleteKnowledgeBase:output_type -> workspace.v1.DeleteResponse
+	133, // 460: workspace.v1.AgentWorkspaceService.ListKnowledgeCategories:output_type -> workspace.v1.ListKnowledgeCategoriesResponse
+	136, // 461: workspace.v1.AgentWorkspaceService.CreateKnowledgeCategory:output_type -> workspace.v1.KnowledgeCategory
+	295, // 462: workspace.v1.AgentWorkspaceService.DeleteKnowledgeCategory:output_type -> workspace.v1.DeleteResponse
+	138, // 463: workspace.v1.AgentWorkspaceService.ListKnowledgeDocuments:output_type -> workspace.v1.ListKnowledgeDocumentsResponse
+	168, // 464: workspace.v1.AgentWorkspaceService.ListExperts:output_type -> workspace.v1.ListExpertsResponse
+	174, // 465: workspace.v1.AgentWorkspaceService.GetExpert:output_type -> workspace.v1.Expert
+	174, // 466: workspace.v1.AgentWorkspaceService.CreateExpert:output_type -> workspace.v1.Expert
+	174, // 467: workspace.v1.AgentWorkspaceService.UpdateExpert:output_type -> workspace.v1.Expert
+	295, // 468: workspace.v1.AgentWorkspaceService.DeleteExpert:output_type -> workspace.v1.DeleteResponse
+	176, // 469: workspace.v1.AgentWorkspaceService.ListExpertTeams:output_type -> workspace.v1.ListExpertTeamsResponse
+	184, // 470: workspace.v1.AgentWorkspaceService.GetExpertTeam:output_type -> workspace.v1.ExpertTeam
+	184, // 471: workspace.v1.AgentWorkspaceService.CreateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	184, // 472: workspace.v1.AgentWorkspaceService.UpdateExpertTeam:output_type -> workspace.v1.ExpertTeam
+	295, // 473: workspace.v1.AgentWorkspaceService.DeleteExpertTeam:output_type -> workspace.v1.DeleteResponse
+	190, // 474: workspace.v1.AgentWorkspaceService.GetSettings:output_type -> workspace.v1.PersonalSettings
+	190, // 475: workspace.v1.AgentWorkspaceService.UpdateSettings:output_type -> workspace.v1.PersonalSettings
+	193, // 476: workspace.v1.AgentWorkspaceService.GetPlatformExecutionDefault:output_type -> workspace.v1.PlatformExecutionDefault
+	193, // 477: workspace.v1.AgentWorkspaceService.SetPlatformExecutionDefault:output_type -> workspace.v1.PlatformExecutionDefault
+	196, // 478: workspace.v1.AgentWorkspaceService.ListRuntimeEngines:output_type -> workspace.v1.ListRuntimeEnginesResponse
+	199, // 479: workspace.v1.AgentWorkspaceService.ListModelProviderPresets:output_type -> workspace.v1.ListModelProviderPresetsResponse
+	202, // 480: workspace.v1.AgentWorkspaceService.ListModelProviderConnections:output_type -> workspace.v1.ListModelProviderConnectionsResponse
+	208, // 481: workspace.v1.AgentWorkspaceService.CreateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	208, // 482: workspace.v1.AgentWorkspaceService.UpdateModelProviderConnection:output_type -> workspace.v1.ModelProviderConnection
+	295, // 483: workspace.v1.AgentWorkspaceService.DeleteModelProviderConnection:output_type -> workspace.v1.DeleteResponse
+	208, // 484: workspace.v1.AgentWorkspaceService.RefreshProviderModels:output_type -> workspace.v1.ModelProviderConnection
+	209, // 485: workspace.v1.AgentWorkspaceService.CreateProviderModel:output_type -> workspace.v1.ProviderModel
+	212, // 486: workspace.v1.AgentWorkspaceService.ListMCPConnectors:output_type -> workspace.v1.ListMCPConnectorsResponse
+	219, // 487: workspace.v1.AgentWorkspaceService.CreateMCPConnector:output_type -> workspace.v1.MCPConnector
+	219, // 488: workspace.v1.AgentWorkspaceService.UpdateMCPConnector:output_type -> workspace.v1.MCPConnector
+	219, // 489: workspace.v1.AgentWorkspaceService.TestMCPConnector:output_type -> workspace.v1.MCPConnector
+	228, // 490: workspace.v1.AgentWorkspaceService.GetMCPConnectorDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
+	295, // 491: workspace.v1.AgentWorkspaceService.DeleteMCPConnector:output_type -> workspace.v1.DeleteResponse
+	221, // 492: workspace.v1.AgentWorkspaceService.ListSkills:output_type -> workspace.v1.ListSkillsResponse
+	226, // 493: workspace.v1.AgentWorkspaceService.CreateSkill:output_type -> workspace.v1.Skill
+	226, // 494: workspace.v1.AgentWorkspaceService.UpdateSkill:output_type -> workspace.v1.Skill
+	228, // 495: workspace.v1.AgentWorkspaceService.GetSkillDeletionImpact:output_type -> workspace.v1.ResourceDeletionImpact
+	295, // 496: workspace.v1.AgentWorkspaceService.DeleteSkill:output_type -> workspace.v1.DeleteResponse
+	234, // 497: workspace.v1.AgentWorkspaceService.ListCLIConnectorDefinitions:output_type -> workspace.v1.ListCLIConnectorDefinitionsResponse
+	272, // 498: workspace.v1.AgentWorkspaceService.ListConnectorInstallations:output_type -> workspace.v1.ListConnectorInstallationsResponse
+	250, // 499: workspace.v1.AgentWorkspaceService.ListConnectorPublications:output_type -> workspace.v1.ListConnectorPublicationsResponse
+	247, // 500: workspace.v1.AgentWorkspaceService.InstallPublishedConnector:output_type -> workspace.v1.ConnectorInstallation
+	247, // 501: workspace.v1.AgentWorkspaceService.UpgradeConnectorInstallation:output_type -> workspace.v1.ConnectorInstallation
+	261, // 502: workspace.v1.AgentWorkspaceService.ListConnectorAuthorizations:output_type -> workspace.v1.ListConnectorAuthorizationsResponse
+	247, // 503: workspace.v1.AgentWorkspaceService.SelectConnectorAuthorization:output_type -> workspace.v1.ConnectorInstallation
+	248, // 504: workspace.v1.AgentWorkspaceService.RefreshConnectorAuthorization:output_type -> workspace.v1.ConnectorAuthorization
+	248, // 505: workspace.v1.AgentWorkspaceService.DisconnectPublishedConnectorAuthorization:output_type -> workspace.v1.ConnectorAuthorization
+	265, // 506: workspace.v1.AgentWorkspaceService.BeginConnectorSetup:output_type -> workspace.v1.ConnectorSetup
+	265, // 507: workspace.v1.AgentWorkspaceService.CompleteConnectorSetup:output_type -> workspace.v1.ConnectorSetup
+	268, // 508: workspace.v1.AgentWorkspaceService.BeginConnectorAuthorizationFlow:output_type -> workspace.v1.ConnectorAuthorizationFlow
+	268, // 509: workspace.v1.AgentWorkspaceService.CompleteConnectorAuthorizationFlow:output_type -> workspace.v1.ConnectorAuthorizationFlow
+	247, // 510: workspace.v1.AgentWorkspaceService.UploadConnectorPackage:output_type -> workspace.v1.ConnectorInstallation
+	247, // 511: workspace.v1.AgentWorkspaceService.CreateConnectorPackage:output_type -> workspace.v1.ConnectorInstallation
+	247, // 512: workspace.v1.AgentWorkspaceService.DisableConnectorInstallation:output_type -> workspace.v1.ConnectorInstallation
+	295, // 513: workspace.v1.AgentWorkspaceService.UninstallConnector:output_type -> workspace.v1.DeleteResponse
+	247, // 514: workspace.v1.AgentWorkspaceService.ConnectConnector:output_type -> workspace.v1.ConnectorInstallation
+	247, // 515: workspace.v1.AgentWorkspaceService.DisconnectConnectorAuthorization:output_type -> workspace.v1.ConnectorInstallation
+	243, // 516: workspace.v1.AgentWorkspaceService.StageConnectorPackage:output_type -> workspace.v1.ConnectorRevision
+	253, // 517: workspace.v1.AgentWorkspaceService.ListConnectorPublicationRevisions:output_type -> workspace.v1.ListConnectorPublicationRevisionsResponse
+	244, // 518: workspace.v1.AgentWorkspaceService.PublishConnectorRevision:output_type -> workspace.v1.ConnectorPublication
+	244, // 519: workspace.v1.AgentWorkspaceService.DisableConnectorPublication:output_type -> workspace.v1.ConnectorPublication
+	257, // 520: workspace.v1.AgentWorkspaceService.ListConnectorPublicationHealth:output_type -> workspace.v1.ListConnectorPublicationHealthResponse
+	232, // 521: workspace.v1.AgentWorkspaceService.CreateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	232, // 522: workspace.v1.AgentWorkspaceService.UpdateCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	232, // 523: workspace.v1.AgentWorkspaceService.PublishCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	232, // 524: workspace.v1.AgentWorkspaceService.DisableCLIConnectorDefinition:output_type -> workspace.v1.CLIConnectorDefinition
+	295, // 525: workspace.v1.AgentWorkspaceService.DeleteCLIConnectorDefinition:output_type -> workspace.v1.DeleteResponse
+	241, // 526: workspace.v1.AgentWorkspaceService.ListCLIConnectorHealth:output_type -> workspace.v1.ListCLIConnectorHealthResponse
+	281, // 527: workspace.v1.AgentWorkspaceService.EnableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
+	281, // 528: workspace.v1.AgentWorkspaceService.DisableCLIConnector:output_type -> workspace.v1.CLIConnectorEnablement
+	283, // 529: workspace.v1.AgentWorkspaceService.ListCLIConnectorEnablements:output_type -> workspace.v1.ListCLIConnectorEnablementsResponse
+	293, // 530: workspace.v1.AgentWorkspaceService.ListCommandApprovals:output_type -> workspace.v1.ListCommandApprovalsResponse
+	291, // 531: workspace.v1.AgentWorkspaceService.DecideCommandApproval:output_type -> workspace.v1.CommandApproval
+	281, // 532: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorEnablement:output_type -> workspace.v1.CLIConnectorEnablement
+	285, // 533: workspace.v1.AgentWorkspaceService.BeginCLIConnectorAuthorization:output_type -> workspace.v1.CLIConnectorAuthorizationFlow
+	285, // 534: workspace.v1.AgentWorkspaceService.CompleteCLIConnectorAuthorization:output_type -> workspace.v1.CLIConnectorAuthorizationFlow
+	289, // 535: workspace.v1.AgentWorkspaceService.ListCLIConnectorAuthorizations:output_type -> workspace.v1.ListCLIConnectorAuthorizationsResponse
+	284, // 536: workspace.v1.AgentWorkspaceService.DisconnectCLIConnectorAuthorization:output_type -> workspace.v1.CLIConnectorAuthorization
+	376, // [376:537] is the sub-list for method output_type
+	215, // [215:376] is the sub-list for method input_type
+	215, // [215:215] is the sub-list for extension type_name
+	215, // [215:215] is the sub-list for extension extendee
+	0,   // [0:215] is the sub-list for field type_name
 }
 
 func init() { file_workspace_v1_workspace_proto_init() }
@@ -21334,73 +24748,84 @@ func file_workspace_v1_workspace_proto_init() {
 	if File_workspace_v1_workspace_proto != nil {
 		return
 	}
-	file_workspace_v1_workspace_proto_msgTypes[1].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[9].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[11].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[12].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[13].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[6].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[14].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[19].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[20].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[21].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[23].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[25].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[30].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[36].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[37].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[49].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[50].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[52].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[53].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[55].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[28].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[32].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[33].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[34].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[35].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[41].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[42].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[44].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[46].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[51].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[57].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[58].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[62].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[64].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[65].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[70].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[71].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[72].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[73].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[74].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[77].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[76].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[79].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[83].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[85].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[86].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[87].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[88].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[91].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[107].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[108].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[114].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[122].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[127].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[128].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[132].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[141].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[152].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[168].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[172].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[98].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[100].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[103].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[104].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[106].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[109].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[118].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[119].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[120].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[123].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[130].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[131].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[139].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[140].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[146].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[155].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[160].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[161].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[165].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[174].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[182].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[183].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[186].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[187].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[190].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[196].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[207].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[209].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[185].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[189].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[204].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[208].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[210].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[211].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[212].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[229].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[218].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[219].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[222].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[223].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[226].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[232].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[243].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[245].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[246].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[247].OneofWrappers = []any{}
 	file_workspace_v1_workspace_proto_msgTypes[248].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[249].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[255].OneofWrappers = []any{}
-	file_workspace_v1_workspace_proto_msgTypes[258].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[265].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[268].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[281].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[284].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[285].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[291].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[294].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[299].OneofWrappers = []any{}
+	file_workspace_v1_workspace_proto_msgTypes[302].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_workspace_v1_workspace_proto_rawDesc), len(file_workspace_v1_workspace_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   274,
+			NumMessages:   315,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

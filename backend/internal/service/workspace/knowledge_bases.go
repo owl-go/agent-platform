@@ -143,11 +143,18 @@ func (service *Service) ListKnowledgeDocuments(ctx context.Context, request *wor
 }
 
 func knowledgeBaseInput(input *workspacev1.KnowledgeBaseInput) workspacedomain.KnowledgeBaseInput {
-	return workspacedomain.KnowledgeBaseInput{Name: input.GetName(), Description: input.GetDescription(), Visibility: workspacedomain.KnowledgeVisibility(input.GetVisibility()), Platform: input.GetPlatform()}
+	return workspacedomain.KnowledgeBaseInput{Name: input.GetName(), Description: input.GetDescription(), Visibility: workspacedomain.KnowledgeVisibility(input.GetVisibility()), Platform: input.GetPlatform(), Scope: workspacedomain.KnowledgeScope(input.GetScope()), GroupID: input.GroupId}
 }
 
 func knowledgeBaseResponse(item workspacedomain.KnowledgeBase) *workspacev1.KnowledgeBase {
-	return &workspacev1.KnowledgeBase{Id: item.ID, OwnerId: item.OwnerID, Name: item.Name, Description: item.Description, Visibility: string(item.Visibility), Platform: item.Platform, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.KnowledgeBase{Id: item.ID, OwnerId: item.OwnerID, Name: item.Name, Description: item.Description, Visibility: string(item.Visibility), Platform: item.Platform, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, DocumentCount: item.DocumentCount, ReadyDocumentCount: item.ReadyDocumentCount, Scope: string(item.Scope), GroupId: item.GroupID}
+	if item.GroupName != "" {
+		response.GroupName = &item.GroupName
+	}
+	if item.LastReadyAt != nil {
+		response.LastReadyAt = timestamppb.New(*item.LastReadyAt)
+	}
+	return response
 }
 
 func knowledgeCategoryResponse(item workspacedomain.KnowledgeCategory) *workspacev1.KnowledgeCategory {

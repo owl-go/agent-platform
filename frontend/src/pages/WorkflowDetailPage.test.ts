@@ -55,9 +55,9 @@ function apiStub(overrides: Partial<PlatformApi> = {}): PlatformApi {
   } as unknown as PlatformApi;
 }
 
-async function mountPage(api = apiStub()) {
+async function mountPage(api = apiStub(), path = `/workflows/${workflow.id}?tab=history`) {
   const router = createAppRouter(createMemoryHistory());
-  await router.push(`/workflows/${workflow.id}?tab=history`);
+  await router.push(path);
   await router.isReady();
   const wrapper = mount(WorkflowDetailPage, {
     global: {
@@ -71,6 +71,7 @@ async function mountPage(api = apiStub()) {
 
 describe("WorkflowDetailPage", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:workflow-attachment") });
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
@@ -80,6 +81,27 @@ describe("WorkflowDetailPage", () => {
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
+  });
+
+  it("offers advanced setup only after a successful validation run", async () => {
+    const pending = await mountPage(apiStub({ listRuns: vi.fn(async () => [{ ...run, state: "waiting_for_user" as const }]) }));
+    expect(pending.find(".workflow-next-steps").exists()).toBe(false);
+    pending.unmount();
+
+    const validated = await mountPage();
+    expect(validated.get(".workflow-next-steps").text()).toContain("这个工作流已经跑通");
+    expect(validated.get(".workflow-next-steps").text()).toContain("定时触发");
+    expect(validated.get(".workflow-next-steps").text()).toContain("API 凭证");
+    expect(validated.get(".workflow-next-steps").text()).toContain("Git 来源");
+    await validated.get(".workflow-next-steps .el-button").trigger("click");
+    expect(validated.findAll(".tabs button")[3]!.classes()).toContain("active");
+    validated.unmount();
+  });
+
+  it("shows a recoverable error when initial validation could not start", async () => {
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => []) }), `/workflows/${workflow.id}?tab=history&validation_error=1`);
+    expect(wrapper.text()).toContain("工作流已创建，但验证运行未能启动");
+    wrapper.unmount();
   });
 
   it("pauses polling in Settings and refreshes when returning to Run History", async () => {
@@ -152,6 +174,21 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("shows the source Session and opens the first validation Run from the conversion link", async () => {
+    const validationRun: Run = { ...run, trigger: "session_conversion", state: "waiting_for_user", execution_plan: { id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules", steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }], resources: [], side_effects: [], reasons: ["workflow_execution"], estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0 } };
+    const linkedWorkflow: Workflow = { ...workflow, origin: { session_id: "session-1", message_id: 2, workflow_id: workflow.id, workflow_name: workflow.name, validation_run_id: validationRun.id, created_at: validationRun.queued_at } };
+    const api = apiStub({ getWorkflow: vi.fn(async () => linkedWorkflow), listRuns: vi.fn(async () => [validationRun]), listRunTurns: vi.fn(async () => [validationRun]) });
+    const wrapper = await mountPage(api, `/workflows/${workflow.id}?open_run=${validationRun.id}`);
+
+    expect(api.listRunTurns).toHaveBeenCalledWith(workflow.id, validationRun.id);
+    expect(wrapper.get(".run-page .execution-plan-card").text()).toContain("执行任务");
+    wrapper.unmount();
+
+    const summary = await mountPage(api);
+    expect(summary.get(".workflow-origin-link").text()).toContain("来自会话");
+    summary.unmount();
+  });
+
   it("opens a Run as a conversation instead of raw Runtime events", async () => {
     const wrapper = await mountPage();
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
@@ -168,10 +205,30 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
   });
 
+  it("links a Run conversation to its adaptive task panel", async () => {
+    const plannedRun: Run = { ...run, execution_plan: {
+      id: "plan-1", state: "completed", objective: "审查发布风险", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+      steps: [{ id: "step-1", kind: "execute_stage", label: "检查变更", position: 1, state: "completed" }], resources: [], side_effects: [], reasons: [], estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+    } };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [plannedRun]), listRunTurns: vi.fn(async () => [plannedRun]) }));
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".run-page").classes()).toContain("has-task-panel");
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("审查发布风险");
+    await wrapper.get(".task-workspace-panel > header button").trigger("click");
+    expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
+    await wrapper.get(".message-task").trigger("click");
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
+    wrapper.unmount();
+  });
+
   it("replays persisted Run activity into the shared conversation thread after completion", async () => {
     const streamRunEvents = vi.fn(async (_workflowID: string, _runID: string, onEvent: (event: RunEvent) => void) => {
       onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
       onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+      onEvent({ sequence: 3, type: "command.completed", payload: { command: "git status", exit_code: 0 }, raw: "{}" });
+      onEvent({ sequence: 4, type: "file.changed", payload: { path: "report.md" }, raw: "{}" });
     });
     const wrapper = await mountPage(apiStub({ streamRunEvents }));
 
@@ -179,9 +236,13 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(streamRunEvents).toHaveBeenCalledWith("workflow-1", "run-1", expect.any(Function));
-    expect(wrapper.get(".runtime-activity").text()).toContain("正在调用工具");
+    expect(wrapper.get(".runtime-activity").text()).toContain("正在更新文件");
     expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity details").text()).toContain("git status");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项文件变化");
+    expect(wrapper.findAll(".activity-kind").map((item) => item.text())).toEqual(["环境", "工具", "文件"]);
+    expect(wrapper.findAll(".activity-state").map((item) => item.text())).toEqual(["已完成", "已完成", "已完成"]);
     wrapper.unmount();
   });
 
@@ -219,7 +280,8 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     const header = wrapper.get(".run-conversation-head").text();
-    expect(wrapper.get(".execution-status-bar").text()).toContain("失败");
+    expect(wrapper.find(".execution-status-bar").exists()).toBe(false);
+    expect(wrapper.get(".message-terminal-state.is-failed").text()).toBe("失败");
     expect(header).toContain(new Date(latestTurn.started_at!).toLocaleString());
     expect(header).not.toContain(new Date(run.started_at!).toLocaleString());
     wrapper.unmount();
@@ -362,8 +424,8 @@ describe("WorkflowDetailPage", () => {
 
   it("lets a Workflow explicitly choose zero or more Knowledge Bases without a default", async () => {
     const knowledgeBases: KnowledgeBase[] = [
-      { id: "kb-1", owner_id: "user-1", name: "产品资料", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
-      { id: "kb-2", owner_id: "user-1", name: "公开规范", description: "", visibility: "public", platform: true, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1 },
+      { id: "kb-1", owner_id: "user-1", name: "产品资料", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1, document_count: 2, ready_document_count: 2 },
+      { id: "kb-2", owner_id: "user-1", name: "公开规范", description: "", visibility: "public", platform: true, deleted: false, created_at: "2026-09-18T00:00:00Z", updated_at: "2026-09-18T00:00:00Z", version: 1, document_count: 1, ready_document_count: 0 },
     ];
     const updateWorkflow = vi.fn(async (_id: string, input: Parameters<PlatformApi["updateWorkflow"]>[1], _version: number) => ({ ...workflow, ...input }));
     const api = apiStub({ listKnowledgeBases: vi.fn(async () => knowledgeBases), updateWorkflow });
@@ -375,6 +437,10 @@ describe("WorkflowDetailPage", () => {
     const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
     expect(choices).toHaveLength(2);
     expect(choices.every((choice) => !choice.element.checked)).toBe(true);
+    expect(choices[0]!.element.disabled).toBe(false);
+    expect(choices[1]!.element.disabled).toBe(true);
+    expect(wrapper.get(".knowledge-base-options").text()).toContain("2 份文档可检索");
+    expect(wrapper.get(".knowledge-base-options").text()).toContain("暂无可检索文档");
 
     await choices[0]!.setValue(true);
     expect(choices[0]!.element.checked).toBe(true);
@@ -644,5 +710,39 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.get(".run-conversation .message.assistant .markdown-body").text()).toBe(response);
     wrapper.unmount();
     vi.useRealTimers();
+  });
+
+  it("resumes from the last event sequence and ignores replayed duplicates", async () => {
+    vi.useFakeTimers();
+    const activeRun: Run = { ...run, state: "running", final_text: undefined, ended_at: undefined, elapsed_ms: 0 };
+    let streamCalls = 0;
+    const streamRunEvents = vi.fn(async (_workflowID: string, _runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal, options?: { afterSequence?: number; reconnect?: boolean }) => {
+      streamCalls += 1;
+      if (streamCalls === 1) {
+        onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+        throw new Error("connection lost");
+      }
+      onEvent({ sequence: 1, type: "runtime.started", payload: { runtime: "codex" }, raw: "{}" });
+      onEvent({ sequence: 2, type: "command.requested", payload: { command: "git status" }, raw: "{}" });
+      expect(options).toEqual({ afterSequence: 1, reconnect: true });
+      await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+    });
+    const api = apiStub({
+      listRuns: vi.fn(async () => [activeRun]),
+      listRunTurns: vi.fn(async () => [activeRun]),
+      getRun: vi.fn(async () => activeRun),
+      streamRunEvents,
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+
+    await vi.advanceTimersByTimeAsync(750);
+    await flushPromises();
+
+    expect(streamRunEvents).toHaveBeenCalledTimes(2);
+    expect(streamRunEvents.mock.calls[1]?.[4]).toEqual({ afterSequence: 1, reconnect: true });
+    expect(wrapper.findAll(".activity-summary-group")).toHaveLength(2);
+    wrapper.unmount();
   });
 });

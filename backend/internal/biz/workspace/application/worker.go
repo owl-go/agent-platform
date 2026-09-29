@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"agent-platform/backend/internal/agentruntime"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/cliconnector"
+	"agent-platform/backend/internal/productanalytics"
 )
 
 type JobKind string
@@ -48,6 +50,7 @@ type ExecutionResult struct {
 	Events              []ExecutionEvent
 	Artifacts           []ExecutionArtifact
 	ExpertStages        []domain.ExpertStage
+	Evidence            []domain.Evidence
 	CreditConsumption   *domain.CreditConsumption
 	CreditSettlements   []CreditSettlement
 	SuccessCommit       SuccessCommit
@@ -113,6 +116,7 @@ type Worker struct {
 	repository       WorkerRepository
 	executor         Executor
 	connectorBuilder *cliconnector.Builder
+	analytics        productanalytics.Observer
 }
 
 const cancellationPollInterval = 200 * time.Millisecond
@@ -121,11 +125,17 @@ func NewWorker(repository WorkerRepository, executor Executor, connectorBuilders
 	if repository == nil || executor == nil {
 		return nil, fmt.Errorf("Agent Workspace Worker Repository and Executor are required")
 	}
-	worker := &Worker{repository: repository, executor: executor}
+	worker := &Worker{repository: repository, executor: executor, analytics: productanalytics.Nop{}}
 	if len(connectorBuilders) > 0 {
 		worker.connectorBuilder = connectorBuilders[0]
 	}
 	return worker, nil
+}
+
+func (worker *Worker) EnableProductAnalytics(observer productanalytics.Observer) {
+	if observer != nil {
+		worker.analytics = observer
+	}
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -181,6 +191,7 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 		if err := worker.repository.FinishFailed(context.WithoutCancel(ctx), *job, result, executeErr.Error()); err != nil {
 			return true, fmt.Errorf("record failed execution after %v: %w", executeErr, err)
 		}
+		worker.observeTerminal(context.WithoutCancel(ctx), *job, result, "failed", executeErr)
 		return true, nil
 	}
 	if cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job); checkErr != nil {
@@ -194,7 +205,80 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 		discardSuccessCommit(result)
 		return true, err
 	}
+	worker.observeTerminal(context.WithoutCancel(ctx), *job, result, "succeeded", nil)
 	return true, nil
+}
+
+func (worker *Worker) observeTerminal(ctx context.Context, job ExecutionJob, result ExecutionResult, state string, executionErr error) {
+	if job.Kind == JobSession {
+		code := string(agentruntime.ErrorCodeOf(executionErr))
+		if executionErr == nil {
+			code = "none"
+		}
+		worker.analytics.SessionTerminal(ctx, productanalytics.SessionTerminalObservation{
+			OwnerID: job.OwnerID, SessionID: job.SessionID, MessageID: job.AssistantMessageID, State: state,
+			Duration: executionDuration(result), Specialist: specialistType(job.Snapshot), ArtifactCount: len(result.Artifacts),
+			FailureStage: failureStage(agentruntime.ErrorCode(code)), SafeErrorCode: code, Recoverable: recoverableFailure(agentruntime.ErrorCode(code)),
+		})
+		return
+	}
+	if job.Kind == JobWorkflow {
+		worker.analytics.WorkflowTerminal(ctx, productanalytics.WorkflowTerminalObservation{OwnerID: job.OwnerID, WorkflowID: job.WorkflowID, RunID: job.ID, State: state})
+	}
+}
+
+func executionDuration(result ExecutionResult) time.Duration {
+	var total time.Duration
+	for _, stage := range result.ExpertStages {
+		if stage.ElapsedMS > 0 {
+			total += time.Duration(stage.ElapsedMS) * time.Millisecond
+		}
+	}
+	return total
+}
+
+func specialistType(snapshot domain.ExecutionSnapshot) string {
+	stages, err := snapshot.OrderedStages()
+	if err != nil || len(stages) == 0 {
+		return "default"
+	}
+	if len(stages) > 1 || stages[0].TeamMemberID != "" {
+		return "team"
+	}
+	if stages[0].Expert != nil {
+		return "expert"
+	}
+	return "default"
+}
+
+func failureStage(code agentruntime.ErrorCode) string {
+	switch code {
+	case agentruntime.ErrorInvalidConfiguration:
+		return "configuration"
+	case agentruntime.ErrorRuntimeUnavailable:
+		return "runtime_start"
+	case agentruntime.ErrorAuthenticationFailed:
+		return "authorization"
+	case agentruntime.ErrorModelFailed:
+		return "model"
+	case agentruntime.ErrorCommandFailed:
+		return "tool"
+	case agentruntime.ErrorBudgetExhausted:
+		return "budget"
+	case agentruntime.ErrorEventDeliveryFailed:
+		return "event_delivery"
+	default:
+		return "execution"
+	}
+}
+
+func recoverableFailure(code agentruntime.ErrorCode) bool {
+	switch code {
+	case agentruntime.ErrorInvalidConfiguration:
+		return false
+	default:
+		return true
+	}
 }
 
 func discardSuccessCommit(result ExecutionResult) {

@@ -1,6 +1,7 @@
 import type { InjectionKey } from "vue";
 
-export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number }
+export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean; group_budget?: { group_id: string; group_name: string; limit_hundredths: number; consumed_hundredths: number; reserved_hundredths: number; available_hundredths: number } }
+export interface CreditPolicy { default_daily_allocation_hundredths: number; warning_threshold_percent: number; redemption_codes_enabled: boolean; version: number; updated_at: string; updated_by_user_id?: string }
 export interface CreditStageConsumption { stage_position: number; provider_model: string; runtime_engine: string; input_tokens: number; output_tokens: number; usage_reported: boolean; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; amount_hundredths: number; estimated: boolean; rate_revision_id: string }
 export interface CreditConsumption { total_hundredths: number; stages: CreditStageConsumption[] }
 export interface CreditLedgerEntry { id: string; type: string; amount_hundredths: number; resulting_balance_hundredths: number; credit_day: string; reason?: string; created_at: string }
@@ -15,7 +16,9 @@ export interface ImageGenerationInput { request_id?: string; original_prompt?: s
 export interface ImageGenerationEvent { sequence: number; type: string }
 export interface ReferenceImageUpload { id: string; media_type: string; encoded_size: number; width: number; height: number; expires_at: string }
 export interface PromptOptimizationCandidate { provider_model_id: string; display_name: string; api_protocol: "openai_chat"; endpoint?: string; api_key_configured: boolean; instruction: string }
-export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; settings_ready: boolean; credit_balance?: CreditBalance }
+export interface IdentityGroup { id: string; external_id: string; name: string; path: string; department: boolean; daily_credit_limit_hundredths?: number; member_count: number; last_synced_at: string; version: number }
+export interface GovernanceAuditEvent { id: number; actor_user_id: string; action: string; target_type: string; target_id: string; reason: string; metrics: Array<{ key: string; value: number }>; occurred_at: string }
+export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; bootstrap_administrator?: boolean; resource_publisher?: boolean; groups?: IdentityGroup[]; settings_ready: boolean; credit_balance?: CreditBalance }
 export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; assistant_welcome?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus }; skills?: Array<{ id: string; name: string; object_key: string; sha256: string }>; mcp_servers?: Array<{ id: string; name: string; transport: string; icon?: string }>; cli_connectors?: Array<{ id: string; name: string; icon?: string; executable: string; authentication_driver: string; bundle_sha256: string; runtime_digests: string[]; version: number }> }
 export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
@@ -26,26 +29,38 @@ export interface ConversationSelection { id: string; expert_id: string; expert_t
 export interface SelectionInput { previous_id?: string; change_expert?: boolean; expert_id?: string; expert_team_id?: string; skill_ids: string[]; mcp_server_ids: string[]; cli_connector_ids: string[]; disabled_connectors: string[]; refresh_ids?: string[] }
 export interface FileReference { kind: "attachment" | "artifact" | "workspace"; id: string; path: string }
 export interface ConversationFile { kind: FileReference["kind"] | "directory"; id: string; path: string; name: string; size: number; available: boolean; unavailable_reason: string }
-export interface ConversationInput { selection_id?: string; file_references?: FileReference[] }
+export type PlanPreference = "auto" | "always";
+export interface ConversationInput { selection_id?: string; file_references?: FileReference[]; plan_preference?: PlanPreference }
+export interface ExecutionPlanStep { id: string; kind: string; label: string; position: number; state: "pending" | "running" | "completed" | "skipped" | "failed" }
+export interface ExecutionPlanResource { kind: string; id: string; name: string }
+export interface ExecutionPlan { id: string; state: "pending" | "approved" | "executing" | "completed" | "failed" | "cancelled" | "skipped"; objective: string; steps: ExecutionPlanStep[]; resources: ExecutionPlanResource[]; side_effects: string[]; reasons: string[]; estimated_model_calls: number; estimated_credit_hundredths: number; generation_credit_hundredths: number; generator: string; created_at: string; decided_at?: string; version: number }
 export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
 export interface ExecutionActivity { type: string; detail: string }
+export interface EvidenceCitation { revision_id: string; category_name?: string; source_location?: string; relevance?: number }
+export interface Evidence { id: string; kind: "file" | "knowledge" | "connector" | "artifact"; source_id: string; source_name: string; container_id?: string; state: "requested" | "succeeded" | "failed" | "not_used"; action: string; stage_position: number; citation?: EvidenceCitation }
 export interface ResourceCreationAction { id: string; kind: "skill" | "expert" | "connector"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
-export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; resource_action?: ResourceCreationAction }
+export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
+export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitConfigEntry { key: string; value: string }
 export interface GitSource { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; config: GitConfigEntry[]; ssh_config?: string; credential_configured: boolean }
 export interface GitSourceInput { url: string; branch: string; authentication: "none" | "basic" | "ssh"; username?: string; password?: string; ssh_private_key?: string; config: GitConfigEntry[]; ssh_config?: string }
-export interface KnowledgeBase { id: string; owner_id: string; name: string; description: string; visibility: "private" | "public"; platform: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
+export interface KnowledgeBase { id: string; owner_id: string; name: string; description: string; visibility: "private" | "public"; platform: boolean; scope?: "private" | "group" | "platform"; group_id?: string; group_name?: string; deleted: boolean; created_at: string; updated_at: string; version: number; document_count?: number; ready_document_count?: number; last_ready_at?: string }
 export interface KnowledgeCategory { id: string; knowledge_base_id: string; name: string; deleted: boolean; created_at: string; updated_at: string; version: number }
 export interface KnowledgeDocumentRevision { id: string; document_id: string; revision: number; sha256: string; size: number; content_type: string; state: string; error?: string; created_at: string; ready_at?: string }
 export interface KnowledgeDocument { id: string; knowledge_base_id: string; category_id?: string; name: string; source_type: "upload" | "url"; source_uri?: string; state: string; error?: string; deleted: boolean; created_at: string; updated_at: string; version: number; latest_revision?: KnowledgeDocumentRevision }
 export interface KnowledgeSearchResult { document_id: string; revision_id: string; document_name: string; category_name?: string; text: string; relevance: number }
 export interface KnowledgeSearchResponse { index_ready: boolean; items: KnowledgeSearchResult[] }
 export interface WorkflowInput { name: string; goal: string; expert_id?: string; expert_team_id?: string; knowledge_base_ids?: string[]; environment: EnvironmentVariable[]; schedule?: Schedule }
-export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption }
+export interface SessionWorkflowLink { session_id: string; message_id: number; workflow_id: string; workflow_name: string; validation_run_id: string; created_at: string }
+export interface SessionWorkflowResource { kind: "expert" | "skill" | "mcp" | "cli"; id: string; name: string }
+export interface SessionWorkflowFile { source_key: string; kind: "attachment" | "artifact"; name: string; size: number; available: boolean; unavailable_reason?: string }
+export interface SessionWorkflowDraft { suggested_name: string; suggested_goal: string; specialist_name: string; resources: SessionWorkflowResource[]; files: SessionWorkflowFile[]; existing_link?: SessionWorkflowLink }
+export interface SessionWorkflowFileDecision { source_key: string; destination: "workspace" | "exclude" }
+export interface SessionWorkflowCreation { workflow: Workflow; validation_run: Run; link: SessionWorkflowLink; replayed: boolean }
+export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; origin?: SessionWorkflowLink }
+export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
@@ -57,7 +72,12 @@ export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert
 export interface ExpertTeamInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
 export interface ExpertTeam extends ExpertTeamInput { id: string; experts: Expert[]; expertise_tags: string[]; capability_introduction?: string; available: boolean; created_at: string; updated_at: string; version: number; members: ExpertTeamMember[] }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
-export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number }
+export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number; execution_inherited?: boolean; platform_execution_available?: boolean }
+export interface PlatformExecutionDefault { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; updated_by_user_id: string; version: number; updated_at: string }
+export interface HomeOverview { recent_tasks: HomeTask[]; common_workflows: HomeWorkflow[]; action_items: HomeAction[] }
+export interface HomeTask { kind: "session" | "run"; id: string; parent_id: string; title: string; state: string; updated_at: string }
+export interface HomeWorkflow { id: string; name: string; run_count: number; updated_at: string }
+export interface HomeAction { kind: "approval" | "plan" | "failed"; id: string; execution_kind: "session" | "run"; execution_id: string; parent_id: string; title: string; state: string; created_at: string }
 export interface RuntimeEngineStatus { name: RuntimeEngine; available: boolean; native_resume: boolean; cli_version: string }
 export type CompatibilityStatus = "verified" | "unverified" | "incompatible";
 export interface RuntimeModelCompatibility { runtime_engine: RuntimeEngine; status: CompatibilityStatus; reason?: string }
@@ -66,8 +86,11 @@ export interface ModelProviderConnection { id: string; name: string; provider_ty
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
 export interface MCPServer { id: string; platform?: boolean; managed_installation?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; platform?: boolean; system_key?: string; immutable?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
-export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; free_text_enabled?: boolean; daily_call_limit?: number }
-export interface SmartAssistant { id: string; name: string; icon: string; description?: string; introduction: string; scenario: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; state: "draft" | "enabled" | "disabled"; share: AssistantShareConfiguration; created_at: string; updated_at: string; version: number }
+export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; free_text_enabled?: boolean; daily_call_limit?: number; data_processing_acknowledged?: boolean }
+export interface AssistantPublicationCheck { code: string; ready: boolean; detail: string }
+export interface AssistantPublicationValidation { assistant_id: string; assistant_version: number; ready: boolean; checks: AssistantPublicationCheck[]; checked_at: string }
+export interface AssistantPublicationStats { window_days: number; external_conversations: number; free_text_calls: number; faq_answers: number; model_answers: number; failed_or_cancelled_answers: number; safety_refusals: number; credit_consumed_hundredths: number }
+export interface SmartAssistant { id: string; name: string; icon: string; description?: string; introduction: string; scenario: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style: string; knowledge_base_ids: string[]; expert_id?: string; expert_team_id?: string; state: "draft" | "enabled" | "disabled"; share: AssistantShareConfiguration; last_validated_at?: string; validated_version?: number; created_at: string; updated_at: string; version: number }
 export interface SmartAssistantInput { name: string; icon?: string; description?: string; introduction?: string; scenario?: string; prompt?: string; preprocess_prompt?: string; provider_model_id?: string; service_goal?: string; answer_scope?: string; operating_rules?: string; response_style?: string; knowledge_base_ids?: string[]; expert_id?: string; expert_team_id?: string; state?: "draft" | "enabled" | "disabled"; share?: AssistantShareConfiguration }
 export interface SmartAssistantFAQ { id: string; assistant_id: string; question: string; answer_markdown: string; display_order: number; category: string; tag: string; icon: string; enabled: boolean; created_at: string; updated_at: string; version: number }
 export interface AssistantConversation { id: string; assistant_id: string; assistant_name: string; welcome: string; created_at: string; updated_at: string }
@@ -92,7 +115,7 @@ export interface CLIConnectorEnablement { id: string; definition_id: string; sta
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
 export interface CommandApproval { id: string; execution_kind: "session" | "run"; execution_id: string; connector_name: string; operation: string; target: string; redacted_arguments: string; state: "pending" | "approved" | "rejected" | "consumed" | "expired" | "closed"; identity?: "user" | "bot"; expires_at: string; version: number }
-export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
+export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; bootstrap_administrator?: boolean; resource_publisher?: boolean; groups?: IdentityGroup[]; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
 
 export function runtimeEngineDisplayName(runtime?: RuntimeEngine | string | null): string {
@@ -113,11 +136,14 @@ export class ApiError extends Error {
 }
 
 export interface PlatformApi {
+  getHomeOverview(signal?: AbortSignal): Promise<HomeOverview>;
   getConversationSelection(scope: ConversationScope, signal?: AbortSignal): Promise<ConversationSelection>;
   resolveConversationSelection(scope: ConversationScope, input: SelectionInput, signal?: AbortSignal): Promise<ConversationSelection>;
   listConversationFiles(scope: ConversationScope, workspacePath?: string, signal?: AbortSignal): Promise<ConversationFile[]>;
   getSkillDocument(id: string, signal?: AbortSignal): Promise<{ skill: Skill; content: string }>;
   getCreditBalance(signal?: AbortSignal): Promise<CreditBalance>;
+  getCreditPolicy(signal?: AbortSignal): Promise<CreditPolicy>;
+  updateCreditPolicy(policy: Pick<CreditPolicy, "default_daily_allocation_hundredths" | "warning_threshold_percent" | "redemption_codes_enabled" | "version">, signal?: AbortSignal): Promise<CreditPolicy>;
   listCreditLedger(cursor?: string, signal?: AbortSignal): Promise<{ items: CreditLedgerEntry[]; next_cursor?: string }>;
   redeemCreditCode(code: string, signal?: AbortSignal): Promise<CreditBalance>;
   configureUserDailyCredits(userID: string, allocationHundredths: number, signal?: AbortSignal): Promise<CreditBalance>;
@@ -155,12 +181,16 @@ export interface PlatformApi {
   setSessionExpertSelection(id: string, selection: { expert_id?: string; expert_team_id?: string }, version: number, signal?: AbortSignal): Promise<Session>;
   deleteSession(id: string, signal?: AbortSignal): Promise<void>;
   listSessionMessages(id: string, signal?: AbortSignal): Promise<SessionMessage[]>;
-  streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal): Promise<void>;
+  streamSessionMessage(id: string, messageID: number, onSnapshot: (snapshot: SessionMessageSnapshot) => void, signal?: AbortSignal, options?: { reconnect?: boolean }): Promise<void>;
   uploadAttachment(file: File, signal?: AbortSignal): Promise<Attachment>;
   getAttachmentDownload(id: string, signal?: AbortSignal): Promise<Blob>;
   sendSessionMessage(id: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   retrySessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<{ user_message: SessionMessage; assistant_message: SessionMessage }>;
   cancelSessionMessage(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionMessage>;
+  decideSessionExecutionPlan(sessionID: string, messageID: number, decision: "start" | "direct" | "cancel", version: number, signal?: AbortSignal): Promise<SessionMessage>;
+  previewSessionWorkflowDraft(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionWorkflowDraft>;
+  createWorkflowFromSession(sessionID: string, messageID: number, input: { name: string; goal: string; files: SessionWorkflowFileDecision[] }, signal?: AbortSignal): Promise<SessionWorkflowCreation>;
+  listSessionWorkflowLinks(sessionID: string, signal?: AbortSignal): Promise<SessionWorkflowLink[]>;
   decideResourceCreationAction(actionID: string, decision: "confirm" | "cancel", signal?: AbortSignal): Promise<ResourceCreationAction>;
   getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
@@ -170,12 +200,13 @@ export interface PlatformApi {
   deleteWorkflow(id: string, signal?: AbortSignal): Promise<void>;
   generateWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at: string }>;
   getWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at?: string }>;
-  runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown> }, signal?: AbortSignal): Promise<Run>;
+  runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown>; plan_preference?: PlanPreference }, signal?: AbortSignal): Promise<Run>;
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listRunTurns(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run[]>;
   continueRunConversation(workflowID: string, runID: string, content: string, attachmentIDs?: string[], signal?: AbortSignal, input?: ConversationInput): Promise<Run>;
-  streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal): Promise<void>;
+  decideRunExecutionPlan(workflowID: string, runID: string, decision: "start" | "direct" | "cancel", version: number, signal?: AbortSignal): Promise<Run>;
+  streamRunEvents(workflowID: string, runID: string, onEvent: (event: RunEvent) => void, signal?: AbortSignal, options?: { afterSequence?: number; reconnect?: boolean }): Promise<void>;
   cancelRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   rerunWorkflow(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listArtifacts(id: string, signal?: AbortSignal): Promise<Artifact[]>;
@@ -185,8 +216,8 @@ export interface PlatformApi {
   downloadWorkspaceFile(id: string, path: string, signal?: AbortSignal): Promise<Blob>;
   configureWorkflowGitSource(id: string, input: GitSourceInput, signal?: AbortSignal): Promise<Workflow>;
   listKnowledgeBases(deleted?: boolean, signal?: AbortSignal): Promise<KnowledgeBase[]>;
-  createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, signal?: AbortSignal): Promise<KnowledgeBase>;
-  updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
+  createKnowledgeBase(input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean; scope?: "private" | "group" | "platform"; group_id?: string }, signal?: AbortSignal): Promise<KnowledgeBase>;
+  updateKnowledgeBase(id: string, input: { name: string; description: string; visibility: "private" | "public"; platform?: boolean; scope?: "private" | "group" | "platform"; group_id?: string }, version: number, signal?: AbortSignal): Promise<KnowledgeBase>;
   deleteKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeBase(id: string, signal?: AbortSignal): Promise<void>;
   listKnowledgeCategories(id: string, signal?: AbortSignal): Promise<KnowledgeCategory[]>;
@@ -197,7 +228,8 @@ export interface PlatformApi {
   searchKnowledgeBase(id: string, query: string, signal?: AbortSignal): Promise<KnowledgeSearchResponse>;
   uploadKnowledgeDocument(id: string, file: File, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
   importKnowledgeDocument(id: string, url: string, categoryID?: string, signal?: AbortSignal): Promise<KnowledgeDocument>;
-  downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
+	downloadKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<Blob>;
+	downloadKnowledgeEvidence(baseID: string, documentID: string, revisionID: string, signal?: AbortSignal): Promise<Blob>;
   retryKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   regenerateKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   deleteKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
@@ -214,6 +246,8 @@ export interface PlatformApi {
   deleteExpertTeam(id: string, signal?: AbortSignal): Promise<void>;
   getSettings(signal?: AbortSignal): Promise<PersonalSettings>;
   updateSettings(settings: PersonalSettings, signal?: AbortSignal): Promise<PersonalSettings>;
+  getPlatformExecutionDefault(signal?: AbortSignal): Promise<PlatformExecutionDefault>;
+  setPlatformExecutionDefault(input: { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; expected_version: number }, signal?: AbortSignal): Promise<PlatformExecutionDefault>;
   listRuntimeEngines(signal?: AbortSignal): Promise<RuntimeEngineStatus[]>;
   listModelProviderPresets(signal?: AbortSignal): Promise<ModelProviderPreset[]>;
   listModelProviderConnections(signal?: AbortSignal): Promise<ModelProviderConnection[]>;
@@ -243,6 +277,8 @@ export interface PlatformApi {
   updateAssistantFAQ(assistantID: string, id: string, input: Omit<SmartAssistantFAQ, "id" | "assistant_id" | "created_at" | "updated_at" | "version">, version: number, signal?: AbortSignal): Promise<SmartAssistantFAQ>;
   deleteAssistantFAQ(assistantID: string, id: string, signal?: AbortSignal): Promise<void>;
   regenerateAssistantShareToken(id: string, version: number, signal?: AbortSignal): Promise<{ token: string; assistant: SmartAssistant }>;
+  runAssistantPublicationCheck(id: string, signal?: AbortSignal): Promise<AssistantPublicationValidation>;
+  getAssistantPublicationStats(id: string, signal?: AbortSignal): Promise<AssistantPublicationStats>;
   createAssistantSession(id: string, signal?: AbortSignal): Promise<Session>;
   createAssistantConversation(id: string, signal?: AbortSignal): Promise<AssistantConversation>;
   listAssistantConversations(id: string, signal?: AbortSignal): Promise<AssistantConversation[]>;
@@ -295,8 +331,14 @@ export interface PlatformApi {
   decideCommandApproval(id: string, decision: "approved" | "rejected", identity: "user" | "bot" | undefined, version: number, signal?: AbortSignal): Promise<CommandApproval>;
   listUsers(signal?: AbortSignal): Promise<UserAccount[]>;
   createUser(input: { username: string; email: string; display_name: string }, signal?: AbortSignal): Promise<{ user: UserAccount; temporary_password: string }>;
-  setUserEnabled(id: string, enabled: boolean, version: number, signal?: AbortSignal): Promise<UserAccount>;
+  setUserEnabled(id: string, enabled: boolean, version: number, reason: string, signal?: AbortSignal): Promise<UserAccount>;
   resetUserPassword(id: string, signal?: AbortSignal): Promise<{ temporary_password: string }>;
+  setUserRoles(id: string, input: { administrator: boolean; resource_publisher: boolean; expected_version: number; reason: string }, signal?: AbortSignal): Promise<UserAccount>;
+  listIdentityGroups(signal?: AbortSignal): Promise<IdentityGroup[]>;
+  syncIdentityGroups(signal?: AbortSignal): Promise<IdentityGroup[]>;
+  updateIdentityGroupBudget(id: string, input: { daily_credit_limit_hundredths?: number; expected_version: number; reason: string }, signal?: AbortSignal): Promise<IdentityGroup>;
+  listGovernanceAuditEvents(limit?: number, signal?: AbortSignal): Promise<GovernanceAuditEvent[]>;
+  transferGroupResources(groupID: string, input: { from_user_id: string; to_user_id: string; reason: string }, signal?: AbortSignal): Promise<{ knowledge_base_count: number }>;
 }
 
 export const platformApiKey: InjectionKey<PlatformApi> = Symbol("agent-workspace-api");
@@ -327,11 +369,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
   };
   const remove = async (path: string, signal?: AbortSignal) => { await call<{ deleted: boolean }>(path, { method: "DELETE", signal, headers: { "Idempotency-Key": crypto.randomUUID() } }); };
   return {
+    async getHomeOverview(signal) { const item = await call<HomeOverview>("/api/v1/home-overview", { signal }); return { recent_tasks: item.recent_tasks ?? [], common_workflows: item.common_workflows ?? [], action_items: item.action_items ?? [] }; },
     async getConversationSelection(scope, signal) { return normalizeSelection(await call(`/api/v1/conversation-selection?${scopeQuery(scope)}`, { signal })); },
     async resolveConversationSelection(scope, input, signal) { return normalizeSelection(await call("/api/v1/conversation-selection", json("POST", { ...scope, ...input }, signal))); },
     async listConversationFiles(scope, workspacePath = "", signal) { const result = await call<{ items?: ConversationFile[] }>(`/api/v1/conversation-files?${scopeQuery(scope)}&workspace_path=${encodeURIComponent(workspacePath)}`, { signal }); return (result.items ?? []).map((item) => ({ ...item, size: Number(item.size), id: item.id ?? "", path: item.path ?? "" })); },
     getSkillDocument(id, signal) { return call(`/api/v1/skills/${encodeURIComponent(id)}/document`, { signal }); },
-    getCreditBalance(signal) { return call("/api/v1/credits/balance", { signal }); },
+    async getCreditBalance(signal) { const item = await call<CreditBalance>("/api/v1/credits/balance", { signal }); return { ...item, warning_threshold_percent: Number(item.warning_threshold_percent || 80), redemption_codes_enabled: Boolean(item.redemption_codes_enabled) }; },
+    async getCreditPolicy(signal) { const item = await call<CreditPolicy>("/api/v1/admin/credit-policy", { signal }); return { ...item, redemption_codes_enabled: Boolean(item.redemption_codes_enabled) }; },
+    updateCreditPolicy(policy, signal) { return call("/api/v1/admin/credit-policy", json("PUT", { default_daily_allocation_hundredths: policy.default_daily_allocation_hundredths, warning_threshold_percent: policy.warning_threshold_percent, redemption_codes_enabled: policy.redemption_codes_enabled, expected_version: policy.version }, signal)); },
     listCreditLedger(cursor = "", signal) { return call(`/api/v1/credits/ledger?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { signal }); },
     redeemCreditCode(code, signal) { return call("/api/v1/credits/redemptions", json("POST", { code }, signal)); },
     configureUserDailyCredits(userID, allocationHundredths, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(userID)}/daily-credits`, json("PATCH", { allocation_hundredths: allocationHundredths }, signal)); },
@@ -408,10 +453,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
         after = next;
       }
     },
-    async streamSessionMessage(id, messageID, onSnapshot, signal) {
+    async streamSessionMessage(id, messageID, onSnapshot, signal, options) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
-      const response = await fetch(`/api/v1/sessions/${encodeURIComponent(id)}/messages/${messageID}/events`, { signal, headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` } });
+      const reconnect = options?.reconnect ? "?reconnect=true" : "";
+      const response = await fetch(`/api/v1/sessions/${encodeURIComponent(id)}/messages/${messageID}/events${reconnect}`, { signal, headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` } });
       if (!response.ok || !response.body) throw new ApiError(response.status === 404 ? "not_found" : "unknown", response.status, "message_stream_failed");
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let pending = "";
@@ -451,6 +497,13 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     sendSessionMessage(id, content, attachmentIDs = [], signal, input) { return call(`/api/v1/sessions/${encodeURIComponent(id)}/messages`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal)); },
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
+    decideSessionExecutionPlan(sessionID, messageID, decision, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/plan-decision`, json("POST", { decision, expected_version: version }, signal)); },
+    previewSessionWorkflowDraft(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow-draft`, { signal }); },
+    async createWorkflowFromSession(sessionID, messageID, input, signal) {
+      const result = await call<SessionWorkflowCreation>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow`, json("POST", input, signal));
+      return { ...result, validation_run: normalizeRun(result.validation_run) };
+    },
+    async listSessionWorkflowLinks(sessionID, signal) { return (await call<{ items?: SessionWorkflowLink[] }>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/workflow-links`, { signal })).items ?? []; },
     decideResourceCreationAction(actionID, decision, signal) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}/decision`, json("POST", { decision }, signal)); },
     getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
@@ -465,10 +518,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
     async listRunTurns(workflowID, runID, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, { signal })).items ?? []).map(normalizeRun); },
     async continueRunConversation(workflowID, runID, content, attachmentIDs = [], signal, input) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, json("POST", { content, attachment_ids: attachmentIDs, ...input }, signal))); },
-    async streamRunEvents(workflowID, runID, onEvent, signal) {
+    async decideRunExecutionPlan(workflowID, runID, decision, version, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/plan-decision`, json("POST", { decision, expected_version: version }, signal))); },
+    async streamRunEvents(workflowID, runID, onEvent, signal, options) {
       const token = getAccessToken();
       if (!token) throw new ApiError("unauthenticated", 401, "invalid_authentication");
-      const response = await fetch(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/events`, { signal, headers: { Accept: "text/event-stream", Authorization: `Bearer ${token}` } });
+      const reconnect = options?.reconnect ? "?reconnect=true" : "";
+      const headers: Record<string, string> = { Accept: "text/event-stream", Authorization: `Bearer ${token}` };
+      if (options?.afterSequence) headers["Last-Event-ID"] = String(options.afterSequence);
+      const response = await fetch(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/events${reconnect}`, { signal, headers });
       if (!response.ok || !response.body) throw new ApiError(response.status === 403 ? "forbidden" : "unknown", response.status, "event_stream_failed");
       const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
       let pending = "";
@@ -531,6 +588,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     },
     importKnowledgeDocument(id, url, categoryID, signal) { return call(`/api/v1/knowledge-bases/${encodeURIComponent(id)}/documents/import`, json("POST", { url, category_id: categoryID }, signal)); },
     downloadKnowledgeDocument(baseID, documentID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download`, signal); },
+    downloadKnowledgeEvidence(baseID, documentID, revisionID, signal) { return download(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/download?revision_id=${encodeURIComponent(revisionID)}`, signal); },
     async retryKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/retry`, json("POST", {}, signal)); },
     async regenerateKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/regenerate`, json("POST", {}, signal)); },
     deleteKnowledgeDocument(baseID, documentID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}`, signal); },
@@ -555,7 +613,9 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       const settings = await call<PersonalSettings>("/api/v1/settings", { signal });
       return { ...settings, runtime_model_defaults: settings.runtime_model_defaults ?? [] };
     },
-    updateSettings(settings, signal) { const { version, ...values } = settings; return call("/api/v1/settings", json("PATCH", { ...values, expected_version: version }, signal)); },
+    updateSettings(settings, signal) { const { version, execution_inherited, platform_execution_available: _available, ...values } = settings; return call("/api/v1/settings", json("PATCH", { ...values, expected_version: version, inherit_platform_execution: execution_inherited }, signal)); },
+    getPlatformExecutionDefault(signal) { return call("/api/v1/admin/platform-execution-default", { signal }); },
+    setPlatformExecutionDefault(input, signal) { return call("/api/v1/admin/platform-execution-default", json("PUT", input, signal)); },
     async listRuntimeEngines(signal) { return (await call<{ items: RuntimeEngineStatus[] }>("/api/v1/runtime-engines", { signal })).items ?? []; },
     async listModelProviderPresets(signal) { return (await call<{ items: ModelProviderPreset[] }>("/api/v1/model-provider-presets", { signal })).items ?? []; },
     async listModelProviderConnections(signal) {
@@ -603,6 +663,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     updateAssistantFAQ(assistantID, id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     deleteAssistantFAQ(assistantID, id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, signal); },
     regenerateAssistantShareToken(id, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/share-token`, json("POST", { version }, signal)); },
+    runAssistantPublicationCheck(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/publication-check`, json("POST", {}, signal)); },
+    getAssistantPublicationStats(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/publication-stats`, { signal }); },
     createAssistantSession(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/sessions`, json("POST", {}, signal)); },
     createAssistantConversation(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/conversations`, json("POST", {}, signal)); },
     async listAssistantConversations(id, signal) { return (await call<{ items: AssistantConversation[] }>(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/conversations`, { signal })).items ?? []; },
@@ -705,8 +767,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },
     createUser(input, signal) { return call("/api/v1/admin/users", json("POST", input, signal)); },
-    setUserEnabled(id, enabled, version, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version }, signal)); },
+    setUserEnabled(id, enabled, version, reason, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version, reason }, signal)); },
     resetUserPassword(id, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/password-reset`, json("POST", {}, signal)); },
+    setUserRoles(id, input, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/roles`, json("PATCH", input, signal)); },
+    async listIdentityGroups(signal) { return (await call<{ items: IdentityGroup[] }>("/api/v1/admin/identity-groups", { signal })).items ?? []; },
+    async syncIdentityGroups(signal) { return (await call<{ items: IdentityGroup[] }>("/api/v1/admin/identity-groups/synchronization", json("POST", {}, signal))).items ?? []; },
+    updateIdentityGroupBudget(id, input, signal) { return call(`/api/v1/admin/identity-groups/${encodeURIComponent(id)}/budget`, json("PATCH", input, signal)); },
+    async listGovernanceAuditEvents(limit = 100, signal) { return (await call<{ items: GovernanceAuditEvent[] }>(`/api/v1/admin/governance-audit-events?limit=${limit}`, { signal })).items ?? []; },
+    transferGroupResources(groupID, input, signal) { return call(`/api/v1/admin/identity-groups/${encodeURIComponent(groupID)}/resource-transfers`, json("POST", input, signal)); },
   };
 }
 

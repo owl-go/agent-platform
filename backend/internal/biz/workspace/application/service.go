@@ -92,6 +92,7 @@ type Repository interface {
 	CreateKnowledgeCategory(context.Context, string, string, bool, string) (domain.KnowledgeCategory, error)
 	DeleteKnowledgeCategory(context.Context, string, string, string, bool) error
 	ListKnowledgeDocuments(context.Context, string, string, bool) ([]domain.KnowledgeDocument, error)
+	GetKnowledgeDocumentRevisionSource(context.Context, string, string, string, string, bool) (string, domain.KnowledgeDocumentRevision, error)
 	CreateKnowledgeDocument(context.Context, string, bool, domain.KnowledgeDocumentInput) (domain.KnowledgeDocument, error)
 	RetryKnowledgeDocument(context.Context, string, string, string, bool) error
 	RegenerateKnowledgeDocument(context.Context, string, string, string, bool) error
@@ -99,6 +100,27 @@ type Repository interface {
 	RestoreKnowledgeBase(context.Context, string, string, bool) error
 	RestoreKnowledgeCategory(context.Context, string, string, string, bool) error
 	RestoreKnowledgeDocument(context.Context, string, string, string, bool) error
+	TransferGroupResources(context.Context, string, string, string, string, string) (int64, error)
+}
+
+// SessionWorkflowRepository is an optional atomic conversion seam. Keeping it
+// separate avoids widening every Repository fake while requiring production
+// persistence to create the Workflow, provenance link, and validation Run in
+// one transaction.
+type SessionWorkflowRepository interface {
+	CreateWorkflowFromSession(context.Context, string, string, string, int64, string, string) (domain.SessionWorkflowCreation, error)
+	ListSessionWorkflowLinks(context.Context, string, string) ([]domain.SessionWorkflowLink, error)
+}
+
+// PlatformExecutionDefaultRepository keeps the enterprise-wide verified
+// Runtime/Model choice separate from User-owned Personal Settings.
+type PlatformExecutionDefaultRepository interface {
+	GetPlatformExecutionDefault(context.Context) (domain.PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(context.Context, string, domain.RuntimeEngine, string, string, int64) (domain.PlatformExecutionDefault, error)
+}
+
+type HomeOverviewRepository interface {
+	GetHomeOverview(context.Context, string) (domain.HomeOverview, error)
 }
 
 type ModelCatalog interface {

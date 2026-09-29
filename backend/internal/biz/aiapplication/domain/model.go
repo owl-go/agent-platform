@@ -79,15 +79,41 @@ func (policy SafetyPolicy) Decide(input string) SafetyDecision {
 }
 
 type ShareConfiguration struct {
-	Enabled         bool     `json:"enabled"`
-	Token           string   `json:"token,omitempty"`
-	TokenHash       string   `json:"-"`
-	TokenRevision   int64    `json:"token_revision"`
-	AllowedOrigins  []string `json:"allowed_origins,omitempty"`
-	Width           string   `json:"width"`
-	Height          int      `json:"height"`
-	FreeTextEnabled bool     `json:"free_text_enabled"`
-	DailyCallLimit  int      `json:"daily_call_limit"`
+	Enabled                    bool     `json:"enabled"`
+	Token                      string   `json:"token,omitempty"`
+	TokenHash                  string   `json:"-"`
+	TokenRevision              int64    `json:"token_revision"`
+	AllowedOrigins             []string `json:"allowed_origins,omitempty"`
+	Width                      string   `json:"width"`
+	Height                     int      `json:"height"`
+	FreeTextEnabled            bool     `json:"free_text_enabled"`
+	DailyCallLimit             int      `json:"daily_call_limit"`
+	DataProcessingAcknowledged bool     `json:"data_processing_acknowledged"`
+}
+
+type PublicationCheck struct {
+	Code   string `json:"code"`
+	Ready  bool   `json:"ready"`
+	Detail string `json:"detail"`
+}
+
+type PublicationValidation struct {
+	AssistantID      string             `json:"assistant_id"`
+	AssistantVersion int64              `json:"assistant_version"`
+	Ready            bool               `json:"ready"`
+	Checks           []PublicationCheck `json:"checks"`
+	CheckedAt        time.Time          `json:"checked_at"`
+}
+
+type PublicationStats struct {
+	WindowDays               int   `json:"window_days"`
+	ExternalConversations    int64 `json:"external_conversations"`
+	FreeTextCalls            int64 `json:"free_text_calls"`
+	FAQAnswers               int64 `json:"faq_answers"`
+	ModelAnswers             int64 `json:"model_answers"`
+	FailedOrCancelledAnswers int64 `json:"failed_or_cancelled_answers"`
+	SafetyRefusals           int64 `json:"safety_refusals"`
+	CreditConsumedHundredths int64 `json:"credit_consumed_hundredths"`
 }
 
 type SmartAssistant struct {
@@ -110,6 +136,8 @@ type SmartAssistant struct {
 	ExpertTeamID     *string            `json:"expert_team_id,omitempty"`
 	Share            ShareConfiguration `json:"share"`
 	State            ApplicationState   `json:"state"`
+	LastValidatedAt  *time.Time         `json:"last_validated_at,omitempty"`
+	ValidatedVersion int64              `json:"validated_version"`
 	CreatedAt        time.Time          `json:"created_at"`
 	UpdatedAt        time.Time          `json:"updated_at"`
 	Version          int64              `json:"version"`
@@ -141,6 +169,17 @@ func (assistant SmartAssistant) Validate() error {
 	}
 	if assistant.Share.DailyCallLimit < 0 {
 		return fmt.Errorf("%w: daily call limit cannot be negative", ErrInvalid)
+	}
+	if assistant.Share.Enabled {
+		if len(assistant.Share.AllowedOrigins) == 0 {
+			return fmt.Errorf("%w: sharing requires at least one allowed origin", ErrInvalid)
+		}
+		if assistant.Share.DailyCallLimit < 1 {
+			return fmt.Errorf("%w: sharing requires a positive daily call limit", ErrInvalid)
+		}
+		if !assistant.Share.DataProcessingAcknowledged {
+			return fmt.Errorf("%w: sharing requires data-processing acknowledgement", ErrInvalid)
+		}
 	}
 	for _, origin := range assistant.Share.AllowedOrigins {
 		parsed, err := url.Parse(strings.TrimSpace(origin))

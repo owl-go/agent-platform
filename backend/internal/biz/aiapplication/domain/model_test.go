@@ -10,7 +10,7 @@ import (
 func TestSmartAssistantValidatesVisibleRulesAndShareDimensions(t *testing.T) {
 	assistant := domain.SmartAssistant{
 		Name: "产品助手", ServiceGoal: "回答产品使用问题", OperatingRules: "只基于知识库回答", ResponseStyle: "简洁",
-		Share: domain.ShareConfiguration{Enabled: true, Width: "100%", Height: 600},
+		Share: domain.ShareConfiguration{Enabled: true, Width: "100%", Height: 600, AllowedOrigins: []string{"https://support.example.test"}, DailyCallLimit: 100, DataProcessingAcknowledged: true},
 	}
 	if err := assistant.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
@@ -23,6 +23,19 @@ func TestSmartAssistantValidatesVisibleRulesAndShareDimensions(t *testing.T) {
 	assistant.Share.Width = "319px"
 	if !errors.Is(assistant.Validate(), domain.ErrInvalid) {
 		t.Fatalf("Validate() error = %v, want ErrInvalid for narrow share", assistant.Validate())
+	}
+}
+
+func TestSmartAssistantSharingRequiresControlledPublicationSettings(t *testing.T) {
+	assistant := domain.SmartAssistant{Name: "产品助手", Share: domain.ShareConfiguration{Enabled: true, Width: "100%", Height: 600}}
+	if err := assistant.Validate(); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("Validate() error = %v, want ErrInvalid for unrestricted sharing", err)
+	}
+	assistant.Share.AllowedOrigins = []string{"https://support.example.test"}
+	assistant.Share.DailyCallLimit = 100
+	assistant.Share.DataProcessingAcknowledged = true
+	if err := assistant.Validate(); err != nil {
+		t.Fatalf("Validate() controlled sharing error = %v", err)
 	}
 }
 

@@ -13,6 +13,8 @@ import (
 )
 
 type Repository interface {
+	GetPolicy(context.Context) (domain.Policy, error)
+	UpdatePolicy(context.Context, string, domain.Policy, int64, time.Time) (domain.Policy, error)
 	ResolveRate(context.Context, domain.ModelRateKey) (domain.ModelCreditRate, error)
 	Admit(context.Context, domain.Admission) (domain.Admission, error)
 	Settle(context.Context, domain.Settlement) (domain.Consumption, error)
@@ -29,6 +31,20 @@ type Repository interface {
 	CreateRateRevision(context.Context, string, domain.ModelCreditRate, string, time.Time) (domain.ModelCreditRate, error)
 	ReserveImage(context.Context, domain.ImageReservation) (domain.ImageReservation, error)
 	SettleImage(context.Context, string, domain.Amount, time.Time) error
+}
+
+func (service *Service) Policy(ctx context.Context) (domain.Policy, error) {
+	return service.repository.GetPolicy(ctx)
+}
+
+func (service *Service) UpdatePolicy(ctx context.Context, administratorID string, policy domain.Policy, expectedVersion int64) (domain.Policy, error) {
+	if strings.TrimSpace(administratorID) == "" || expectedVersion < 1 {
+		return domain.Policy{}, fmt.Errorf("%w: Administrator and expected version are required", domain.ErrInvalid)
+	}
+	if err := policy.Validate(); err != nil {
+		return domain.Policy{}, err
+	}
+	return service.repository.UpdatePolicy(ctx, administratorID, policy, expectedVersion, service.now().UTC())
 }
 
 type RedemptionSecret struct {
@@ -164,6 +180,9 @@ func (service *Service) Adjust(ctx context.Context, userID, administratorID, req
 }
 
 func (service *Service) CreateRedemptionBatch(ctx context.Context, administratorID string, count int, value domain.Amount, expiresAt *time.Time) (domain.RedemptionBatch, error) {
+	if err := service.requireRedemptionCodes(ctx); err != nil {
+		return domain.RedemptionBatch{}, err
+	}
 	if count < 1 || count > 100 || value <= 0 {
 		return domain.RedemptionBatch{}, fmt.Errorf("%w: batch count must be 1-100 and value must be positive", domain.ErrInvalid)
 	}
@@ -181,6 +200,9 @@ func (service *Service) CreateRedemptionBatch(ctx context.Context, administrator
 }
 
 func (service *Service) Redeem(ctx context.Context, userID, timezone, plaintext string) (domain.Balance, error) {
+	if err := service.requireRedemptionCodes(ctx); err != nil {
+		return domain.Balance{}, err
+	}
 	plaintext = strings.TrimSpace(plaintext)
 	if plaintext == "" || len(plaintext) > 128 {
 		return domain.Balance{}, domain.ErrCodeUnavailable
@@ -191,6 +213,9 @@ func (service *Service) Redeem(ctx context.Context, userID, timezone, plaintext 
 }
 
 func (service *Service) ListRedemptionCodes(ctx context.Context, cursor string, limit int) (domain.RedemptionCodePage, error) {
+	if err := service.requireRedemptionCodes(ctx); err != nil {
+		return domain.RedemptionCodePage{}, err
+	}
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -198,10 +223,24 @@ func (service *Service) ListRedemptionCodes(ctx context.Context, cursor string, 
 }
 
 func (service *Service) VoidRedemptionCode(ctx context.Context, codeID string) (domain.RedemptionCodeStatus, error) {
+	if err := service.requireRedemptionCodes(ctx); err != nil {
+		return domain.RedemptionCodeStatus{}, err
+	}
 	if strings.TrimSpace(codeID) == "" {
 		return domain.RedemptionCodeStatus{}, fmt.Errorf("%w: Redemption Code ID is required", domain.ErrInvalid)
 	}
 	return service.repository.VoidRedemptionCode(ctx, codeID, service.now().UTC())
+}
+
+func (service *Service) requireRedemptionCodes(ctx context.Context) error {
+	policy, err := service.Policy(ctx)
+	if err != nil {
+		return err
+	}
+	if !policy.RedemptionCodesEnabled {
+		return domain.ErrRedemptionDisabled
+	}
+	return nil
 }
 
 func (service *Service) ListRates(ctx context.Context) ([]domain.RateRevision, error) {

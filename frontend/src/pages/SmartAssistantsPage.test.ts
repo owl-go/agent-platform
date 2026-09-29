@@ -22,6 +22,9 @@ function apiStub(): PlatformApi {
     createSmartAssistant: vi.fn(async () => source),
     uploadSmartAssistantIcon: vi.fn(async (_id, _file, version) => ({ ...source, icon: "ai-applications/assistant-icons/user-1/icon-1", version: version + 1 })),
     listAssistantConversations: vi.fn(async () => []),
+    listAssistantFAQs: vi.fn(async () => []),
+    getAssistantPublicationStats: vi.fn(async () => ({ window_days: 30, external_conversations: 0, free_text_calls: 0, faq_answers: 0, model_answers: 0, failed_or_cancelled_answers: 0, safety_refusals: 0, credit_consumed_hundredths: 0 })),
+    runAssistantPublicationCheck: vi.fn(async () => ({ assistant_id: "assistant-1", assistant_version: 1, ready: true, checked_at: "2026-09-22T00:00:00Z", checks: [{ code: "model_available", ready: true, detail: "ready" }] })),
     createAssistantConversation: vi.fn(async () => ({ id: "conversation-1", assistant_id: "assistant-1", assistant_name: "产品助手", welcome: "欢迎使用产品助手", created_at: "2026-09-22T00:00:00Z", updated_at: "2026-09-22T00:00:00Z" })),
   } as unknown as PlatformApi;
 }
@@ -98,6 +101,24 @@ describe("SmartAssistantsPage lifecycle", () => {
     expect(wrapper.findAll(".application-card-actions .el-button")).toHaveLength(2);
     expect(wrapper.get("[data-testid=assistant-chat]").attributes("aria-label")).toBe("开始对话");
     expect(wrapper.get("[data-testid=assistant-more]").attributes("aria-label")).toBe("更多");
+    wrapper.unmount();
+  });
+
+  it("blocks enablement and shows the exact failed publication checks", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const api = apiStub();
+    vi.mocked(api.runAssistantPublicationCheck).mockResolvedValue({ assistant_id: "assistant-1", assistant_version: 1, ready: false, checked_at: "2026-09-22T00:00:00Z", checks: [{ code: "knowledge_ready", ready: false, detail: "not ready" }] });
+    const wrapper = mount(SmartAssistantsPage, { attachTo: document.body, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    await wrapper.get("[data-testid=assistant-more]").trigger("click");
+    await flushPromises();
+    const menus = document.body.querySelectorAll(".assistant-card-action-menu");
+    ((menus[menus.length - 1] as HTMLElement).querySelectorAll(".el-dropdown-menu__item")[0] as HTMLElement).click();
+    await flushPromises();
+
+    expect(api.setSmartAssistantState).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".assistant-publication-dialog")?.textContent).toContain("绑定知识库均有 Ready 文档");
     wrapper.unmount();
   });
 

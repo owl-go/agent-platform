@@ -598,7 +598,7 @@ func (repository *Repository) GetSettings(ctx context.Context, ownerID string) (
 		}
 		runtimeDefaults[parsed] = modelID
 	}
-	return domain.Settings{Personality: row.Personality, PersonalityInstructions: row.PersonalityInstructions, RuntimeModelDefaults: runtimeDefaults, DefaultRuntimeEngine: runtime, Language: row.Language, Timezone: row.Timezone, Version: row.Version}, nil
+	return domain.Settings{Personality: row.Personality, PersonalityInstructions: row.PersonalityInstructions, RuntimeModelDefaults: runtimeDefaults, DefaultRuntimeEngine: runtime, Language: row.Language, Timezone: row.Timezone, Version: row.Version, ExecutionInherited: row.ExecutionInherited}, nil
 }
 
 func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string, settings domain.Settings, expectedVersion int64) (domain.Settings, error) {
@@ -606,6 +606,17 @@ func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string
 		return domain.Settings{}, err
 	}
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if settings.ExecutionInherited {
+			var defaults platformExecutionDefaultRecord
+			if err := tx.Where("singleton", true).Take(&defaults).Error; err == nil {
+				settings.DefaultRuntimeEngine = domain.RuntimeEngine(defaults.RuntimeEngine)
+				settings.RuntimeModelDefaults = map[domain.RuntimeEngine]string{settings.DefaultRuntimeEngine: defaults.ProviderModelID}
+			} else if errors.Is(err, gorm.ErrRecordNotFound) {
+				settings.RuntimeModelDefaults = map[domain.RuntimeEngine]string{}
+			} else {
+				return err
+			}
+		}
 		defaults := make(map[string]string, len(settings.RuntimeModelDefaults))
 		for runtime, modelID := range settings.RuntimeModelDefaults {
 			if _, err := uuid.Parse(modelID); err != nil {
@@ -633,7 +644,7 @@ func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string
 		result := tx.Model(&settingsRecord{}).Where("user_id = ? AND version = ?", ownerID, expectedVersion).Updates(map[string]any{
 			"personality": settings.Personality, "personality_instructions": strings.TrimSpace(settings.PersonalityInstructions),
 			"runtime_model_defaults": encodedDefaults, "default_runtime_engine": string(settings.DefaultRuntimeEngine),
-			"language": settings.Language, "timezone": settings.Timezone, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
+			"language": settings.Language, "timezone": settings.Timezone, "execution_inherited": settings.ExecutionInherited, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 		})
 		if result.Error != nil {
 			return result.Error

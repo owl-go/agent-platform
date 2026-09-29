@@ -16,6 +16,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -44,6 +45,8 @@ import (
 	"agent-platform/backend/internal/sandbox"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/workspacefs"
+
+	"github.com/google/uuid"
 )
 
 const runtimeWorkspaceDirectory = "/workspace"
@@ -300,11 +303,39 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			value.ExpertID, value.ExpertName = executionStage.Expert.ID, executionStage.Expert.Name
 		}
 		stage := &value
+		var evidenceMu sync.Mutex
+		invokedConnectorIDs := make(map[string]struct{})
+		connectorEvidenceFinalized := false
+		observeConnector := func(invocation cliconnector.InvocationEvidence) {
+			evidenceMu.Lock()
+			defer evidenceMu.Unlock()
+			invokedConnectorIDs[invocation.ConnectorID] = struct{}{}
+			state := "failed"
+			if invocation.Succeeded {
+				state = "succeeded"
+			}
+			result.Evidence = appendExecutionEvidence(result.Evidence, workspacedomain.Evidence{ID: uuid.NewString(), Kind: "connector", SourceID: invocation.ConnectorID, SourceName: invocation.ConnectorName, State: state, Action: invocation.Capability, StagePosition: executionStage.Position})
+		}
+		finalizeConnectorEvidence := func() {
+			evidenceMu.Lock()
+			defer evidenceMu.Unlock()
+			if connectorEvidenceFinalized {
+				return
+			}
+			connectorEvidenceFinalized = true
+			for _, connector := range memberJob.Snapshot.CLIConnectors {
+				if _, invoked := invokedConnectorIDs[connector.ID]; invoked {
+					continue
+				}
+				result.Evidence = appendExecutionEvidence(result.Evidence, workspacedomain.Evidence{ID: uuid.NewString(), Kind: "connector", SourceID: connector.ID, SourceName: connector.Name, State: "not_used", Action: "not invoked", StagePosition: executionStage.Position})
+			}
+		}
 		var stageRedactor *credentials.Redactor
 		if err := recordExpertStage(executionCtx, progress, job, value); err != nil {
 			return result, err
 		}
 		failStage := func(cause error) error {
+			finalizeConnectorEvidence()
 			if stage.State != "running" {
 				return cause
 			}
@@ -380,7 +411,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
 		}
-		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, executionStage.Position, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch)
+		brokerServer, brokerSocket, brokerErr := executor.startCLIConnectorBroker(executionCtx, memberJob, executionStage.Position, stageRuntimeConfig, connectorDirectory, workspace, stageSlot.scratch, observeConnector)
 		if brokerErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			_ = environment.Cleanup()
@@ -422,7 +453,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(describeErr)
 		}
 		instruction := buildInstruction(memberJob, stageAttachments)
-		instruction, err = executor.injectKnowledgeContext(executionCtx, job.OwnerID, memberJob.Snapshot, instruction)
+		var knowledgeEvidence []workspacedomain.Evidence
+		instruction, knowledgeEvidence, err = executor.injectKnowledgeContext(executionCtx, job.OwnerID, memberJob.Snapshot, instruction, executionStage.Position)
+		result.Evidence = appendExecutionEvidence(result.Evidence, knowledgeEvidence...)
 		if err != nil {
 			_ = releaseWarmLease(ctx, lease)
 			_ = environment.Cleanup()
@@ -488,6 +521,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, agentruntime.NewRedactingEventSink(redactor, sink))
 		runtimeFinishedAt = time.Now()
 		brokerCloseErr := closeBroker()
+		finalizeConnectorEvidence()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
 		if executor.credits != nil && job.Kind != application.JobExpertTagProjection {
@@ -800,7 +834,7 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 	return directory, nil
 }
 
-func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, stagePosition int, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string) (*cliconnector.UnixBrokerServer, string, error) {
+func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job application.ExecutionJob, stagePosition int, runtime platformconfig.RuntimeEngineConfig, bundleDirectory, workspace, scratch string, observe func(cliconnector.InvocationEvidence)) (*cliconnector.UnixBrokerServer, string, error) {
 	if len(job.Snapshot.CLIConnectors) == 0 {
 		return nil, "", nil
 	}
@@ -886,6 +920,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		Approval:           executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
 			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,
 		},
+		ObserveInvocation: observe,
 	})
 	if err != nil {
 		return nil, "", err
@@ -896,6 +931,17 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		return nil, "", err
 	}
 	return server, socket, nil
+}
+
+func appendExecutionEvidence(existing []workspacedomain.Evidence, items ...workspacedomain.Evidence) []workspacedomain.Evidence {
+	remaining := workspacedomain.MaxExecutionEvidence - len(existing)
+	if remaining <= 0 {
+		return existing
+	}
+	if len(items) > remaining {
+		items = items[:remaining]
+	}
+	return append(existing, items...)
 }
 
 func (executor *Executor) cliConnectorRuntimeVerified(ctx context.Context, connector workspacedomain.CLIConnectorSnapshot, runtimeDigest string) (bool, error) {

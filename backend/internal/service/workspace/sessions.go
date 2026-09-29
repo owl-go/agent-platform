@@ -165,20 +165,16 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 	if err != nil {
 		return nil, publicError(err)
 	}
-	var user, assistant workspacedomain.Message
-	if request.SelectionId != "" {
-		repository, portErr := service.conversationRepository()
-		if portErr != nil {
-			return nil, publicError(portErr)
-		}
-		user, assistant, err = repository.CreateSelectedMessagePair(ctx, owner, request.SessionId, request.Content, attachments, request.SelectionId)
-	} else {
-		user, assistant, err = service.workspace.Repository().CreateMessagePair(ctx, owner, request.SessionId, request.Content, attachments)
+	repository, portErr := service.executionPlanRepository()
+	if portErr != nil {
+		return nil, publicError(portErr)
 	}
+	user, assistant, err := repository.CreatePlannedMessagePair(ctx, owner, request.SessionId, request.Content, attachments, request.SelectionId, request.PlanPreference)
 	if err != nil {
 		return nil, publicError(err)
 	}
 	accepted = true
+	service.productAnalytics().FirstTaskStarted(ctx, owner, request.SessionId, "session", len(attachments) > 0)
 	return &workspacev1.SendSessionMessageResponse{UserMessage: messageResponse(user), AssistantMessage: messageResponse(assistant)}, nil
 }
 
@@ -236,11 +232,23 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	for _, activity := range item.Activities {
 		response.Activities = append(response.Activities, &workspacev1.ExecutionActivity{Type: activity.Type, Detail: activity.Detail})
 	}
+	for _, evidence := range item.Evidence {
+		response.Evidence = append(response.Evidence, evidenceResponse(evidence))
+	}
 	for _, artifact := range item.Artifacts {
 		response.Artifacts = append(response.Artifacts, artifactResponse(artifact))
 	}
 	if action := item.ResourceAction; action != nil {
 		response.ResourceAction = resourceCreationActionResponse(*action)
+	}
+	response.ExecutionPlan = executionPlanResponse(item.ExecutionPlan)
+	return response
+}
+
+func evidenceResponse(item workspacedomain.Evidence) *workspacev1.Evidence {
+	response := &workspacev1.Evidence{Id: item.ID, Kind: item.Kind, SourceId: item.SourceID, SourceName: item.SourceName, ContainerId: item.ContainerID, State: item.State, Action: item.Action, StagePosition: int32(item.StagePosition)}
+	if item.Citation != nil {
+		response.Citation = &workspacev1.EvidenceCitation{RevisionId: item.Citation.RevisionID, CategoryName: item.Citation.CategoryName, SourceLocation: item.Citation.SourceLocation, Relevance: item.Citation.Relevance}
 	}
 	return response
 }

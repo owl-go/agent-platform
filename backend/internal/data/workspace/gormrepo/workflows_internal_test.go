@@ -155,7 +155,7 @@ func TestSessionInstructionMarksTheFirstMessageAsSessionIsolated(t *testing.T) {
 }
 
 func TestSessionMessagePairInitializesRuntimeActivities(t *testing.T) {
-	user, assistant := sessionMessagePairRecords("session-1", "hello", []byte(`[]`), []byte(`{"schema_version":2}`))
+	user, assistant := sessionMessagePairRecords("session-1", "hello", []byte(`[]`), []byte(`{"schema_version":2}`), nil)
 	for _, message := range []messageRecord{user, assistant} {
 		if string(message.RuntimeActivities) != "[]" {
 			t.Fatalf("%s runtime activities = %q, want []", message.Role, message.RuntimeActivities)

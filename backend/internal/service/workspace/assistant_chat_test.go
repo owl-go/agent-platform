@@ -36,6 +36,7 @@ func (repository *assistantModelRepository) ListModelProviderConnections(context
 type currentAssistantRepository struct {
 	aiapp.Repository
 	assistant aiappdomain.SmartAssistant
+	faqs      []aiappdomain.FAQ
 }
 
 func (repository *currentAssistantRepository) GetAssistant(_ context.Context, owner, id string) (aiappdomain.SmartAssistant, error) {
@@ -43,6 +44,13 @@ func (repository *currentAssistantRepository) GetAssistant(_ context.Context, ow
 		return aiappdomain.SmartAssistant{}, aiappdomain.ErrNotFound
 	}
 	return repository.assistant, nil
+}
+
+func (repository *currentAssistantRepository) ListFAQs(_ context.Context, owner, assistantID string) ([]aiappdomain.FAQ, error) {
+	if owner != repository.assistant.OwnerID || assistantID != repository.assistant.ID {
+		return nil, aiappdomain.ErrNotFound
+	}
+	return append([]aiappdomain.FAQ(nil), repository.faqs...), nil
 }
 
 type assistantKnowledgeSearcher struct {
@@ -148,6 +156,60 @@ func TestAssistantTurnLoadsCurrentAssistantConfiguration(t *testing.T) {
 	}
 	if assistant.Name != "current name" || assistant.Prompt != "current prompt" || assistant.PreprocessPrompt != "current preprocess" || assistant.ResponseStyle != "current style" || assistant.ProviderModelID != "current-model" || len(assistant.KnowledgeBaseIDs) != 1 || assistant.KnowledgeBaseIDs[0] != "current-knowledge" {
 		t.Fatalf("Assistant turn configuration = %+v, want current Assistant configuration", assistant)
+	}
+}
+
+func TestAssistantScopeInquiryMatchesConfiguredCapabilityFAQ(t *testing.T) {
+	faqs := []aiappdomain.FAQ{
+		{ID: "model", Question: "运行引擎是什么？", AnswerMarkdown: "internal model details", Enabled: true},
+		{ID: "capabilities", Question: "这个agent可以做什么", AnswerMarkdown: "可以创建会话，也可以创建工作流", Enabled: true},
+	}
+	for _, question := range []string{"你可以回答什么问题", "处理什么业务范围", "能处理哪些业务？"} {
+		faq, ok := matchAssistantScopeFAQ(faqs, question)
+		if !ok || faq.ID != "capabilities" {
+			t.Fatalf("scope inquiry %q matched FAQ %+v, ok=%v", question, faq, ok)
+		}
+	}
+	if faq, ok := matchAssistantScopeFAQ(faqs, "怎么停止了"); ok {
+		t.Fatalf("unrelated question matched FAQ %+v", faq)
+	}
+}
+
+func TestAssistantScopeFallbackDoesNotExposePlaceholderConfiguration(t *testing.T) {
+	assistant := aiappdomain.SmartAssistant{Prompt: "回答范围：\n- 【业务范围一】\n- 【业务范围二】"}
+	if answer := assistantScopeFallback(assistant); !strings.Contains(answer, "尚未配置具体业务范围") {
+		t.Fatalf("placeholder scope answer = %q", answer)
+	}
+	assistant.Description = "处理账户开通和售后政策问题"
+	if answer := assistantScopeFallback(assistant); !strings.Contains(answer, assistant.Description) {
+		t.Fatalf("configured scope answer = %q", answer)
+	}
+}
+
+func TestAssistantScopeInquiryReturnsCurrentCapabilityFAQWithoutModel(t *testing.T) {
+	repository := &currentAssistantRepository{
+		assistant: aiappdomain.SmartAssistant{ID: "assistant-1", OwnerID: "owner", Prompt: "strict scope prompt"},
+		faqs: []aiappdomain.FAQ{{
+			ID: "capabilities", AssistantID: "assistant-1", Question: "这个agent可以做什么",
+			AnswerMarkdown: "可以创建会话，也可以创建工作流", Enabled: true,
+		}},
+	}
+	application, err := aiapp.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{aiapplications: application}
+	answer, err := service.answerAssistantTurn(
+		context.Background(), "owner",
+		aiappdomain.AssistantConversation{ID: "conversation-1", AssistantID: "assistant-1"},
+		aiappdomain.AssistantTurn{ID: "turn-1", Question: "你可以回答什么问题"},
+		"", "authenticated", func(string) error { return nil },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.text != "可以创建会话，也可以创建工作流" || answer.source != "faq" || answer.faqID != "capabilities" || answer.inputTokens != 0 || answer.outputTokens != 0 {
+		t.Fatalf("scope answer = %+v", answer)
 	}
 }
 

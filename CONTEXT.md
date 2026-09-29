@@ -9,12 +9,32 @@ The product in which an authenticated User creates private Sessions, configures 
 _Avoid_: Coding Agent Platform, multi-agent system
 
 **User**:
-An authenticated person who exclusively owns their Sessions, Workflows, Expert Teams, Personal Settings, Credit Balance, Credit Ledger, and privately created Experts, Skills, and MCP Connectors. Every User may also select Administrator-created Platform Resources, the platform-wide Model Catalog, and available CLI Connectors.
+An authenticated person who exclusively owns their Sessions, Workflows, Expert Teams, Personal Settings, Credit Balance, Credit Ledger, and privately created Experts, Skills, and MCP Connectors. A User may also access Platform Resources and Department Resources within their current Identity Group memberships.
 _Avoid_: Organization member, Team member, product role
 
 **Administrator**:
-The single bootstrap identity that manages User accounts, Platform Resources, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to private User-owned content or execution-level consumption.
+An authorized User who manages accounts, read-only Identity Group synchronization, governance roles, Department budgets, Platform Resources, the platform-wide Model Catalog, Daily Credit Allocations, Model Credit Rates, Redemption Codes, and reasoned Credit Adjustments without access to private User-owned content or execution-level consumption. One immutable Bootstrap Administrator guarantees that the deployment cannot lose its final Administrator.
 _Avoid_: Platform operator, Organization administrator, support user
+
+**Resource Publisher**:
+An authorized User who may create and maintain Department Resources only inside a Department where they currently hold Identity Group membership. The role does not grant Administrator access, access to another Department, or access to any User's private content.
+_Avoid_: Administrator, resource owner bypass, global editor
+
+**Identity Group**:
+A read-only local projection of one group and its memberships from the configured enterprise identity source. A Group marked as a Department may scope shared resources and a daily Credit budget; the product never maintains a second writable organization tree.
+_Avoid_: product-managed Team, role grant, local mailing list
+
+**Department Resource**:
+A shared resource bound to exactly one active Department. Department members may read it and Resource Publishers in that Department may maintain it; access is revoked when the Group or membership disappears from the latest identity synchronization. A disabled former custodian may be outside the current membership snapshot while an Administrator transfers only that Department's resources to a current Resource Publisher.
+_Avoid_: Platform Resource, public resource, User-private resource
+
+**Governance Audit Event**:
+An append-only record of an Administrator governance mutation containing the actor, action, target identifier, required reason, bounded numeric metrics, and occurrence time. It never stores prompts, replies, filenames, private resource contents, credentials, or external tokens.
+_Avoid_: Product Event, Runtime Event, private-content transcript
+
+**Product Event**:
+An append-only, privacy-bounded measurement record derived from a confirmed product transition. It contains only a stable anonymous User key, an optional anonymous subject key, an allowlisted event name, coarse state or duration attributes, and occurrence time; prompts, replies, filenames, Object Keys, external accounts, credentials, and signed URLs are forbidden.
+_Avoid_: Runtime Event, audit transcript, request log, user content
 
 ## Credits And Usage
 
@@ -27,8 +47,12 @@ The sum of one User's remaining Daily Credit Allocation and Redeemed Credit Bala
 _Avoid_: Daily Credit Limit, Provider balance, Token balance
 
 **Available Credit**:
-The portion of one User's Credit Balance not withheld by active Image Credit Reservations and therefore available to admit another execution. It is the balance shown in the product's compact account surfaces.
+The portion of one User's Credit Balance not withheld by active Image or Execution Credit Reservations and available to admit another execution. When any current Department membership has a daily Credit budget, Available Credit is capped by the smallest remaining applicable Department budget and the limiting Department is shown to the User.
 _Avoid_: Credit Balance, reserved Credit, Provider balance
+
+**Department Credit Budget**:
+An optional daily aggregate admission limit for all current members of one Department. It counts settled Credit Consumption and active reservations for the Credit Day, is enforced transactionally before model or image execution, and never replaces a User's own Credit Balance.
+_Avoid_: User Daily Credit Allocation, Provider budget, accounting invoice
 
 **Daily Credit Allocation**:
 A User-specific amount of expiring Credits restored at the start of each calendar day in that User's configured time zone. Unused daily Credits do not carry forward and are consumed before redeemed Credits.
@@ -110,6 +134,10 @@ _Avoid_: User-wide execution queue, Run Conversation, Workspace lock
 The immutable copy of a Workflow's goal, initial execution stages, environment, and other initiating inputs used by one Run Conversation. Follow-up Response Snapshots preserve that context while recording each turn's specialist and resource selection. API Keys are referenced through protected versioned credentials rather than copied into the ordinary snapshot.
 _Avoid_: Published Workflow, Workflow release
 
+**Session Workflow Origin**:
+The immutable, owner-scoped provenance link from one successful Session response to the Workflow and first validation Run created from it. It supports navigation and idempotent conversion; the Session and Workflow do not share later history.
+_Avoid_: copied Session, shared conversation, Workflow version
+
 **Execution Stage Snapshot**:
 The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert and Team Member identities, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, structured Expert guidance, Skills, and Connectors. An execution without an Expert has one anonymous stage; an Expert Team has one ordered stage per member.
 _Avoid_: Expert Stage result, mutable Expert, team Runtime Engine
@@ -133,6 +161,14 @@ _Avoid_: Workflow, Run Conversation, Session response, Worker process
 **User Action Wait**:
 A non-terminal execution state in which a Session response or Run is paused until the User completes Connector authorization or approves a high-risk Connector command before a fixed deadline. No protected action executes without the required confirmation.
 _Avoid_: queued execution, indefinite pause, automatic approval
+
+**Execution Plan**:
+The immutable, platform-generated objective, ordered Plan Steps, selected resource identities, bounded side-effect categories, and execution estimate shown before a qualifying Session response or manual Run begins. It is confirmed, skipped only for a direct answer with no external operation, or cancelled as one versioned decision; it does not replace a high-risk Connector command approval.
+_Avoid_: model chain-of-thought, Workflow definition, command approval
+
+**Plan Step**:
+One user-visible unit in an Execution Plan whose state is pending, running, completed, skipped, or failed. Worker-owned transitions project actual execution progress and are not inferred from generated prose.
+_Avoid_: Runtime Event, Expert Stage Snapshot, hidden reasoning step
 
 **Deleted Workflow Record**:
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
@@ -159,8 +195,12 @@ The ordered, platform-enforced and Assistant-configurable boundary that decides 
 _Avoid_: Prompt instruction, content filter toggle, moderation note
 
 **Share Configuration**:
-The per-Smart-Assistant public-use configuration containing an unpredictable share Token, optional allowed Origins, iframe dimensions, rate limits, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
+The per-Smart-Assistant public-use configuration containing an unpredictable share Token, an explicit non-empty HTTPS allowed-Origin list, iframe dimensions, a positive daily free-text limit, a data-processing acknowledgement, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
 _Avoid_: Public Session, API Key, User Access Token
+
+**Publication Validation**:
+A version-bound, server-recorded result proving that one Smart Assistant revision passed the platform publication checks for configuration, model availability, FAQ safety, Knowledge readiness, referenced resources, owner Credits, and Share Configuration. Any material Assistant edit invalidates the result; an enabled or shared Assistant must have a passing result for its current version.
+_Avoid_: client-side checklist, permanent approval, production-provider evidence
 
 **External Conversation**:
 An anonymous conversation created through a Smart Assistant Share Configuration and kept separate from the owner's private Session list. Each accepted turn uses the Smart Assistant's current configuration while retaining its Share Token revision, answer source, and owner Credit settlement for audit.
@@ -225,7 +265,7 @@ A message's explicit reference to an attachment or Artifact from its own convers
 _Avoid_: Mutable Workspace path, signed download URL, filename mention
 
 **Knowledge Base**:
-A logical collection of knowledge documents owned by one User or created by the Administrator as a Platform Resource. A User-owned Knowledge Base is private; an Administrator-created Knowledge Base is explicitly private to the Administrator or public, and a public one is readable, searchable, and downloadable by every authenticated User without mutation rights.
+A logical collection of knowledge documents with one immutable ownership scope: private to one User, a Department Resource, or an enterprise-wide Platform Resource. Private content remains visible only to its owner; a Department Knowledge Base is readable by current Department members and maintainable by current Resource Publishers in that Department; a Platform Knowledge Base is readable by every authenticated User and maintainable only by its Administrator owner.
 _Avoid_: Workspace, Artifact collection, shared file folder
 
 **Knowledge Category**:
@@ -263,6 +303,10 @@ _Avoid_: Provider workspace, mutable search state, Workflow Snapshot
 **Knowledge Citation**:
 A bounded, permission-checked provenance record for a Retrieval Context excerpt, identifying its Knowledge Base, Category, Document Revision, source location, relevance, and safe display text. It remains auditable in Run history without becoming an Artifact or granting unconditional source access.
 _Avoid_: Raw provider response, full document copy, download URL
+
+**Evidence**:
+A bounded, owner-visible execution fact retained with an Assistant Message or Run, derived only from a platform-controlled boundary such as Knowledge Retrieval or the CLI Connector Broker. It identifies a safe source, action, owning stage, and requested/succeeded/failed/not-used state; an optional Knowledge Citation may add provenance. Evidence never contains raw Tool Output, arguments, prompts, model responses, credentials, unrestricted external payloads, or private reasoning.
+_Avoid_: Runtime log, model claim, Response Snapshot, Artifact
 
 ## Experts, Skills, And Connectors
 
@@ -395,6 +439,9 @@ _Avoid_: platform-owned Skill, hidden instruction, automatic installation
 
 **Personal Settings**:
 A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone. Its default Provider Model and Runtime Engine supply every new Session or Run Conversation's execution configuration, whether or not an Expert or Expert Team is selected.
+
+**Platform Execution Default**:
+The Administrator-managed Runtime Engine and Provider Model pair inherited by Users who have not opted into a personal execution override. It is accepted only with a verified Provider and a successful matching validation Run; that evidence promotes an unverified compatible pair to verified, while an incompatible pair remains forbidden. It is never a silent fallback.
 _Avoid_: Organization policy, Expert configuration, Workflow settings
 
 **Personality**:

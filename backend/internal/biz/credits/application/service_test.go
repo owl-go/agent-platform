@@ -80,11 +80,38 @@ func TestRequirePositiveBalanceUsesAvailableCredit(t *testing.T) {
 	}
 }
 
+func TestRedemptionCodesAreDisabledByEnterprisePolicy(t *testing.T) {
+	policy := domain.Policy{DefaultDailyAllocation: 60_000, WarningThresholdPercent: 80, RedemptionCodesEnabled: false, Version: 1}
+	repository := &recordingRepository{policy: &policy}
+	service, err := application.New(repository, func() time.Time { return time.Date(2026, 9, 4, 10, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Redeem(context.Background(), "user-1", "Asia/Shanghai", "AWC-test"); !errors.Is(err, domain.ErrRedemptionDisabled) {
+		t.Fatalf("Redeem error = %v, want disabled policy", err)
+	}
+	if _, err := service.CreateRedemptionBatch(context.Background(), "admin-1", 1, 100, nil); !errors.Is(err, domain.ErrRedemptionDisabled) {
+		t.Fatalf("CreateRedemptionBatch error = %v, want disabled policy", err)
+	}
+}
+
 type recordingRepository struct {
 	rate         domain.ModelCreditRate
 	resolveCalls int
 	settlement   domain.Settlement
 	balance      domain.Balance
+	policy       *domain.Policy
+}
+
+func (repository *recordingRepository) GetPolicy(context.Context) (domain.Policy, error) {
+	if repository.policy != nil {
+		return *repository.policy, nil
+	}
+	return domain.Policy{DefaultDailyAllocation: domain.DefaultDailyAllocation, WarningThresholdPercent: 80, RedemptionCodesEnabled: true, Version: 1}, nil
+}
+
+func (repository *recordingRepository) UpdatePolicy(_ context.Context, _ string, policy domain.Policy, _ int64, _ time.Time) (domain.Policy, error) {
+	return policy, nil
 }
 
 func (repository *recordingRepository) ResolveRate(context.Context, domain.ModelRateKey) (domain.ModelCreditRate, error) {

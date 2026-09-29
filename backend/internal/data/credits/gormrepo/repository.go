@@ -22,6 +22,57 @@ func New(db *gorm.DB) *Repository { return &Repository{db: db} }
 
 var _ application.Repository = (*Repository)(nil)
 
+type policyRecord struct {
+	Singleton              bool          `gorm:"column:singleton;primaryKey"`
+	DefaultDailyAllocation domain.Amount `gorm:"column:default_daily_allocation_hundredths"`
+	WarningThreshold       int           `gorm:"column:warning_threshold_percent"`
+	RedemptionCodesEnabled bool          `gorm:"column:redemption_codes_enabled"`
+	UpdatedByUserID        *string       `gorm:"column:updated_by_user_id"`
+	UpdatedAt              time.Time     `gorm:"column:updated_at"`
+	Version                int64         `gorm:"column:version"`
+}
+
+func (policyRecord) TableName() string { return "credit_policy" }
+
+func (repository *Repository) GetPolicy(ctx context.Context) (domain.Policy, error) {
+	var row policyRecord
+	if err := repository.db.WithContext(ctx).Where("singleton = true").Take(&row).Error; err != nil {
+		return domain.Policy{}, fmt.Errorf("get Credit Policy: %w", err)
+	}
+	return toPolicy(row), nil
+}
+
+func (repository *Repository) UpdatePolicy(ctx context.Context, administratorID string, policy domain.Policy, expectedVersion int64, now time.Time) (domain.Policy, error) {
+	var updated domain.Policy
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row policyRecord
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("singleton = true").Take(&row).Error; err != nil {
+			return err
+		}
+		if row.Version != expectedVersion {
+			return domain.ErrConflict
+		}
+		row.DefaultDailyAllocation = policy.DefaultDailyAllocation
+		row.WarningThreshold = policy.WarningThresholdPercent
+		row.RedemptionCodesEnabled = policy.RedemptionCodesEnabled
+		row.UpdatedByUserID, row.UpdatedAt, row.Version = &administratorID, now, row.Version+1
+		if err := tx.Save(&row).Error; err != nil {
+			return err
+		}
+		updated = toPolicy(row)
+		return nil
+	})
+	return updated, mapConflict(err)
+}
+
+func toPolicy(row policyRecord) domain.Policy {
+	policy := domain.Policy{DefaultDailyAllocation: row.DefaultDailyAllocation, WarningThresholdPercent: row.WarningThreshold, RedemptionCodesEnabled: row.RedemptionCodesEnabled, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	if row.UpdatedByUserID != nil {
+		policy.UpdatedByUserID = *row.UpdatedByUserID
+	}
+	return policy
+}
+
 type accountRecord struct {
 	UserID            string         `gorm:"column:user_id;primaryKey"`
 	CreditDay         time.Time      `gorm:"column:credit_day;type:date"`
@@ -141,6 +192,16 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		if err != nil {
 			return err
 		}
+		if account.DailyRemaining+account.Persistent-imageDaily-imagePersistent-stageDaily-stagePersistent < admission.Rate.Fallback {
+			return domain.ErrInsufficientCredits
+		}
+		groupBudget, err := limitingGroupBudget(tx, admission.UserID, account.CreditDay, true)
+		if err != nil {
+			return err
+		}
+		if groupBudget != nil && groupBudget.Available < admission.Rate.Fallback {
+			return domain.ErrInsufficientCredits
+		}
 		dailyAvailable := account.DailyRemaining - imageDaily - stageDaily
 		persistentAvailable := account.Persistent - imagePersistent - stagePersistent
 		if dailyAvailable < 0 {
@@ -148,9 +209,6 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		}
 		if persistentAvailable < 0 {
 			persistentAvailable = 0
-		}
-		if dailyAvailable+persistentAvailable < admission.Rate.Fallback {
-			return domain.ErrInsufficientCredits
 		}
 		admission.Reserved = admission.Rate.Fallback
 		admission.DailyReserved = admission.Reserved
@@ -250,6 +308,14 @@ func (repository *Repository) Balance(ctx context.Context, userID, timezone stri
 			reserved := imageDaily + imagePersistent + stageDaily + stagePersistent
 			balance.Reserved = reserved
 			balance.Available = balance.Total - reserved
+			groupBudget, budgetErr := limitingGroupBudget(tx, userID, account.CreditDay, false)
+			if budgetErr != nil {
+				return budgetErr
+			}
+			balance.GroupBudget = groupBudget
+			if groupBudget != nil && groupBudget.Available < balance.Available {
+				balance.Available = groupBudget.Available
+			}
 		}
 		return err
 	})
@@ -278,6 +344,48 @@ func activeStageReservations(tx *gorm.DB, userID string, creditDay time.Time) (d
 		Select("COALESCE(SUM(CASE WHEN credit_day = ? THEN daily_reserved_hundredths ELSE 0 END), 0) AS daily, COALESCE(SUM(persistent_reserved_hundredths), 0) AS persistent", creditDay).
 		Scan(&result).Error
 	return result.Daily, result.Persistent, err
+}
+
+func limitingGroupBudget(tx *gorm.DB, userID string, creditDay time.Time, lock bool) (*domain.GroupBudgetStatus, error) {
+	type groupBudgetRow struct {
+		ID    string        `gorm:"column:id"`
+		Name  string        `gorm:"column:name"`
+		Limit domain.Amount `gorm:"column:daily_credit_limit_hundredths"`
+	}
+	var groups []groupBudgetRow
+	if err := tx.Table("identity_groups identity_group").Select("identity_group.id, identity_group.name, identity_group.daily_credit_limit_hundredths").Joins("JOIN identity_group_memberships membership ON membership.group_id = identity_group.id").Where("membership.user_id = ? AND identity_group.deleted_at IS NULL AND identity_group.department = true AND identity_group.daily_credit_limit_hundredths IS NOT NULL", userID).Order("identity_group.id").Scan(&groups).Error; err != nil {
+		return nil, err
+	}
+	var limiting *domain.GroupBudgetStatus
+	for _, group := range groups {
+		if lock {
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(hashtext(?))", "group-credit-budget:"+group.ID+":"+creditDay.Format(time.DateOnly)).Error; err != nil {
+				return nil, err
+			}
+		}
+		var usage struct {
+			Consumed domain.Amount `gorm:"column:consumed"`
+			Reserved domain.Amount `gorm:"column:reserved"`
+		}
+		query := `SELECT
+			COALESCE((SELECT SUM(-ledger.amount_hundredths) FROM credit_ledger ledger
+				JOIN identity_group_memberships member ON member.user_id = ledger.user_id
+				WHERE member.group_id = ? AND ledger.credit_day = ? AND ledger.entry_type = 'consumption'), 0) AS consumed,
+			COALESCE((SELECT SUM(admission.reserved_hundredths) FROM credit_stage_admissions admission
+				JOIN identity_group_memberships member ON member.user_id = admission.user_id
+				WHERE member.group_id = ? AND admission.credit_day = ? AND admission.settled_at IS NULL), 0)
+			+ COALESCE((SELECT SUM(reservation.amount_hundredths) FROM image_credit_reservations reservation
+				JOIN identity_group_memberships member ON member.user_id = reservation.user_id
+				WHERE member.group_id = ? AND reservation.credit_day = ? AND reservation.settled_at IS NULL), 0) AS reserved`
+		if err := tx.Raw(query, group.ID, creditDay, group.ID, creditDay, group.ID, creditDay).Scan(&usage).Error; err != nil {
+			return nil, err
+		}
+		status := &domain.GroupBudgetStatus{GroupID: group.ID, Name: group.Name, Limit: group.Limit, Consumed: usage.Consumed, Reserved: usage.Reserved, Available: group.Limit - usage.Consumed - usage.Reserved}
+		if limiting == nil || status.Available < limiting.Available {
+			limiting = status
+		}
+	}
+	return limiting, nil
 }
 
 func (repository *Repository) ReserveImage(ctx context.Context, reservation domain.ImageReservation) (domain.ImageReservation, error) {
@@ -314,6 +422,16 @@ func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.Ima
 		}
 		dailyReserved := imageDaily + stageDaily
 		persistentReserved := imagePersistent + stagePersistent
+		if account.DailyRemaining+account.Persistent-dailyReserved-persistentReserved < reservation.Amount {
+			return domain.ErrInsufficientCredits
+		}
+		groupBudget, err := limitingGroupBudget(tx, reservation.UserID, account.CreditDay, true)
+		if err != nil {
+			return err
+		}
+		if groupBudget != nil && groupBudget.Available < reservation.Amount {
+			return domain.ErrInsufficientCredits
+		}
 		dailyAvailable := account.DailyRemaining - dailyReserved
 		persistentAvailable := account.Persistent - persistentReserved
 		if dailyAvailable < 0 {
@@ -321,9 +439,6 @@ func (repository *Repository) ReserveImageTx(tx *gorm.DB, reservation domain.Ima
 		}
 		if persistentAvailable < 0 {
 			persistentAvailable = 0
-		}
-		if dailyAvailable+persistentAvailable < reservation.Amount {
-			return domain.ErrInsufficientCredits
 		}
 		reservation.DailyReserved = reservation.Amount
 		if reservation.DailyReserved > dailyAvailable {
@@ -412,7 +527,11 @@ func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTime
 		return accountRecord{}, err
 	}
 	requestedDay := dateAt(now, location)
-	created := accountRecord{UserID: userID, CreditDay: requestedDay, Timezone: requestedTimezone, DailyAllocation: domain.DefaultDailyAllocation, DailyRemaining: domain.DefaultDailyAllocation, UpdatedAt: now, Version: 1}
+	var policy policyRecord
+	if err := tx.Where("singleton = true").Take(&policy).Error; err != nil {
+		return accountRecord{}, err
+	}
+	created := accountRecord{UserID: userID, CreditDay: requestedDay, Timezone: requestedTimezone, DailyAllocation: policy.DefaultDailyAllocation, DailyRemaining: policy.DefaultDailyAllocation, UpdatedAt: now, Version: 1}
 	result := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&created)
 	if result.Error != nil {
 		return accountRecord{}, result.Error
@@ -420,7 +539,7 @@ func (repository *Repository) ensureAccountTx(tx *gorm.DB, userID, requestedTime
 	if result.RowsAffected == 1 {
 		source := "daily:" + requestedDay.Format(time.DateOnly)
 		reason := "daily allocation"
-		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "daily_allocation", Amount: domain.DefaultDailyAllocation, DailyDelta: domain.DefaultDailyAllocation, ResultingBalance: domain.DefaultDailyAllocation, CreditDay: requestedDay, Source: &source, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
+		entry := ledgerRecord{ID: uuid.NewString(), UserID: userID, Type: "daily_allocation", Amount: policy.DefaultDailyAllocation, DailyDelta: policy.DefaultDailyAllocation, ResultingBalance: policy.DefaultDailyAllocation, CreditDay: requestedDay, Source: &source, Reason: &reason, Detail: []byte(`{}`), CreatedAt: now}
 		if err := tx.Create(&entry).Error; err != nil {
 			return accountRecord{}, err
 		}
