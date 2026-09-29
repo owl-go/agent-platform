@@ -7,6 +7,16 @@ describe("application routes", () => {
     document.body.innerHTML = "";
   });
 
+  it("uses Home as the authenticated entry route", async () => {
+    const router = createAppRouter(createMemoryHistory());
+
+    await router.push("/");
+    await router.isReady();
+
+    expect(router.currentRoute.value.name).toBe("home");
+    expect(router.currentRoute.value.meta.surface).toBe("home");
+  });
+
   it("redirects the deployed legacy image route to Image Creation", async () => {
     const router = createAppRouter(createMemoryHistory());
 
@@ -28,19 +38,20 @@ describe("application routes", () => {
     const router = createAppRouter(createMemoryHistory());
 
     await router.push("/ai-apps/digital-humans/human-1");
-    expect(router.currentRoute.value.fullPath).toBe("/sessions");
+    expect(router.currentRoute.value.fullPath).toBe("/home");
   });
 
-  it("keeps the top-level Knowledge Bases route distinct from the AI Applications route", async () => {
+  it("converges legacy Knowledge Base routes into the Resource Library", async () => {
     const router = createAppRouter(createMemoryHistory());
 
     await router.push("/knowledge-bases");
-    expect(router.currentRoute.value.name).toBe("knowledge-bases");
-    expect(router.currentRoute.value.meta.surface).toBe("knowledge-bases");
+    expect(router.currentRoute.value.name).toBe("resources");
+    expect(router.currentRoute.value.fullPath).toBe("/resources?tab=knowledge");
+    expect(router.currentRoute.value.meta.surface).toBe("resources");
 
     await router.push("/ai-apps/knowledge-bases");
-    expect(router.currentRoute.value.name).toBe("ai-application-knowledge-bases");
-    expect(router.currentRoute.value.meta.surface).toBe("ai-applications");
+    expect(router.currentRoute.value.name).toBe("resources");
+    expect(router.currentRoute.value.fullPath).toBe("/resources?tab=knowledge");
   });
 
   it("reloads the intended route when a deployed lazy module is unavailable", () => {

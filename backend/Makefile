@@ -1,6 +1,7 @@
 .PHONY: breaking build test generate verify-generated wire
 
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.72.0
+MODULE_GO_TOOLCHAIN := go$(shell awk '/^go / { print $$2; exit }' go.mod)
 BUF_BREAKING_REF ?= $(shell git -C .. show-ref --verify --quiet refs/remotes/origin/main && echo refs/remotes/origin/main || echo main)
 BUF_BREAKING_AGAINST ?= ../.git\#ref=$(BUF_BREAKING_REF),subdir=backend
 GENERATED_PATHS := api gen/openapi cmd/api/wire_gen.go cmd/worker/wire_gen.go ../frontend/src/api/generated.d.ts
@@ -36,4 +37,4 @@ verify-generated: generate
 	}
 
 wire:
-	go run github.com/google/wire/cmd/wire@v0.7.0 ./cmd/api ./cmd/worker
+	GOTOOLCHAIN=$(MODULE_GO_TOOLCHAIN) go run github.com/google/wire/cmd/wire@v0.7.0 ./cmd/api ./cmd/worker

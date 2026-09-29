@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -28,6 +28,7 @@ function apiStub(sessionMessages: SessionMessage[] = messages, stream?: (snapsho
     ...conversationApiStub(),
     listSessions: vi.fn(async (archived = false) => archived ? [] : [session]),
     listSessionMessages: vi.fn(async () => sessionMessages),
+    listSessionWorkflowLinks: vi.fn(async () => []),
     streamSessionMessage: vi.fn(async (_sessionID, _messageID, onSnapshot) => stream?.(onSnapshot)),
     listExperts: vi.fn(async () => []),
     listExpertTeams: vi.fn(async () => []),
@@ -57,6 +58,7 @@ async function mountPageWithAPI(api: PlatformApi) {
 
 describe("SessionsPage conversation layout", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: vi.fn(function (this: HTMLElement, options?: ScrollToOptions | number) {
       if (typeof options === "object") this.scrollTop = options.top ?? this.scrollTop;
     }) });
@@ -64,11 +66,23 @@ describe("SessionsPage conversation layout", () => {
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   });
   afterEach(() => {
+    vi.useRealTimers();
     embeddedSessionApprovalID.value = undefined;
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
+  });
+
+  it("blocks a new task when an inherited execution pair is no longer verified", async () => {
+    const api = apiStub([]);
+    api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 1, execution_inherited: true, platform_execution_available: true }));
+    api.listModelProviderConnections = vi.fn(async (): Promise<ModelProviderConnection[]> => [{ id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: "verified", custom_endpoint: true, models: [{ id: "model-1", connection_id: "connection-1", model_id: "model", display_name: "Model", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] }], created_at: session.created_at, updated_at: session.updated_at, version: 1 }]);
+    api.getAttachmentDownload = vi.fn(async () => new Blob());
+    const wrapper = await mountPageWithAPI(api);
+    expect(wrapper.text()).toContain("开始前完成 3 个步骤");
+    expect(wrapper.get(".setup-guide").text()).toContain("模型供应商");
+    wrapper.unmount();
   });
 
   it("keeps user and Agent messages in distinct role rows", async () => {
@@ -77,6 +91,50 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".message.assistant .message-content").text()).toContain("Agent 的消息");
     expect(wrapper.find(".message-avatar").exists()).toBe(false);
     expect(wrapper.find(".composer-layer").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("prefills a Workflow from a successful response and requires an explicit file destination", async () => {
+    const successful = [
+      { ...messages[0]!, attachments: [{ id: "attachment-1", name: "brief.pdf", content_type: "application/pdf", size: 2048, sha256: "digest", image: false }] },
+      { ...messages[1]!, state: "completed", response_snapshot: { schema_version: 2, stages: [{ position: 1, runtime_engine: "codex", provider_model: { id: "model-1", connection_id: "connection-1", connection_version: 1, connection_name: "Provider", provider_type: "openai", model_id: "model", name: "Model", endpoint: "https://model.invalid", protocols: ["openai_responses"], compatibility: "verified" }, skills: [{ id: "skill-1", name: "Report", object_key: "skills/report.zip", sha256: "digest" }] }] } },
+    ] as SessionMessage[];
+    const api = apiStub(successful);
+    api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "周报", suggested_goal: "生成本周周报", specialist_name: "默认执行配置", resources: [{ kind: "skill", id: "skill-1", name: "Report" }], files: [{ source_key: "attachment:attachment-1", kind: "attachment", name: "brief.pdf", size: 2048, available: true }] }));
+    api.createWorkflowFromSession = vi.fn<PlatformApi["createWorkflowFromSession"]>(() => new Promise(() => undefined));
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get(".message.assistant .message-actions button").trigger("click");
+    await flushPromises();
+
+    expect(api.previewSessionWorkflowDraft).toHaveBeenCalledWith(session.id, 2);
+    expect(wrapper.get<HTMLInputElement>(".workflow-save-dialog input").element.value).toBe("周报");
+    expect(wrapper.get(".workflow-save-dialog").text()).toContain("Report");
+    await wrapper.get(".workflow-save-dialog .modal-actions .el-button--primary").trigger("click");
+    await flushPromises();
+    expect(api.createWorkflowFromSession).toHaveBeenCalledWith(session.id, 2, {
+      name: "周报",
+      goal: "生成本周周报",
+      files: [{ source_key: "attachment:attachment-1", destination: "workspace" }],
+    });
+    wrapper.unmount();
+  });
+
+  it("shows task details only for a task-bearing response and reopens them from history", async () => {
+    const taskMessages = [messages[0]!, {
+      ...messages[1]!,
+      execution_plan: {
+        id: "plan-1", state: "completed", objective: "生成发布报告", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "检查变更", position: 1, state: "completed" }], resources: [], side_effects: [], reasons: [], estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    }] as SessionMessage[];
+    const wrapper = await mountPage(taskMessages);
+
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("生成发布报告");
+    await wrapper.get(".task-workspace-panel > header button").trigger("click");
+    expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
+    await wrapper.get(".message-task").trigger("click");
+    expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
     wrapper.unmount();
   });
 
@@ -428,7 +486,7 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
-  it("shows safe progress instead of a queued label while the Agent is working", async () => {
+  it("distinguishes queued state from the safe activity description", async () => {
     const wrapper = await mountPage([
       messages[0]!,
       { id: 2, role: "assistant", state: "queued", content: "", progress_stage: "preparing", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" },
@@ -436,7 +494,8 @@ describe("SessionsPage conversation layout", () => {
 
     expect(wrapper.text()).toContain("思考中");
     expect(wrapper.text()).toContain("正在准备运行环境");
-    expect(wrapper.text()).not.toContain("排队中");
+    expect(wrapper.get(".execution-status-bar").text()).toContain("排队中");
+    expect(wrapper.get(".execution-status-stop").text()).toContain("取消排队");
     wrapper.unmount();
   });
 
@@ -460,8 +519,10 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPageWithAPI(api);
     await flushPromises();
 
-    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("本次执行");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
     expect(wrapper.get(".activity-summary-group > summary").text()).toContain("先检查仓库状态");
+    expect(wrapper.get(".activity-state").text()).toBe("进行中");
     expect(wrapper.get(".activity-summary-group > summary").text()).not.toContain("git status --short");
     expect(wrapper.get(".activity-detail-list").text()).toContain("git status --short");
     wrapper.unmount();
@@ -488,7 +549,7 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, completed]);
     const summaries = wrapper.findAll(".activity-summary-group > summary");
 
-    expect(summaries.map((summary) => summary.text())).toEqual([
+    expect(summaries.map((summary) => summary.get("strong").text())).toEqual([
       "运行环境已准备",
       "已调用飞书连接器读取群聊搜索说明",
       "已调用飞书连接器搜索群聊",
@@ -585,7 +646,7 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, failed]);
 
     expect(wrapper.find(".runtime-activity-current").exists()).toBe(false);
-    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("查看执行过程");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("本次执行");
     expect(wrapper.get(".runtime-activity").text()).toContain("运行环境已准备");
     expect(wrapper.get(".runtime-activity").text()).not.toContain("正在准备运行环境");
     wrapper.unmount();
@@ -627,6 +688,30 @@ describe("SessionsPage conversation layout", () => {
     expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
     expect(wrapper.text()).toContain("图片内容已识别");
     expect(wrapper.text()).not.toContain("正在调用工具");
+    wrapper.unmount();
+  });
+
+  it("reads authoritative state before reconnecting a broken message stream", async () => {
+    vi.useFakeTimers();
+    const pending: SessionMessage = { id: 2, role: "assistant", state: "generating", content: "", progress_stage: "thinking", elapsed_ms: 0, created_at: "2026-08-25T12:00:01Z" };
+    const api = apiStub([messages[0]!, pending]);
+    let streamCalls = 0;
+    api.streamSessionMessage = vi.fn(async (_sessionID, _messageID, _onSnapshot, signal, options) => {
+      streamCalls += 1;
+      if (streamCalls === 1) throw new Error("connection lost");
+      expect(options).toEqual({ reconnect: true });
+      await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
+    });
+
+    const wrapper = await mountPageWithAPI(api);
+    await flushPromises();
+    expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(750);
+    await flushPromises();
+
+    expect(api.streamSessionMessage).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(api.streamSessionMessage).mock.calls[1]?.[4]).toEqual({ reconnect: true });
     wrapper.unmount();
   });
 

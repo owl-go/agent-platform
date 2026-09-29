@@ -627,6 +627,219 @@
         ]
       }
     },
+    "/api/v1/admin/credit-policy": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetCreditPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreditPolicy"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "put": {
+        "operationId": "AgentWorkspaceService_UpdateCreditPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreditPolicy"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateCreditPolicyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/governance-audit-events": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListGovernanceAuditEvents",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListGovernanceAuditEventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListIdentityGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListIdentityGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups/synchronization": {
+      "post": {
+        "operationId": "AgentWorkspaceService_SyncIdentityGroups",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListIdentityGroupsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SyncIdentityGroupsRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups/{group_id}/budget": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_UpdateIdentityGroupBudget",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IdentityGroup"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateIdentityGroupBudgetBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/identity-groups/{group_id}/resource-transfers": {
+      "post": {
+        "operationId": "AgentWorkspaceService_TransferGroupResources",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransferGroupResourcesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceTransferGroupResourcesBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/model-credit-rates": {
       "get": {
         "operationId": "AgentWorkspaceService_ListModelCreditRates",
@@ -671,6 +884,58 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1CreateModelCreditRateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/platform-execution-default": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetPlatformExecutionDefault",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PlatformExecutionDefault"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "put": {
+        "operationId": "AgentWorkspaceService_SetPlatformExecutionDefault",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PlatformExecutionDefault"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SetPlatformExecutionDefaultRequest"
             }
           }
         ],
@@ -982,6 +1247,44 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceResetUserPasswordBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/roles": {
+      "patch": {
+        "operationId": "AgentWorkspaceService_SetUserRoles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UserAccount"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSetUserRolesBody"
             }
           }
         ],
@@ -2937,6 +3240,28 @@
         ]
       }
     },
+    "/api/v1/home-overview": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetHomeOverview",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1HomeOverview"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/knowledge-bases": {
       "get": {
         "operationId": "AgentWorkspaceService_ListKnowledgeBases",
@@ -3838,6 +4163,51 @@
         ]
       }
     },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DecideSessionExecutionPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SessionMessage"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDecideSessionExecutionPlanBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/sessions/{session_id}/messages/{message_id}/retry": {
       "post": {
         "operationId": "AgentWorkspaceService_RetrySessionMessage",
@@ -3876,6 +4246,118 @@
             "schema": {
               "$ref": "#/definitions/AgentWorkspaceServiceRetrySessionMessageBody"
             }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow": {
+      "post": {
+        "operationId": "AgentWorkspaceService_CreateWorkflowFromSession",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateWorkflowFromSessionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceCreateWorkflowFromSessionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft": {
+      "get": {
+        "operationId": "AgentWorkspaceService_PreviewSessionWorkflowDraft",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SessionWorkflowDraft"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/workflow-links": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListSessionWorkflowLinks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSessionWorkflowLinksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -4591,6 +5073,50 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision": {
+      "post": {
+        "operationId": "AgentWorkspaceService_DecideRunExecutionPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Run"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceDecideRunExecutionPlanBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun": {
       "post": {
         "operationId": "AgentWorkspaceService_RerunWorkflow",
@@ -4976,6 +5502,9 @@
             "type": "object",
             "$ref": "#/definitions/v1FileReference"
           }
+        },
+        "plan_preference": {
+          "type": "string"
         }
       }
     },
@@ -4995,6 +5524,24 @@
         }
       }
     },
+    "AgentWorkspaceServiceCreateWorkflowFromSessionBody": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SessionWorkflowFileDecision"
+          }
+        }
+      }
+    },
     "AgentWorkspaceServiceDecideCommandApprovalBody": {
       "type": "object",
       "properties": {
@@ -5002,6 +5549,30 @@
           "type": "string"
         },
         "identity": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceDecideRunExecutionPlanBody": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceDecideSessionExecutionPlanBody": {
+      "type": "object",
+      "properties": {
+        "decision": {
           "type": "string"
         },
         "expected_version": {
@@ -5204,6 +5775,9 @@
         },
         "json_input": {
           "type": "object"
+        },
+        "plan_preference": {
+          "type": "string"
         }
       }
     },
@@ -5237,6 +5811,9 @@
             "type": "object",
             "$ref": "#/definitions/v1FileReference"
           }
+        },
+        "plan_preference": {
+          "type": "string"
         }
       }
     },
@@ -5284,6 +5861,27 @@
         "expected_version": {
           "type": "string",
           "format": "int64"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceSetUserRolesBody": {
+      "type": "object",
+      "properties": {
+        "administrator": {
+          "type": "boolean"
+        },
+        "resource_publisher": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
         }
       }
     },
@@ -5292,6 +5890,20 @@
     },
     "AgentWorkspaceServiceTestMCPConnectorBody": {
       "type": "object"
+    },
+    "AgentWorkspaceServiceTransferGroupResourcesBody": {
+      "type": "object",
+      "properties": {
+        "from_user_id": {
+          "type": "string"
+        },
+        "to_user_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
     },
     "AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody": {
       "type": "object",
@@ -5326,6 +5938,22 @@
         "expected_version": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "AgentWorkspaceServiceUpdateIdentityGroupBudgetBody": {
+      "type": "object",
+      "properties": {
+        "daily_credit_limit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
         }
       }
     },
@@ -6604,6 +7232,23 @@
         }
       }
     },
+    "v1CreateWorkflowFromSessionResponse": {
+      "type": "object",
+      "properties": {
+        "workflow": {
+          "$ref": "#/definitions/v1Workflow"
+        },
+        "validation_run": {
+          "$ref": "#/definitions/v1Run"
+        },
+        "link": {
+          "$ref": "#/definitions/v1SessionWorkflowLink"
+        },
+        "replayed": {
+          "type": "boolean"
+        }
+      }
+    },
     "v1CreateWorkflowRequest": {
       "type": "object",
       "properties": {
@@ -6663,6 +7308,16 @@
         "available_hundredths": {
           "type": "string",
           "format": "int64"
+        },
+        "warning_threshold_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "redemption_codes_enabled": {
+          "type": "boolean"
+        },
+        "group_budget": {
+          "$ref": "#/definitions/v1GroupCreditBudget"
         }
       }
     },
@@ -6708,6 +7363,33 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1CreditPolicy": {
+      "type": "object",
+      "properties": {
+        "default_daily_allocation_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "warning_threshold_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "redemption_codes_enabled": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_by_user_id": {
+          "type": "string"
         }
       }
     },
@@ -6782,6 +7464,19 @@
         },
         "credit_balance": {
           "$ref": "#/definitions/v1CreditBalance"
+        },
+        "bootstrap_administrator": {
+          "type": "boolean"
+        },
+        "resource_publisher": {
+          "type": "boolean"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityGroup"
+          }
         }
       }
     },
@@ -6810,6 +7505,57 @@
         }
       }
     },
+    "v1Evidence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "source_name": {
+          "type": "string"
+        },
+        "container_id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "stage_position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "citation": {
+          "$ref": "#/definitions/v1EvidenceCitation"
+        }
+      }
+    },
+    "v1EvidenceCitation": {
+      "type": "object",
+      "properties": {
+        "revision_id": {
+          "type": "string"
+        },
+        "category_name": {
+          "type": "string"
+        },
+        "source_location": {
+          "type": "string"
+        },
+        "relevance": {
+          "type": "number",
+          "format": "float"
+        }
+      }
+    },
     "v1ExecutionActivity": {
       "type": "object",
       "properties": {
@@ -6817,6 +7563,108 @@
           "type": "string"
         },
         "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExecutionPlan": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExecutionPlanStep"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExecutionPlanResource"
+          }
+        },
+        "side_effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "estimated_model_calls": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "estimated_credit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "generation_credit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "generator": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExecutionPlanResource": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ExecutionPlanStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "state": {
           "type": "string"
         }
       }
@@ -7312,11 +8160,220 @@
         }
       }
     },
+    "v1GovernanceAuditEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "actor_user_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "target_type": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GovernanceAuditMetric"
+          }
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1GovernanceAuditMetric": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1GroupCreditBudget": {
+      "type": "object",
+      "properties": {
+        "group_id": {
+          "type": "string"
+        },
+        "group_name": {
+          "type": "string"
+        },
+        "limit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "consumed_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reserved_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "available_hundredths": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1HealthResponse": {
       "type": "object",
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "v1HomeAction": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "execution_kind": {
+          "type": "string"
+        },
+        "execution_id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1HomeOverview": {
+      "type": "object",
+      "properties": {
+        "recent_tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HomeTask"
+          }
+        },
+        "common_workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HomeWorkflow"
+          }
+        },
+        "action_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1HomeAction"
+          }
+        }
+      }
+    },
+    "v1HomeTask": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1HomeWorkflow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "run_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1IdentityGroup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "external_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "department": {
+          "type": "boolean"
+        },
+        "daily_credit_limit_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "member_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "last_synced_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -7544,6 +8601,27 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "document_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ready_document_count": {
+          "type": "string",
+          "format": "int64"
+        },
+        "last_ready_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
+        },
+        "group_name": {
+          "type": "string"
         }
       }
     },
@@ -7561,6 +8639,12 @@
         },
         "platform": {
           "type": "boolean"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": "string"
         }
       }
     },
@@ -7865,6 +8949,30 @@
         }
       }
     },
+    "v1ListGovernanceAuditEventsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1GovernanceAuditEvent"
+          }
+        }
+      }
+    },
+    "v1ListIdentityGroupsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityGroup"
+          }
+        }
+      }
+    },
     "v1ListImageGenerationOptionsResponse": {
       "type": "object",
       "properties": {
@@ -8051,6 +9159,18 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1SessionMessage"
+          }
+        }
+      }
+    },
+    "v1ListSessionWorkflowLinksResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SessionWorkflowLink"
           }
         }
       }
@@ -8442,6 +9562,37 @@
         "version": {
           "type": "string",
           "format": "int64"
+        },
+        "execution_inherited": {
+          "type": "boolean"
+        },
+        "platform_execution_available": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1PlatformExecutionDefault": {
+      "type": "object",
+      "properties": {
+        "runtime_engine": {
+          "type": "string"
+        },
+        "provider_model_id": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "updated_by_user_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -8912,6 +10063,16 @@
         "queue_position": {
           "type": "integer",
           "format": "int32"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Evidence"
+          }
+        },
+        "execution_plan": {
+          "$ref": "#/definitions/v1ExecutionPlan"
         }
       }
     },
@@ -9109,6 +10270,139 @@
         },
         "resource_action": {
           "$ref": "#/definitions/v1ResourceCreationAction"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Evidence"
+          }
+        },
+        "execution_plan": {
+          "$ref": "#/definitions/v1ExecutionPlan"
+        }
+      }
+    },
+    "v1SessionWorkflowDraft": {
+      "type": "object",
+      "properties": {
+        "suggested_name": {
+          "type": "string"
+        },
+        "suggested_goal": {
+          "type": "string"
+        },
+        "specialist_name": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SessionWorkflowResource"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1SessionWorkflowFile"
+          }
+        },
+        "existing_link": {
+          "$ref": "#/definitions/v1SessionWorkflowLink"
+        }
+      }
+    },
+    "v1SessionWorkflowFile": {
+      "type": "object",
+      "properties": {
+        "source_key": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string",
+          "format": "int64"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SessionWorkflowFileDecision": {
+      "type": "object",
+      "properties": {
+        "source_key": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SessionWorkflowLink": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "message_id": {
+          "type": "string",
+          "format": "int64"
+        },
+        "workflow_id": {
+          "type": "string"
+        },
+        "workflow_name": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1SessionWorkflowResource": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SetPlatformExecutionDefaultRequest": {
+      "type": "object",
+      "properties": {
+        "runtime_engine": {
+          "type": "string"
+        },
+        "provider_model_id": {
+          "type": "string"
+        },
+        "validation_run_id": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -9238,6 +10532,38 @@
         }
       }
     },
+    "v1SyncIdentityGroupsRequest": {
+      "type": "object"
+    },
+    "v1TransferGroupResourcesResponse": {
+      "type": "object",
+      "properties": {
+        "knowledge_base_count": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1UpdateCreditPolicyRequest": {
+      "type": "object",
+      "properties": {
+        "default_daily_allocation_hundredths": {
+          "type": "string",
+          "format": "int64"
+        },
+        "warning_threshold_percent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "redemption_codes_enabled": {
+          "type": "boolean"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "v1UpdateSettingsRequest": {
       "type": "object",
       "properties": {
@@ -9266,6 +10592,9 @@
         "expected_version": {
           "type": "string",
           "format": "int64"
+        },
+        "inherit_platform_execution": {
+          "type": "boolean"
         }
       }
     },
@@ -9309,6 +10638,19 @@
         },
         "credit_balance": {
           "$ref": "#/definitions/v1CreditBalance"
+        },
+        "bootstrap_administrator": {
+          "type": "boolean"
+        },
+        "resource_publisher": {
+          "type": "boolean"
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1IdentityGroup"
+          }
         }
       }
     },
@@ -9366,6 +10708,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "origin": {
+          "$ref": "#/definitions/v1SessionWorkflowLink"
         }
       }
     },

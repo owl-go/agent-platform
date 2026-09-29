@@ -7,10 +7,10 @@ import ConversationThread from "./ConversationThread.vue";
 
 const stage = { expert_id: "expert-1", expert_name: "架构专家", provider_model_name: "Model", runtime_engine: "codex" as const, position: 1, total: 1, state: "succeeded" as const, elapsed_ms: 1200, final_text: "答案" };
 
-function mountThread(messages: ConversationMessage[]) {
+function mountThread(messages: ConversationMessage[], locale: "zh-CN" | "en-US" = "zh-CN") {
   return mount(ConversationThread, {
     props: { messages, loadAttachment: vi.fn(async () => new Blob()) },
-    global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    global: { plugins: [createAppI18n({ getItem: () => locale }, locale)] },
   });
 }
 
@@ -26,6 +26,7 @@ describe("ConversationThread", () => {
     expect(wrapper.findAll(".message")).toHaveLength(2);
     expect(wrapper.get(".message.user p").text()).toBe("用户原文");
     expect(wrapper.get(".message.assistant .markdown-body").text()).toBe("答案");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个执行阶段");
     expect(wrapper.find(".expert-stage-list").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -86,6 +87,118 @@ describe("ConversationThread", () => {
     expect(wrapper.get(".message.assistant .agent-avatar").text()).toBe("AI");
     expect(wrapper.get(".message-identity").text()).toContain("架构专家");
     expect(wrapper.get(".message-identity").text()).toContain("Agent");
+    wrapper.unmount();
+  });
+
+  it("summarizes platform-recorded execution evidence without claiming unavailable sources", () => {
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "已完成",
+      state: "succeeded",
+      timestamp: "2026-08-25T12:00:01Z",
+      activities: [
+        { id: "tool", kind: "tool", toolCallCount: 1, label: "已调用连接器", state: "completed", items: [{ id: 1, label: "连接器调用完成" }] },
+        { id: "file", kind: "file", fileChangeCount: 1, label: "已更新文件", state: "completed", items: [{ id: 2, label: "文件更新完成" }] },
+      ],
+      stages: [stage],
+      artifacts: [{ id: "artifact-1", kind: "file", name: "report.md", path: "report.md", size: 42, expired: false, created_at: "2026-08-25T12:00:01Z" }],
+    }]);
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("本次执行");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项文件变化");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个执行阶段");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 个产物");
+    expect(wrapper.findAll(".activity-kind").map((item) => item.text())).toEqual(["工具", "文件"]);
+    expect(wrapper.findAll(".activity-state").map((item) => item.text())).toEqual(["已完成", "已完成"]);
+    expect(wrapper.text()).not.toContain("打开来源");
+    wrapper.unmount();
+  });
+
+  it("states only that no external activity was recorded", () => {
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "回答",
+      state: "succeeded",
+      timestamp: "2026-08-25T12:00:01Z",
+      activities: [{ id: "runtime", kind: "runtime", label: "运行环境已准备", state: "completed", items: [{ id: 1, label: "运行环境已准备" }] }],
+    }]);
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("未记录外部工具、文件变化或依据");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).not.toContain("未使用知识库");
+    wrapper.unmount();
+  });
+
+  it("renders execution evidence labels in English", () => {
+    const wrapper = mountThread([{
+      id: "assistant-1",
+      role: "assistant",
+      content: "Done",
+      state: "succeeded",
+      timestamp: "2026-08-25T12:00:01Z",
+      activities: [{ id: "tool", kind: "tool", toolCallCount: 1, label: "Tool completed", state: "completed", items: [{ id: 1, label: "Tool completed" }] }],
+    }], "en-US");
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("This execution");
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 tool call");
+    expect(wrapper.get(".activity-kind").text()).toBe("Tool");
+    wrapper.unmount();
+  });
+
+  it("shows verified source states and only opens a succeeded Knowledge citation", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-1", role: "assistant", content: "回答", state: "succeeded", timestamp: "2026-08-25T12:00:01Z",
+      evidence: [
+        { id: "knowledge-1", kind: "knowledge", source_id: "document-1", source_name: "制度.pdf", container_id: "base-1", state: "succeeded", action: "retrieved", stage_position: 1, citation: { revision_id: "revision-1", source_location: "第 2 页", relevance: .91 } },
+        { id: "connector-1", kind: "connector", source_id: "crm", source_name: "CRM", state: "failed", action: "contact.search", stage_position: 1 },
+        { id: "connector-2", kind: "connector", source_id: "mail", source_name: "邮箱", state: "not_used", action: "selected", stage_position: 1 },
+      ],
+    }]);
+
+    expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项依据");
+    expect(wrapper.findAll(".execution-source")).toHaveLength(3);
+    expect(wrapper.text()).toContain("已使用");
+    expect(wrapper.text()).toContain("调用失败");
+    expect(wrapper.text()).toContain("未采用");
+    expect(wrapper.findAll(".execution-source .text-button")).toHaveLength(1);
+    await wrapper.get(".execution-source .text-button").trigger("click");
+    expect(wrapper.emitted("openEvidence")?.[0]?.[0]).toMatchObject({ id: "knowledge-1", source_id: "document-1" });
+    wrapper.unmount();
+  });
+
+  it("shows a pending execution plan and emits only allowed decisions", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "更新 CRM 中的客户记录", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "销售运营", position: 1, state: "pending" }],
+        resources: [{ kind: "connector", id: "crm", name: "CRM" }], side_effects: ["external_connector_operation"], reasons: ["external_side_effect"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 125, generation_credit_hundredths: 0,
+      },
+    }]);
+
+    expect(wrapper.get(".execution-plan-card").text()).toContain("更新 CRM 中的客户记录");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("最多约 1.25 Credits");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("平台规则生成 · 0.00 Credits");
+    expect(wrapper.text()).not.toContain("直接回答，不执行外部操作");
+    await wrapper.get(".execution-plan-card footer .el-button--primary").trigger("click");
+    expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-plan", "start"]);
+    wrapper.unmount();
+  });
+
+  it("opens the task panel from a task-bearing historical response", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-task", role: "assistant", content: "Done", state: "succeeded", timestamp: "2026-09-28T08:00:00Z",
+      artifacts: [{ id: "artifact-1", kind: "file", name: "report.md", path: "report.md", size: 42, expired: false, created_at: "2026-09-28T08:01:00Z" }],
+    }]);
+    await wrapper.setProps({ selectedTaskId: "assistant-task" });
+
+    expect(wrapper.get(".message.assistant").classes()).toContain("is-task-selected");
+    expect(wrapper.get(".message-task").attributes("aria-pressed")).toBe("true");
+    await wrapper.get(".message-task").trigger("click");
+    expect(wrapper.emitted("selectTask")?.[0]).toEqual(["assistant-task"]);
     wrapper.unmount();
   });
 });

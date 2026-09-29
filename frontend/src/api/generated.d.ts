@@ -244,6 +244,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/credit-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetCreditPolicy"];
+        put: operations["AgentWorkspaceService_UpdateCreditPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance-audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListGovernanceAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/identity-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListIdentityGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/identity-groups/synchronization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_SyncIdentityGroups"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/identity-groups/{group_id}/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_UpdateIdentityGroupBudget"];
+        trace?: never;
+    };
+    "/api/v1/admin/identity-groups/{group_id}/resource-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_TransferGroupResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model-credit-rates": {
         parameters: {
             query?: never;
@@ -254,6 +350,22 @@ export interface paths {
         get: operations["AgentWorkspaceService_ListModelCreditRates"];
         put?: never;
         post: operations["AgentWorkspaceService_CreateModelCreditRate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/platform-execution-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetPlatformExecutionDefault"];
+        put: operations["AgentWorkspaceService_SetPlatformExecutionDefault"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -386,6 +498,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{user_id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AgentWorkspaceService_SetUserRoles"];
         trace?: never;
     };
     "/api/v1/ai-creation/image-generation/options": {
@@ -1140,6 +1268,22 @@ export interface paths {
         patch: operations["AgentWorkspaceService_UpdateExpert"];
         trace?: never;
     };
+    "/api/v1/home-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetHomeOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/knowledge-bases": {
         parameters: {
             query?: never;
@@ -1428,6 +1572,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DecideSessionExecutionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/messages/{message_id}/retry": {
         parameters: {
             query?: never;
@@ -1438,6 +1598,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["AgentWorkspaceService_RetrySessionMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_CreateWorkflowFromSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_PreviewSessionWorkflowDraft"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/workflow-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListSessionWorkflowLinks"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1668,6 +1876,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_DecideRunExecutionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun": {
         parameters: {
             query?: never;
@@ -1814,6 +2038,7 @@ export interface components {
             attachment_ids?: string[];
             selection_id?: string;
             file_references?: components["schemas"]["v1FileReference"][];
+            plan_preference?: string;
         };
         AgentWorkspaceServiceCreateKnowledgeCategoryBody: {
             name?: string;
@@ -1821,9 +2046,24 @@ export interface components {
         AgentWorkspaceServiceCreateProviderModelBody: {
             model_id?: string;
         };
+        AgentWorkspaceServiceCreateWorkflowFromSessionBody: {
+            name?: string;
+            goal?: string;
+            files?: components["schemas"]["v1SessionWorkflowFileDecision"][];
+        };
         AgentWorkspaceServiceDecideCommandApprovalBody: {
             decision?: string;
             identity?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDecideRunExecutionPlanBody: {
+            decision?: string;
+            /** Format: int64 */
+            expected_version?: number;
+        };
+        AgentWorkspaceServiceDecideSessionExecutionPlanBody: {
+            decision?: string;
             /** Format: int64 */
             expected_version?: number;
         };
@@ -1896,6 +2136,7 @@ export interface components {
         AgentWorkspaceServiceRunWorkflowBody: {
             text_input?: string;
             json_input?: Record<string, never>;
+            plan_preference?: string;
         };
         AgentWorkspaceServiceSelectConnectorAuthorizationBody: {
             /** Format: int64 */
@@ -1906,6 +2147,7 @@ export interface components {
             attachment_ids?: string[];
             selection_id?: string;
             file_references?: components["schemas"]["v1FileReference"][];
+            plan_preference?: string;
         };
         AgentWorkspaceServiceSetImageModelAvailabilityBody: {
             available?: boolean;
@@ -1925,9 +2167,22 @@ export interface components {
             enabled?: boolean;
             /** Format: int64 */
             expected_version?: number;
+            reason?: string;
+        };
+        AgentWorkspaceServiceSetUserRolesBody: {
+            administrator?: boolean;
+            resource_publisher?: boolean;
+            /** Format: int64 */
+            expected_version?: number;
+            reason?: string;
         };
         AgentWorkspaceServiceStopImageGenerationBody: Record<string, never>;
         AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
+        AgentWorkspaceServiceTransferGroupResourcesBody: {
+            from_user_id?: string;
+            to_user_id?: string;
+            reason?: string;
+        };
         AgentWorkspaceServiceUpdateCLIConnectorDefinitionBody: {
             definition?: components["schemas"]["v1CLIConnectorDefinitionInput"];
             /** Format: int64 */
@@ -1942,6 +2197,13 @@ export interface components {
             expert_team?: components["schemas"]["v1ExpertTeamInput"];
             /** Format: int64 */
             expected_version?: number;
+        };
+        AgentWorkspaceServiceUpdateIdentityGroupBudgetBody: {
+            /** Format: int64 */
+            daily_credit_limit_hundredths?: number;
+            /** Format: int64 */
+            expected_version?: number;
+            reason?: string;
         };
         AgentWorkspaceServiceUpdateKnowledgeBaseBody: {
             knowledge_base?: components["schemas"]["v1KnowledgeBaseInput"];
@@ -2385,6 +2647,12 @@ export interface components {
             user?: components["schemas"]["v1UserAccount"];
             temporary_password?: string;
         };
+        v1CreateWorkflowFromSessionResponse: {
+            workflow?: components["schemas"]["v1Workflow"];
+            validation_run?: components["schemas"]["v1Run"];
+            link?: components["schemas"]["v1SessionWorkflowLink"];
+            replayed?: boolean;
+        };
         v1CreateWorkflowRequest: {
             workflow?: components["schemas"]["v1WorkflowInput"];
         };
@@ -2412,6 +2680,10 @@ export interface components {
             reserved_hundredths?: number;
             /** Format: int64 */
             available_hundredths?: number;
+            /** Format: int32 */
+            warning_threshold_percent?: number;
+            redemption_codes_enabled?: boolean;
+            group_budget?: components["schemas"]["v1GroupCreditBudget"];
         };
         v1CreditConsumption: {
             /** Format: int64 */
@@ -2429,6 +2701,18 @@ export interface components {
             reason?: string;
             /** Format: date-time */
             created_at?: string;
+        };
+        v1CreditPolicy: {
+            /** Format: int64 */
+            default_daily_allocation_hundredths?: number;
+            /** Format: int32 */
+            warning_threshold_percent?: number;
+            redemption_codes_enabled?: boolean;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            updated_at?: string;
+            updated_by_user_id?: string;
         };
         v1CreditStageConsumption: {
             /** Format: int32 */
@@ -2459,6 +2743,9 @@ export interface components {
             administrator?: boolean;
             settings_ready?: boolean;
             credit_balance?: components["schemas"]["v1CreditBalance"];
+            bootstrap_administrator?: boolean;
+            resource_publisher?: boolean;
+            groups?: components["schemas"]["v1IdentityGroup"][];
         };
         v1DeleteResponse: {
             deleted?: boolean;
@@ -2469,9 +2756,63 @@ export interface components {
             secret?: boolean;
             configured?: boolean;
         };
+        v1Evidence: {
+            id?: string;
+            kind?: string;
+            source_id?: string;
+            source_name?: string;
+            container_id?: string;
+            state?: string;
+            action?: string;
+            /** Format: int32 */
+            stage_position?: number;
+            citation?: components["schemas"]["v1EvidenceCitation"];
+        };
+        v1EvidenceCitation: {
+            revision_id?: string;
+            category_name?: string;
+            source_location?: string;
+            /** Format: float */
+            relevance?: number;
+        };
         v1ExecutionActivity: {
             type?: string;
             detail?: string;
+        };
+        v1ExecutionPlan: {
+            id?: string;
+            state?: string;
+            objective?: string;
+            steps?: components["schemas"]["v1ExecutionPlanStep"][];
+            resources?: components["schemas"]["v1ExecutionPlanResource"][];
+            side_effects?: string[];
+            reasons?: string[];
+            /** Format: int32 */
+            estimated_model_calls?: number;
+            /** Format: int64 */
+            estimated_credit_hundredths?: number;
+            /** Format: int64 */
+            generation_credit_hundredths?: number;
+            generator?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            decided_at?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        v1ExecutionPlanResource: {
+            kind?: string;
+            id?: string;
+            name?: string;
+        };
+        v1ExecutionPlanStep: {
+            id?: string;
+            kind?: string;
+            label?: string;
+            /** Format: int32 */
+            position?: number;
+            state?: string;
         };
         v1ExecutionStageSnapshot: {
             /** Format: int32 */
@@ -2632,8 +2973,85 @@ export interface components {
             config?: components["schemas"]["v1GitConfigEntry"][];
             ssh_config?: string;
         };
+        v1GovernanceAuditEvent: {
+            /** Format: int64 */
+            id?: number;
+            actor_user_id?: string;
+            action?: string;
+            target_type?: string;
+            target_id?: string;
+            reason?: string;
+            metrics?: components["schemas"]["v1GovernanceAuditMetric"][];
+            /** Format: date-time */
+            occurred_at?: string;
+        };
+        v1GovernanceAuditMetric: {
+            key?: string;
+            /** Format: int64 */
+            value?: number;
+        };
+        v1GroupCreditBudget: {
+            group_id?: string;
+            group_name?: string;
+            /** Format: int64 */
+            limit_hundredths?: number;
+            /** Format: int64 */
+            consumed_hundredths?: number;
+            /** Format: int64 */
+            reserved_hundredths?: number;
+            /** Format: int64 */
+            available_hundredths?: number;
+        };
         v1HealthResponse: {
             status?: string;
+        };
+        v1HomeAction: {
+            kind?: string;
+            id?: string;
+            execution_kind?: string;
+            execution_id?: string;
+            parent_id?: string;
+            title?: string;
+            state?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        v1HomeOverview: {
+            recent_tasks?: components["schemas"]["v1HomeTask"][];
+            common_workflows?: components["schemas"]["v1HomeWorkflow"][];
+            action_items?: components["schemas"]["v1HomeAction"][];
+        };
+        v1HomeTask: {
+            kind?: string;
+            id?: string;
+            parent_id?: string;
+            title?: string;
+            state?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        v1HomeWorkflow: {
+            id?: string;
+            name?: string;
+            /** Format: int64 */
+            run_count?: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        v1IdentityGroup: {
+            id?: string;
+            external_id?: string;
+            name?: string;
+            path?: string;
+            department?: boolean;
+            /** Format: int64 */
+            daily_credit_limit_hundredths?: number;
+            /** Format: int64 */
+            member_count?: number;
+            /** Format: date-time */
+            last_synced_at?: string;
+            /** Format: int64 */
+            version?: number;
         };
         v1ImageCreditRate: {
             size?: string;
@@ -2714,12 +3132,23 @@ export interface components {
             updated_at?: string;
             /** Format: int64 */
             version?: number;
+            /** Format: int64 */
+            document_count?: number;
+            /** Format: int64 */
+            ready_document_count?: number;
+            /** Format: date-time */
+            last_ready_at?: string;
+            scope?: string;
+            group_id?: string;
+            group_name?: string;
         };
         v1KnowledgeBaseInput: {
             name?: string;
             description?: string;
             visibility?: string;
             platform?: boolean;
+            scope?: string;
+            group_id?: string;
         };
         v1KnowledgeCategory: {
             id?: string;
@@ -2814,6 +3243,12 @@ export interface components {
         v1ListExpertsResponse: {
             items?: components["schemas"]["v1Expert"][];
         };
+        v1ListGovernanceAuditEventsResponse: {
+            items?: components["schemas"]["v1GovernanceAuditEvent"][];
+        };
+        v1ListIdentityGroupsResponse: {
+            items?: components["schemas"]["v1IdentityGroup"][];
+        };
         v1ListImageGenerationOptionsResponse: {
             image_models?: components["schemas"]["v1ImageModel"][];
             prompt_optimization_models?: components["schemas"]["v1PromptOptimizationCandidate"][];
@@ -2860,6 +3295,9 @@ export interface components {
         };
         v1ListSessionMessagesResponse: {
             items?: components["schemas"]["v1SessionMessage"][];
+        };
+        v1ListSessionWorkflowLinksResponse: {
+            items?: components["schemas"]["v1SessionWorkflowLink"][];
         };
         v1ListSessionsResponse: {
             items?: components["schemas"]["v1Session"][];
@@ -2989,6 +3427,18 @@ export interface components {
             timezone?: string;
             /** Format: int64 */
             version?: number;
+            execution_inherited?: boolean;
+            platform_execution_available?: boolean;
+        };
+        v1PlatformExecutionDefault: {
+            runtime_engine?: string;
+            provider_model_id?: string;
+            validation_run_id?: string;
+            updated_by_user_id?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            updated_at?: string;
         };
         v1PromptOptimizationCandidate: {
             provider_model_id?: string;
@@ -3148,6 +3598,8 @@ export interface components {
             credit_consumption?: components["schemas"]["v1CreditConsumption"];
             /** Format: int32 */
             queue_position?: number;
+            evidence?: components["schemas"]["v1Evidence"][];
+            execution_plan?: components["schemas"]["v1ExecutionPlan"];
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -3217,6 +3669,51 @@ export interface components {
             activities?: components["schemas"]["v1ExecutionActivity"][];
             artifacts?: components["schemas"]["v1Artifact"][];
             resource_action?: components["schemas"]["v1ResourceCreationAction"];
+            evidence?: components["schemas"]["v1Evidence"][];
+            execution_plan?: components["schemas"]["v1ExecutionPlan"];
+        };
+        v1SessionWorkflowDraft: {
+            suggested_name?: string;
+            suggested_goal?: string;
+            specialist_name?: string;
+            resources?: components["schemas"]["v1SessionWorkflowResource"][];
+            files?: components["schemas"]["v1SessionWorkflowFile"][];
+            existing_link?: components["schemas"]["v1SessionWorkflowLink"];
+        };
+        v1SessionWorkflowFile: {
+            source_key?: string;
+            kind?: string;
+            name?: string;
+            /** Format: int64 */
+            size?: number;
+            available?: boolean;
+            unavailable_reason?: string;
+        };
+        v1SessionWorkflowFileDecision: {
+            source_key?: string;
+            destination?: string;
+        };
+        v1SessionWorkflowLink: {
+            session_id?: string;
+            /** Format: int64 */
+            message_id?: number;
+            workflow_id?: string;
+            workflow_name?: string;
+            validation_run_id?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        v1SessionWorkflowResource: {
+            kind?: string;
+            id?: string;
+            name?: string;
+        };
+        v1SetPlatformExecutionDefaultRequest: {
+            runtime_engine?: string;
+            provider_model_id?: string;
+            validation_run_id?: string;
+            /** Format: int64 */
+            expected_version?: number;
         };
         v1Skill: {
             id?: string;
@@ -3264,6 +3761,20 @@ export interface components {
             request_id?: string;
             original_prompt?: string;
         };
+        v1SyncIdentityGroupsRequest: Record<string, never>;
+        v1TransferGroupResourcesResponse: {
+            /** Format: int64 */
+            knowledge_base_count?: number;
+        };
+        v1UpdateCreditPolicyRequest: {
+            /** Format: int64 */
+            default_daily_allocation_hundredths?: number;
+            /** Format: int32 */
+            warning_threshold_percent?: number;
+            redemption_codes_enabled?: boolean;
+            /** Format: int64 */
+            expected_version?: number;
+        };
         v1UpdateSettingsRequest: {
             personality?: string;
             personality_instructions?: string;
@@ -3273,6 +3784,7 @@ export interface components {
             timezone?: string;
             /** Format: int64 */
             expected_version?: number;
+            inherit_platform_execution?: boolean;
         };
         v1UploadConnectorPackageRequest: {
             /** Format: byte */
@@ -3290,6 +3802,9 @@ export interface components {
             /** Format: int64 */
             version?: number;
             credit_balance?: components["schemas"]["v1CreditBalance"];
+            bootstrap_administrator?: boolean;
+            resource_publisher?: boolean;
+            groups?: components["schemas"]["v1IdentityGroup"][];
         };
         v1Workflow: {
             id?: string;
@@ -3309,6 +3824,7 @@ export interface components {
             version?: number;
             expert_team_id?: string;
             knowledge_base_ids?: string[];
+            origin?: components["schemas"]["v1SessionWorkflowLink"];
         };
         v1WorkflowAccessToken: {
             jwt_token?: string;
@@ -3982,6 +4498,231 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_GetCreditPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditPolicy"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateCreditPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1UpdateCreditPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreditPolicy"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListGovernanceAuditEvents: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListGovernanceAuditEventsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListIdentityGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListIdentityGroupsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SyncIdentityGroups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1SyncIdentityGroupsRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListIdentityGroupsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateIdentityGroupBudget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateIdentityGroupBudgetBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1IdentityGroup"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_TransferGroupResources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceTransferGroupResourcesBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1TransferGroupResourcesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListModelCreditRates: {
         parameters: {
             query?: never;
@@ -4031,6 +4772,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ModelCreditRate"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetPlatformExecutionDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PlatformExecutionDefault"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetPlatformExecutionDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1SetPlatformExecutionDefaultRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PlatformExecutionDefault"];
                 };
             };
             /** @description An unexpected error response. */
@@ -4333,6 +5136,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ResetUserPasswordResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SetUserRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSetUserRolesBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1UserAccount"];
                 };
             };
             /** @description An unexpected error response. */
@@ -6285,6 +7123,35 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_GetHomeOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1HomeOverview"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ListKnowledgeBases: {
         parameters: {
             query?: {
@@ -7196,6 +8063,42 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_DecideSessionExecutionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDecideSessionExecutionPlanBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SessionMessage"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_RetrySessionMessage: {
         parameters: {
             query?: never;
@@ -7219,6 +8122,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1SendSessionMessageResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CreateWorkflowFromSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceCreateWorkflowFromSessionBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1CreateWorkflowFromSessionResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_PreviewSessionWorkflowDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                message_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1SessionWorkflowDraft"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListSessionWorkflowLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListSessionWorkflowLinksResponse"];
                 };
             };
             /** @description An unexpected error response. */
@@ -7925,6 +8927,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServiceCancelRunBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1Run"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_DecideRunExecutionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceDecideRunExecutionPlanBody"];
             };
         };
         responses: {

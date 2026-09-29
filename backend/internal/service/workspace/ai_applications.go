@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	aiapplicationdomain "agent-platform/backend/internal/biz/aiapplication/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
@@ -33,13 +35,14 @@ type assistantPayload struct {
 }
 
 type sharePayload struct {
-	Enabled         bool     `json:"enabled"`
-	Token           string   `json:"token,omitempty"`
-	AllowedOrigins  []string `json:"allowed_origins"`
-	Width           string   `json:"width"`
-	Height          int      `json:"height"`
-	FreeTextEnabled bool     `json:"free_text_enabled"`
-	DailyCallLimit  int      `json:"daily_call_limit"`
+	Enabled                    bool     `json:"enabled"`
+	Token                      string   `json:"token,omitempty"`
+	AllowedOrigins             []string `json:"allowed_origins"`
+	Width                      string   `json:"width"`
+	Height                     int      `json:"height"`
+	FreeTextEnabled            bool     `json:"free_text_enabled"`
+	DailyCallLimit             int      `json:"daily_call_limit"`
+	DataProcessingAcknowledged bool     `json:"data_processing_acknowledged"`
 }
 
 type faqPayload struct {
@@ -172,6 +175,10 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 				writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_model_unavailable")
 				return
 			}
+			if payload.State == string(aiapplicationdomain.StateEnabled) || payload.Share.Enabled {
+				writeAuthError(writer, http.StatusUnprocessableEntity, "assistant_publication_check_required")
+				return
+			}
 			if err := service.validateAssistantModel(request.Context(), owner, payload.ProviderModelID); err != nil {
 				service.writeAssistantModelError(writer, err)
 				return
@@ -211,6 +218,37 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		}
 		value, err := service.aiapplications.RegenerateShareToken(request.Context(), owner, rest[0], input.Version)
 		service.writeAIResult(writer, map[string]any{"assistant": value, "token": value.Share.Token}, err)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "publication-check" {
+		if request.Method != http.MethodPost {
+			writer.Header().Set("Allow", http.MethodPost)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		assistant, err := service.aiapplications.GetAssistant(request.Context(), owner, rest[0])
+		if err != nil {
+			service.writeAIResult(writer, nil, err)
+			return
+		}
+		validation := service.assistantPublicationCheck(request.Context(), owner, assistant)
+		if validation.Ready {
+			if _, err := service.recordAssistantPublicationValidation(request.Context(), owner, validation); err != nil {
+				service.writeAIResult(writer, nil, err)
+				return
+			}
+		}
+		service.writeAIResult(writer, validation, nil)
+		return
+	}
+	if len(rest) == 2 && rest[1] == "publication-stats" {
+		if request.Method != http.MethodGet {
+			writer.Header().Set("Allow", http.MethodGet)
+			http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		stats, err := service.aiapplications.PublicationStats(request.Context(), owner, rest[0], assistantPublicationStatsWindowDays)
+		service.writeAIResult(writer, stats, err)
 		return
 	}
 	if len(rest) == 2 && rest[1] == "sessions" {
@@ -271,6 +309,19 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 				service.writeAssistantModelError(writer, err)
 				return
 			}
+			validation := service.assistantPublicationCheck(request.Context(), owner, assistant)
+			if !validation.Ready {
+				service.writeAIResult(writer, nil, fmt.Errorf("%w: assistant publication check failed", aiapplicationdomain.ErrInvalid))
+				return
+			}
+			value, err := service.aiapplications.SetAssistantState(request.Context(), owner, rest[0], input.State, input.Version)
+			if err == nil {
+				validation.AssistantVersion = value.Version
+				validation.CheckedAt = time.Now().UTC()
+				value, err = service.recordAssistantPublicationValidation(request.Context(), owner, validation)
+			}
+			service.writeAIResult(writer, value, err)
+			return
 		}
 		value, err := service.aiapplications.SetAssistantState(request.Context(), owner, rest[0], input.State, input.Version)
 		service.writeAIResult(writer, value, err)
@@ -302,7 +353,27 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 			service.writeAssistantModelError(writer, err)
 			return
 		}
-		value, err := service.aiapplications.UpdateAssistant(request.Context(), owner, rest[0], assistantFromPayload(payload), payload.Version)
+		candidate := assistantFromPayload(payload)
+		candidate.ID, candidate.OwnerID, candidate.Version = current.ID, current.OwnerID, current.Version
+		if candidate.State == "" {
+			candidate.State = current.State
+		}
+		var validation aiapplicationdomain.PublicationValidation
+		if candidate.State == aiapplicationdomain.StateEnabled {
+			validation = service.assistantPublicationCheck(request.Context(), owner, candidate)
+			if !validation.Ready {
+				service.writeAIResult(writer, nil, fmt.Errorf("%w: assistant publication check failed", aiapplicationdomain.ErrInvalid))
+				return
+			}
+		}
+		value, err := service.aiapplications.UpdateAssistant(request.Context(), owner, rest[0], candidate, payload.Version)
+		if err == nil && candidate.State == aiapplicationdomain.StateEnabled {
+			issuedShareToken := value.Share.Token
+			validation.AssistantVersion = value.Version
+			validation.CheckedAt = time.Now().UTC()
+			value, err = service.recordAssistantPublicationValidation(request.Context(), owner, validation)
+			value.Share.Token = issuedShareToken
+		}
 		service.writeAIResult(writer, value, err)
 	case http.MethodDelete:
 		service.writeAIResult(writer, nil, service.aiapplications.DeleteAssistant(request.Context(), owner, rest[0]))
@@ -439,7 +510,7 @@ func (service *Service) writeAIResult(writer http.ResponseWriter, value any, err
 }
 
 func assistantFromPayload(value assistantPayload) aiapplicationdomain.SmartAssistant {
-	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit}}
+	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit, DataProcessingAcknowledged: value.Share.DataProcessingAcknowledged}}
 }
 
 func (service *Service) validateAssistantModel(ctx context.Context, owner, modelID string) error {

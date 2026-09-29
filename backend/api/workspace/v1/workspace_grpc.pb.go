@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AgentWorkspaceService_GetHomeOverview_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/GetHomeOverview"
 	AgentWorkspaceService_GetConversationSelection_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
 	AgentWorkspaceService_ResolveConversationSelection_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
 	AgentWorkspaceService_ListConversationFiles_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
@@ -28,7 +29,15 @@ const (
 	AgentWorkspaceService_CreateUser_FullMethodName                                = "/workspace.v1.AgentWorkspaceService/CreateUser"
 	AgentWorkspaceService_SetUserEnabled_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
 	AgentWorkspaceService_ResetUserPassword_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
+	AgentWorkspaceService_SetUserRoles_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/SetUserRoles"
+	AgentWorkspaceService_ListIdentityGroups_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListIdentityGroups"
+	AgentWorkspaceService_SyncIdentityGroups_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SyncIdentityGroups"
+	AgentWorkspaceService_UpdateIdentityGroupBudget_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/UpdateIdentityGroupBudget"
+	AgentWorkspaceService_ListGovernanceAuditEvents_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ListGovernanceAuditEvents"
+	AgentWorkspaceService_TransferGroupResources_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/TransferGroupResources"
 	AgentWorkspaceService_GetCreditBalance_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
+	AgentWorkspaceService_GetCreditPolicy_FullMethodName                           = "/workspace.v1.AgentWorkspaceService/GetCreditPolicy"
+	AgentWorkspaceService_UpdateCreditPolicy_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/UpdateCreditPolicy"
 	AgentWorkspaceService_ListCreditLedger_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/ListCreditLedger"
 	AgentWorkspaceService_RedeemCreditCode_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
 	AgentWorkspaceService_ConfigureUserDailyCredits_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/ConfigureUserDailyCredits"
@@ -65,6 +74,10 @@ const (
 	AgentWorkspaceService_SendSessionMessage_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
 	AgentWorkspaceService_RetrySessionMessage_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
 	AgentWorkspaceService_CancelSessionMessage_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
+	AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName                = "/workspace.v1.AgentWorkspaceService/DecideSessionExecutionPlan"
+	AgentWorkspaceService_PreviewSessionWorkflowDraft_FullMethodName               = "/workspace.v1.AgentWorkspaceService/PreviewSessionWorkflowDraft"
+	AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateWorkflowFromSession"
+	AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListSessionWorkflowLinks"
 	AgentWorkspaceService_ListWorkflows_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 	AgentWorkspaceService_CreateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 	AgentWorkspaceService_GetWorkflow_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
@@ -80,6 +93,7 @@ const (
 	AgentWorkspaceService_ContinueRunConversation_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
 	AgentWorkspaceService_CancelRun_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/CancelRun"
 	AgentWorkspaceService_RerunWorkflow_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
+	AgentWorkspaceService_DecideRunExecutionPlan_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/DecideRunExecutionPlan"
 	AgentWorkspaceService_ListArtifacts_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
 	AgentWorkspaceService_ListWorkspaceEntries_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
 	AgentWorkspaceService_GetWorkspaceFile_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
@@ -105,6 +119,8 @@ const (
 	AgentWorkspaceService_DeleteExpertTeam_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/DeleteExpertTeam"
 	AgentWorkspaceService_GetSettings_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetSettings"
 	AgentWorkspaceService_UpdateSettings_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
+	AgentWorkspaceService_GetPlatformExecutionDefault_FullMethodName               = "/workspace.v1.AgentWorkspaceService/GetPlatformExecutionDefault"
+	AgentWorkspaceService_SetPlatformExecutionDefault_FullMethodName               = "/workspace.v1.AgentWorkspaceService/SetPlatformExecutionDefault"
 	AgentWorkspaceService_ListRuntimeEngines_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/ListRuntimeEngines"
 	AgentWorkspaceService_ListModelProviderPresets_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
 	AgentWorkspaceService_ListModelProviderConnections_FullMethodName              = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
@@ -170,6 +186,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentWorkspaceServiceClient interface {
+	GetHomeOverview(ctx context.Context, in *GetHomeOverviewRequest, opts ...grpc.CallOption) (*HomeOverview, error)
 	GetConversationSelection(ctx context.Context, in *GetConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error)
 	ResolveConversationSelection(ctx context.Context, in *ResolveConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error)
 	ListConversationFiles(ctx context.Context, in *ListConversationFilesRequest, opts ...grpc.CallOption) (*ListConversationFilesResponse, error)
@@ -179,7 +196,15 @@ type AgentWorkspaceServiceClient interface {
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	SetUserEnabled(ctx context.Context, in *SetUserEnabledRequest, opts ...grpc.CallOption) (*UserAccount, error)
 	ResetUserPassword(ctx context.Context, in *ResetUserPasswordRequest, opts ...grpc.CallOption) (*ResetUserPasswordResponse, error)
+	SetUserRoles(ctx context.Context, in *SetUserRolesRequest, opts ...grpc.CallOption) (*UserAccount, error)
+	ListIdentityGroups(ctx context.Context, in *ListIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error)
+	SyncIdentityGroups(ctx context.Context, in *SyncIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error)
+	UpdateIdentityGroupBudget(ctx context.Context, in *UpdateIdentityGroupBudgetRequest, opts ...grpc.CallOption) (*IdentityGroup, error)
+	ListGovernanceAuditEvents(ctx context.Context, in *ListGovernanceAuditEventsRequest, opts ...grpc.CallOption) (*ListGovernanceAuditEventsResponse, error)
+	TransferGroupResources(ctx context.Context, in *TransferGroupResourcesRequest, opts ...grpc.CallOption) (*TransferGroupResourcesResponse, error)
 	GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*CreditBalance, error)
+	GetCreditPolicy(ctx context.Context, in *GetCreditPolicyRequest, opts ...grpc.CallOption) (*CreditPolicy, error)
+	UpdateCreditPolicy(ctx context.Context, in *UpdateCreditPolicyRequest, opts ...grpc.CallOption) (*CreditPolicy, error)
 	ListCreditLedger(ctx context.Context, in *ListCreditLedgerRequest, opts ...grpc.CallOption) (*ListCreditLedgerResponse, error)
 	RedeemCreditCode(ctx context.Context, in *RedeemCreditCodeRequest, opts ...grpc.CallOption) (*CreditBalance, error)
 	ConfigureUserDailyCredits(ctx context.Context, in *ConfigureUserDailyCreditsRequest, opts ...grpc.CallOption) (*CreditBalance, error)
@@ -216,6 +241,10 @@ type AgentWorkspaceServiceClient interface {
 	SendSessionMessage(ctx context.Context, in *SendSessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	RetrySessionMessage(ctx context.Context, in *RetrySessionMessageRequest, opts ...grpc.CallOption) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(ctx context.Context, in *CancelSessionMessageRequest, opts ...grpc.CallOption) (*SessionMessage, error)
+	DecideSessionExecutionPlan(ctx context.Context, in *DecideSessionExecutionPlanRequest, opts ...grpc.CallOption) (*SessionMessage, error)
+	PreviewSessionWorkflowDraft(ctx context.Context, in *PreviewSessionWorkflowDraftRequest, opts ...grpc.CallOption) (*SessionWorkflowDraft, error)
+	CreateWorkflowFromSession(ctx context.Context, in *CreateWorkflowFromSessionRequest, opts ...grpc.CallOption) (*CreateWorkflowFromSessionResponse, error)
+	ListSessionWorkflowLinks(ctx context.Context, in *ListSessionWorkflowLinksRequest, opts ...grpc.CallOption) (*ListSessionWorkflowLinksResponse, error)
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
 	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
@@ -231,6 +260,7 @@ type AgentWorkspaceServiceClient interface {
 	ContinueRunConversation(ctx context.Context, in *ContinueRunConversationRequest, opts ...grpc.CallOption) (*Run, error)
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*Run, error)
 	RerunWorkflow(ctx context.Context, in *RerunWorkflowRequest, opts ...grpc.CallOption) (*Run, error)
+	DecideRunExecutionPlan(ctx context.Context, in *DecideRunExecutionPlanRequest, opts ...grpc.CallOption) (*Run, error)
 	ListArtifacts(ctx context.Context, in *ListArtifactsRequest, opts ...grpc.CallOption) (*ListArtifactsResponse, error)
 	ListWorkspaceEntries(ctx context.Context, in *ListWorkspaceEntriesRequest, opts ...grpc.CallOption) (*ListWorkspaceEntriesResponse, error)
 	GetWorkspaceFile(ctx context.Context, in *GetWorkspaceFileRequest, opts ...grpc.CallOption) (*WorkspaceFile, error)
@@ -256,6 +286,8 @@ type AgentWorkspaceServiceClient interface {
 	DeleteExpertTeam(ctx context.Context, in *DeleteExpertTeamRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GetSettings(ctx context.Context, in *GetSettingsRequest, opts ...grpc.CallOption) (*PersonalSettings, error)
 	UpdateSettings(ctx context.Context, in *UpdateSettingsRequest, opts ...grpc.CallOption) (*PersonalSettings, error)
+	GetPlatformExecutionDefault(ctx context.Context, in *GetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(ctx context.Context, in *SetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error)
 	ListRuntimeEngines(ctx context.Context, in *ListRuntimeEnginesRequest, opts ...grpc.CallOption) (*ListRuntimeEnginesResponse, error)
 	ListModelProviderPresets(ctx context.Context, in *ListModelProviderPresetsRequest, opts ...grpc.CallOption) (*ListModelProviderPresetsResponse, error)
 	ListModelProviderConnections(ctx context.Context, in *ListModelProviderConnectionsRequest, opts ...grpc.CallOption) (*ListModelProviderConnectionsResponse, error)
@@ -323,6 +355,16 @@ type agentWorkspaceServiceClient struct {
 
 func NewAgentWorkspaceServiceClient(cc grpc.ClientConnInterface) AgentWorkspaceServiceClient {
 	return &agentWorkspaceServiceClient{cc}
+}
+
+func (c *agentWorkspaceServiceClient) GetHomeOverview(ctx context.Context, in *GetHomeOverviewRequest, opts ...grpc.CallOption) (*HomeOverview, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HomeOverview)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetHomeOverview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *agentWorkspaceServiceClient) GetConversationSelection(ctx context.Context, in *GetConversationSelectionRequest, opts ...grpc.CallOption) (*ConversationSelection, error) {
@@ -415,10 +457,90 @@ func (c *agentWorkspaceServiceClient) ResetUserPassword(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) SetUserRoles(ctx context.Context, in *SetUserRolesRequest, opts ...grpc.CallOption) (*UserAccount, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserAccount)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetUserRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListIdentityGroups(ctx context.Context, in *ListIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListIdentityGroupsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListIdentityGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SyncIdentityGroups(ctx context.Context, in *SyncIdentityGroupsRequest, opts ...grpc.CallOption) (*ListIdentityGroupsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListIdentityGroupsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SyncIdentityGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpdateIdentityGroupBudget(ctx context.Context, in *UpdateIdentityGroupBudgetRequest, opts ...grpc.CallOption) (*IdentityGroup, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IdentityGroup)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateIdentityGroupBudget_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListGovernanceAuditEvents(ctx context.Context, in *ListGovernanceAuditEventsRequest, opts ...grpc.CallOption) (*ListGovernanceAuditEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListGovernanceAuditEventsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListGovernanceAuditEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) TransferGroupResources(ctx context.Context, in *TransferGroupResourcesRequest, opts ...grpc.CallOption) (*TransferGroupResourcesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferGroupResourcesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_TransferGroupResources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) GetCreditBalance(ctx context.Context, in *GetCreditBalanceRequest, opts ...grpc.CallOption) (*CreditBalance, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreditBalance)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetCreditBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetCreditPolicy(ctx context.Context, in *GetCreditPolicyRequest, opts ...grpc.CallOption) (*CreditPolicy, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreditPolicy)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetCreditPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpdateCreditPolicy(ctx context.Context, in *UpdateCreditPolicyRequest, opts ...grpc.CallOption) (*CreditPolicy, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreditPolicy)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateCreditPolicy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -785,6 +907,46 @@ func (c *agentWorkspaceServiceClient) CancelSessionMessage(ctx context.Context, 
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) DecideSessionExecutionPlan(ctx context.Context, in *DecideSessionExecutionPlanRequest, opts ...grpc.CallOption) (*SessionMessage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionMessage)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) PreviewSessionWorkflowDraft(ctx context.Context, in *PreviewSessionWorkflowDraftRequest, opts ...grpc.CallOption) (*SessionWorkflowDraft, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionWorkflowDraft)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_PreviewSessionWorkflowDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CreateWorkflowFromSession(ctx context.Context, in *CreateWorkflowFromSessionRequest, opts ...grpc.CallOption) (*CreateWorkflowFromSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateWorkflowFromSessionResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListSessionWorkflowLinks(ctx context.Context, in *ListSessionWorkflowLinksRequest, opts ...grpc.CallOption) (*ListSessionWorkflowLinksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSessionWorkflowLinksResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListWorkflowsResponse)
@@ -929,6 +1091,16 @@ func (c *agentWorkspaceServiceClient) RerunWorkflow(ctx context.Context, in *Rer
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Run)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_RerunWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) DecideRunExecutionPlan(ctx context.Context, in *DecideRunExecutionPlanRequest, opts ...grpc.CallOption) (*Run, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Run)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_DecideRunExecutionPlan_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1179,6 +1351,26 @@ func (c *agentWorkspaceServiceClient) UpdateSettings(ctx context.Context, in *Up
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PersonalSettings)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetPlatformExecutionDefault(ctx context.Context, in *GetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlatformExecutionDefault)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetPlatformExecutionDefault_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SetPlatformExecutionDefault(ctx context.Context, in *SetPlatformExecutionDefaultRequest, opts ...grpc.CallOption) (*PlatformExecutionDefault, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlatformExecutionDefault)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SetPlatformExecutionDefault_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1779,6 +1971,7 @@ func (c *agentWorkspaceServiceClient) DisconnectCLIConnectorAuthorization(ctx co
 // All implementations must embed UnimplementedAgentWorkspaceServiceServer
 // for forward compatibility.
 type AgentWorkspaceServiceServer interface {
+	GetHomeOverview(context.Context, *GetHomeOverviewRequest) (*HomeOverview, error)
 	GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error)
 	ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error)
 	ListConversationFiles(context.Context, *ListConversationFilesRequest) (*ListConversationFilesResponse, error)
@@ -1788,7 +1981,15 @@ type AgentWorkspaceServiceServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
 	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
+	SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error)
+	ListIdentityGroups(context.Context, *ListIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
+	SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
+	UpdateIdentityGroupBudget(context.Context, *UpdateIdentityGroupBudgetRequest) (*IdentityGroup, error)
+	ListGovernanceAuditEvents(context.Context, *ListGovernanceAuditEventsRequest) (*ListGovernanceAuditEventsResponse, error)
+	TransferGroupResources(context.Context, *TransferGroupResourcesRequest) (*TransferGroupResourcesResponse, error)
 	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error)
+	GetCreditPolicy(context.Context, *GetCreditPolicyRequest) (*CreditPolicy, error)
+	UpdateCreditPolicy(context.Context, *UpdateCreditPolicyRequest) (*CreditPolicy, error)
 	ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error)
 	RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error)
 	ConfigureUserDailyCredits(context.Context, *ConfigureUserDailyCreditsRequest) (*CreditBalance, error)
@@ -1825,6 +2026,10 @@ type AgentWorkspaceServiceServer interface {
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
+	DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error)
+	PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error)
+	CreateWorkflowFromSession(context.Context, *CreateWorkflowFromSessionRequest) (*CreateWorkflowFromSessionResponse, error)
+	ListSessionWorkflowLinks(context.Context, *ListSessionWorkflowLinksRequest) (*ListSessionWorkflowLinksResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
@@ -1840,6 +2045,7 @@ type AgentWorkspaceServiceServer interface {
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error)
+	DecideRunExecutionPlan(context.Context, *DecideRunExecutionPlanRequest) (*Run, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
@@ -1865,6 +2071,8 @@ type AgentWorkspaceServiceServer interface {
 	DeleteExpertTeam(context.Context, *DeleteExpertTeamRequest) (*DeleteResponse, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
+	GetPlatformExecutionDefault(context.Context, *GetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(context.Context, *SetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
 	ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
@@ -1934,6 +2142,9 @@ type AgentWorkspaceServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAgentWorkspaceServiceServer struct{}
 
+func (UnimplementedAgentWorkspaceServiceServer) GetHomeOverview(context.Context, *GetHomeOverviewRequest) (*HomeOverview, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetHomeOverview not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetConversationSelection not implemented")
 }
@@ -1961,8 +2172,32 @@ func (UnimplementedAgentWorkspaceServiceServer) SetUserEnabled(context.Context, 
 func (UnimplementedAgentWorkspaceServiceServer) ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetUserPassword not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetUserRoles not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListIdentityGroups(context.Context, *ListIdentityGroupsRequest) (*ListIdentityGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListIdentityGroups not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SyncIdentityGroups not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpdateIdentityGroupBudget(context.Context, *UpdateIdentityGroupBudgetRequest) (*IdentityGroup, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateIdentityGroupBudget not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListGovernanceAuditEvents(context.Context, *ListGovernanceAuditEventsRequest) (*ListGovernanceAuditEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListGovernanceAuditEvents not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) TransferGroupResources(context.Context, *TransferGroupResourcesRequest) (*TransferGroupResourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferGroupResources not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCreditBalance not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetCreditPolicy(context.Context, *GetCreditPolicyRequest) (*CreditPolicy, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCreditPolicy not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpdateCreditPolicy(context.Context, *UpdateCreditPolicyRequest) (*CreditPolicy, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCreditPolicy not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListCreditLedger(context.Context, *ListCreditLedgerRequest) (*ListCreditLedgerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCreditLedger not implemented")
@@ -2072,6 +2307,18 @@ func (UnimplementedAgentWorkspaceServiceServer) RetrySessionMessage(context.Cont
 func (UnimplementedAgentWorkspaceServiceServer) CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelSessionMessage not implemented")
 }
+func (UnimplementedAgentWorkspaceServiceServer) DecideSessionExecutionPlan(context.Context, *DecideSessionExecutionPlanRequest) (*SessionMessage, error) {
+	return nil, status.Error(codes.Unimplemented, "method DecideSessionExecutionPlan not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewSessionWorkflowDraft not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CreateWorkflowFromSession(context.Context, *CreateWorkflowFromSessionRequest) (*CreateWorkflowFromSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateWorkflowFromSession not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListSessionWorkflowLinks(context.Context, *ListSessionWorkflowLinksRequest) (*ListSessionWorkflowLinksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSessionWorkflowLinks not implemented")
+}
 func (UnimplementedAgentWorkspaceServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListWorkflows not implemented")
 }
@@ -2116,6 +2363,9 @@ func (UnimplementedAgentWorkspaceServiceServer) CancelRun(context.Context, *Canc
 }
 func (UnimplementedAgentWorkspaceServiceServer) RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error) {
 	return nil, status.Error(codes.Unimplemented, "method RerunWorkflow not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) DecideRunExecutionPlan(context.Context, *DecideRunExecutionPlanRequest) (*Run, error) {
+	return nil, status.Error(codes.Unimplemented, "method DecideRunExecutionPlan not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListArtifacts not implemented")
@@ -2191,6 +2441,12 @@ func (UnimplementedAgentWorkspaceServiceServer) GetSettings(context.Context, *Ge
 }
 func (UnimplementedAgentWorkspaceServiceServer) UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetPlatformExecutionDefault(context.Context, *GetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPlatformExecutionDefault not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SetPlatformExecutionDefault(context.Context, *SetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetPlatformExecutionDefault not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListRuntimeEngines(context.Context, *ListRuntimeEnginesRequest) (*ListRuntimeEnginesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListRuntimeEngines not implemented")
@@ -2390,6 +2646,24 @@ func RegisterAgentWorkspaceServiceServer(s grpc.ServiceRegistrar, srv AgentWorks
 	s.RegisterService(&AgentWorkspaceService_ServiceDesc, srv)
 }
 
+func _AgentWorkspaceService_GetHomeOverview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHomeOverviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetHomeOverview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetHomeOverview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetHomeOverview(ctx, req.(*GetHomeOverviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_GetConversationSelection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetConversationSelectionRequest)
 	if err := dec(in); err != nil {
@@ -2552,6 +2826,114 @@ func _AgentWorkspaceService_ResetUserPassword_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_SetUserRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUserRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SetUserRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SetUserRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SetUserRoles(ctx, req.(*SetUserRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListIdentityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListIdentityGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListIdentityGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListIdentityGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListIdentityGroups(ctx, req.(*ListIdentityGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SyncIdentityGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncIdentityGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SyncIdentityGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SyncIdentityGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SyncIdentityGroups(ctx, req.(*SyncIdentityGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpdateIdentityGroupBudget_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateIdentityGroupBudgetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpdateIdentityGroupBudget(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpdateIdentityGroupBudget_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpdateIdentityGroupBudget(ctx, req.(*UpdateIdentityGroupBudgetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListGovernanceAuditEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListGovernanceAuditEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListGovernanceAuditEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListGovernanceAuditEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListGovernanceAuditEvents(ctx, req.(*ListGovernanceAuditEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_TransferGroupResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferGroupResourcesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).TransferGroupResources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_TransferGroupResources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).TransferGroupResources(ctx, req.(*TransferGroupResourcesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_GetCreditBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCreditBalanceRequest)
 	if err := dec(in); err != nil {
@@ -2566,6 +2948,42 @@ func _AgentWorkspaceService_GetCreditBalance_Handler(srv interface{}, ctx contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).GetCreditBalance(ctx, req.(*GetCreditBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetCreditPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreditPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetCreditPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetCreditPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetCreditPolicy(ctx, req.(*GetCreditPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpdateCreditPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCreditPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpdateCreditPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpdateCreditPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpdateCreditPolicy(ctx, req.(*UpdateCreditPolicyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3218,6 +3636,78 @@ func _AgentWorkspaceService_CancelSessionMessage_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_DecideSessionExecutionPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideSessionExecutionPlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DecideSessionExecutionPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DecideSessionExecutionPlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DecideSessionExecutionPlan(ctx, req.(*DecideSessionExecutionPlanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_PreviewSessionWorkflowDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreviewSessionWorkflowDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).PreviewSessionWorkflowDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_PreviewSessionWorkflowDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).PreviewSessionWorkflowDraft(ctx, req.(*PreviewSessionWorkflowDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CreateWorkflowFromSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkflowFromSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CreateWorkflowFromSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CreateWorkflowFromSession(ctx, req.(*CreateWorkflowFromSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListSessionWorkflowLinks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSessionWorkflowLinksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListSessionWorkflowLinks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListSessionWorkflowLinks(ctx, req.(*ListSessionWorkflowLinksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_ListWorkflows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListWorkflowsRequest)
 	if err := dec(in); err != nil {
@@ -3484,6 +3974,24 @@ func _AgentWorkspaceService_RerunWorkflow_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).RerunWorkflow(ctx, req.(*RerunWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_DecideRunExecutionPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DecideRunExecutionPlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).DecideRunExecutionPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_DecideRunExecutionPlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).DecideRunExecutionPlan(ctx, req.(*DecideRunExecutionPlanRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3934,6 +4442,42 @@ func _AgentWorkspaceService_UpdateSettings_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).UpdateSettings(ctx, req.(*UpdateSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetPlatformExecutionDefault_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlatformExecutionDefaultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetPlatformExecutionDefault(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetPlatformExecutionDefault_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetPlatformExecutionDefault(ctx, req.(*GetPlatformExecutionDefaultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SetPlatformExecutionDefault_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPlatformExecutionDefaultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SetPlatformExecutionDefault(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SetPlatformExecutionDefault_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SetPlatformExecutionDefault(ctx, req.(*SetPlatformExecutionDefaultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5008,6 +5552,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AgentWorkspaceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetHomeOverview",
+			Handler:    _AgentWorkspaceService_GetHomeOverview_Handler,
+		},
+		{
 			MethodName: "GetConversationSelection",
 			Handler:    _AgentWorkspaceService_GetConversationSelection_Handler,
 		},
@@ -5044,8 +5592,40 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_ResetUserPassword_Handler,
 		},
 		{
+			MethodName: "SetUserRoles",
+			Handler:    _AgentWorkspaceService_SetUserRoles_Handler,
+		},
+		{
+			MethodName: "ListIdentityGroups",
+			Handler:    _AgentWorkspaceService_ListIdentityGroups_Handler,
+		},
+		{
+			MethodName: "SyncIdentityGroups",
+			Handler:    _AgentWorkspaceService_SyncIdentityGroups_Handler,
+		},
+		{
+			MethodName: "UpdateIdentityGroupBudget",
+			Handler:    _AgentWorkspaceService_UpdateIdentityGroupBudget_Handler,
+		},
+		{
+			MethodName: "ListGovernanceAuditEvents",
+			Handler:    _AgentWorkspaceService_ListGovernanceAuditEvents_Handler,
+		},
+		{
+			MethodName: "TransferGroupResources",
+			Handler:    _AgentWorkspaceService_TransferGroupResources_Handler,
+		},
+		{
 			MethodName: "GetCreditBalance",
 			Handler:    _AgentWorkspaceService_GetCreditBalance_Handler,
+		},
+		{
+			MethodName: "GetCreditPolicy",
+			Handler:    _AgentWorkspaceService_GetCreditPolicy_Handler,
+		},
+		{
+			MethodName: "UpdateCreditPolicy",
+			Handler:    _AgentWorkspaceService_UpdateCreditPolicy_Handler,
 		},
 		{
 			MethodName: "ListCreditLedger",
@@ -5192,6 +5772,22 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentWorkspaceService_CancelSessionMessage_Handler,
 		},
 		{
+			MethodName: "DecideSessionExecutionPlan",
+			Handler:    _AgentWorkspaceService_DecideSessionExecutionPlan_Handler,
+		},
+		{
+			MethodName: "PreviewSessionWorkflowDraft",
+			Handler:    _AgentWorkspaceService_PreviewSessionWorkflowDraft_Handler,
+		},
+		{
+			MethodName: "CreateWorkflowFromSession",
+			Handler:    _AgentWorkspaceService_CreateWorkflowFromSession_Handler,
+		},
+		{
+			MethodName: "ListSessionWorkflowLinks",
+			Handler:    _AgentWorkspaceService_ListSessionWorkflowLinks_Handler,
+		},
+		{
 			MethodName: "ListWorkflows",
 			Handler:    _AgentWorkspaceService_ListWorkflows_Handler,
 		},
@@ -5250,6 +5846,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RerunWorkflow",
 			Handler:    _AgentWorkspaceService_RerunWorkflow_Handler,
+		},
+		{
+			MethodName: "DecideRunExecutionPlan",
+			Handler:    _AgentWorkspaceService_DecideRunExecutionPlan_Handler,
 		},
 		{
 			MethodName: "ListArtifacts",
@@ -5350,6 +5950,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateSettings",
 			Handler:    _AgentWorkspaceService_UpdateSettings_Handler,
+		},
+		{
+			MethodName: "GetPlatformExecutionDefault",
+			Handler:    _AgentWorkspaceService_GetPlatformExecutionDefault_Handler,
+		},
+		{
+			MethodName: "SetPlatformExecutionDefault",
+			Handler:    _AgentWorkspaceService_SetPlatformExecutionDefault_Handler,
 		},
 		{
 			MethodName: "ListRuntimeEngines",

@@ -149,6 +149,8 @@ type messageRecord struct {
 	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
 	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
 	RuntimeActivities []byte     `gorm:"column:runtime_activities;type:jsonb"`
+	Evidence          []byte     `gorm:"column:evidence;type:jsonb"`
+	ExecutionPlan     []byte     `gorm:"column:execution_plan;type:jsonb"`
 	ResourceActionID  *string    `gorm:"column:resource_creation_action_id"`
 }
 
@@ -204,6 +206,7 @@ type workflowRecord struct {
 	EnvironmentSecret   []byte     `gorm:"column:environment_secret_ciphertext"`
 	Schedule            []byte     `gorm:"column:schedule;type:jsonb"`
 	KnowledgeBaseIDs    []byte     `gorm:"column:knowledge_base_ids;type:jsonb"`
+	ExecutionTemplate   []byte     `gorm:"column:execution_template;type:jsonb"`
 	NextScheduledAt     *time.Time `gorm:"column:next_scheduled_at"`
 	GitSource           []byte     `gorm:"column:git_source;type:jsonb"`
 	GitSecret           []byte     `gorm:"column:git_secret_ciphertext"`
@@ -219,17 +222,34 @@ type workflowRecord struct {
 
 func (workflowRecord) TableName() string { return "workflows" }
 
+type workflowSessionOriginRecord struct {
+	WorkflowID      string    `gorm:"column:workflow_id"`
+	OwnerID         string    `gorm:"column:owner_user_id"`
+	SessionID       string    `gorm:"column:session_id"`
+	MessageID       int64     `gorm:"column:message_id"`
+	ValidationRunID string    `gorm:"column:validation_run_id"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+}
+
+func (workflowSessionOriginRecord) TableName() string { return "workflow_session_origins" }
+
 type knowledgeBaseRecord struct {
-	ID          string     `gorm:"column:id"`
-	OwnerID     string     `gorm:"column:owner_user_id"`
-	Platform    bool       `gorm:"column:platform"`
-	Name        string     `gorm:"column:name"`
-	Description string     `gorm:"column:description"`
-	Visibility  string     `gorm:"column:visibility"`
-	DeletedAt   *time.Time `gorm:"column:deleted_at"`
-	CreatedAt   time.Time  `gorm:"column:created_at"`
-	UpdatedAt   time.Time  `gorm:"column:updated_at"`
-	Version     int64      `gorm:"column:version"`
+	ID                 string     `gorm:"column:id"`
+	OwnerID            string     `gorm:"column:owner_user_id"`
+	Platform           bool       `gorm:"column:platform"`
+	Name               string     `gorm:"column:name"`
+	Description        string     `gorm:"column:description"`
+	Visibility         string     `gorm:"column:visibility"`
+	Scope              string     `gorm:"column:scope_type"`
+	GroupID            *string    `gorm:"column:group_id"`
+	GroupName          string     `gorm:"column:group_name;->"`
+	DeletedAt          *time.Time `gorm:"column:deleted_at"`
+	CreatedAt          time.Time  `gorm:"column:created_at"`
+	UpdatedAt          time.Time  `gorm:"column:updated_at"`
+	Version            int64      `gorm:"column:version"`
+	DocumentCount      int64      `gorm:"column:document_count;->"`
+	ReadyDocumentCount int64      `gorm:"column:ready_document_count;->"`
+	LastReadyAt        *time.Time `gorm:"column:last_ready_at;->"`
 }
 
 func (knowledgeBaseRecord) TableName() string { return "knowledge_bases" }
@@ -460,9 +480,23 @@ type settingsRecord struct {
 	Language                string `gorm:"column:language"`
 	Timezone                string `gorm:"column:timezone"`
 	Version                 int64  `gorm:"column:version"`
+	ExecutionInherited      bool   `gorm:"column:execution_inherited"`
 }
 
 func (settingsRecord) TableName() string { return "personal_settings" }
+
+type platformExecutionDefaultRecord struct {
+	Singleton       bool      `gorm:"column:singleton"`
+	RuntimeEngine   string    `gorm:"column:runtime_engine"`
+	ProviderModelID string    `gorm:"column:provider_model_id"`
+	ValidationRunID string    `gorm:"column:validation_run_id"`
+	UpdatedByUserID string    `gorm:"column:updated_by_user_id"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+	UpdatedAt       time.Time `gorm:"column:updated_at"`
+	Version         int64     `gorm:"column:version"`
+}
+
+func (platformExecutionDefaultRecord) TableName() string { return "platform_execution_defaults" }
 
 type modelProviderConnectionRecord struct {
 	ID                 string     `gorm:"column:id"`
@@ -570,6 +604,8 @@ type runRecord struct {
 	CancelRequested   *time.Time `gorm:"column:cancel_requested_at"`
 	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
 	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
+	Evidence          []byte     `gorm:"column:evidence;type:jsonb"`
+	ExecutionPlan     []byte     `gorm:"column:execution_plan;type:jsonb"`
 	NativeCheckpoint  string     `gorm:"column:native_checkpoint"`
 	Version           int64      `gorm:"column:version"`
 }

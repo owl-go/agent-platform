@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"agent-platform/backend/internal/biz/account/domain"
 )
@@ -18,13 +19,19 @@ type Repository interface {
 	FindPrincipal(context.Context, string) (domain.Principal, error)
 	ListUsers(context.Context) ([]domain.User, error)
 	CreateUser(context.Context, domain.User) (domain.User, error)
-	SetEnabled(context.Context, string, bool, int64) (domain.User, error)
+	SetEnabled(context.Context, string, string, bool, int64, string) (domain.User, error)
+	SetRoles(context.Context, string, string, bool, bool, int64, string) (domain.User, error)
+	ReplaceIdentityGroups(context.Context, string, []domain.IdentityGroupSnapshot, time.Time) ([]domain.IdentityGroup, error)
+	ListIdentityGroups(context.Context) ([]domain.IdentityGroup, error)
+	UpdateIdentityGroupBudget(context.Context, string, string, *int64, int64, string) (domain.IdentityGroup, error)
+	ListGovernanceAuditEvents(context.Context, int) ([]domain.GovernanceAuditEvent, error)
 }
 
 type IdentityProvider interface {
 	CreateUser(context.Context, domain.NewUser) (subject, temporaryPassword string, err error)
 	SetEnabled(context.Context, string, bool) error
 	ResetPassword(context.Context, string) (string, error)
+	ListGroups(context.Context) ([]domain.IdentityGroupSnapshot, error)
 }
 
 type Service struct {
@@ -124,13 +131,17 @@ func (service *Service) CreateUser(ctx context.Context, input domain.NewUser) (d
 	return created, password, nil
 }
 
-func (service *Service) SetEnabled(ctx context.Context, userID string, enabled bool, expectedVersion int64) (domain.User, error) {
+func (service *Service) SetEnabled(ctx context.Context, userID string, enabled bool, expectedVersion int64, reason string) (domain.User, error) {
 	principal, err := service.Current(ctx)
 	if err != nil {
 		return domain.User{}, err
 	}
 	if err := principal.RequireAdministrator(); err != nil {
 		return domain.User{}, err
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" || len(reason) > 500 {
+		return domain.User{}, fmt.Errorf("User status change requires a reason")
 	}
 	users, err := service.repo.ListUsers(ctx)
 	if err != nil {
@@ -147,12 +158,12 @@ func (service *Service) SetEnabled(ctx context.Context, userID string, enabled b
 		return domain.User{}, domain.ErrNotFound
 	}
 	if target.Administrator {
-		return domain.User{}, fmt.Errorf("bootstrap Administrator cannot be disabled")
+		return domain.User{}, fmt.Errorf("Administrator must be demoted before the account can be disabled")
 	}
 	if err := service.provider.SetEnabled(ctx, target.OIDCSubject, enabled); err != nil {
 		return domain.User{}, fmt.Errorf("update Identity Provider User: %w", err)
 	}
-	updated, err := service.repo.SetEnabled(ctx, userID, enabled, expectedVersion)
+	updated, err := service.repo.SetEnabled(ctx, principal.UserID, userID, enabled, expectedVersion, reason)
 	if err != nil {
 		_ = service.provider.SetEnabled(context.WithoutCancel(ctx), target.OIDCSubject, target.Enabled)
 		return domain.User{}, err
@@ -178,4 +189,84 @@ func (service *Service) ResetPassword(ctx context.Context, userID string) (strin
 		}
 	}
 	return "", domain.ErrNotFound
+}
+
+func (service *Service) SetRoles(ctx context.Context, userID string, administrator, resourcePublisher bool, expectedVersion int64, reason string) (domain.User, error) {
+	principal, err := service.Current(ctx)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if err := principal.RequireAdministrator(); err != nil {
+		return domain.User{}, err
+	}
+	reason = strings.TrimSpace(reason)
+	if strings.TrimSpace(userID) == "" || expectedVersion < 1 || reason == "" || len(reason) > 500 {
+		return domain.User{}, fmt.Errorf("governance role change requires a User, version, and reason")
+	}
+	return service.repo.SetRoles(ctx, principal.UserID, userID, administrator, resourcePublisher, expectedVersion, reason)
+}
+
+func (service *Service) SyncIdentityGroups(ctx context.Context) ([]domain.IdentityGroup, error) {
+	principal, err := service.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := principal.RequireAdministrator(); err != nil {
+		return nil, err
+	}
+	groups, err := service.provider.ListGroups(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read identity groups: %w", err)
+	}
+	seen := make(map[string]struct{}, len(groups))
+	for _, group := range groups {
+		if err := group.Validate(); err != nil {
+			return nil, err
+		}
+		if _, exists := seen[group.ExternalID]; exists {
+			return nil, fmt.Errorf("identity source returned duplicate group %q", group.ExternalID)
+		}
+		seen[group.ExternalID] = struct{}{}
+	}
+	return service.repo.ReplaceIdentityGroups(ctx, principal.UserID, groups, time.Now().UTC())
+}
+
+func (service *Service) ListIdentityGroups(ctx context.Context) ([]domain.IdentityGroup, error) {
+	principal, err := service.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := principal.RequireAdministrator(); err != nil {
+		return nil, err
+	}
+	return service.repo.ListIdentityGroups(ctx)
+}
+
+func (service *Service) UpdateIdentityGroupBudget(ctx context.Context, groupID string, dailyLimit *int64, expectedVersion int64, reason string) (domain.IdentityGroup, error) {
+	principal, err := service.Current(ctx)
+	if err != nil {
+		return domain.IdentityGroup{}, err
+	}
+	if err := principal.RequireAdministrator(); err != nil {
+		return domain.IdentityGroup{}, err
+	}
+	reason = strings.TrimSpace(reason)
+	if strings.TrimSpace(groupID) == "" || expectedVersion < 1 || reason == "" || len(reason) > 500 || (dailyLimit != nil && *dailyLimit < 0) {
+		return domain.IdentityGroup{}, fmt.Errorf("group budget requires a Group, non-negative limit, version, and reason")
+	}
+	return service.repo.UpdateIdentityGroupBudget(ctx, principal.UserID, groupID, dailyLimit, expectedVersion, reason)
+}
+
+func (service *Service) ListGovernanceAuditEvents(ctx context.Context, limit int) ([]domain.GovernanceAuditEvent, error) {
+	principal, err := service.Current(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := principal.RequireAdministrator(); err != nil {
+		return nil, err
+	}
+	if limit < 1 || limit > 200 {
+		limit = 100
+	}
+	return service.repo.ListGovernanceAuditEvents(ctx, limit)
 }

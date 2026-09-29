@@ -15,6 +15,7 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/cliconnector"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
+	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
 	"agent-platform/backend/internal/infrastructure/gormdb"
@@ -53,7 +54,7 @@ func (worker *Worker) CleanupExpiredAIContent(ctx context.Context) (bool, error)
 	return removed > 0, err
 }
 
-func NewWorker(database *gormdb.Database, config platformconfig.Config, objects objectstore.Provider, warm *containerprocess.WarmManager) (*Worker, error) {
+func NewWorker(database *gormdb.Database, config platformconfig.Config, objects objectstore.Provider, warm *containerprocess.WarmManager, logger *slog.Logger) (*Worker, error) {
 	box, err := secretcrypto.New(config.Security.DataEncryptionKey)
 	if err != nil {
 		return nil, err
@@ -101,6 +102,11 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
+	analytics, err := analyticsrepo.New(database.ORM(), logger)
+	if err != nil {
+		return nil, err
+	}
+	workspaceWorker.EnableProductAnalytics(analytics)
 	aicreation, err := aicreationwiring.NewApplication(database, creditsRepository, credits, box, objects)
 	if err != nil {
 		return nil, err

@@ -14,7 +14,8 @@ import (
 func TestBrokerExecutesOnlyServerOwnedLowRiskDefinition(t *testing.T) {
 	process := &recordingProcess{}
 	definition := brokerDefinition(RiskLow)
-	broker, err := NewBroker(BrokerConfig{Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: process}})
+	var observed InvocationEvidence
+	broker, err := NewBroker(BrokerConfig{Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: process}, ObserveInvocation: func(value InvocationEvidence) { observed = value }})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,6 +24,9 @@ func TestBrokerExecutesOnlyServerOwnedLowRiskDefinition(t *testing.T) {
 	stdout, decodeErr := base64.StdEncoding.DecodeString(response.StdoutBase64)
 	if decodeErr != nil || response.ErrorCode != "" || string(stdout) != "ok" || process.executable != "tool" {
 		t.Fatalf("response=%#v executable=%q decode=%v", response, process.executable, decodeErr)
+	}
+	if observed.ConnectorID != definition.ID || observed.ConnectorName != definition.Name || observed.Capability != "identity" || !observed.Succeeded {
+		t.Fatalf("invocation Evidence = %#v", observed)
 	}
 }
 

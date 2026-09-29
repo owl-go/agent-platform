@@ -9,6 +9,7 @@ import "google/protobuf/timestamp.proto";
 option go_package = "agent-platform/backend/api/workspace/v1;workspacev1";
 
 service AgentWorkspaceService {
+  rpc GetHomeOverview(GetHomeOverviewRequest) returns (HomeOverview) { option (google.api.http) = {get: "/api/v1/home-overview"}; }
   rpc GetConversationSelection(GetConversationSelectionRequest) returns (ConversationSelection) { option (google.api.http) = {get: "/api/v1/conversation-selection"}; }
   rpc ResolveConversationSelection(ResolveConversationSelectionRequest) returns (ConversationSelection) { option (google.api.http) = {post: "/api/v1/conversation-selection" body: "*"}; }
   rpc ListConversationFiles(ListConversationFilesRequest) returns (ListConversationFilesResponse) { option (google.api.http) = {get: "/api/v1/conversation-files"}; }
@@ -18,7 +19,15 @@ service AgentWorkspaceService {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) { option (google.api.http) = {post: "/api/v1/admin/users" body: "*"}; }
   rpc SetUserEnabled(SetUserEnabledRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/enabled" body: "*"}; }
   rpc ResetUserPassword(ResetUserPasswordRequest) returns (ResetUserPasswordResponse) { option (google.api.http) = {post: "/api/v1/admin/users/{user_id}/password-reset" body: "*"}; }
+  rpc SetUserRoles(SetUserRolesRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/roles" body: "*"}; }
+  rpc ListIdentityGroups(ListIdentityGroupsRequest) returns (ListIdentityGroupsResponse) { option (google.api.http) = {get: "/api/v1/admin/identity-groups"}; }
+  rpc SyncIdentityGroups(SyncIdentityGroupsRequest) returns (ListIdentityGroupsResponse) { option (google.api.http) = {post: "/api/v1/admin/identity-groups/synchronization" body: "*"}; }
+  rpc UpdateIdentityGroupBudget(UpdateIdentityGroupBudgetRequest) returns (IdentityGroup) { option (google.api.http) = {patch: "/api/v1/admin/identity-groups/{group_id}/budget" body: "*"}; }
+  rpc ListGovernanceAuditEvents(ListGovernanceAuditEventsRequest) returns (ListGovernanceAuditEventsResponse) { option (google.api.http) = {get: "/api/v1/admin/governance-audit-events"}; }
+  rpc TransferGroupResources(TransferGroupResourcesRequest) returns (TransferGroupResourcesResponse) { option (google.api.http) = {post: "/api/v1/admin/identity-groups/{group_id}/resource-transfers" body: "*"}; }
   rpc GetCreditBalance(GetCreditBalanceRequest) returns (CreditBalance) { option (google.api.http) = {get: "/api/v1/credits/balance"}; }
+  rpc GetCreditPolicy(GetCreditPolicyRequest) returns (CreditPolicy) { option (google.api.http) = {get: "/api/v1/admin/credit-policy"}; }
+  rpc UpdateCreditPolicy(UpdateCreditPolicyRequest) returns (CreditPolicy) { option (google.api.http) = {put: "/api/v1/admin/credit-policy" body: "*"}; }
   rpc ListCreditLedger(ListCreditLedgerRequest) returns (ListCreditLedgerResponse) { option (google.api.http) = {get: "/api/v1/credits/ledger"}; }
   rpc RedeemCreditCode(RedeemCreditCodeRequest) returns (CreditBalance) { option (google.api.http) = {post: "/api/v1/credits/redemptions" body: "*"}; }
   rpc ConfigureUserDailyCredits(ConfigureUserDailyCreditsRequest) returns (CreditBalance) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/daily-credits" body: "*"}; }
@@ -57,6 +66,10 @@ service AgentWorkspaceService {
   rpc SendSessionMessage(SendSessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages" body: "*"}; }
   rpc RetrySessionMessage(RetrySessionMessageRequest) returns (SendSessionMessageResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/retry" body: "*"}; }
   rpc CancelSessionMessage(CancelSessionMessageRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/cancellation" body: "*"}; }
+  rpc DecideSessionExecutionPlan(DecideSessionExecutionPlanRequest) returns (SessionMessage) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/plan-decision" body: "*"}; }
+  rpc PreviewSessionWorkflowDraft(PreviewSessionWorkflowDraftRequest) returns (SessionWorkflowDraft) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft"}; }
+  rpc CreateWorkflowFromSession(CreateWorkflowFromSessionRequest) returns (CreateWorkflowFromSessionResponse) { option (google.api.http) = {post: "/api/v1/sessions/{session_id}/messages/{message_id}/workflow" body: "*"}; }
+  rpc ListSessionWorkflowLinks(ListSessionWorkflowLinksRequest) returns (ListSessionWorkflowLinksResponse) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/workflow-links"}; }
 
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
   rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
@@ -73,6 +86,7 @@ service AgentWorkspaceService {
   rpc ContinueRunConversation(ContinueRunConversationRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/turns" body: "*"}; }
   rpc CancelRun(CancelRunRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/cancellation" body: "*"}; }
   rpc RerunWorkflow(RerunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/rerun" body: "*"}; }
+  rpc DecideRunExecutionPlan(DecideRunExecutionPlanRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs/{run_id}/plan-decision" body: "*"}; }
   rpc ListArtifacts(ListArtifactsRequest) returns (ListArtifactsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/artifacts"}; }
 
   rpc ListWorkspaceEntries(ListWorkspaceEntriesRequest) returns (ListWorkspaceEntriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/workspace"}; }
@@ -102,6 +116,8 @@ service AgentWorkspaceService {
 
   rpc GetSettings(GetSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {get: "/api/v1/settings"}; }
   rpc UpdateSettings(UpdateSettingsRequest) returns (PersonalSettings) { option (google.api.http) = {patch: "/api/v1/settings" body: "*"}; }
+  rpc GetPlatformExecutionDefault(GetPlatformExecutionDefaultRequest) returns (PlatformExecutionDefault) { option (google.api.http) = {get: "/api/v1/admin/platform-execution-default"}; }
+  rpc SetPlatformExecutionDefault(SetPlatformExecutionDefaultRequest) returns (PlatformExecutionDefault) { option (google.api.http) = {put: "/api/v1/admin/platform-execution-default" body: "*"}; }
   rpc ListRuntimeEngines(ListRuntimeEnginesRequest) returns (ListRuntimeEnginesResponse) { option (google.api.http) = {get: "/api/v1/runtime-engines"}; }
   rpc ListModelProviderPresets(ListModelProviderPresetsRequest) returns (ListModelProviderPresetsResponse) { option (google.api.http) = {get: "/api/v1/model-provider-presets"}; }
   rpc ListModelProviderConnections(ListModelProviderConnectionsRequest) returns (ListModelProviderConnectionsResponse) { option (google.api.http) = {get: "/api/v1/model-provider-connections"}; }
@@ -164,19 +180,41 @@ service AgentWorkspaceService {
   rpc DisconnectCLIConnectorAuthorization(DisconnectCLIConnectorAuthorizationRequest) returns (CLIConnectorAuthorization) { option (google.api.http) = {post: "/api/v1/connectors/cli/authorizations/{authorization_id}/disconnect" body: "*"}; }
 }
 
+message GetHomeOverviewRequest {}
+message HomeOverview { repeated HomeTask recent_tasks = 1; repeated HomeWorkflow common_workflows = 2; repeated HomeAction action_items = 3; }
+message HomeTask { string kind = 1; string id = 2; string parent_id = 3; string title = 4; string state = 5; google.protobuf.Timestamp updated_at = 6; }
+message HomeWorkflow { string id = 1; string name = 2; int64 run_count = 3; google.protobuf.Timestamp updated_at = 4; }
+message HomeAction { string kind = 1; string id = 2; string execution_kind = 3; string execution_id = 4; string parent_id = 5; string title = 6; string state = 7; google.protobuf.Timestamp created_at = 8; }
+
 message GetCurrentUserRequest {}
-message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; optional CreditBalance credit_balance = 7; }
+message CurrentUser { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool settings_ready = 6; optional CreditBalance credit_balance = 7; bool bootstrap_administrator = 8; bool resource_publisher = 9; repeated IdentityGroup groups = 10; }
 message ListUsersRequest {}
 message ListUsersResponse { repeated UserAccount items = 1; }
 message CreateUserRequest { string username = 1; string display_name = 2; string email = 3; }
 message CreateUserResponse { UserAccount user = 1; string temporary_password = 2; }
-message SetUserEnabledRequest { string user_id = 1; bool enabled = 2; int64 expected_version = 3; }
+message SetUserEnabledRequest { string user_id = 1; bool enabled = 2; int64 expected_version = 3; string reason = 4; }
 message ResetUserPasswordRequest { string user_id = 1; }
 message ResetUserPasswordResponse { string temporary_password = 1; }
-message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; optional CreditBalance credit_balance = 9; }
+message UserAccount { string id = 1; string username = 2; string email = 3; string display_name = 4; bool administrator = 5; bool enabled = 6; google.protobuf.Timestamp created_at = 7; int64 version = 8; optional CreditBalance credit_balance = 9; bool bootstrap_administrator = 10; bool resource_publisher = 11; repeated IdentityGroup groups = 12; }
+message SetUserRolesRequest { string user_id = 1; bool administrator = 2; bool resource_publisher = 3; int64 expected_version = 4; string reason = 5; }
+message ListIdentityGroupsRequest {}
+message SyncIdentityGroupsRequest {}
+message ListIdentityGroupsResponse { repeated IdentityGroup items = 1; }
+message UpdateIdentityGroupBudgetRequest { string group_id = 1; optional int64 daily_credit_limit_hundredths = 2; int64 expected_version = 3; string reason = 4; }
+message IdentityGroup { string id = 1; string external_id = 2; string name = 3; string path = 4; bool department = 5; optional int64 daily_credit_limit_hundredths = 6; int64 member_count = 7; google.protobuf.Timestamp last_synced_at = 8; int64 version = 9; }
+message ListGovernanceAuditEventsRequest { optional int32 limit = 1; }
+message ListGovernanceAuditEventsResponse { repeated GovernanceAuditEvent items = 1; }
+message GovernanceAuditMetric { string key = 1; int64 value = 2; }
+message GovernanceAuditEvent { int64 id = 1; string actor_user_id = 2; string action = 3; string target_type = 4; string target_id = 5; string reason = 6; repeated GovernanceAuditMetric metrics = 7; google.protobuf.Timestamp occurred_at = 8; }
+message TransferGroupResourcesRequest { string group_id = 1; string from_user_id = 2; string to_user_id = 3; string reason = 4; }
+message TransferGroupResourcesResponse { int64 knowledge_base_count = 1; }
 
 message GetCreditBalanceRequest {}
-message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; int64 reserved_hundredths = 12; int64 available_hundredths = 13; }
+message CreditBalance { int64 total_hundredths = 1; int64 daily_remaining_hundredths = 2; int64 persistent_hundredths = 3; int64 today_consumed_hundredths = 4; int64 daily_allocation_hundredths = 5; string credit_day = 6; string timezone = 7; google.protobuf.Timestamp next_allocation_at = 8; optional int64 pending_daily_allocation_hundredths = 9; optional string pending_effective_day = 10; int64 version = 11; int64 reserved_hundredths = 12; int64 available_hundredths = 13; int32 warning_threshold_percent = 14; bool redemption_codes_enabled = 15; optional GroupCreditBudget group_budget = 16; }
+message GroupCreditBudget { string group_id = 1; string group_name = 2; int64 limit_hundredths = 3; int64 consumed_hundredths = 4; int64 reserved_hundredths = 5; int64 available_hundredths = 6; }
+message GetCreditPolicyRequest {}
+message UpdateCreditPolicyRequest { int64 default_daily_allocation_hundredths = 1; int32 warning_threshold_percent = 2; bool redemption_codes_enabled = 3; int64 expected_version = 4; }
+message CreditPolicy { int64 default_daily_allocation_hundredths = 1; int32 warning_threshold_percent = 2; bool redemption_codes_enabled = 3; int64 version = 4; google.protobuf.Timestamp updated_at = 5; optional string updated_by_user_id = 6; }
 message ListCreditLedgerRequest { optional string cursor = 1; optional int32 limit = 2; }
 message ListCreditLedgerResponse { repeated CreditLedgerEntry items = 1; optional string next_cursor = 2; }
 message CreditLedgerEntry { string id = 1; string type = 2; int64 amount_hundredths = 3; int64 resulting_balance_hundredths = 4; string credit_day = 5; optional string reason = 6; google.protobuf.Timestamp created_at = 7; }
@@ -354,11 +392,22 @@ message DeleteSessionRequest { string session_id = 1; }
 message Session { string id = 1; string title = 2; optional string expert_id = 3; bool archived = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; int64 version = 7; reserved 8; reserved "current_provider_model_id"; optional string expert_team_id = 9; }
 message ListSessionMessagesRequest { string session_id = 1; optional int64 after = 2; optional int32 limit = 3; }
 message ListSessionMessagesResponse { repeated SessionMessage items = 1; }
-message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; }
+message SendSessionMessageRequest { string session_id = 1; string content = 2; reserved 3; reserved "provider_model_id"; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; string plan_preference = 7; }
 message SendSessionMessageResponse { SessionMessage user_message = 1; SessionMessage assistant_message = 2; }
 message RetrySessionMessageRequest { string session_id = 1; int64 message_id = 2; }
 message CancelSessionMessageRequest { string session_id = 1; int64 message_id = 2; }
-message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; repeated ExecutionActivity activities = 13; repeated Artifact artifacts = 14; optional ResourceCreationAction resource_action = 15; }
+message DecideSessionExecutionPlanRequest { string session_id = 1; int64 message_id = 2; string decision = 3; int64 expected_version = 4; }
+message PreviewSessionWorkflowDraftRequest { string session_id = 1; int64 message_id = 2; }
+message CreateWorkflowFromSessionRequest { string session_id = 1; int64 message_id = 2; string name = 3; string goal = 4; repeated SessionWorkflowFileDecision files = 5; }
+message CreateWorkflowFromSessionResponse { Workflow workflow = 1; Run validation_run = 2; SessionWorkflowLink link = 3; bool replayed = 4; }
+message ListSessionWorkflowLinksRequest { string session_id = 1; }
+message ListSessionWorkflowLinksResponse { repeated SessionWorkflowLink items = 1; }
+message SessionWorkflowDraft { string suggested_name = 1; string suggested_goal = 2; string specialist_name = 3; repeated SessionWorkflowResource resources = 4; repeated SessionWorkflowFile files = 5; optional SessionWorkflowLink existing_link = 6; }
+message SessionWorkflowResource { string kind = 1; string id = 2; string name = 3; }
+message SessionWorkflowFile { string source_key = 1; string kind = 2; string name = 3; int64 size = 4; bool available = 5; optional string unavailable_reason = 6; }
+message SessionWorkflowFileDecision { string source_key = 1; string destination = 2; }
+message SessionWorkflowLink { string session_id = 1; int64 message_id = 2; string workflow_id = 3; string workflow_name = 4; string validation_run_id = 5; google.protobuf.Timestamp created_at = 6; }
+message SessionMessage { int64 id = 1; string role = 2; string state = 3; string content = 4; optional string error = 5; int64 elapsed_ms = 6; google.protobuf.Timestamp created_at = 7; string progress_stage = 8; optional ResponseSnapshot response_snapshot = 9; repeated Attachment attachments = 10; repeated ExpertStage expert_stages = 11; optional CreditConsumption credit_consumption = 12; repeated ExecutionActivity activities = 13; repeated Artifact artifacts = 14; optional ResourceCreationAction resource_action = 15; repeated Evidence evidence = 16; optional ExecutionPlan execution_plan = 17; }
 message ResourceCreationAction { string id = 1; string kind = 2; string state = 3; string name = 4; string description = 5; string resource_id = 6; optional string error = 7; google.protobuf.Timestamp expires_at = 8; int64 version = 9; }
 message ResponseSnapshot { string provider_model_id = 1; string connection_id = 2; string connection_name = 3; string provider_type = 4; string model_id = 5; string model_name = 6; string endpoint = 7; repeated string protocols = 8; string runtime_engine = 9; string compatibility = 10; int64 connection_version = 11; int32 schema_version = 12; repeated ExecutionStageSnapshot stages = 13; }
 message ExecutionStageSnapshot { int32 position = 1; optional ExpertSnapshot expert = 2; string runtime_engine = 3; ProviderModelSnapshot provider_model = 4; repeated MCPServerSnapshot mcp_servers = 5; repeated SkillSnapshot skills = 6; optional string team_member_id = 7; optional string team_member_name = 8; repeated string team_member_labels = 9; repeated CLIConnectorSnapshot cli_connectors = 10; }
@@ -375,7 +424,7 @@ message GetWorkflowRequest { string workflow_id = 1; }
 message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
 message DeleteWorkflowRequest { string workflow_id = 1; }
 message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; reserved 4, 5; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; repeated string knowledge_base_ids = 9; }
-message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; optional SessionWorkflowLink origin = 17; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitConfigEntry { string key = 1; string value = 2; }
@@ -386,8 +435,8 @@ message CreateKnowledgeBaseRequest { KnowledgeBaseInput knowledge_base = 1; }
 message GetKnowledgeBaseRequest { string knowledge_base_id = 1; }
 message UpdateKnowledgeBaseRequest { string knowledge_base_id = 1; KnowledgeBaseInput knowledge_base = 2; int64 expected_version = 3; }
 message DeleteKnowledgeBaseRequest { string knowledge_base_id = 1; }
-message KnowledgeBaseInput { string name = 1; string description = 2; string visibility = 3; bool platform = 4; }
-message KnowledgeBase { string id = 1; string owner_id = 2; string name = 3; string description = 4; string visibility = 5; bool platform = 6; bool deleted = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; int64 version = 10; }
+message KnowledgeBaseInput { string name = 1; string description = 2; string visibility = 3; bool platform = 4; string scope = 5; optional string group_id = 6; }
+message KnowledgeBase { string id = 1; string owner_id = 2; string name = 3; string description = 4; string visibility = 5; bool platform = 6; bool deleted = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; int64 version = 10; int64 document_count = 11; int64 ready_document_count = 12; optional google.protobuf.Timestamp last_ready_at = 13; string scope = 14; optional string group_id = 15; optional string group_name = 16; }
 message ListKnowledgeCategoriesRequest { string knowledge_base_id = 1; }
 message ListKnowledgeCategoriesResponse { repeated KnowledgeCategory items = 1; }
 message CreateKnowledgeCategoryRequest { string knowledge_base_id = 1; string name = 2; }
@@ -403,15 +452,16 @@ message WorkflowCredential { string api_key = 1; string api_secret = 2; google.p
 message ExchangeWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowAccessToken { string jwt_token = 1; string token_type = 2; google.protobuf.Timestamp expires_at = 3; }
 
-message RunWorkflowRequest { string workflow_id = 1; optional string text_input = 2; optional google.protobuf.Struct json_input = 3; }
+message RunWorkflowRequest { string workflow_id = 1; optional string text_input = 2; optional google.protobuf.Struct json_input = 3; string plan_preference = 4; }
 message ListRunsRequest { string workflow_id = 1; }
 message ListRunsResponse { repeated Run items = 1; }
 message GetRunRequest { string workflow_id = 1; string run_id = 2; }
 message ListRunTurnsRequest { string workflow_id = 1; string run_id = 2; }
-message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; }
+message ContinueRunConversationRequest { string workflow_id = 1; string run_id = 2; string content = 3; repeated string attachment_ids = 4; string selection_id = 5; repeated FileReference file_references = 6; string plan_preference = 7; }
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; int32 queue_position = 21; }
+message DecideRunExecutionPlanRequest { string workflow_id = 1; string run_id = 2; string decision = 3; int64 expected_version = 4; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; int32 queue_position = 21; repeated Evidence evidence = 22; optional ExecutionPlan execution_plan = 23; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }
@@ -450,8 +500,11 @@ message CreditConsumption { int64 total_hundredths = 1; repeated CreditStageCons
 message CreditStageConsumption { int32 stage_position = 1; string provider_model = 2; string runtime_engine = 3; int64 input_tokens = 4; int64 output_tokens = 5; bool usage_reported = 6; int64 input_multiplier_micros = 7; int64 output_multiplier_micros = 8; int64 fallback_hundredths = 9; int64 amount_hundredths = 10; bool estimated = 11; string rate_revision_id = 12; }
 
 message GetSettingsRequest {}
-message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; }
-message PersonalSettings { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 version = 7; }
+message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; optional bool inherit_platform_execution = 8; }
+message PersonalSettings { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 version = 7; bool execution_inherited = 8; bool platform_execution_available = 9; }
+message GetPlatformExecutionDefaultRequest {}
+message SetPlatformExecutionDefaultRequest { string runtime_engine = 1; string provider_model_id = 2; string validation_run_id = 3; int64 expected_version = 4; }
+message PlatformExecutionDefault { string runtime_engine = 1; string provider_model_id = 2; string validation_run_id = 3; string updated_by_user_id = 4; int64 version = 5; google.protobuf.Timestamp updated_at = 6; }
 message RuntimeModelDefault { string runtime_engine = 1; string provider_model_id = 2; }
 message ListRuntimeEnginesRequest {}
 message ListRuntimeEnginesResponse { repeated RuntimeEngineStatus items = 1; }
@@ -560,6 +613,11 @@ message DecideCommandApprovalRequest { string approval_id = 1; string decision =
 message DeleteResponse { bool deleted = 1; }
 message Attachment { string id = 1; string name = 2; string content_type = 3; int64 size = 4; string sha256 = 5; bool image = 6; }
 message ExecutionActivity { string type = 1; string detail = 2; }
+message EvidenceCitation { string revision_id = 1; string category_name = 2; string source_location = 3; float relevance = 4; }
+message Evidence { string id = 1; string kind = 2; string source_id = 3; string source_name = 4; string container_id = 5; string state = 6; string action = 7; int32 stage_position = 8; optional EvidenceCitation citation = 9; }
+message ExecutionPlanStep { string id = 1; string kind = 2; string label = 3; int32 position = 4; string state = 5; }
+message ExecutionPlanResource { string kind = 1; string id = 2; string name = 3; }
+message ExecutionPlan { string id = 1; string state = 2; string objective = 3; repeated ExecutionPlanStep steps = 4; repeated ExecutionPlanResource resources = 5; repeated string side_effects = 6; repeated string reasons = 7; int32 estimated_model_calls = 8; int64 estimated_credit_hundredths = 9; int64 generation_credit_hundredths = 10; string generator = 11; google.protobuf.Timestamp created_at = 12; optional google.protobuf.Timestamp decided_at = 13; int64 version = 14; }
 message GetSessionArtifactDownloadRequest { string session_id = 1; string artifact_id = 2; }
 message CompleteCLIConnectorEnablementRequest { string enablement_id = 1; }
 

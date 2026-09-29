@@ -14,17 +14,20 @@ import ConnectorDetails from "./ConnectorDetails.vue";
 import ConnectorIcon from "./ConnectorIcon.vue";
 import ProfileIcon from "./ProfileIcon.vue";
 import IconPicker from "./IconPicker.vue";
+import ResourceTrustMeta from "./ResourceTrustMeta.vue";
 
 type ResourceTab = "mcp" | "skills";
 type ConnectorCatalogEntry = { publication?: ConnectorPublication; installation?: ConnectorInstallation };
 type MCPDraft = { name: string; icon: string; transport: "streamable_http" | "stdio"; url: string; runner: "npx" | "uvx"; package: string; package_version: string; argumentsText: string; environment: EnvironmentVariable[]; bearerToken: string };
 type CLIDraft = { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_install: string; archive: string };
 
-const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; showTabs?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
+const props = withDefaults(defineProps<{ selectable?: boolean; initialTab?: ResourceTab; mineOnly?: boolean; showTabs?: boolean; catalogQuery?: string; availableOnly?: boolean; mcpServerIds?: string[]; skillIds?: string[]; cliConnectorDefinitionIds?: string[] }>(), {
   selectable: false,
   initialTab: "mcp",
   mineOnly: false,
   showTabs: true,
+  catalogQuery: "",
+  availableOnly: false,
   mcpServerIds: () => [],
   skillIds: () => [],
   cliConnectorDefinitionIds: () => [],
@@ -114,20 +117,33 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
-const connectorSections = computed(() => props.mineOnly
-  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: mcp.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[], packages: connectorCatalogItems.value.filter((item) => Boolean(item.installation)) }]
-  : [{ key: "platform", title: t("resources.platformConnectors"), mcp: mcp.value.filter((item) => item.platform), cli: cliDefinitions.value.filter((item) => !item.managed_installation), packages: connectorCatalogItems.value }]);
 const connectorCatalogItems = computed(() => {
   const bySource = new Map<string, ConnectorCatalogEntry>(connectorPublications.value.map((publication) => [publication.source, { publication, installation: connectorInstallations.value.find((item) => item.source === publication.source) }]));
   for (const installation of connectorInstallations.value) if (!bySource.has(installation.source)) bySource.set(installation.source, { publication: undefined, installation });
   return [...bySource.values()];
 });
+const queryNeedle = computed(() => props.catalogQuery.trim().toLocaleLowerCase());
+function matchesCatalog(...values: Array<string | undefined>) { return !queryNeedle.value || values.join(" ").toLocaleLowerCase().includes(queryNeedle.value); }
+const visibleMCP = computed(() => mcp.value.filter((item) => (!props.availableOnly || item.tested) && matchesCatalog(item.name, item.url, item.package, item.transport)));
+const visibleCLI = computed(() => cliDefinitions.value.filter((item) => (!props.availableOnly || (item.state === "available" && (item.conformance_runtime_digests?.length ?? 0) > 0)) && matchesCatalog(item.name, item.description, item.npm_package, ...(item.capabilities ?? []).map((capability) => capability.id))));
+const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.filter((entry) => {
+  const available = entry.publication?.state === "available" && entry.publication.revision.conformance_available;
+  return (!props.availableOnly || available) && matchesCatalog(entry.publication?.revision.name, entry.publication?.revision.description, entry.installation?.name, entry.installation?.description, entry.publication?.source, entry.installation?.source);
+}));
+const connectorSections = computed(() => (props.mineOnly
+  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: visibleMCP.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[], packages: visibleConnectorCatalogItems.value.filter((item) => Boolean(item.installation)) }]
+  : [
+      { key: "platform", title: t("resources.platformConnectors"), mcp: visibleMCP.value.filter((item) => item.platform), cli: visibleCLI.value.filter((item) => !item.managed_installation), packages: visibleConnectorCatalogItems.value.filter((item) => !item.installation) },
+      { key: "mine", title: t("resources.myConnectors"), mcp: visibleMCP.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[], packages: visibleConnectorCatalogItems.value.filter((item) => Boolean(item.installation)) },
+    ]).filter((section) => section.mcp.length || section.cli.length || section.packages.length));
 const skillSections = computed(() => {
-  if (props.mineOnly) return [{ key: "mine", title: t("resources.mySkills"), items: skills.value.filter((item) => !item.platform) }];
-  const sections = [{ key: "platform", title: t("resources.platformSkills"), items: skills.value.filter((item) => item.platform) }];
-  const created = skills.value.filter((item) => !item.platform && createdSkillIDs.value.has(item.id));
-  if (created.length) sections.push({ key: "created", title: t("resources.mySkills"), items: created });
-  return sections;
+  const visible = skills.value.filter((item) => matchesCatalog(skillDisplayName(item), skillDescription(item), item.git_url, item.source));
+  return (props.mineOnly
+    ? [{ key: "mine", title: t("resources.mySkills"), items: visible.filter((item) => !item.platform) }]
+    : [
+        { key: "platform", title: t("resources.platformSkills"), items: visible.filter((item) => item.platform) },
+        { key: "mine", title: t("resources.mySkills"), items: visible.filter((item) => !item.platform) },
+      ]).filter((section) => section.items.length);
 });
 
 onMounted(() => {
@@ -608,6 +624,7 @@ async function fileToBase64(file: File): Promise<string> {
           <div class="extension-card-copy">
             <div class="extension-card-title"><strong>{{ entry.publication?.revision.name || entry.installation?.name || entry.installation?.source }}</strong><el-tag v-if="entry.installation" :type="entry.installation.authorized ? 'success' : 'warning'" size="small">{{ entry.installation.authorized ? t('resources.connected') : t('resources.setupRequired') }}</el-tag><el-tag v-else size="small">{{ t('resources.availableToInstall') }}</el-tag></div>
             <p>{{ entry.publication?.revision.description || entry.installation?.description }}</p>
+            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
             <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
             <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
             <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
@@ -628,6 +645,7 @@ async function fileToBase64(file: File): Promise<string> {
           <div class="extension-card-copy">
             <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag></div>
             <p>{{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p>
+            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="item.tested ? t('resources.connectionTested') : item.test_pending ? t('resources.verificationPending') : t('resources.unverified')" :status-tone="item.tested ? 'success' : 'warning'" :detail="t('resources.isolatedRuntime')" />
           </div>
           <div class="extension-card-actions" @click.stop>
             <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
@@ -641,6 +659,7 @@ async function fileToBase64(file: File): Promise<string> {
           <div class="extension-card-copy">
             <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="item.managed_installation ? item.managed_authorized : enablementFor(item.id)?.state === 'enabled' && !cliNeedsActivation(item)" type="success" size="small">{{ t('common.enabled') }}</el-tag><el-tag v-else-if="!item.managed_installation && enablementFor(item.id)?.state === 'enabled'" type="warning" size="small">{{ t('resources.setupRequired') }}</el-tag></div>
             <p>{{ cliDescription(item) }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p>
+            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="t('resources.allCanEnable')" :status="item.state === 'available' ? t('resources.runtimeVerified') : t(`resources.state.${item.state}`)" :status-tone="item.state === 'available' ? 'success' : item.state === 'failed' ? 'danger' : 'warning'" :detail="item.conformance_runtime_digests?.length ? t('resources.runtimeDigestCount', { count: item.conformance_runtime_digests.length }) : t('resources.noRuntimeEvidence')" />
             <small>{{ item.managed_installation ? `package · ${item.npm_package}@${item.npm_version}` : item.installation_type === 'upload' ? t('resources.zipUpload') : `npm · ${item.npm_package}@${item.npm_version}` }}</small>
             <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
             <section v-if="item.recommended_skills?.length" class="recommended-skill-offers" @click.stop><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
@@ -666,6 +685,7 @@ async function fileToBase64(file: File): Promise<string> {
         <div v-if="!section.packages.length && !section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
       </div>
       </section>
+      <el-empty v-if="!connectorSections.length" class="catalog-empty" :description="t('resources.noMatchingResources')" />
       </div>
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
@@ -676,7 +696,7 @@ async function fileToBase64(file: File): Promise<string> {
       <div class="resource-list extension-catalog-grid skill-catalog-grid">
         <article v-for="item in section.items" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="skillDisplayName(item)" @click="openSkillDetails(item)" @keydown.enter.self="openSkillDetails(item)" @keydown.space.self.prevent="openSkillDetails(item)">
           <ProfileIcon class="connector-card-icon" :icon="item.icon || 'sparkles'" />
-          <div class="extension-card-copy skill-card-copy"><strong>{{ skillDisplayName(item) }}</strong><p>{{ skillDescription(item) }}</p><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
+          <div class="extension-card-copy skill-card-copy"><strong>{{ skillDisplayName(item) }}</strong><p>{{ skillDescription(item) }}</p><ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" /><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
           <div class="extension-card-actions">
             <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
             <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
@@ -687,6 +707,7 @@ async function fileToBase64(file: File): Promise<string> {
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
       </div>
       </section>
+      <el-empty v-if="!skillSections.length" class="catalog-empty" :description="t('resources.noMatchingResources')" />
       </div>
     </div>
   </div>

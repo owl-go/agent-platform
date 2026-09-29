@@ -26,6 +26,13 @@ func (service *Service) streamRunEvents(writer http.ResponseWriter, request *htt
 		return
 	}
 	cursor, _ := strconv.ParseInt(request.Header.Get("Last-Event-ID"), 10, 64)
+	if request.URL.Query().Get("reconnect") == "true" {
+		resumeMode := "replay"
+		if cursor > 0 {
+			resumeMode = "sequence"
+		}
+		service.productAnalytics().ExecutionStreamReconnected(request.Context(), owner, runID, "run", resumeMode)
+	}
 	writer.Header().Set("Content-Type", "text/event-stream")
 	writer.Header().Set("Cache-Control", "no-store")
 	writer.Header().Set("X-Accel-Buffering", "no")

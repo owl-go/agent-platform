@@ -8,6 +8,7 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	accountdomain "agent-platform/backend/internal/biz/account/domain"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/productanalytics"
 
 	"github.com/go-kratos/kratos/v3/transport"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -47,6 +48,7 @@ func (service *Service) CreateWorkflow(ctx context.Context, request *workspacev1
 	if err != nil {
 		return nil, publicError(err)
 	}
+	service.productAnalytics().WorkflowCreated(ctx, productanalytics.WorkflowCreatedObservation{OwnerID: owner, WorkflowID: item.ID, Source: "manual", HasSchedule: input.Schedule != nil, HasConnector: false})
 	return workflowResponse(item), nil
 }
 
@@ -201,7 +203,11 @@ func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.Ru
 			}
 		}
 	} else {
-		item, err = service.workspace.Repository().CreateRun(ctx, owner, request.WorkflowId, trigger, request.TextInput, jsonInput)
+		repository, portErr := service.executionPlanRepository()
+		if portErr != nil {
+			return nil, publicError(portErr)
+		}
+		item, err = repository.CreatePlannedRun(ctx, owner, request.WorkflowId, trigger, request.TextInput, jsonInput, request.PlanPreference)
 	}
 	if err != nil {
 		return nil, publicError(err)
@@ -291,16 +297,11 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 	if err != nil {
 		return nil, publicError(err)
 	}
-	var item workspacedomain.Run
-	if request.SelectionId != "" {
-		repository, portErr := service.conversationRepository()
-		if portErr != nil {
-			return nil, publicError(portErr)
-		}
-		item, err = repository.ContinueSelectedRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments, request.SelectionId)
-	} else {
-		item, err = service.workspace.Repository().ContinueRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments)
+	repository, portErr := service.executionPlanRepository()
+	if portErr != nil {
+		return nil, publicError(portErr)
 	}
+	item, err := repository.ContinuePlannedRunConversation(ctx, owner, request.WorkflowId, request.RunId, request.Content, attachments, request.SelectionId, request.PlanPreference)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -385,6 +386,9 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 
 func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
 	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, KnowledgeBaseIds: append([]string(nil), item.KnowledgeBaseIDs...), ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	if item.Origin != nil {
+		response.Origin = sessionWorkflowLinkResponse(*item.Origin)
+	}
 	for _, value := range item.Environment {
 		environment := &workspacev1.EnvironmentVariable{Name: value.Name, Secret: value.Secret, Configured: value.Configured}
 		if !value.Secret && value.Value != "" {
@@ -432,6 +436,10 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
 	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
+	for _, evidence := range item.Evidence {
+		response.Evidence = append(response.Evidence, evidenceResponse(evidence))
+	}
+	response.ExecutionPlan = executionPlanResponse(item.ExecutionPlan)
 	if item.StartedAt != nil {
 		end := time.Now()
 		if item.EndedAt != nil {

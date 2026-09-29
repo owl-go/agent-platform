@@ -7,7 +7,7 @@ import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import KnowledgeBasesPage from "./KnowledgeBasesPage.vue";
 
-const base: KnowledgeBase = { id: "base-1", owner_id: "user-1", name: "产品文档", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-12T00:00:00Z", updated_at: "2026-09-12T00:00:00Z", version: 1 };
+const base: KnowledgeBase = { id: "base-1", owner_id: "user-1", name: "产品文档", description: "", visibility: "private", platform: false, deleted: false, created_at: "2026-09-12T00:00:00Z", updated_at: "2026-09-12T00:00:00Z", version: 1, document_count: 1, ready_document_count: 1, last_ready_at: "2026-09-12T00:00:00Z" };
 
 const inputStub = defineComponent({
   props: ["modelValue", "placeholder"],
@@ -17,9 +17,9 @@ const inputStub = defineComponent({
   },
 });
 
-function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], document?: KnowledgeDocument | KnowledgeDocument[], regenerate?: PlatformApi["regenerateKnowledgeDocument"], retry?: PlatformApi["retryKnowledgeDocument"]) {
+function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], document?: KnowledgeDocument | KnowledgeDocument[], regenerate?: PlatformApi["regenerateKnowledgeDocument"], retry?: PlatformApi["retryKnowledgeDocument"], knowledgeBases: KnowledgeBase[] = [base], props?: { availableOnly?: boolean }) {
   const api = {
-    listKnowledgeBases: vi.fn(async () => [base]),
+    listKnowledgeBases: vi.fn(async () => knowledgeBases),
     listKnowledgeCategories: vi.fn(async () => []),
     listKnowledgeDocuments: vi.fn(async () => document ? (Array.isArray(document) ? document : [document]) : []),
     searchKnowledgeBase,
@@ -27,10 +27,33 @@ function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], docu
     retryKnowledgeDocument: retry,
   } as unknown as PlatformApi;
   const auth: AuthContext = { isCallback: false, session: { state: ref({ kind: "authenticated", currentUser: { id: "user-1", username: "user", email: "u@example.test", display_name: "User", administrator: false, settings_ready: true } }), accessToken: () => "token", initialize: vi.fn(async () => {}), signIn: vi.fn(async () => {}), signOut: vi.fn(async () => {}), dispose: vi.fn() } };
-  return mount(KnowledgeBasesPage, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
+  return mount(KnowledgeBasesPage, { props, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
 }
 
 describe("KnowledgeBasesPage search", () => {
+  it("separates Department Knowledge Bases from personal content and keeps non-Publishers read-only", async () => {
+    const department: KnowledgeBase = { ...base, id: "base-group", owner_id: "publisher-1", name: "财务制度", scope: "group", group_id: "group-1", group_name: "财务部" };
+    const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [department, base]);
+    await flushPromises();
+    expect(wrapper.text()).toContain("部门知识库");
+    expect(wrapper.text()).toContain("财务部");
+    expect(wrapper.findAll(".knowledge-card")[0]!.find(".card-more").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("recommends only knowledge bases with retrieval-ready documents", async () => {
+    const unready: KnowledgeBase = { ...base, id: "base-2", name: "处理中", document_count: 1, ready_document_count: 0, last_ready_at: undefined };
+    const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [base, unready], { availableOnly: true });
+    await flushPromises();
+    expect(wrapper.findAll(".knowledge-card")).toHaveLength(1);
+    expect(wrapper.text()).toContain("产品文档");
+    expect(wrapper.text()).not.toContain("处理中");
+    await wrapper.setProps({ availableOnly: false });
+    expect(wrapper.findAll(".knowledge-card")).toHaveLength(2);
+    expect(wrapper.text()).toContain("索引未就绪");
+    wrapper.unmount();
+  });
+
   it("shows retrieved excerpts with their document and category source", async () => {
     const search = vi.fn(async () => ({ index_ready: true, items: [{ document_id: "doc-1", revision_id: "rev-1", document_name: "安装指南.txt", category_name: "指南", text: "请先安装客户端。", relevance: 0.9 }] }));
     const wrapper = mountPage(search);

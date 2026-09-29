@@ -5,7 +5,7 @@ export const localeStorageKey = "agent-workspace-locale";
 
 const zh = {
   artifactDisclosure: { viewAllArtifacts: "查看所有产物 ({count})", viewAllChanges: "查看所有变更 ({count})" },
-  product: "Agent Workspace", nav: { label: "主导航", groups: { workspace: "工作区", resources: "资源中心", system: "系统" }, sessions: "会话", workflows: "工作流", experts: "专家", resources: "专家/技能/连接器", "knowledge-bases": "知识库", settings: "设置", users: "账号管理", "ai-applications": "AI 应用", "ai-applications-assistants": "智能助手", "ai-applications-image-creation": "图片创作" },
+  product: "Agent Workspace", nav: { label: "主导航", groups: { workspace: "工作区", resources: "资源中心", system: "系统" }, home: "首页", sessions: "会话", workflows: "工作流", experts: "专家", resources: "专家/技能/连接器", "knowledge-bases": "知识库", settings: "设置", users: "账号管理", "ai-applications": "AI 应用", "ai-applications-assistants": "智能助手", "ai-applications-image-creation": "图片创作" },
   auth: { checking: "正在连接工作空间", required: "登录后开始使用", body: "你的会话、工作流、技能和连接器均属于你的工作空间。", signIn: "登录", unavailable: "身份服务暂时不可用", signOut: "退出登录", online: "API 在线", offline: "API 离线", checkingApi: "正在检查 API" },
   common: { new: "新增", edit: "编辑", name: "名称", save: "保存", saving: "保存中…", cancel: "取消", cancelled: "已取消", delete: "删除", archive: "归档", unarchive: "取消归档", rename: "重命名", more: "更多", loading: "加载中…", empty: "这里还没有内容", close: "关闭", retry: "重试", run: "运行", running: "运行中", waitingForUser: "等待用户操作", success: "成功", failed: "失败", queued: "排队中", copied: "已复制", copy: "复制", back: "返回", comingSoon: "即将开放", readOnly: "只读", upload: "上传", download: "下载", folder: "文件夹", enabled: "已启用" },
   sessions: { title: "会话", subtitle: "与专家或默认助手持续对话", new: "新建会话", archived: "已归档", active: "当前会话", chooseExpert: "选择专家（可选）", noExpert: "不选择专家", placeholder: "输入消息，Enter 发送，Shift + Enter 换行", welcome: "从一个问题开始。首条消息发送后，专家配置会冻结到本会话。", elapsed: "用时 {value}", jumpToLatest: "回到最新消息", copyQuestion: "复制当前问题", copyAnswer: "复制当前回答", usedSkills: "本次使用的技能", thinking: "思考中", stopGeneration: "中止生成", stopping: "正在中止…", cancelled: "已中止生成", modelSelector: "选择本会话使用的模型", modelUnverified: "此模型与当前 Runtime 尚未验证", deleteTitle: "删除这个会话？", deleteDescription: "删除后，这段对话及其全部消息将从你的工作空间中永久移除。", deleteTarget: "即将删除", deleteWarning: "此操作无法撤销", deleteConfirm: "删除会话", deleting: "正在删除…", deleteAction: "删除会话 {title}", progress: { preparing: "正在准备运行环境", thinking: "正在分析问题", using_tool: "正在调用工具", working: "正在处理结果", responding: "正在组织答案" }, setupTitle: "开始前完成 3 个步骤", setupModel: "连接模型供应商并选择默认模型", setupRuntime: "选择可用 Runtime", setupStart: "开始会话或工作流" },
@@ -19,7 +19,7 @@ const zh = {
 
 const en = {
   artifactDisclosure: { viewAllArtifacts: "View all artifacts ({count})", viewAllChanges: "View all changes ({count})" },
-  product: "Agent Workspace", nav: { label: "Primary navigation", groups: { workspace: "Workspace", resources: "Resource Center", system: "System" }, sessions: "Sessions", workflows: "Workflows", experts: "Experts", resources: "Experts / Skills / Connectors", "knowledge-bases": "Knowledge Bases", settings: "Settings", users: "User accounts", "ai-applications": "AI Applications", "ai-applications-assistants": "Smart Assistants", "ai-applications-image-creation": "Image Creation" },
+  product: "Agent Workspace", nav: { label: "Primary navigation", groups: { workspace: "Workspace", resources: "Resource Center", system: "System" }, home: "Home", sessions: "Sessions", workflows: "Workflows", experts: "Experts", resources: "Experts / Skills / Connectors", "knowledge-bases": "Knowledge Bases", settings: "Settings", users: "User accounts", "ai-applications": "AI Applications", "ai-applications-assistants": "Smart Assistants", "ai-applications-image-creation": "Image Creation" },
   auth: { checking: "Connecting to your workspace", required: "Sign in to continue", body: "Your sessions, workflows, Skills, and Connectors belong to your workspace.", signIn: "Sign in", unavailable: "Identity service is unavailable", signOut: "Sign out", online: "API online", offline: "API offline", checkingApi: "Checking API" },
   common: { new: "New", edit: "Edit", name: "Name", save: "Save", saving: "Saving…", cancel: "Cancel", cancelled: "Cancelled", delete: "Delete", archive: "Archive", unarchive: "Unarchive", rename: "Rename", more: "More", loading: "Loading…", empty: "Nothing here yet", close: "Close", retry: "Retry", run: "Run", running: "Running", waitingForUser: "Waiting for user action", success: "Succeeded", failed: "Failed", queued: "Queued", copied: "Copied", copy: "Copy", back: "Back", comingSoon: "Coming soon", readOnly: "Read only", upload: "Upload", download: "Download", folder: "Folder", enabled: "Enabled" },
   sessions: { title: "Sessions", subtitle: "Keep a conversation going with an Expert or your default assistant", new: "New session", archived: "Archived", active: "Current sessions", chooseExpert: "Choose an Expert (optional)", noExpert: "No Expert", placeholder: "Message your workspace — Enter to send, Shift + Enter for a new line", welcome: "Start with a question. Expert configuration freezes after the first message.", elapsed: "{value} elapsed", jumpToLatest: "Jump to latest message", copyQuestion: "Copy this question", copyAnswer: "Copy this answer", usedSkills: "Skills used for this message", thinking: "Thinking", stopGeneration: "Stop generating", stopping: "Stopping…", cancelled: "Generation stopped", modelSelector: "Choose the model for this Session", modelUnverified: "This model and Runtime have not been verified", deleteTitle: "Delete this session?", deleteDescription: "This conversation and every message in it will be permanently removed from your workspace.", deleteTarget: "About to delete", deleteWarning: "This action cannot be undone", deleteConfirm: "Delete session", deleting: "Deleting…", deleteAction: "Delete session {title}", progress: { preparing: "Preparing the runtime", thinking: "Analyzing your request", using_tool: "Using a tool", working: "Processing the result", responding: "Composing the answer" }, setupTitle: "Complete three steps to start", setupModel: "Connect a model provider and choose a default", setupRuntime: "Select an available Runtime", setupStart: "Start a Session or Workflow" },
@@ -37,6 +37,7 @@ Object.assign(zh, { credits: { title: "积分", balance: "积分余额", consume
 Object.assign(zh.users, { tabs: { users: "用户", rates: "模型倍率", codes: "兑换码" }, dailyLimit: "每日积分", credits: "积分设置", creditSettings: "用户积分", adjustment: "积分调整", adjustmentReason: "调整原因", rateEditor: "模型倍率设置", rateHistory: "倍率版本记录", providerType: "供应商类型", protocol: "API 协议", modelId: "模型 ID（全部留空表示平台默认）", inputMultiplier: "输入倍率", outputMultiplier: "输出倍率", fallback: "缺失 Usage 回退积分", platformDefault: "平台默认", createCodes: "生成兑换码", codeCount: "数量（1–100）", codeValue: "每个兑换积分", expiry: "过期时间（可选）", generateCodes: "生成", copyCodesNow: "兑换码仅本次显示，请立即复制", codeStatus: "兑换码状态", voidCode: "作废", codeState: { available: "可用", redeemed: "已兑换", void: "已作废", expired: "已过期" } });
 Object.assign(zh.workflows, { conversation: "运行对话", followUpPlaceholder: "继续对话，Enter 发送，Shift + Enter 换行", activityDetails: "查看执行过程", command: "命令", reasoningSummary: "思考过程", runtimePrepared: "运行环境已准备", toolCompleted: "工具调用完成", updatingFiles: "正在更新文件", streamingAnswer: "正在生成回答", answerReady: "回答已生成", howToIntegrate: "如何接入", credentialUnavailable: "该凭证由旧版本生成，Secret 无法恢复，请点击“重新生成”。", apiKeyLabel: "API Key", apiSecretLabel: "API Secret", showSecret: "显示 API Secret", hideSecret: "隐藏 API Secret", integrationGuideTitle: "如何接入工作流", integrationStepToken: "1. 使用 API Key 和 API Secret 换取 JWT", integrationStepInvoke: "2. 创建 Run（返回 Run ID）", integrationStepStream: "3. 流式获取输出（SSE）", integrationStepFullOutput: "4. 一次性获取完整输出", integrationTokenHint: "JWT 有效期为 72 小时；过期后重新换取即可。", integrationIdempotencyHint: "每个业务请求使用唯一的 Idempotency-Key；重试同一个请求时保持该值不变。", integrationRunHint: "创建接口立即返回 202 和 Run ID；将返回的 ID 保存到 RUN_ID。", integrationStreamHint: "SSE 会先回放历史事件，再持续推送实时事件，直到 Run 进入终态。", integrationFullOutputHint: "Run 完成后调用此接口一次，完整结果位于 final_text 或 final_json。" });
 Object.assign(zh.sessions, { activitySummary: { runtime: { running: "正在准备运行环境", completed: "运行环境已准备" }, reasoning: { running: "正在分析问题", completed: "已分析问题" }, feishuChatSearchHelp: { running: "调用飞书连接器读取群聊搜索说明", completed: "已调用飞书连接器读取群聊搜索说明" }, feishuChatSearch: { running: "调用飞书连接器搜索群聊", completed: "已调用飞书连接器搜索群聊" }, feishuMessageSendHelp: { running: "调用飞书连接器读取消息发送说明", completed: "已调用飞书连接器读取消息发送说明" }, feishuMessageSend: { running: "调用飞书连接器发送消息", completed: "已调用飞书连接器发送消息" }, tool: { running: "执行工具操作", completed: "已执行工具操作" }, file: { running: "正在更新文件", completed: "已更新文件" }, activity: { running: "正在处理任务", completed: "已完成处理" } } });
+Object.assign(zh.sessions, { executionEvidence: { title: "本次执行", tools: "{count} 项工具调用", files: "{count} 项文件变化", stages: "{count} 个执行阶段", artifacts: "{count} 个产物", sources: "{count} 项依据", noExternal: "未记录外部工具、文件变化或依据", running: "进行中", completed: "已完成", stage: "阶段 {position}", openSource: "打开来源", sourceUnavailable: "来源已更新、删除或你已无权访问", sourceKind: { file: "文件", knowledge: "知识库", connector: "连接器", artifact: "产物" }, sourceState: { requested: "已请求", succeeded: "已使用", failed: "调用失败", not_used: "未采用" }, sourceAction: { retrieved: "检索到相关内容", noMatch: "没有相关检索结果", retrievalFailed: "检索失败", retrievalUnavailable: "检索服务不可用", indexUnavailable: "可用索引不存在", notInvoked: "本次未调用" }, kind: { runtime: "环境", reasoning: "分析", tool: "工具", file: "文件", activity: "执行" } } });
 Object.assign(zh.workflows, { gitCredentialSaved: "凭证已保存，无法查看。重新克隆时请重新填写。", replaceGitCredential: "重新填写", gitPrivateKeyDraft: "新 SSH 私钥（尚未保存）", gitPasswordDraft: "新密码 / Token（尚未保存）" });
 Object.assign(zh.workflows, { gitErrors: {
   git_source_invalid: "Git 配置无效。请检查仓库地址与认证方式是否匹配、分支是否填写，以及 Git / SSH config 是否符合字段下方的说明。",
@@ -57,6 +58,8 @@ Object.assign(zh.workflows, { apiTokenDescription: "API Key 和 API Secret 会�
 Object.assign(zh.sessions, { addAttachment: "添加图片或文件", removeAttachment: "移除附件 {name}", attachmentLimits: "每条消息最多 10 个附件，单个附件不能超过 100 MB" });
 Object.assign(zh.sessions, { connectorAuthorizationWait: "等待{provider}授权：这次操作尚未执行。请在下方输入框的授权提示中点击“打开{provider}授权”，在{provider}完成授权后返回会话，回复“已授权”或点击“重试”继续。如果没有看到授权入口，请到连接器页面检查账号授权状态。" });
 Object.assign(zh.sessions.progress, { finalizing: "正在安全保存会话" });
+Object.assign(zh.sessions, { executionStatus: { stale: "任务仍在运行 · 最后更新于 {time}", modelCalls: "模型调用 {count} 次", settlementPending: "完成后结算", cancelQueue: "取消排队" } });
+Object.assign(en.sessions, { executionStatus: { stale: "Still running · last updated at {time}", modelCalls: "{count} model calls", settlementPending: "Settles on completion", cancelQueue: "Cancel queued run" } });
 Object.assign(zh.nav, { resources: "专家/技能/连接器" });
 Object.assign(zh.sessions, { resourceActionSkill: "技能创建预览", resourceActionExpert: "专家创建预览", resourceActionConnector: "连接器创建预览", resourceActionConfirm: "确认创建", resourceActionConfirmed: "已创建并安装", resourceActionCancelled: "已取消", resourceActionExpired: "操作已过期或失败" });
 Object.assign(zh, { resources: { title: "技能·连接器", centerTitle: "资源中心", subtitle: "管理可复用的技能与连接器", skills: "技能", connectors: "连接器", cli: "第三方 CLI", cliDefinition: "CLI 连接器定义", continueSetup: "继续完成授权", enable: "启用", exactVersion: "固定版本", executable: "可执行命令", npmPackage: "npm 包", npmIntegrity: "npm 完整性", feishuCLI: "飞书 CLI", deleteAffected: "删除“{resource}”会同时从这些专家中解除绑定：{experts}。历史快照不会改变。", deleteUnaffected: "确认删除“{resource}”？历史快照不会改变。", capabilities: "能力策略", capabilityId: "能力标识", argvPrefix: "命令参数前缀", risk: "风险等级", lowRisk: "低风险", highRisk: "高风险", identities: "执行身份", scopes: "所需权限", egressHosts: "允许访问的域名", timeoutSeconds: "超时（秒）", architectures: "支持架构", recommendedSkills: "推荐技能", state: { draft: "草稿", building: "构建中", testing: "验证中", available: "可用", failed: "失败", disabled: "已停用" }, health: { enabled: "{count} 个用户已启用", waiting: "{count} 个等待用户操作", authorization: "{active} 个有效授权 · {attention} 个需处理" } } });
@@ -95,6 +98,7 @@ Object.assign(en, { credits: { title: "Credits", balance: "Credit balance", cons
 Object.assign(en.users, { tabs: { users: "Users", rates: "Model rates", codes: "Redemption codes" }, dailyLimit: "Daily Credits", credits: "Credits", creditSettings: "User Credits", adjustment: "Credit adjustment", adjustmentReason: "Adjustment reason", rateEditor: "Model Credit Rate", rateHistory: "Rate revision history", providerType: "Provider type", protocol: "API protocol", modelId: "Model ID (leave all three blank for default)", inputMultiplier: "Input multiplier", outputMultiplier: "Output multiplier", fallback: "Missing-Usage fallback", platformDefault: "Platform default", createCodes: "Generate Redemption Codes", codeCount: "Count (1–100)", codeValue: "Credits per code", expiry: "Expiry (optional)", generateCodes: "Generate", copyCodesNow: "Codes are shown once. Copy them now.", codeStatus: "Code status", voidCode: "Void", codeState: { available: "Available", redeemed: "Redeemed", void: "Voided", expired: "Expired" } });
 Object.assign(en.workflows, { conversation: "Run conversation", followUpPlaceholder: "Continue the conversation — Enter to send, Shift + Enter for a new line", activityDetails: "View execution progress", command: "Command", reasoningSummary: "Reasoning summary", runtimePrepared: "Runtime prepared", toolCompleted: "Tool call completed", updatingFiles: "Updating files", streamingAnswer: "Generating the answer", answerReady: "Answer ready", howToIntegrate: "How to integrate", credentialUnavailable: "This credential was generated by an older version and its Secret cannot be recovered. Regenerate it to continue.", apiKeyLabel: "API Key", apiSecretLabel: "API Secret", showSecret: "Show API Secret", hideSecret: "Hide API Secret", integrationGuideTitle: "How to integrate this Workflow", integrationStepToken: "1. Exchange the API Key and API Secret for a JWT", integrationStepInvoke: "2. Create a Run (returns a Run ID)", integrationStepStream: "3. Stream output with SSE", integrationStepFullOutput: "4. Fetch the complete output once", integrationTokenHint: "The JWT is valid for 72 hours. Exchange a new one after it expires.", integrationIdempotencyHint: "Use a unique Idempotency-Key for each business request and keep it unchanged when retrying that request.", integrationRunHint: "The create endpoint immediately returns 202 and a Run ID; save that ID as RUN_ID.", integrationStreamHint: "SSE replays historical events, then streams live events until the Run reaches a terminal state.", integrationFullOutputHint: "After the Run completes, call this endpoint once; the complete result is in final_text or final_json." });
 Object.assign(en.sessions, { activitySummary: { runtime: { running: "Preparing the runtime", completed: "Runtime prepared" }, reasoning: { running: "Analyzing the request", completed: "Request analyzed" }, feishuChatSearchHelp: { running: "Use the Feishu Connector to read chat search instructions", completed: "Used the Feishu Connector to read chat search instructions" }, feishuChatSearch: { running: "Use the Feishu Connector to search chats", completed: "Used the Feishu Connector to search chats" }, feishuMessageSendHelp: { running: "Use the Feishu Connector to read message instructions", completed: "Used the Feishu Connector to read message instructions" }, feishuMessageSend: { running: "Use the Feishu Connector to send a message", completed: "Used the Feishu Connector to send a message" }, tool: { running: "Run a tool operation", completed: "Ran a tool operation" }, file: { running: "Updating files", completed: "Updated files" }, activity: { running: "Processing the task", completed: "Completed processing" } } });
+Object.assign(en.sessions, { executionEvidence: { title: "This execution", tools: "{count} tool call | {count} tool calls", files: "{count} file change | {count} file changes", stages: "{count} execution stage | {count} execution stages", artifacts: "{count} artifact | {count} artifacts", sources: "{count} source | {count} sources", noExternal: "No external tools, file changes, or sources recorded", running: "In progress", completed: "Completed", stage: "Stage {position}", openSource: "Open source", sourceUnavailable: "The source changed, was deleted, or is no longer available to you", sourceKind: { file: "File", knowledge: "Knowledge", connector: "Connector", artifact: "Artifact" }, sourceState: { requested: "Requested", succeeded: "Used", failed: "Failed", not_used: "Not used" }, sourceAction: { retrieved: "Relevant content retrieved", noMatch: "No relevant indexed source", retrievalFailed: "Retrieval failed", retrievalUnavailable: "Retrieval unavailable", indexUnavailable: "Ready index unavailable", notInvoked: "Not invoked in this execution" }, kind: { runtime: "Runtime", reasoning: "Analysis", tool: "Tool", file: "File", activity: "Execution" } } });
 Object.assign(en.workflows, { gitCredentialSaved: "Credentials are saved and cannot be viewed. Enter them again to clone again.", replaceGitCredential: "Enter new credentials", gitPrivateKeyDraft: "New SSH private key (not saved)", gitPasswordDraft: "New password / token (not saved)" });
 Object.assign(en.workflows, { gitErrors: {
   git_source_invalid: "Invalid Git configuration. Check that the repository URL matches the authentication method, the branch is filled in, and Git / SSH config follows the field guidance.",
@@ -319,6 +323,203 @@ export function resolveInitialLocale(stored: string | null, browserLanguage: str
   if (stored === "zh-CN" || stored === "en-US") return stored;
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
 }
+
+Object.assign((zh as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "先制定计划", planFirstHint: "无论任务复杂度，先展示可编辑的执行计划并等待确认" });
+Object.assign((en as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "Plan first", planFirstHint: "Show an execution plan and wait for confirmation before starting" });
+Object.assign(zh.sessions, { executionPlan: {
+  title: "执行计划", resources: "将使用", sideEffectsTitle: "可能产生的变更", estimate: "预计消耗", generationCost: "制定计划", start: "按计划开始", edit: "修改要求", direct: "直接回答，不执行外部操作",
+  estimateValue: "{calls} 次模型调用 · 最多约 {credits} Credits", generationCostValue: "平台规则生成 · {credits} Credits",
+  states: { pending: "等待确认", approved: "已确认", executing: "执行中", completed: "已完成", failed: "未完成", cancelled: "已取消", skipped: "已跳过" },
+  stepStates: { pending: "待执行", running: "进行中", completed: "已完成", skipped: "已跳过", failed: "失败" },
+  reasons: { user_requested: "你要求先制定计划", multiple_stages: "包含多个执行阶段", multiple_external_sources: "将读取多个外部资源", external_side_effect: "可能修改外部系统", workflow_execution: "这是工作流执行", workspace_change: "可能修改工作区文件" },
+  sideEffects: { external_connector_operation: "可能调用连接器修改外部系统", workspace_files_may_change: "可能修改工作区文件" },
+} });
+Object.assign(en.sessions, { executionPlan: {
+  title: "Execution plan", resources: "Resources", sideEffectsTitle: "Possible changes", estimate: "Estimate", generationCost: "Plan generation", start: "Start plan", edit: "Edit requirements", direct: "Answer directly without external actions",
+  estimateValue: "{calls} model calls · up to about {credits} Credits", generationCostValue: "Platform rules · {credits} Credits",
+  states: { pending: "Awaiting confirmation", approved: "Approved", executing: "Running", completed: "Completed", failed: "Incomplete", cancelled: "Cancelled", skipped: "Skipped" },
+  stepStates: { pending: "Pending", running: "Running", completed: "Completed", skipped: "Skipped", failed: "Failed" },
+  reasons: { user_requested: "You requested a plan first", multiple_stages: "Multiple execution stages", multiple_external_sources: "Uses multiple external resources", external_side_effect: "May change an external system", workflow_execution: "Workflow execution", workspace_change: "May change workspace files" },
+  sideEffects: { external_connector_operation: "May use a Connector to change an external system", workspace_files_may_change: "May change workspace files" },
+} });
+Object.assign(zh, { taskWorkspace: {
+  eyebrow: "当前任务", title: "任务面板", close: "关闭任务面板", open: "查看任务详情", plan: "计划", evidence: "证据", activities: "执行活动", modelCalls: "模型阶段", files: "文件", inputFile: "输入文件", outputFile: "输出产物", result: "结果摘要", state: "状态", elapsed: "耗时", credits: "消耗积分",
+  stepKinds: { review_input: "核对输入", retrieve_knowledge: "检索知识", execute_stage: "执行任务", deliver_result: "交付结果" },
+} });
+Object.assign(en, { taskWorkspace: {
+  eyebrow: "Current task", title: "Task panel", close: "Close task panel", open: "View task details", plan: "Plan", evidence: "Evidence", activities: "Execution activities", modelCalls: "Model stages", files: "Files", inputFile: "Input file", outputFile: "Output artifact", result: "Result summary", state: "State", elapsed: "Elapsed", credits: "Credits used",
+  stepKinds: { review_input: "Review input", retrieve_knowledge: "Retrieve knowledge", execute_stage: "Execute task", deliver_result: "Deliver result" },
+} });
+Object.assign(zh.sessions, { workflowSave: {
+  action: "保存为工作流", open: "打开已保存工作流", eyebrow: "从成功结果创建", title: "保存为可重复运行的工作流", description: "名称、目标和本次实际使用的专家、技能与连接器会被带入。会话与工作流后续各自保留独立历史。", carriedConfiguration: "带入的执行配置", noExtraResources: "本次未使用额外技能或连接器。", filesTitle: "处理本次文件", filesDescription: "每个输入文件和输出产物都必须明确选择去向；不会静默复制。", unavailable: "不可用，只能排除", toWorkspace: "复制到工作区", exclude: "不带入", validationNotice: "创建后会立即生成首个验证运行，并先展示执行计划等待你确认。工作流、来源关系和验证运行会一起成功或一起失败。", confirm: "创建并验证", loadFailed: "无法读取这个成功结果，请刷新后重试。", createFailed: "工作流未创建；请检查名称、目标和文件后重试。",
+} });
+Object.assign(en.sessions, { workflowSave: {
+  action: "Save as Workflow", open: "Open saved Workflow", eyebrow: "Create from a successful result", title: "Save as a repeatable Workflow", description: "The name, goal, and the exact Experts, Skills, and Connectors used in this response are carried over. The Session and Workflow keep independent histories afterward.", carriedConfiguration: "Execution configuration", noExtraResources: "No additional Skills or Connectors were used.", filesTitle: "Handle files from this result", filesDescription: "Choose an explicit destination for every input file and artifact. Nothing is copied silently.", unavailable: "Unavailable; must be excluded", toWorkspace: "Copy to Workspace", exclude: "Do not carry over", validationNotice: "Creation immediately adds the first validation Run and shows its execution plan for confirmation. The Workflow, source link, and validation Run either all succeed or all fail.", confirm: "Create and validate", loadFailed: "This successful result could not be loaded. Refresh and retry.", createFailed: "No Workflow was created. Check the name, goal, and files, then retry.",
+} });
+Object.assign(zh.workflows, { session_conversion: "由会话创建", fromSession: "来自会话" });
+Object.assign(en.workflows, { session_conversion: "Created from Session", fromSession: "From Session" });
+Object.assign(zh.workflows, { createHint: "先用名称和目标跑通一次，再配置专家、知识库、定时、API 或 Git。", createAndValidate: "创建并验证", validationRunFailed: "工作流已创建，但验证运行未能启动；请检查个人执行设置后重试。", validatedTitle: "这个工作流已经跑通", validatedHint: "现在再按使用方式配置定时触发、API 接入或 Git 来源。", configureNext: "继续配置" });
+Object.assign(en.workflows, { createHint: "Start with a name and goal. Configure Experts, Knowledge Bases, schedules, API, or Git after the first run works.", createAndValidate: "Create and validate", validationRunFailed: "The Workflow was created, but its validation Run could not start. Check Personal Settings and retry.", validatedTitle: "This Workflow has completed a run", validatedHint: "Now configure a schedule, API integration, or Git source when the use case needs it.", configureNext: "Configure next" });
+Object.assign(zh.settings, { usePlatformDefault: "继承企业默认执行组合", platformDefaultHint: "管理员已验证 Runtime 与模型；无需单独配置即可开始。", platformDefaultUnavailable: "企业默认尚未配置。取消继承后可使用个人执行设置。", platformDefault: "企业默认执行组合", platformDefaultAdminHint: "必须绑定一个已成功且执行快照完全匹配的验证 Run；该证据会把 unverified 组合晋升为 verified，不兼容组合不可选。", validationRun: "验证 Run", validationRunHint: "填写由当前 Runtime 与模型完成的成功 Run ID。", setPlatformDefault: "设为企业默认", platformDefaultSaved: "企业默认已更新，所有仍在继承的账号已同步。" });
+Object.assign(en.settings, { usePlatformDefault: "Inherit the enterprise execution default", platformDefaultHint: "An Administrator verified this Runtime and model; no personal execution setup is required.", platformDefaultUnavailable: "No enterprise default is available. Turn inheritance off to configure a personal execution profile.", platformDefault: "Enterprise execution default", platformDefaultAdminHint: "A successful validation Run with an exactly matching execution snapshot is required. That evidence promotes an unverified pair to verified; incompatible pairs cannot be selected.", validationRun: "Validation Run", validationRunHint: "Enter the ID of a successful Run completed by this Runtime and model.", setPlatformDefault: "Set enterprise default", platformDefaultSaved: "The enterprise default was updated and propagated to every account still inheriting it." });
+Object.assign((zh as unknown as { credits: Record<string, unknown> }).credits, { available: "可用额度", reserved: "执行中预留", warning: "今日额度使用已达到 {percent}% 提醒线", exhausted: "今日额度已用尽", contactAdministrator: "需要更多额度时请联系企业管理员；新的执行会在可用额度不足时被阻止。", stageSummary: "按执行阶段查看", stage: "阶段 {position}", measuredCharge: "按实际用量结算", estimatedCharge: "缺少用量时按冻结估算结算", consumedBeforeStop: "停止前已产生的消耗", notCharged: "本次未记录模型消耗；重试会作为新的执行单独计费。" });
+Object.assign((en as unknown as { credits: Record<string, unknown> }).credits, { available: "Available Credits", reserved: "Reserved for active work", warning: "Today's usage reached the {percent}% warning threshold", exhausted: "Today's Credits are exhausted", contactAdministrator: "Contact your Administrator if you need more Credits. New executions are blocked when Available Credits are insufficient.", stageSummary: "View execution stages", stage: "Stage {position}", measuredCharge: "Settled from measured usage", estimatedCharge: "Settled from the frozen fallback when usage was unavailable", consumedBeforeStop: "Usage incurred before the execution stopped", notCharged: "No model usage was recorded for this execution. A retry is charged as a separate execution." });
+Object.assign(zh.users, { creditPolicy: "企业额度策略", creditPolicyHint: "默认额度只作用于新建额度账户；单用户额度保持独立。兑换码默认关闭。", defaultDailyLimit: "新账号每日默认额度", warningThreshold: "用量提醒阈值", enableCodes: "启用兑换码渠道" });
+Object.assign(en.users, { creditPolicy: "Enterprise Credit policy", creditPolicyHint: "The default applies only to new Credit accounts. Per-user allocations remain independent. Redemption Codes are off by default.", defaultDailyLimit: "Default daily Credits for new accounts", warningThreshold: "Usage warning threshold", enableCodes: "Enable Redemption Code channel" });
+Object.assign(zh, { home: {
+  title: "回到要处理的事", subtitle: "只汇总任务元数据；消息正文、结果、参数和错误详情仍留在原任务中。", refresh: "刷新", loadFailed: "首页暂时无法加载", empty: "还没有任务或工作流", actions: "待你处理", actionsHint: "审批、计划确认和失败恢复都回到原任务处理。", noActions: "没有待处理事项", recent: "最近任务", recentHint: "继续最近更新的会话或工作流运行。", noRecent: "还没有最近任务", commonWorkflows: "常用工作流", commonWorkflowsHint: "按实际运行次数和最近使用时间排序。", noWorkflows: "还没有可用工作流", runCount: "运行 {count} 次", actionKind: { approval: "等待审批", plan: "等待确认计划", failed: "需要恢复" }, taskKind: { session: "会话", run: "工作流运行" }, taskState: { idle: "暂无执行", queued: "排队中", running: "运行中", waiting_for_user: "等待你的操作", succeeded: "已成功", completed: "已完成", failed: "失败", cancelled: "已取消" },
+} });
+Object.assign(en, { home: {
+  title: "Pick up what needs attention", subtitle: "Only task metadata is aggregated. Messages, results, arguments, and error details stay in the original task.", refresh: "Refresh", loadFailed: "Home is temporarily unavailable", empty: "No tasks or Workflows yet", actions: "Needs your attention", actionsHint: "Open the original task to approve, confirm a plan, or recover a failure.", noActions: "Nothing needs your attention", recent: "Recent tasks", recentHint: "Continue a recently updated Session or Workflow Run.", noRecent: "No recent tasks", commonWorkflows: "Common Workflows", commonWorkflowsHint: "Ranked by actual Run count and recent use.", noWorkflows: "No Workflows yet", runCount: "{count} Runs", actionKind: { approval: "Approval required", plan: "Plan confirmation required", failed: "Recovery required" }, taskKind: { session: "Session", run: "Workflow Run" }, taskState: { idle: "No active execution", queued: "Queued", running: "Running", waiting_for_user: "Waiting for you", succeeded: "Succeeded", completed: "Completed", failed: "Failed", cancelled: "Cancelled" },
+} });
+Object.assign(zh.nav, { resources: "资源库" });
+Object.assign(en.nav, { resources: "Resource Library" });
+Object.assign((zh as unknown as { resources: Record<string, unknown> }).resources, {
+  taskSearch: "按任务搜索当前类型的名称、用途或能力",
+  availableOnly: "可直接使用",
+  allStates: "全部状态",
+  availableOnlyHint: "默认不推荐未测试、失败、停用或不兼容的资源；切换到全部状态后可处理这些资源。",
+  allStatesHint: "正在显示草稿、验证中、失败、停用和不兼容资源；这些状态不代表可以执行。",
+  platformPublished: "平台发布",
+  userPublished: "个人创建",
+  allAuthenticated: "企业内可用",
+  ownerOnly: "仅我可见",
+  allCanInstall: "企业内可安装",
+  personalInstallation: "我的安装",
+  allCanEnable: "企业内可启用",
+  verifiedAvailable: "已验证可用",
+  available: "可用",
+  unavailable: "不可用",
+  unverified: "未验证",
+  verificationPending: "验证中",
+  runtimeVerified: "运行环境已验证",
+  connectionTested: "连接测试通过",
+  packageValidated: "安装包校验通过",
+  isolatedRuntime: "仅在隔离 Runtime 内执行",
+  runtimeDigestCount: "{count} 个 Runtime 镜像证据",
+  noRuntimeEvidence: "没有当前 Runtime 镜像证据",
+  noMatchingResources: "没有匹配当前筛选条件的资源",
+  platformKnowledge: "平台知识库",
+  myKnowledge: "我的知识库",
+  allReadOwnerEdit: "企业内可读 · 我可编辑",
+  allReadOnly: "企业内只读",
+  accessible: "当前有权访问",
+  retrievalReady: "可检索",
+  indexNotReady: "索引未就绪",
+  emptyKnowledge: "空知识库",
+  knowledgeDocumentEvidence: "{ready}/{total} 份文档可检索",
+  lastIndexed: "最近就绪 {date}",
+});
+Object.assign((en as unknown as { resources: Record<string, unknown> }).resources, {
+  taskSearch: "Search this resource type by task, purpose, or capability",
+  availableOnly: "Ready to use",
+  allStates: "All states",
+  availableOnlyHint: "Untested, failed, disabled, or incompatible resources are not recommended by default. Switch to All states to manage them.",
+  allStatesHint: "Draft, testing, failed, disabled, and incompatible resources are visible. These states do not mean the resource can execute.",
+  platformPublished: "Platform published",
+  userPublished: "Personally created",
+  allAuthenticated: "Available across the enterprise",
+  ownerOnly: "Visible only to me",
+  allCanInstall: "Installable across the enterprise",
+  personalInstallation: "My installation",
+  allCanEnable: "Enableable across the enterprise",
+  verifiedAvailable: "Verified and available",
+  available: "Available",
+  unavailable: "Unavailable",
+  unverified: "Unverified",
+  verificationPending: "Verification pending",
+  runtimeVerified: "Runtime verified",
+  connectionTested: "Connection test passed",
+  packageValidated: "Package validation passed",
+  isolatedRuntime: "Runs only in an isolated Runtime",
+  runtimeDigestCount: "Evidence for {count} Runtime images",
+  noRuntimeEvidence: "No current Runtime image evidence",
+  noMatchingResources: "No resources match the current filters",
+  platformKnowledge: "Platform Knowledge Bases",
+  myKnowledge: "My Knowledge Bases",
+  allReadOwnerEdit: "Enterprise-readable · editable by me",
+  allReadOnly: "Enterprise read-only",
+  accessible: "Accessible with current permissions",
+  retrievalReady: "Retrieval ready",
+  indexNotReady: "Index not ready",
+  emptyKnowledge: "Empty Knowledge Base",
+  knowledgeDocumentEvidence: "{ready}/{total} documents retrieval-ready",
+  lastIndexed: "Last ready {date}",
+});
+
+Object.assign(zh.workflows, { readyKnowledgeDocuments: "{count} 份文档可检索", knowledgeBaseNotReady: "暂无可检索文档" });
+Object.assign(en.workflows, { readyKnowledgeDocuments: "{count} retrieval-ready documents", knowledgeBaseNotReady: "No retrieval-ready documents" });
+
+Object.assign(zh.common, { confirm: "确认" });
+Object.assign(en.common, { confirm: "Confirm" });
+Object.assign((zh as unknown as { credits: Record<string, string> }).credits, { groupBudget: "部门预算：{name}", groupBudgetRemaining: "今日部门剩余 ✧ {remaining} / 上限 ✧ {limit}；可用积分取个人与部门剩余中的较小值。" });
+Object.assign((en as unknown as { credits: Record<string, string> }).credits, { groupBudget: "Department budget: {name}", groupBudgetRemaining: "Department remaining today: ✧ {remaining} of ✧ {limit}. Available Credits use the lower of the personal and Department balance." });
+Object.assign(zh.users, {
+  tabs: { users: "用户", groups: "部门与群组", audit: "治理审计", rates: "模型倍率", codes: "兑换码" },
+  result: "操作结果", roles: "角色", bootstrapAdministrator: "初始管理员", bootstrapLocked: "初始管理员不可降级", resourcePublisher: "资源发布者", departments: "所属部门",
+  reason: "变更原因", disableUser: "停用账号", enableUser: "启用账号", syncGroups: "从身份源同步", groupSyncFailed: "身份群组同步失败；本地权限未变更。",
+  identityReadOnly: "群组与成员关系来自身份源，只能同步；平台不会反向修改企业目录。", group: "群组", groupPath: "身份源路径", groupType: "用途", department: "部门", identityGroup: "普通群组", memberCount: "成员数",
+  groupDailyBudget: "部门每日预算", unlimited: "不限制", budget: "预算", limitBudget: "设置上限", lastSynced: "最近同步", transfer: "移交部门资源", transferFrom: "离职/停用成员", transferTo: "接收发布者",
+  transferBoundary: "只移交该部门的知识库归属；不会读取、转移或暴露个人会话、文件和私有知识库。", transferCompleted: "已移交 {count} 个部门知识库", groupBudgetBound: "受 {name} 部门预算约束",
+  auditPrivacy: "审计记录只保留治理动作、目标标识、原因和计数，不记录私有内容。", occurredAt: "发生时间", action: "动作", target: "目标", metrics: "计数"
+});
+Object.assign(en.users, {
+  tabs: { users: "Users", groups: "Departments & groups", audit: "Governance audit", rates: "Model rates", codes: "Redemption codes" },
+  result: "Result", roles: "Roles", bootstrapAdministrator: "Bootstrap administrator", bootstrapLocked: "The Bootstrap Administrator cannot be demoted", resourcePublisher: "Resource Publisher", departments: "Departments",
+  reason: "Reason", disableUser: "Disable account", enableUser: "Enable account", syncGroups: "Sync identity source", groupSyncFailed: "Identity group sync failed. Local permissions were not changed.",
+  identityReadOnly: "Groups and memberships are read-only from the identity source. The platform never writes back to the enterprise directory.", group: "Group", groupPath: "Identity path", groupType: "Purpose", department: "Department", identityGroup: "Identity group", memberCount: "Members",
+  groupDailyBudget: "Department daily budget", unlimited: "Unlimited", budget: "Budget", limitBudget: "Set limit", lastSynced: "Last synced", transfer: "Transfer department resources", transferFrom: "Disabled member", transferTo: "Receiving publisher",
+  transferBoundary: "Only ownership of this Department's Knowledge Bases is transferred. Private Sessions, files, and private Knowledge Bases are never read, exposed, or transferred.", transferCompleted: "Transferred {count} Department Knowledge Bases", groupBudgetBound: "Limited by {name} Department budget",
+  auditPrivacy: "Audit records contain only governance actions, target identifiers, reasons, and counts—not private content.", occurredAt: "Occurred", action: "Action", target: "Target", metrics: "Metrics"
+});
+Object.assign((zh as unknown as { knowledgeBases: Record<string, unknown> }).knowledgeBases, {
+  scope: "归属范围", privateScope: "仅自己", departmentScope: "部门", platformScope: "全企业", department: "部门", departmentKnowledge: "部门知识库",
+  scopeImmutable: "创建后归属范围不可修改，避免绕过权限与审计边界。", scopeHint: { private: "只有你可以查看和维护。", group: "部门成员可读；该部门的资源发布者可维护。", platform: "全企业可读；仅创建它的管理员可维护。" },
+  departmentPublished: "{name} 发布", departmentReadPublisherEdit: "部门内可读 · 发布者可编辑", departmentReadOnly: "部门内只读"
+});
+Object.assign((en as unknown as { knowledgeBases: Record<string, unknown> }).knowledgeBases, {
+  scope: "Ownership scope", privateScope: "Only me", departmentScope: "Department", platformScope: "Enterprise", department: "Department", departmentKnowledge: "Department Knowledge Bases",
+  scopeImmutable: "Ownership scope cannot change after creation, preserving permission and audit boundaries.", scopeHint: { private: "Only you can view and maintain it.", group: "Department members can read it; Resource Publishers in the Department can maintain it.", platform: "Everyone can read it; only the Administrator who created it can maintain it." },
+  departmentPublished: "Published by {name}", departmentReadPublisherEdit: "Department-readable · Publisher-editable", departmentReadOnly: "Department read-only"
+});
+
+const zhAIApplications = (zh as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
+const enAIApplications = (en as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
+Object.assign(zhAIApplications.share, {
+  allowedOriginsPlaceholder: "每行一个明确的 HTTPS 来源，例如 https://support.example.com",
+  dailyLimit: "每日自由提问上限",
+  controlsRequired: "开启分享前必须填写允许来源、正数调用上限，并确认数据处理与所有者付费影响。",
+  impactTitle: "匿名访客会消耗助手所有者的额度",
+  impactDescription: "访客问题会经过安全检查并可能发送给模型与知识检索服务；管理端只展示调用、错误和额度聚合值，不展示访客问题正文。",
+  acknowledge: "我已确认匿名访问、数据处理和所有者付费影响",
+  visitorPreview: "以访客身份预览",
+  previewNotice: "这是不调用模型、不创建对话、不计入用量的外观预览。",
+  tokenOnce: "这是新 Token 的唯一展示机会；复制后妥善保存。旧 Token 已立即失效。",
+  aggregateStats: "最近 {days} 天聚合数据",
+  statConversations: "匿名会话 {count}", statCalls: "自由提问 {count}", statErrors: "失败或取消 {count}", statCredits: "消耗积分 {count}"
+});
+Object.assign(enAIApplications.share, {
+  allowedOrigins: "Allowed embed origins", allowedOriginsPlaceholder: "One explicit HTTPS origin per line, e.g. https://support.example.com",
+  dailyLimit: "Daily free-text limit",
+  controlsRequired: "Sharing requires an allowed origin, a positive daily cap, and acknowledgement of data processing and owner-paid usage.",
+  impactTitle: "Anonymous visitors consume the Assistant owner's Credits",
+  impactDescription: "Visitor questions pass safety checks and may be sent to model and knowledge retrieval services. Management sees only aggregate calls, errors, and Credits—not visitor question content.",
+  acknowledge: "I acknowledge anonymous access, data processing, and owner-paid usage",
+  visitorPreview: "Preview as visitor", previewNotice: "This appearance preview makes no model call, creates no conversation, and does not affect usage.",
+  tokenOnce: "This is the only display of the new Token. Copy it now; the old Token is already invalid.",
+  aggregateStats: "Aggregate data for the last {days} days",
+  statConversations: "Anonymous conversations {count}", statCalls: "Free-text calls {count}", statErrors: "Failed or cancelled {count}", statCredits: "Credits consumed {count}"
+});
+Object.assign(zhAIApplications, { publication: {
+  title: "发布检查", runCheck: "运行发布检查", ready: "可以发布", blocked: "暂不可发布", passed: "通过", failed: "阻断", checkFailed: "发布检查失败，请稍后重试。",
+  controlledVisitors: "受控访客", authenticatedOwner: "已认证所有者", boundKnowledge: "绑定 {count} 个知识库", validatedAt: "最近验证 {time}", notValidated: "尚无当前版本的发布验证",
+  checks: { configuration_complete: "名称、图标和可见配置完整", model_available: "所选模型与凭证可用", faq_safe: "已启用 FAQ 通过安全检查", knowledge_ready: "绑定知识库均有 Ready 文档", resources_available: "引用的 Expert、Team 或数字人可用", credit_policy_ready: "所有者有可用额度策略", share_controls: "分享来源、每日上限和数据确认完整" }
+} });
+Object.assign(enAIApplications, { publication: {
+  title: "Publication check", runCheck: "Run publication check", ready: "Ready to publish", blocked: "Publication blocked", passed: "Passed", failed: "Blocked", checkFailed: "The publication check failed. Try again.",
+  controlledVisitors: "Controlled visitors", authenticatedOwner: "Authenticated owner", boundKnowledge: "{count} Knowledge Bases", validatedAt: "Last validated {time}", notValidated: "No validation for the current revision",
+  checks: { configuration_complete: "Name, icon, and visible configuration are complete", model_available: "Selected model and credential are available", faq_safe: "Enabled FAQs passed safety checks", knowledge_ready: "Every bound Knowledge Base has Ready content", resources_available: "Referenced Expert or Team is available", credit_policy_ready: "Owner has a usable Credit policy", share_controls: "Origins, daily cap, and data acknowledgement are explicit" }
+} });
 
 export function createAppI18n(storage: Pick<Storage, "getItem"> = localStorage, browserLanguage = navigator.language) {
   const locale = resolveInitialLocale(storage.getItem(localeStorageKey), browserLanguage);

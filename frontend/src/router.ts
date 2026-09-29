@@ -43,7 +43,7 @@ export function installStaleReleaseRecovery(
   return router;
 }
 
-export type Surface = "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "ai-applications" | "settings";
+export type Surface = "home" | "sessions" | "workflows" | "experts" | "resources" | "ai-creation" | "ai-applications" | "settings";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -55,7 +55,8 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
   return installStaleReleaseRecovery(createRouter({
     history,
     routes: [
-      { path: "/", redirect: "/sessions" },
+      { path: "/", redirect: "/home" },
+      { path: "/home", name: "home", component: () => import("./pages/HomePage.vue"), meta: { surface: "home" } },
       { path: "/sessions", name: "sessions", component: SessionsPage, meta: { surface: "sessions" } },
       { path: "/workflows", name: "workflows", component: () => import("./pages/WorkflowsPage.vue"), meta: { surface: "workflows" } },
       { path: "/workflows/:workflowId", name: "workflow-detail", component: () => import("./pages/WorkflowDetailPage.vue"), meta: { surface: "workflows" } },
@@ -66,7 +67,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/expert-teams/:teamId", name: "expert-team-edit", component: () => import("./pages/ExpertTeamEditorPage.vue"), meta: { surface: "resources" } },
       { path: "/resources", name: "resources", component: () => import("./pages/ResourceCenterPage.vue"), meta: { surface: "resources" } },
       { path: "/resources/skills/:skillId", name: "skill-detail", component: () => import("./pages/SkillDetailPage.vue"), meta: { surface: "resources" } },
-      { path: "/knowledge-bases", name: "knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "knowledge-bases" } },
+      { path: "/knowledge-bases", redirect: (to) => ({ path: "/resources", query: { ...to.query, tab: "knowledge" } }) },
       { path: "/ai-creation", redirect: "/ai-apps/image-creation" },
       {
         path: "/ai-apps",
@@ -78,13 +79,13 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
           { path: "assistants", name: "smart-assistants", component: () => import("./pages/SmartAssistantsPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants/:assistantId", name: "smart-assistant-detail", component: () => import("./pages/SmartAssistantDetailPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants/:assistantId/conversations/:conversationId", name: "smart-assistant-conversation", component: () => import("./pages/SmartAssistantConversationPage.vue"), meta: { surface: "ai-applications" } },
-          { path: "knowledge-bases", name: "ai-application-knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "ai-applications" } },
+          { path: "knowledge-bases", redirect: () => ({ path: "/resources", query: { tab: "knowledge" } }) },
         ],
       },
       { path: "/ai-creation/image-generation", redirect: "/ai-apps/image-creation" },
       { path: "/settings", name: "settings", component: () => import("./pages/SettingsPage.vue"), meta: { surface: "settings" } },
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
-      { path: "/:pathMatch(.*)*", redirect: "/sessions" },
+      { path: "/:pathMatch(.*)*", redirect: "/home" },
     ],
   }));
 }

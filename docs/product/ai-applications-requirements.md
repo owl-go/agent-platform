@@ -39,7 +39,7 @@ Each entry keeps its own list, editor, lifecycle, permissions, and empty state. 
 - Every Smart Assistant is owned by exactly one authenticated User.
 - User-owned Smart Assistants, configurations, and conversations are private to that User.
 - An Administrator cannot read or mutate User-owned application content in the current version.
-- Platform Experts, Skills, Connectors, and public Knowledge Bases may be selected only where existing resource rules allow it.
+- Platform Experts, Skills, Connectors, and scoped Knowledge Bases may be selected only where existing resource rules allow it.
 - Image Creation records, prompts, Reference Images, and Generated Images retain their existing owner-isolation rules.
 
 ## 4. Smart Assistants
@@ -60,7 +60,7 @@ The editable configuration contains:
 - Optional Expert or Expert Team selection
 - Ordered Frequently Asked Questions
 - Platform-enforced Answer Safety Policy
-- Optional public Share Configuration
+- Optional controlled public Share Configuration
 - Draft, Enabled, or Disabled state
 
 User-authored prompts remain visible. Every accepted turn reads the Smart Assistant's current saved configuration; historical conversation snapshots remain audit evidence only and never configure a later turn. Provider credentials never enter snapshots or responses. The backend repeats Provider Model validation on create, update, enable, conversation creation, and turn execution.
@@ -74,6 +74,8 @@ Draft -> Enabled -> Disabled
 ```
 
 An incomplete Assistant remains editable but cannot start a conversation. A disabled Assistant cannot accept new conversations. Deletion removes mutable configuration and prevents new conversations but does not delete referenced resources or historical conversation transcripts and audit evidence.
+
+Enabling an Assistant and serving a new authenticated or public conversation require a server-recorded passing Publication Validation for the exact Assistant version. Any material Assistant update clears the previous validation; a failed recheck leaves the Assistant fail closed until the owner fixes the reported item and checks again.
 
 ### 4.3 Conversation Execution
 
@@ -110,13 +112,19 @@ Platform policy rejects configured unsafe categories before FAQ matching, retrie
 
 FAQ answers are checked before enablement. Knowledge Documents are checked before indexing. Safety audit records contain only the minimum application, time, access source, result, policy version, and Credit outcome; ordinary logs do not retain complete sensitive input.
 
-### 4.6 Sharing And Iframe Embedding
+### 4.6 Controlled Sharing And Iframe Embedding
 
-An owner may enable anonymous public use through a Share Configuration containing enabled state, unpredictable Token and revision, optional HTTPS allowed Origins, iframe dimensions, generated snippet, and Token rotation or revocation actions.
+An owner may enable anonymous public use through a Share Configuration containing enabled state, an unpredictable Token and revision, a required non-empty HTTPS allowed-Origin list, a positive daily free-text call limit, explicit data-processing acknowledgement, iframe dimensions, generated snippet, and Token rotation or revocation actions.
 
 Public interactions use visitor-scoped Assistant Conversations isolated from the owner's authenticated Assistant Conversation history. They use the same safety, FAQ, retrieval, model, Credit, and audit path. Public responses never expose Provider Model configuration, credentials, internal IDs, Object Keys, signed URLs, or private settings.
 
-Free-text public calls consume the owner's Credits. The owner may disable free text or set a daily limit; platform concurrency, IP, visitor, and Token rate limits always apply. Share Token validation, CSP `frame-ancestors`, and `postMessage` origin checks are server-side.
+Free-text public calls consume the owner's Credits. The owner may disable free text; platform concurrency, IP, visitor, Token, and configured daily limits always apply. Share Token validation, CSP `frame-ancestors`, and `postMessage` origin checks are server-side.
+
+The Publication Check returns stable pass or block results for configuration completeness, selected model availability, enabled FAQ safety, at least one Ready document in every selected Knowledge Base, referenced Expert or Expert Team availability, positive owner Credits, and strict Share Configuration controls. The UI preview shows presentation and enabled FAQ shortcuts without creating a conversation, invoking a model, consuming Credits, or changing usage totals.
+
+Token rotation immediately revokes the old Token and rebinds the current passing validation to the new Assistant version because the answer configuration is unchanged. Migration `000065_smart_assistant_controlled_publication.sql` revokes pre-existing uncontrolled shares so they cannot bypass the new contract.
+
+The owner-facing publication view exposes only bounded thirty-day aggregates: visitor conversations, free-text turns, failed or cancelled turns, and owner Credits consumed. It never returns prompts, answers, FAQ text, visitor identifiers, provider responses, Knowledge excerpts, credentials, Object Keys, or signed URLs. Authenticated use remains owner-private; controlled publication does not create a cross-User internal application catalog.
 
 ## 5. Image Creation
 
@@ -157,7 +165,7 @@ Acceptance covers:
 - Current Assistant configuration on every new turn, per-turn execution evidence, Credit admission, cancellation, and durable conversation history
 - FAQ CRUD, ordering, safe Markdown, import/export, direct-answer no-Credit behavior, and publication checks
 - Answer Safety Policy, fixed localized refusal, classifier charging, minimum audit, and no sensitive-content leakage
-- Share Token rotation and revocation, Origin and iframe validation, visitor isolation, owner Credit charging, and rate limits
+- Version-bound Publication Validation, strict Origin/daily limit/data acknowledgement, fail-closed migration, non-executing preview, aggregate-only statistics, Token rotation and revocation, visitor isolation, owner Credit charging, and rate limits
 - Image Creation administration and generation behavior, history, notifications, owner isolation, and settlement
 - Knowledge source lifecycle, safety gating, permission-checked revision provenance, and fail-closed behavior while no Retrieval Provider is active
 - Historical Assistant conversations remain readable after an Assistant is disabled or deleted

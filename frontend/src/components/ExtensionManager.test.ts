@@ -334,19 +334,25 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     const connectorGroups = wrapper.findAll(".catalog-group");
-    expect(connectorGroups).toHaveLength(1);
+    expect(connectorGroups).toHaveLength(2);
     expect(connectorGroups[0]!.text()).toContain("平台连接器");
     expect(connectorGroups[0]!.text()).toContain(platformMCP.name);
+    expect(connectorGroups[0]!.text()).toContain("平台发布");
+    expect(connectorGroups[0]!.text()).toContain("连接测试通过");
     expect(connectorGroups[0]!.find('button[aria-label="编辑"]').exists()).toBe(false);
-    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的连接器");
+    expect(connectorGroups[1]!.text()).toContain("我的连接器");
+    expect(connectorGroups[1]!.text()).toContain(myMCP.name);
+    expect(connectorGroups[1]!.text()).toContain("仅我可见");
 
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     const skillGroups = wrapper.findAll(".catalog-group");
-    expect(skillGroups).toHaveLength(1);
+    expect(skillGroups).toHaveLength(2);
     expect(skillGroups[0]!.text()).toContain("平台技能");
     expect(skillGroups[0]!.text()).toContain(platformSkill.name);
     expect(skillGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(false);
-    expect(wrapper.findAll(".catalog-group-title").map((title) => title.text())).not.toContain("我的技能");
+    expect(skillGroups[1]!.text()).toContain("我的技能");
+    expect(skillGroups[1]!.text()).toContain(mySkill.name);
+    expect(skillGroups[1]!.text()).toContain("安装包校验通过");
 
     await wrapper.setProps({ mineOnly: true });
     await flushPromises();
