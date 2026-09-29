@@ -227,7 +227,8 @@ async function saveProvidedConnection() {
   }
   providedConnectionBusy.value = true;
   try {
-    await api.connectConnector(form.installation.id, botID, [], JSON.stringify({ bot_id: botID, secret: form.secret }));
+    // The runtime uses both user and bot capabilities; the Bot ID belongs in the encrypted credentials.
+    await api.connectConnector(form.installation.id, "user", [], JSON.stringify({ bot_id: botID, secret: form.secret }));
     providedConnection.value = undefined;
     await refresh();
   } catch (cause) { reportError(cause, "providedCredentialsInvalid"); }

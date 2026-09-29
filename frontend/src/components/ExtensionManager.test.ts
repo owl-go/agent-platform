@@ -42,7 +42,7 @@ describe("ExtensionManager", () => {
     await form.get('input[name="secret"]').setValue("secret-456");
     await form.trigger("submit");
     await flushPromises();
-    expect(connectConnector).toHaveBeenCalledWith(installation.id, "bot-123", [], JSON.stringify({ bot_id: "bot-123", secret: "secret-456" }));
+    expect(connectConnector).toHaveBeenCalledWith(installation.id, "user", [], JSON.stringify({ bot_id: "bot-123", secret: "secret-456" }));
     expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(false);
     expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
     wrapper.unmount();
