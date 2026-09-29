@@ -23,6 +23,16 @@ const taskMessage: ConversationMessage = {
 };
 
 describe("TaskWorkspacePanel", () => {
+  it("does not display NaN when consumption has no usable total", () => {
+    const wrapper = mount(TaskWorkspacePanel, {
+      props: { message: { ...taskMessage, creditConsumption: { total_hundredths: Number.NaN, stages: [] } }, loadAttachment: vi.fn(async () => new Blob()) },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    });
+    expect(wrapper.text()).not.toContain("NaN");
+    expect(wrapper.text()).not.toContain("消耗积分");
+    wrapper.unmount();
+  });
+
   it("groups plan, evidence, files, and result without inventing content", async () => {
     const wrapper = mount(TaskWorkspacePanel, {
       props: { message: taskMessage, loadAttachment: vi.fn(async () => new Blob()) },
