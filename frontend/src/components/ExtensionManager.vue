@@ -87,6 +87,8 @@ const connectorAuthorizations = ref<Record<string, ConnectorAuthorization[]>>({}
 const connectorBusy = ref<string[]>([]);
 const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
+const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string }>();
+const providedConnectionBusy = ref(false);
 const connectorFlowWindows = new Map<string, Window | null>();
 const reportedAuthorizationFlowErrors = new Set<string>();
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
@@ -208,6 +210,29 @@ function uninstallInstallation(item: ConnectorInstallation) { return runConnecto
 function selectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.selectConnectorAuthorization(item.id, authorization.id, item.version)); }
 function refreshAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.refreshConnectorAuthorization(item.id, authorization.id, authorization.version)); }
 function disconnectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.disconnectPublishedConnectorAuthorization(authorization.id)); }
+function openProvidedConnection(installation: ConnectorInstallation) {
+  providedConnection.value = { installation, botID: "", secret: "" };
+}
+function closeProvidedConnection() {
+  if (providedConnectionBusy.value) return;
+  providedConnection.value = undefined;
+}
+async function saveProvidedConnection() {
+  const form = providedConnection.value;
+  if (!form || providedConnectionBusy.value) return;
+  const botID = form.botID.trim();
+  if (!botID || !form.secret) {
+    reportError(new ApiError("validation", 422, "invalid_input"), "providedCredentialsInvalid");
+    return;
+  }
+  providedConnectionBusy.value = true;
+  try {
+    await api.connectConnector(form.installation.id, botID, [], JSON.stringify({ bot_id: botID, secret: form.secret }));
+    providedConnection.value = undefined;
+    await refresh();
+  } catch (cause) { reportError(cause, "providedCredentialsInvalid"); }
+  finally { providedConnectionBusy.value = false; }
+}
 async function setupPublishedConnector(item: ConnectorInstallation, publication?: ConnectorPublication) {
   const popup = window.open("about:blank", "_blank");
   connectorFlowWindows.set(item.id, popup);
@@ -626,6 +651,7 @@ async function fileToBase64(file: File): Promise<string> {
               <div class="extension-card-actions">
                 <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
                 <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
+                <el-button v-else-if="entry.installation?.source === 'wecom' && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)">{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
                 <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
                 <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
@@ -724,6 +750,14 @@ async function fileToBase64(file: File): Promise<string> {
   <CatalogDetails :skill="detailSkill" @close="detailSkill = undefined" @edit-skill="openSkill" />
   <Teleport to="body">
     <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />
+    <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
+      <form class="modal-card provided-connector-form el-card" @submit.prevent="saveProvidedConnection">
+        <h2>{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
+        <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
+        <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
+        <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
+      </form>
+    </div>
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-conversation" @click="createConnectorSession"><strong>{{ t('resources.createConnectorInConversation') }}</strong><span>{{ t('resources.createConnectorInConversationHint') }}</span></button><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-package" @click="chooseConnectorKind('package')"><strong>{{ t('resources.connectorPackageUpload') }}</strong><span>{{ t('resources.connectorPackageUploadHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
     <input ref="connectorPackageInput" type="file" accept=".zip,application/zip" hidden @change="uploadConnectorPackage">
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><div class="form-field"><span>{{ t("resources.icon") }}</span><IconPicker v-model="mcpForm.icon" fallback="terminal" /></div><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>

@@ -275,6 +275,10 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
     await refreshManagedInstallations();
     let installation = managedInstallation(definition.id);
     if (!installation) throw new Error("Connector installation is unavailable");
+    if (active && definition.authentication_driver === "connector_package" && !installation.authorized) {
+      await router.push("/resources?tab=connectors");
+      return;
+    }
     if (!active) {
       if (connectorEnabled(`cli:${definition.id}`)) await toggleConnector("cli", definition.id);
       await api.disableConnectorInstallation(installation.id, installation.version);
@@ -724,7 +728,7 @@ onBeforeUnmount(() => { disposed = true; if (props.approvalExecutionId) clearCom
             <small>{{ t('experts.teams') }}</small><button v-for="item in filteredTeams" :key="item.id" type="button" :disabled="locked || !item.available" @click="chooseExpert('team', item.id)"><Users /><span>{{ item.name }}<small>{{ item.introduction }}</small></span><Check v-if="selection?.expert_team_id === item.id" /></button>
           </template>
           <template v-if="menu === 'skills'"><button v-for="(item, index) in filteredSkills" :key="item.id" type="button" role="option" :aria-selected="highlighted === index" :class="{ highlighted: highlighted === index }" :disabled="locked" @click="chooseSkill(item)"><Sparkles /><span>{{ item.name }}</span><Check v-if="parts.some((part) => part.kind === 'skill' && part.id === item.id)" /></button><p v-if="!filteredSkills.length">{{ t('composer.empty') }}</p></template>
-          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t('composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
+          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t(item.definition.authentication_driver === 'connector_package' && !managedInstallation(item.id)?.authorized ? 'composer.connectorCredentialsRequired' : 'composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
           <template v-if="menu === 'files'">
             <button type="button" @click="fileInput?.click()"><FilePlus2 />{{ t('composer.localFiles') }}</button>
             <button v-if="workspacePath" type="button" @click="loadFiles(workspacePath.split('/').slice(0, -1).join('/'))"><Folder />{{ t('composer.parentFolder') }}</button>

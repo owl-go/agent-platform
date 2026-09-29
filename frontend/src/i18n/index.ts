@@ -72,6 +72,7 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { iconUploadHint: "支持 PNG、JPEG、WebP 或 GIF，大小不超过 384KB。" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { platformSkills: "平台技能", mySkills: "我的技能", platformConnectors: "平台连接器", myConnectors: "我的连接器" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connected: "已连接", setupRequired: "需要设置", availableToInstall: "可安装", packageVersion: "版本 {version}", conformanceAvailable: "已通过运行验证", conformanceUnavailable: "运行验证不可用", selectedAccount: "当前账号", refreshAuthorization: "刷新授权", upgrade: "升级", uninstall: "卸载" });
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connect: "连接", wecomBotId: "Bot ID", wecomSecret: "Secret", providedCredentialsInvalid: "请填写有效的企业微信 Bot 凭证。" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { deactivate: "取消激活" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorPackageUpload: "上传连接器", connectorPackageUploadHint: "上传一个经过校验的 ZIP；安装后仍显示在同一个连接器目录中。" });
 Object.assign(zh.experts, { platformExperts: "平台专家", myExperts: "我的专家" });
@@ -139,6 +140,7 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { iconUploadHint: "PNG, JPEG, WebP, or GIF up to 384KB." });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { platformSkills: "Platform Skills", mySkills: "My Skills", platformConnectors: "Platform Connectors", myConnectors: "My Connectors" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connected: "Connected", setupRequired: "Setup required", availableToInstall: "Available to install", packageVersion: "Version {version}", conformanceAvailable: "Runtime verified", conformanceUnavailable: "Runtime verification unavailable", selectedAccount: "Selected account", refreshAuthorization: "Refresh authorization", upgrade: "Upgrade", uninstall: "Uninstall" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connect: "Connect", wecomBotId: "Bot ID", wecomSecret: "Secret", providedCredentialsInvalid: "Enter valid WeCom Bot credentials." });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { deactivate: "Deactivate" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorPackageUpload: "Upload Connector", connectorPackageUploadHint: "Upload a validated ZIP. The installation appears in this same Connector catalog." });
 Object.assign(en.experts, { platformExperts: "Platform Experts", myExperts: "My Experts" });
@@ -211,7 +213,7 @@ Object.assign(zh, { composer: {
   placeholder: "输入消息，/ 选择技能，{'@'} 引用对话文件", removeToken: "移除 {name}", useSkill: "去使用", summon: "召唤",
   manageSkills: "管理技能", manageConnectors: "管理连接器", moreExperts: "召唤更多专家", localFiles: "从本地添加文件", localSkill: "本地上传的技能",
   parentFolder: "返回上一级文件夹", conversationFiles: "对话文件", fileUnavailable: "文件已过期或不可用", resourceUnavailable: "资源不可用", version: "版本 {version}",
-  connectorUnavailable: "连接器当前不可用", connectorInactive: "打开右侧开关即可激活", connectorActivation: "激活{name}", selectionFailed: "资源选择未保存，请重试或到管理页检查可用状态。", selectionRecovered: "此前保存的连接器选择已失效，请重新选择。", filesFailed: "无法读取对话文件，请重试。",
+  connectorUnavailable: "连接器当前不可用", connectorInactive: "打开右侧开关即可激活", connectorCredentialsRequired: "先在连接器管理页填写凭证", connectorActivation: "激活{name}", selectionFailed: "资源选择未保存，请重试或到管理页检查可用状态。", selectionRecovered: "此前保存的连接器选择已失效，请重新选择。", filesFailed: "无法读取对话文件，请重试。",
   sendFailed: "发送未完成，草稿已保留，请检查资源或文件后重试。", reselectFiles: "这些文件尚未上传，请重新选择：{names}",
   activationRequired: "{name} 需要完成应用激活", activationHint: "请在飞书页面完成应用创建；返回后系统会继续账号授权。",
   providerFeishu: "飞书", providerDingtalk: "钉钉", authorizeNow: "打开{provider}授权",
@@ -224,7 +226,7 @@ Object.assign(en, { composer: {
   placeholder: "Write a message, / to select Skills, {'@'} to reference conversation files", removeToken: "Remove {name}", useSkill: "Use Skill", summon: "Summon",
   manageSkills: "Manage Skills", manageConnectors: "Manage Connectors", moreExperts: "Discover more Experts", localFiles: "Add local files", localSkill: "Uploaded Skill",
   parentFolder: "Parent folder", conversationFiles: "Conversation files", fileUnavailable: "File expired or unavailable", resourceUnavailable: "Resource unavailable", version: "Version {version}",
-  connectorUnavailable: "This Connector is unavailable", connectorInactive: "Turn on the switch to activate", connectorActivation: "Activate {name}", selectionFailed: "Selection was not saved. Retry or check the resource in its management page.", selectionRecovered: "A previously saved Connector selection is no longer available. Please select it again.", filesFailed: "Could not load conversation files. Please retry.",
+  connectorUnavailable: "This Connector is unavailable", connectorInactive: "Turn on the switch to activate", connectorCredentialsRequired: "Enter credentials in Connector management first", connectorActivation: "Activate {name}", selectionFailed: "Selection was not saved. Retry or check the resource in its management page.", selectionRecovered: "A previously saved Connector selection is no longer available. Please select it again.", filesFailed: "Could not load conversation files. Please retry.",
   sendFailed: "The message was not sent. Your draft is preserved; check its resources and files, then retry.", reselectFiles: "These files were not uploaded. Select them again: {names}",
   activationRequired: "{name} needs application activation", activationHint: "Complete application creation in Feishu. Account authorization continues when you return.",
   providerFeishu: "Feishu", providerDingtalk: "DingTalk", authorizeNow: "Open {provider} authorization",
