@@ -25,6 +25,28 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
 }
 
 describe("ExtensionManager", () => {
+  it("connects a published WeCom package with provided Bot credentials", async () => {
+    let authorized = false;
+    const installation = { id: "installation-1", source: "wecom", active_revision_id: "revision-1", state: "active" as const, authorized: false, version: 1, package_version: "1.3.4", name: "企业微信", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "wecom", active_revision_id: "revision-1", state: "available" as const, version: 1, revision: { id: "revision-1", source: "wecom", package_version: "1.3.4", mode: "cli", sha256: "a".repeat(64), name: "企业微信", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => { authorized = true; return { ...installation, authorized: true }; });
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    const connect = wrapper.findAll(".published-connector-card button").find((item) => item.text() === "连接");
+    expect(connect).toBeDefined();
+    await connect!.trigger("click");
+    await flushPromises();
+    const form = new DOMWrapper(document.body).get(".provided-connector-form");
+    await form.get('input[name="bot_id"]').setValue("bot-123");
+    await form.get('input[name="secret"]').setValue("secret-456");
+    await form.trigger("submit");
+    await flushPromises();
+    expect(connectConnector).toHaveBeenCalledWith(installation.id, "bot-123", [], JSON.stringify({ bot_id: "bot-123", secret: "secret-456" }));
+    expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(false);
+    expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+    wrapper.unmount();
+  });
   it("opens DingTalk device authorization from an installed package without Feishu application setup", async () => {
     const installation = { id: "installation-1", source: "dingtalk", active_revision_id: "revision-1", state: "active", authorized: false, version: 1, package_version: "1.0.62", name: "钉钉", description: "", authentication_driver: "dingtalk", upgrade_available: false };
     const publication = { source: "dingtalk", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "dingtalk", package_version: "1.0.62", mode: "cli", sha256: "a".repeat(64), name: "钉钉", description: "", icon: "plug", authentication_driver: "dingtalk", runtime_digests: [], conformance_available: true, required_scopes: [] } };
