@@ -667,10 +667,20 @@ describe("WorkflowDetailPage", () => {
 
     await wrapper.get(".api-credential-actions .button:nth-child(2)").trigger("click");
     await wrapper.vm.$nextTick();
-    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/api-token");
-    expect(wrapper.get(".integration-guide").text()).toContain("RUN_ID=$(curl");
-    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID/events");
-    expect(wrapper.get(".integration-guide").text()).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID");
+    expect(wrapper.get("#workflow-settings-api").text()).toContain("API Key 和 API Secret 没有固定到期时间");
+    const guide = wrapper.get(".integration-guide");
+    expect(guide.text()).toContain("每次调用前自动换取 JWT");
+    const commands = guide.findAll(".integration-code code").map((code) => code.text());
+    expect(commands).toHaveLength(4);
+    expect(commands[0]).toContain("workflow_request() {");
+    expect(commands[0]).toContain("/api/v1/workflows/workflow-1/api-token");
+    expect(commands[0]).toContain("jq -er '.jwt_token'");
+    expect(commands[1]).toContain("RUN_ID=$(workflow_request");
+    expect(commands[2]).toContain("workflow_request -N");
+    expect(commands[2]).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID/events");
+    expect(commands[3]).toContain("workflow_request");
+    expect(commands[3]).toContain("/api/v1/workflows/workflow-1/runs/$RUN_ID");
+    expect(commands.slice(1).join("\n")).not.toContain("$JWT_TOKEN");
     wrapper.unmount();
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
   });

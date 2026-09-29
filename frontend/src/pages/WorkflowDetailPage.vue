@@ -322,10 +322,14 @@ async function openSettings(section: SettingsSection) {
   const element = settingsFormElement.value?.querySelector(`#workflow-settings-${section}`) as HTMLDetailsElement | null;
   if (element) { element.open = true; element.scrollIntoView?.({ block: "start", behavior: "smooth" }); }
 }
-const tokenCommand = computed(() => `JWT_TOKEN=$(curl -sS -u "$API_KEY:$API_SECRET" -X POST ${origin}/api/v1/workflows/${workflowID.value}/api-token | jq -r '.jwt_token')`);
-const runCommand = computed(() => `RUN_ID=$(curl -sS -H "Authorization: Bearer $JWT_TOKEN" -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' ${origin}/api/v1/workflows/${workflowID.value}/runs | jq -r '.id')`);
-const streamCommand = computed(() => `curl -N -H "Authorization: Bearer $JWT_TOKEN" -H "Accept: text/event-stream" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID/events`);
-const fullOutputCommand = computed(() => `curl -sS -H "Authorization: Bearer $JWT_TOKEN" ${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID`);
+const tokenCommand = computed(() => `workflow_request() {
+  local jwt_token
+  jwt_token=$(curl -fsS -u "$API_KEY:$API_SECRET" -X POST "${origin}/api/v1/workflows/${workflowID.value}/api-token" | jq -er '.jwt_token') || return
+  curl -fsS -H "Authorization: Bearer $jwt_token" "$@"
+}`);
+const runCommand = computed(() => `RUN_ID=$(workflow_request -H 'Idempotency-Key: unique-request' -H 'Content-Type: application/json' -d '{"text_input":"Run now"}' "${origin}/api/v1/workflows/${workflowID.value}/runs" | jq -er '.id')`);
+const streamCommand = computed(() => `workflow_request -N -H "Accept: text/event-stream" "${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID/events"`);
+const fullOutputCommand = computed(() => `workflow_request "${origin}/api/v1/workflows/${workflowID.value}/runs/$RUN_ID"`);
 async function copyValue(value: string, target: CopyTarget) {
   try {
     await navigator.clipboard.writeText(value);

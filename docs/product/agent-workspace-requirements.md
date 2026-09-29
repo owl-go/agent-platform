@@ -190,8 +190,9 @@ Settings contains five collapsed sections:
 ### 5.5 API Credential And Contract
 
 - API access is opt-in. No credential is generated when the Workflow is created.
-- A Workflow has one API Key/API Secret pair. Regeneration immediately revokes the old pair.
+- A Workflow has one API Key/API Secret pair with no fixed expiration. It remains usable until regeneration, revocation, or Workflow deletion; regeneration immediately revokes the old pair.
 - The API Key and API Secret are encrypted at rest and returned only to the owning User from the Workflow detail page, where both can be copied. HTTP Basic Auth with API Key as username and API Secret as password is accepted only by the token exchange endpoint. It returns a 72-hour JWT access token.
+- The integration guide shows an automatic token-exchange request helper: it exchanges a new JWT before each Workflow API request instead of requiring a business system to manually replace a stored JWT every 72 hours. A production integration must keep the long-lived API Key/API Secret server-side and never expose them to a browser client.
 - `GET /api/v1/workflows/{workflowId}/api-credential` returns the current pair only to the owning User. Credentials generated before encrypted Secret storage was introduced must be regenerated before the Secret can be displayed.
 - Workflow invocation and inspection use `Authorization: Bearer <jwt_token>`. Regenerating the credential invalidates outstanding tokens because their signature key derives from the current credential verifier.
 - `POST /api/v1/workflows/{workflowId}/runs` accepts text or JSON input and returns `202` with a Run ID.
