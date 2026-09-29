@@ -334,6 +334,7 @@ Object.assign(zh.sessions, { executionPlan: {
   reasons: { user_requested: "你要求先制定计划", multiple_stages: "包含多个执行阶段", multiple_external_sources: "将读取多个外部资源", external_side_effect: "可能修改外部系统", workflow_execution: "这是工作流执行", workspace_change: "可能修改工作区文件" },
   sideEffects: { external_connector_operation: "可能调用连接器修改外部系统", workspace_files_may_change: "可能修改工作区文件" },
 } });
+Object.assign(zh.workflows, { editPlanTitle: "修改要求", editPlanHint: "先编辑新要求；提交后才会取消当前计划并创建新任务。", editPlanRetryHint: "当前计划已取消，但新任务未创建。要求仍保留在这里，请重试提交。", backToPlan: "返回计划" });
 Object.assign(en.sessions, { executionPlan: {
   title: "Execution plan", resources: "Resources", sideEffectsTitle: "Possible changes", estimate: "Estimate", generationCost: "Plan generation", start: "Start plan", edit: "Edit requirements", direct: "Answer directly without external actions",
   estimateValue: "{calls} model calls · up to about {credits} Credits", generationCostValue: "Platform rules · {credits} Credits",
@@ -342,6 +343,7 @@ Object.assign(en.sessions, { executionPlan: {
   reasons: { user_requested: "You requested a plan first", multiple_stages: "Multiple execution stages", multiple_external_sources: "Uses multiple external resources", external_side_effect: "May change an external system", workflow_execution: "Workflow execution", workspace_change: "May change workspace files" },
   sideEffects: { external_connector_operation: "May use a Connector to change an external system", workspace_files_may_change: "May change workspace files" },
 } });
+Object.assign(en.workflows, { editPlanTitle: "Edit requirements", editPlanHint: "Edit the request first. Submitting cancels the current plan and creates a new task.", editPlanRetryHint: "The plan was cancelled, but the new task was not created. Your request is still here; retry sending.", backToPlan: "Back to plan" });
 Object.assign(zh, { taskWorkspace: {
   eyebrow: "当前任务", title: "任务面板", close: "关闭任务面板", open: "查看任务详情", reopen: "打开任务面板", plan: "计划", evidence: "证据", activities: "执行活动", modelCalls: "模型阶段", files: "文件", inputFile: "输入文件", outputFile: "输出产物", result: "结果摘要", state: "状态", elapsed: "耗时", credits: "消耗积分",
   stepKinds: { review_input: "核对输入", retrieve_knowledge: "检索知识", execute_stage: "执行任务", deliver_result: "交付结果" },

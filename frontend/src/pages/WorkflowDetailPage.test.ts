@@ -220,11 +220,146 @@ describe("WorkflowDetailPage", () => {
     await flushPromises();
 
     expect(wrapper.get(".run-conversation .message.user").text()).toContain(workflow.goal);
-    expect(wrapper.get(".run-conversation .execution-plan-card footer").text()).toContain("按计划开始");
+    expect(wrapper.find(".run-conversation .execution-plan-card footer").exists()).toBe(false);
+    expect(wrapper.get(".task-workspace-plan-actions").text()).toContain("按计划开始");
     await wrapper.get(".task-workspace-plan-actions .el-button--primary").trigger("click");
     await flushPromises();
     expect(decideRunExecutionPlan).toHaveBeenCalledWith(workflow.id, pendingRun.id, "start", 1);
+    await wrapper.get(".task-workspace-panel > header button").trigger("click");
+    expect(wrapper.get(".run-conversation .execution-plan-card footer").text()).toContain("按计划开始");
     wrapper.unmount();
+  });
+
+  it("keeps a pending plan until the edited request is submitted", async () => {
+    const pendingRun: Run = {
+      ...run, state: "waiting_for_user", final_text: undefined,
+      execution_plan: {
+        id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }],
+        resources: [], side_effects: ["workspace_files_may_change"], reasons: ["workflow_execution"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    };
+    const cancelled: Run = { ...pendingRun, state: "cancelled", execution_plan: { ...pendingRun.execution_plan!, state: "cancelled" } };
+    const decideRunExecutionPlan = vi.fn(async () => cancelled);
+    const replacement: Run = { ...run, id: "run-2", turn_number: 2, state: "queued", final_text: undefined };
+    const continueRunConversation = vi.fn(async () => replacement);
+    const api = apiStub({ listRuns: vi.fn(async () => [pendingRun]), listRunTurns: vi.fn(async () => [pendingRun]), decideRunExecutionPlan, continueRunConversation, getAttachmentDownload: vi.fn(async () => new Blob()) });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+    const editButton = wrapper.findAll(".task-workspace-plan-actions .el-button").find((button) => button.text() === "修改要求");
+    expect(editButton).toBeDefined();
+    await editButton!.trigger("click");
+    await flushPromises();
+
+    expect(decideRunExecutionPlan).not.toHaveBeenCalled();
+    expect(wrapper.get(".run-plan-edit-overlay").text()).toContain("提交后");
+    expect(wrapper.get(".run-composer .composer-editor").text()).toContain(workflow.goal);
+    await wrapper.get(".run-plan-edit-heading .el-button").trigger("click");
+    expect(wrapper.find(".run-plan-edit-overlay").exists()).toBe(false);
+    expect(decideRunExecutionPlan).not.toHaveBeenCalled();
+    await editButton!.trigger("click");
+    await flushPromises();
+    await wrapper.get(".run-composer [aria-label='发送']").trigger("click");
+    await flushPromises();
+    expect(decideRunExecutionPlan).toHaveBeenCalledWith(workflow.id, pendingRun.id, "cancel", 1);
+    expect(continueRunConversation).toHaveBeenCalledWith(workflow.id, pendingRun.id, `${workflow.goal}\n\n${pendingRun.text_input}`, [], undefined, expect.any(Object));
+    expect(wrapper.find(".run-plan-edit-overlay").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("keeps the edited request available when creating its replacement fails", async () => {
+    const pendingRun: Run = {
+      ...run, state: "waiting_for_user", final_text: undefined,
+      execution_plan: {
+        id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }],
+        resources: [], side_effects: [], reasons: ["workflow_execution"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    };
+    const cancelled: Run = { ...pendingRun, state: "cancelled", execution_plan: { ...pendingRun.execution_plan!, state: "cancelled" } };
+    const replacement: Run = { ...run, id: "run-2", turn_number: 2, state: "queued", final_text: undefined };
+    const decideRunExecutionPlan = vi.fn(async () => cancelled);
+    const continueRunConversation = vi.fn().mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValue(replacement);
+    const api = apiStub({ listRuns: vi.fn(async () => [pendingRun]), listRunTurns: vi.fn(async () => [pendingRun]), decideRunExecutionPlan, continueRunConversation });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+    const editButton = wrapper.findAll(".task-workspace-plan-actions .el-button").find((button) => button.text() === "修改要求");
+    await editButton!.trigger("click");
+    await flushPromises();
+    await wrapper.get(".run-composer [aria-label='发送']").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get(".run-plan-edit-overlay").text()).toContain("新任务未创建");
+    expect(wrapper.get(".run-composer .composer-editor").text()).toContain(workflow.goal);
+    expect(continueRunConversation).toHaveBeenCalledTimes(1);
+    await wrapper.get(".run-composer [aria-label='发送']").trigger("click");
+    await flushPromises();
+    expect(decideRunExecutionPlan).toHaveBeenCalledTimes(1);
+    expect(continueRunConversation).toHaveBeenCalledTimes(2);
+    expect(wrapper.find(".run-plan-edit-overlay").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("does not create a replacement when cancelling the pending plan fails", async () => {
+    const pendingRun: Run = {
+      ...run, state: "waiting_for_user", final_text: undefined,
+      execution_plan: {
+        id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules",
+        steps: [], resources: [], side_effects: [], reasons: ["workflow_execution"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    };
+    const decideRunExecutionPlan = vi.fn(async () => { throw new Error("conflict"); });
+    const continueRunConversation = vi.fn();
+    const api = apiStub({ listRuns: vi.fn(async () => [pendingRun]), listRunTurns: vi.fn(async () => [pendingRun]), decideRunExecutionPlan, continueRunConversation });
+    const wrapper = await mountPage(api);
+    await wrapper.get(".run-row:not(.run-head)").trigger("click");
+    await flushPromises();
+    const editButton = wrapper.findAll(".task-workspace-plan-actions .el-button").find((button) => button.text() === "修改要求");
+    await editButton!.trigger("click");
+    await flushPromises();
+    await wrapper.get(".run-composer [aria-label='发送']").trigger("click");
+    await flushPromises();
+
+    expect(decideRunExecutionPlan).toHaveBeenCalledTimes(1);
+    expect(continueRunConversation).not.toHaveBeenCalled();
+    expect(wrapper.get(".run-plan-edit-overlay").text()).toContain("提交后");
+    expect(wrapper.get(".run-composer .composer-editor").text()).toContain(workflow.goal);
+    wrapper.unmount();
+  });
+
+  it("opens a pending plan at its start instead of scrolling past its heading", async () => {
+    const scrollTo = vi.fn();
+    const scrollToDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollTo");
+    const scrollHeightDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", { configurable: true, value: scrollTo });
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => 1000 });
+    try {
+      const pendingRun: Run = {
+        ...run, state: "waiting_for_user", final_text: undefined,
+        execution_plan: {
+          id: "plan-1", state: "pending", objective: workflow.goal, created_at: run.queued_at, version: 1, generator: "platform_rules",
+          steps: [{ id: "step-1", kind: "execute_stage", label: "执行任务", position: 1, state: "pending" }],
+          resources: [], side_effects: ["workspace_files_may_change"], reasons: ["workflow_execution"],
+          estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+        },
+      };
+      const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [pendingRun]), listRunTurns: vi.fn(async () => [pendingRun]), getAttachmentDownload: vi.fn(async () => new Blob()) }));
+      await wrapper.get(".run-row:not(.run-head)").trigger("click");
+      await flushPromises();
+
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+      wrapper.unmount();
+    } finally {
+      if (scrollToDescriptor) Object.defineProperty(HTMLElement.prototype, "scrollTo", scrollToDescriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, "scrollTo");
+      if (scrollHeightDescriptor) Object.defineProperty(HTMLElement.prototype, "scrollHeight", scrollHeightDescriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, "scrollHeight");
+    }
   });
 
   it("opens a Run as a conversation instead of raw Runtime events", async () => {
