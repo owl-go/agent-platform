@@ -39,6 +39,8 @@ const schedulePreview = ref<string[]>([]);
 const schedulePreviewing = ref(false);
 const personalTimezone = ref("Asia/Shanghai");
 const runEditPrompt = ref("");
+const editingPlanRunID = ref("");
+const editingPlanCancelled = computed(() => Boolean(editingPlanRunID.value && conversationRuns.value.find((item) => item.id === editingPlanRunID.value)?.execution_plan?.state === "cancelled"));
 const selectedTaskID = ref("");
 const taskPanelOpen = ref(true);
 const integrationGuideOpen = ref(false);
@@ -195,6 +197,7 @@ onBeforeUnmount(() => {
   document.removeEventListener("visibilitychange", resumeRunPolling);
 });
 function measureRunComposer() {
+  if (editingPlanRunID.value) { runComposerClearance.value = 154; return; }
   const height = runComposerLayer.value?.getBoundingClientRect().height ?? 0;
   if (height <= 0) return;
   runComposerClearance.value = Math.ceil(height) + 16;
@@ -479,30 +482,37 @@ async function sendFollowUp(message: ComposerSubmission) {
   const rootID = selectedRun.value.id;
   sendingFollowUp.value = true;
   try {
+    if (editingPlanRunID.value) {
+      const edited = conversationRuns.value.find((item) => item.id === editingPlanRunID.value);
+      if (edited?.execution_plan?.state === "pending" && !await decideExecutionPlan(edited.id, "cancel")) throw new Error("plan_edit_cancel_failed");
+      if (edited?.execution_plan?.state !== "pending" && edited?.execution_plan?.state !== "cancelled") throw new Error("plan_edit_outdated");
+    }
     const created = await api.continueRunConversation(workflowID.value, rootID, message.content, message.attachmentIDs, undefined, message.input);
     if (selectedRun.value?.id !== rootID) return;
     conversationRuns.value.push(created);
+    editingPlanRunID.value = "";
     await scrollConversationToEnd();
     if (created.state === "queued" || created.state === "running") void streamConversationTurn(created);
   } finally { sendingFollowUp.value = false; }
 }
-async function decideExecutionPlan(runID: string, decision: "start" | "direct" | "cancel") {
+async function decideExecutionPlan(runID: string, decision: "start" | "direct" | "cancel"): Promise<boolean> {
   const current = conversationRuns.value.find((item) => item.id === runID);
-  if (!current?.execution_plan || current.execution_plan.state !== "pending") return;
+  if (!current?.execution_plan || current.execution_plan.state !== "pending") return false;
   try {
     const updated = await api.decideRunExecutionPlan(workflowID.value, runID, decision, current.execution_plan.version);
     const index = conversationRuns.value.findIndex((item) => item.id === runID);
     if (index >= 0) conversationRuns.value[index] = updated;
     if (updated.state === "queued" || updated.state === "running") void streamConversationTurn(updated);
-  } catch { error.value = t("errors.conflict"); }
+    return true;
+  } catch { error.value = t("errors.conflict"); return false; }
 }
 async function editExecutionPlan(runID: string) {
   const current = conversationRuns.value.find((item) => item.id === runID);
-  await decideExecutionPlan(runID, "cancel");
-  if (current) {
+  if (current?.execution_plan?.state === "pending") {
+    editingPlanRunID.value = runID;
     runEditPrompt.value = "";
     await nextTick();
-    runEditPrompt.value = current.turn_number === 1 ? workflow.value?.goal ?? "" : current.text_input || (current.json_input ? JSON.stringify(current.json_input, null, 2) : "");
+    runEditPrompt.value = runInputText(current, current.turn_number - 1);
   }
 }
 
@@ -516,7 +526,7 @@ function closeTaskPanel() {
   taskPanelOpen.value = false;
   if (selectedRun.value) localStorage.setItem(`agent-workspace:task-panel:run:${selectedRun.value.id}`, "closed");
 }
-function closeRun() { if (streamReconnectTimer) clearTimeout(streamReconnectTimer); eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; selectedTaskID.value = ""; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
+function closeRun() { if (streamReconnectTimer) clearTimeout(streamReconnectTimer); eventController?.abort(); eventController = undefined; stopRunReveal(); selectedRun.value = undefined; selectedTaskID.value = ""; editingPlanRunID.value = ""; runEditPrompt.value = ""; conversationRuns.value = []; runEvents.value = []; runEventsByID.value = {}; eventRunID.value = ""; streamingRunID.value = ""; revealedRunOutput.value = ""; }
 function runInputText(item: Run, index: number) { const input = item.text_input || (item.json_input ? JSON.stringify(item.json_input, null, 2) : ""); return index === 0 ? [workflow.value?.goal, input].filter(Boolean).join("\n\n") : input; }
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
@@ -584,7 +594,10 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
         <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :plan-actions-in-panel-id="taskPanelOpen ? selectedTaskMessage?.id : undefined" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
       </div>
       <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @download-artifact="openArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" />
-      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer"><ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun)" :submit="sendFollowUp" @stop="cancelConversationRun" /></div>
+      <div v-if="!workflow?.deleted" ref="runComposerLayer" class="composer-layer run-composer-layer" :class="{ 'run-plan-edit-overlay': editingPlanRunID }" :role="editingPlanRunID ? 'dialog' : undefined" :aria-modal="editingPlanRunID ? 'true' : undefined" :aria-label="editingPlanRunID ? t('workflows.editPlanTitle') : undefined">
+        <div v-if="editingPlanRunID" class="run-plan-edit-heading" role="status"><div><strong>{{ t('workflows.editPlanTitle') }}</strong><p>{{ t(editingPlanCancelled ? 'workflows.editPlanRetryHint' : 'workflows.editPlanHint') }}</p></div><el-button text @click="editingPlanRunID = ''">{{ t(editingPlanCancelled ? 'common.close' : 'workflows.backToPlan') }}</el-button></div>
+        <ConversationComposer :key="selectedRun.id" class="run-composer" :scope="{ workflow_id: workflowID, run_id: selectedRun.id }" :initial-prompt="runEditPrompt" :authorization-request="cliAuthorizationRequest" :active="Boolean(activeConversationRun) && !editingPlanRunID" :submit="sendFollowUp" @stop="cancelConversationRun" />
+      </div>
     </div>
     <template v-else>
       <header class="detail-hero"><el-button class="back-link" text @click="router.push('/workflows')">← {{ t('common.back') }}</el-button><div v-if="workflow"><h2>{{ workflow.name }}</h2><el-button v-if="workflow.origin" class="workflow-origin-link" text @click="router.push({ path: '/sessions', query: { open: workflow.origin.session_id } })">{{ t('workflows.fromSession') }} →</el-button></div><el-button v-if="workflow && !workflow.deleted" class="button primary" type="primary" :loading="running" @click="runNow">{{ running ? t('common.running') : '▶ ' + t('workflows.runNow') }}</el-button><el-tag v-else-if="workflow" type="info">{{ t('common.readOnly') }}</el-tag></header>
