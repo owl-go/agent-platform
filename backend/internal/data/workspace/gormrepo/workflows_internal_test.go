@@ -9,6 +9,8 @@ import (
 
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
+
+	"github.com/google/uuid"
 )
 
 func TestValidateRunInputBoundsTextAndJSON(t *testing.T) {
@@ -117,6 +119,40 @@ func TestSummarizeRunConversationsUsesLatestTurnProjection(t *testing.T) {
 	}
 	if latest.StartedAt == nil || !latest.StartedAt.Equal(latestStarted) || latest.EndedAt == nil || !latest.EndedAt.Equal(latestEnded) {
 		t.Fatalf("latest Run Conversation timestamps = %#v / %#v", latest.StartedAt, latest.EndedAt)
+	}
+}
+
+func TestPauseScheduleAfterThreeConsecutiveScheduledFailures(t *testing.T) {
+	db := conversationTestDatabase(t)
+	ownerID, workflowID := uuid.NewString(), uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", ownerID, ownerID, ownerID, ownerID+"@example.test", ownerID).Error; err != nil {
+		t.Fatal(err)
+	}
+	schedule := []byte(`{"enabled":true,"frequency":"daily","hour":9,"minute":0,"weekday":1,"timezone":"Asia/Shanghai"}`)
+	if err := db.Create(&workflowRecord{ID: workflowID, OwnerID: ownerID, Name: "Daily", Goal: "Report", Environment: []byte("[]"), Schedule: schedule, WorkspacePath: "workflows/" + ownerID + "/" + workflowID, Version: 1}).Error; err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 3; index++ {
+		id := uuid.NewString()
+		endedAt := time.Now().UTC().Add(time.Duration(index) * time.Minute)
+		if err := db.Create(&runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: "Daily", Trigger: "scheduled", State: "failed", Input: []byte(`{}`), WorkflowSnapshot: []byte(`{}`), ExpertStages: []byte(`[]`), Evidence: []byte(`[]`), QueuedAt: endedAt, EndedAt: &endedAt, Version: 1}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	paused, err := pauseScheduleAfterConsecutiveFailures(db, workflowID)
+	if err != nil || !paused {
+		t.Fatalf("pause = %v, err = %v", paused, err)
+	}
+	var workflow workflowRecord
+	if err := db.Where("id = ?", workflowID).Take(&workflow).Error; err != nil {
+		t.Fatal(err)
+	}
+	var decoded domain.Schedule
+	if err := json.Unmarshal(workflow.Schedule, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Enabled || workflow.NextScheduledAt != nil {
+		t.Fatalf("paused Workflow = %#v", workflow)
 	}
 }
 

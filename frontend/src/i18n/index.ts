@@ -360,6 +360,46 @@ Object.assign(zh.workflows, { session_conversion: "由会话创建", fromSession
 Object.assign(en.workflows, { session_conversion: "Created from Session", fromSession: "From Session" });
 Object.assign(zh.workflows, { createHint: "先用名称和目标跑通一次，再配置专家、知识库、定时、API 或 Git。", createAndValidate: "创建并验证", validationRunFailed: "工作流已创建，但验证运行未能启动；请检查个人执行设置后重试。", validatedTitle: "这个工作流已经跑通", validatedHint: "现在再按使用方式配置定时触发、API 接入或 Git 来源。", configureNext: "继续配置" });
 Object.assign(en.workflows, { createHint: "Start with a name and goal. Configure Experts, Knowledge Bases, schedules, API, or Git after the first run works.", createAndValidate: "Create and validate", validationRunFailed: "The Workflow was created, but its validation Run could not start. Check Personal Settings and retry.", validatedTitle: "This Workflow has completed a run", validatedHint: "Now configure a schedule, API integration, or Git source when the use case needs it.", configureNext: "Configure next" });
+Object.assign(zh.workflows, {
+  searchPlaceholder: "搜索名称或目标", filterLabel: "筛选工作流", filterAll: "全部", filterAttention: "需要处理", filterScheduled: "已计划", filterNeverRun: "尚未运行",
+  sortLabel: "工作流排序", sortAttention: "需要处理优先", sortUpdated: "最近更新", sortFrequent: "运行最多", noMatching: "没有匹配的工作流",
+  success30d: "30 天成功率", runs30d: "30 天运行", lastRun: "最近运行", nextRun: "下次计划", noSchedule: "未设置", notRun: "尚未运行",
+  continueAction: "继续处理", recoverAction: "查看并恢复", viewRun: "查看运行", validateAction: "开始验证",
+  runState: { queued: "排队中", running: "运行中", waiting_for_user: "等待处理", succeeded: "运行成功", failed: "运行失败", cancelled: "已取消" },
+  deleteImpact: "删除“{name}”后：{schedule}；{api}；工作空间会被清空，历史运行记录保留为只读。",
+  deleteScheduleActive: "正在运行的定时计划会停止", deleteScheduleInactive: "当前没有启用的定时计划", deleteApiActive: "现有 API 凭证会立即失效", deleteApiInactive: "当前没有 API 凭证",
+});
+Object.assign(en.workflows, {
+  searchPlaceholder: "Search by name or goal", filterLabel: "Filter Workflows", filterAll: "All", filterAttention: "Needs attention", filterScheduled: "Scheduled", filterNeverRun: "Never run",
+  sortLabel: "Sort Workflows", sortAttention: "Attention first", sortUpdated: "Recently updated", sortFrequent: "Most run", noMatching: "No matching Workflows",
+  success30d: "30-day success", runs30d: "30-day runs", lastRun: "Last run", nextRun: "Next schedule", noSchedule: "Not scheduled", notRun: "Never run",
+  continueAction: "Continue", recoverAction: "View and recover", viewRun: "View run", validateAction: "Start validation",
+  runState: { queued: "Queued", running: "Running", waiting_for_user: "Needs input", succeeded: "Succeeded", failed: "Failed", cancelled: "Cancelled" },
+  deleteImpact: "Deleting “{name}”: {schedule}; {api}; the Workspace is cleared and Run history remains read-only.",
+  deleteScheduleActive: "the active schedule stops", deleteScheduleInactive: "no schedule is active", deleteApiActive: "the API credential is revoked immediately", deleteApiInactive: "no API credential is configured",
+});
+Object.assign(zh.workflows, {
+  overview: "概览", configureSchedule: "设置定时运行", configureApi: "接入业务系统", configureGit: "连接代码仓库", validateHint: "完成首次验证后才能自动运行",
+  runSuccessCount: "成功 {success}/{total} 次", configureScheduleHint: "验证成功后再设置自动运行", recoveryRequired: "最近一次运行失败", actionRequired: "有操作等待处理",
+  planWaitingHint: "运行计划或授权仍在等待你的确认。", runFailedHint: "打开运行记录查看原因并选择恢复方式。", recentRuns: "最近运行", viewAllRuns: "查看全部", noRunsOverview: "先运行一次，确认目标和执行计划是否正确。",
+  resourceSettings: "执行资源", resourceSummary: "{knowledge} 个知识库 · {environment} 个环境变量", configured: "已配置", notConfigured: "未配置", scheduleEnabledSummary: "{frequency} · {timezone}",
+  previewSchedule: "预览未来三次", schedulePreviewHint: "预览会按当前填写的时区计算，不会保存配置。", schedulePreviewFailed: "无法计算计划时间，请检查频率、时间和时区。",
+  sunday: "周日", monday: "周一", tuesday: "周二", wednesday: "周三", thursday: "周四", friday: "周五", saturday: "周六",
+  rotateCredentialTitle: "重新生成 API 凭证？", rotateCredentialImpact: "旧的 API Key 和 API Secret 会立即失效。请先确认调用方可以同步替换凭证。",
+  revokeCredential: "停用凭证", revokeCredentialTitle: "停用 API 凭证？", revokeCredentialImpact: "所有使用当前凭证的调用会立即失败。工作流本身和历史运行不会被删除。", credentialRevoked: "API 凭证已停用。",
+  artifactsEmpty: "还没有结果文件", artifactsEmptyHint: "运行明确要求生成文件的任务后，结果会出现在这里。", workspaceEmpty: "工作空间为空", workspaceEmptyHint: "连接 Git 来源或让运行写入持久文件后，内容会出现在这里。", rerun: "重新运行",
+});
+Object.assign(en.workflows, {
+  overview: "Overview", configureSchedule: "Set schedule", configureApi: "Connect a system", configureGit: "Connect repository", validateHint: "Complete validation before automating this Workflow",
+  runSuccessCount: "{success}/{total} succeeded", configureScheduleHint: "Validate once before scheduling", recoveryRequired: "The latest run failed", actionRequired: "Action required",
+  planWaitingHint: "A plan or authorization still needs your decision.", runFailedHint: "Open the Run to see the cause and recovery action.", recentRuns: "Recent runs", viewAllRuns: "View all", noRunsOverview: "Run once to validate the goal and execution plan.",
+  resourceSettings: "Execution resources", resourceSummary: "{knowledge} Knowledge Bases · {environment} environment variables", configured: "Configured", notConfigured: "Not configured", scheduleEnabledSummary: "{frequency} · {timezone}",
+  previewSchedule: "Preview next three", schedulePreviewHint: "The preview uses the entered timezone and does not save the configuration.", schedulePreviewFailed: "Could not calculate schedule times. Check the frequency, time, and timezone.",
+  sunday: "Sunday", monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday", saturday: "Saturday",
+  rotateCredentialTitle: "Regenerate API credential?", rotateCredentialImpact: "The existing API Key and API Secret stop working immediately. Confirm that every caller can replace the credential.",
+  revokeCredential: "Revoke credential", revokeCredentialTitle: "Revoke API credential?", revokeCredentialImpact: "Every caller using this credential fails immediately. The Workflow and Run history are not deleted.", credentialRevoked: "The API credential was revoked.",
+  artifactsEmpty: "No result files yet", artifactsEmptyHint: "Files explicitly produced by a Run appear here.", workspaceEmpty: "The Workspace is empty", workspaceEmptyHint: "Connect a Git source or let a Run write persistent files to populate it.", rerun: "Rerun",
+});
 Object.assign(zh.settings, { usePlatformDefault: "继承企业默认执行组合", platformDefaultHint: "管理员已验证 Runtime 与模型；无需单独配置即可开始。", platformDefaultUnavailable: "企业默认尚未配置。取消继承后可使用个人执行设置。", platformDefault: "企业默认执行组合", platformDefaultAdminHint: "必须绑定一个已成功且执行快照完全匹配的验证 Run；该证据会把 unverified 组合晋升为 verified，不兼容组合不可选。", validationRun: "验证 Run", validationRunHint: "填写由当前 Runtime 与模型完成的成功 Run ID。", setPlatformDefault: "设为企业默认", platformDefaultSaved: "企业默认已更新，所有仍在继承的账号已同步。" });
 Object.assign(en.settings, { usePlatformDefault: "Inherit the enterprise execution default", platformDefaultHint: "An Administrator verified this Runtime and model; no personal execution setup is required.", platformDefaultUnavailable: "No enterprise default is available. Turn inheritance off to configure a personal execution profile.", platformDefault: "Enterprise execution default", platformDefaultAdminHint: "A successful validation Run with an exactly matching execution snapshot is required. That evidence promotes an unverified pair to verified; incompatible pairs cannot be selected.", validationRun: "Validation Run", validationRunHint: "Enter the ID of a successful Run completed by this Runtime and model.", setPlatformDefault: "Set enterprise default", platformDefaultSaved: "The enterprise default was updated and propagated to every account still inheriting it." });
 Object.assign((zh as unknown as { credits: Record<string, unknown> }).credits, { available: "可用额度", reserved: "执行中预留", warning: "今日额度使用已达到 {percent}% 提醒线", exhausted: "今日额度已用尽", contactAdministrator: "需要更多额度时请联系企业管理员；新的执行会在可用额度不足时被阻止。", stageSummary: "按执行阶段查看", stage: "阶段 {position}", measuredCharge: "按实际用量结算", estimatedCharge: "缺少用量时按冻结估算结算", consumedBeforeStop: "停止前已产生的消耗", notCharged: "本次未记录模型消耗；重试会作为新的执行单独计费。" });

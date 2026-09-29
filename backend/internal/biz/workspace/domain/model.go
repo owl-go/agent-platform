@@ -496,6 +496,53 @@ type Schedule struct {
 	Timezone  string
 }
 
+func (schedule Schedule) Next(after time.Time) *time.Time {
+	if !schedule.Enabled {
+		return nil
+	}
+	location, err := time.LoadLocation(schedule.Timezone)
+	if err != nil {
+		return nil
+	}
+	local := after.In(location)
+	var next time.Time
+	switch schedule.Frequency {
+	case "hourly":
+		next = time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), int(schedule.Minute), 0, 0, location)
+		if !next.After(local) {
+			next = next.Add(time.Hour)
+		}
+	case "daily":
+		next = time.Date(local.Year(), local.Month(), local.Day(), int(schedule.Hour), int(schedule.Minute), 0, 0, location)
+		if !next.After(local) {
+			next = next.AddDate(0, 0, 1)
+		}
+	case "weekly":
+		days := (int(schedule.Weekday) - int(local.Weekday()) + 7) % 7
+		next = time.Date(local.Year(), local.Month(), local.Day()+days, int(schedule.Hour), int(schedule.Minute), 0, 0, location)
+		if !next.After(local) {
+			next = next.AddDate(0, 0, 7)
+		}
+	default:
+		return nil
+	}
+	utc := next.UTC()
+	return &utc
+}
+
+func (schedule Schedule) Upcoming(after time.Time, count int) []time.Time {
+	items := make([]time.Time, 0, max(0, count))
+	for len(items) < count {
+		next := schedule.Next(after)
+		if next == nil {
+			break
+		}
+		items = append(items, *next)
+		after = next.Add(time.Second)
+	}
+	return items
+}
+
 func (schedule Schedule) Validate() error {
 	if !schedule.Enabled {
 		return nil
@@ -731,8 +778,16 @@ type Workflow struct {
 	RuntimeEngine           *RuntimeEngine
 	Environment             []EnvironmentVariable
 	Schedule                *Schedule
+	NextScheduledAt         *time.Time
+	UpcomingScheduleTimes   []time.Time
 	GitSource               *GitSource
 	APICredentialConfigured bool
+	LastRunID               string
+	LastRunState            string
+	LastRunAt               *time.Time
+	RunCount30Days          int
+	SucceededRunCount30Days int
+	NeedsAttention          bool
 	WorkspacePath           string
 	DeletedAt               *time.Time
 	CreatedAt               time.Time

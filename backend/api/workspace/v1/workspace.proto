@@ -75,9 +75,11 @@ service AgentWorkspaceService {
   rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
   rpc GetWorkflow(GetWorkflowRequest) returns (Workflow) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}"}; }
   rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow) { option (google.api.http) = {patch: "/api/v1/workflows/{workflow_id}" body: "*"}; }
+  rpc PreviewWorkflowSchedule(PreviewWorkflowScheduleRequest) returns (PreviewWorkflowScheduleResponse) { option (google.api.http) = {post: "/api/v1/workflows/schedule-preview" body: "*"}; }
   rpc DeleteWorkflow(DeleteWorkflowRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}"}; }
   rpc GenerateWorkflowCredential(GenerateWorkflowCredentialRequest) returns (WorkflowCredential) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/api-credential" body: "*"}; }
   rpc GetWorkflowCredential(GetWorkflowCredentialRequest) returns (WorkflowCredential) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/api-credential"}; }
+  rpc RevokeWorkflowCredential(RevokeWorkflowCredentialRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}/api-credential"}; }
   rpc ExchangeWorkflowCredential(ExchangeWorkflowCredentialRequest) returns (WorkflowAccessToken) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/api-token" body: "*"}; }
   rpc RunWorkflow(RunWorkflowRequest) returns (Run) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/runs" body: "*"}; }
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/runs"}; }
@@ -422,9 +424,11 @@ message ListWorkflowsResponse { repeated Workflow items = 1; }
 message CreateWorkflowRequest { WorkflowInput workflow = 1; }
 message GetWorkflowRequest { string workflow_id = 1; }
 message UpdateWorkflowRequest { string workflow_id = 1; WorkflowInput workflow = 2; int64 expected_version = 3; }
+message PreviewWorkflowScheduleRequest { Schedule schedule = 1; }
+message PreviewWorkflowScheduleResponse { repeated google.protobuf.Timestamp items = 1; }
 message DeleteWorkflowRequest { string workflow_id = 1; }
 message WorkflowInput { string name = 1; string goal = 2; optional string expert_id = 3; reserved 4, 5; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 6; optional Schedule schedule = 7; optional string expert_team_id = 8; repeated string knowledge_base_ids = 9; }
-message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; optional SessionWorkflowLink origin = 17; }
+message Workflow { string id = 1; string name = 2; string goal = 3; optional string expert_id = 4; reserved 5, 6; reserved "provider_model_id", "runtime_engine"; repeated EnvironmentVariable environment = 7; optional Schedule schedule = 8; optional GitSource git_source = 9; bool api_credential_configured = 10; bool deleted = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; int64 version = 14; optional string expert_team_id = 15; repeated string knowledge_base_ids = 16; optional SessionWorkflowLink origin = 17; optional google.protobuf.Timestamp next_scheduled_at = 18; optional string last_run_state = 19; optional google.protobuf.Timestamp last_run_at = 20; int32 run_count_30d = 21; int32 succeeded_run_count_30d = 22; bool needs_attention = 23; optional string last_run_id = 24; repeated google.protobuf.Timestamp upcoming_schedule_times = 25; }
 message EnvironmentVariable { string name = 1; optional string value = 2; bool secret = 3; bool configured = 4; }
 message Schedule { bool enabled = 1; string frequency = 2; int32 hour = 3; int32 minute = 4; int32 weekday = 5; string timezone = 6; }
 message GitConfigEntry { string key = 1; string value = 2; }
@@ -448,6 +452,7 @@ message KnowledgeDocumentRevision { string id = 1; string document_id = 2; int32
 message KnowledgeDocument { string id = 1; string knowledge_base_id = 2; optional string category_id = 3; string name = 4; string source_type = 5; optional string source_uri = 6; string state = 7; optional string error = 8; bool deleted = 9; google.protobuf.Timestamp created_at = 10; google.protobuf.Timestamp updated_at = 11; int64 version = 12; optional KnowledgeDocumentRevision latest_revision = 13; }
 message GenerateWorkflowCredentialRequest { string workflow_id = 1; }
 message GetWorkflowCredentialRequest { string workflow_id = 1; }
+message RevokeWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowCredential { string api_key = 1; string api_secret = 2; google.protobuf.Timestamp created_at = 3; }
 message ExchangeWorkflowCredentialRequest { string workflow_id = 1; }
 message WorkflowAccessToken { string jwt_token = 1; string token_type = 2; google.protobuf.Timestamp expires_at = 3; }

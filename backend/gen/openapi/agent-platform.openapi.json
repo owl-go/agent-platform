@@ -6135,6 +6135,46 @@
         ]
       }
     },
+    "/api/v1/workflows/schedule-preview": {
+      "post": {
+        "operationId": "AgentWorkspaceService_PreviewWorkflowSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1PreviewWorkflowScheduleResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1PreviewWorkflowScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}": {
       "get": {
         "operationId": "AgentWorkspaceService_GetWorkflow",
@@ -6271,6 +6311,44 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/v1WorkflowCredential"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_RevokeWorkflowCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1DeleteResponse"
                 }
               }
             }
@@ -11224,6 +11302,26 @@
           }
         }
       },
+      "v1PreviewWorkflowScheduleRequest": {
+        "type": "object",
+        "properties": {
+          "schedule": {
+            "$ref": "#/components/schemas/v1Schedule"
+          }
+        }
+      },
+      "v1PreviewWorkflowScheduleResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
       "v1PromptOptimizationCandidate": {
         "type": "object",
         "properties": {
@@ -12321,6 +12419,38 @@
           },
           "origin": {
             "$ref": "#/components/schemas/v1SessionWorkflowLink"
+          },
+          "next_scheduled_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_run_state": {
+            "type": "string"
+          },
+          "last_run_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "run_count_30d": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "succeeded_run_count_30d": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "needs_attention": {
+            "type": "boolean"
+          },
+          "last_run_id": {
+            "type": "string"
+          },
+          "upcoming_schedule_times": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
           }
         }
       },
