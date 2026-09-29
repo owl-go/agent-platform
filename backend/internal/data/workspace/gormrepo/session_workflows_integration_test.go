@@ -44,7 +44,7 @@ func TestSessionWorkflowConversionIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.Workflow.ID != firstID || created.Run.State != "waiting_for_user" || created.Link.ValidationRunID != created.Run.ID || created.Replayed {
+	if created.Workflow.ID != firstID || created.Run.State != "queued" || created.Run.ExecutionPlan == nil || created.Run.ExecutionPlan.State != "approved" || created.Link.ValidationRunID != created.Run.ID || created.Replayed {
 		t.Fatalf("creation = %#v", created)
 	}
 	var persisted struct {

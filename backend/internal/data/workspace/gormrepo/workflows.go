@@ -551,6 +551,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	}
 	now := time.Now().UTC()
 	var encodedPlan []byte
+	planPending := false
 	if conditionalPlan {
 		objective := executionSnapshot.Goal
 		if textInput != nil && strings.TrimSpace(*textInput) != "" {
@@ -565,6 +566,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 			return runRecord{}, err
 		}
 		if plan != nil {
+			planPending = plan.State == "pending"
 			encodedPlan, err = marshal(plan)
 			if err != nil {
 				return runRecord{}, err
@@ -573,14 +575,14 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	}
 	id := uuid.NewString()
 	state := "queued"
-	if len(encodedPlan) > 0 {
+	if planPending {
 		state = "waiting_for_user"
 	}
 	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: state, Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), Evidence: []byte("[]"), ExecutionPlan: encodedPlan, QueuedAt: now, Version: 1}
 	if err := tx.Create(&created).Error; err != nil {
 		return runRecord{}, err
 	}
-	if len(encodedPlan) > 0 {
+	if planPending {
 		return created, appendRunEvents(tx, created.ID, nil, "plan.proposed", created.QueuedAt)
 	}
 	return created, appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
@@ -678,13 +680,15 @@ func (repository *Repository) continueRunConversation(ctx context.Context, owner
 				if err != nil {
 					return err
 				}
-				created.State = "waiting_for_user"
+				if executionPlan.State == "pending" {
+					created.State = "waiting_for_user"
+				}
 			}
 		}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
-		if len(created.ExecutionPlan) > 0 {
+		if created.State == "waiting_for_user" {
 			return appendRunEvents(tx, created.ID, nil, "plan.proposed", created.QueuedAt)
 		}
 		return appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)

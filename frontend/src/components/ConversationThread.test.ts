@@ -201,6 +201,23 @@ describe("ConversationThread", () => {
     wrapper.unmount();
   });
 
+  it("shows an automatic safety plan without a manual start action", () => {
+    const wrapper = mountThread([{
+      id: "assistant-auto", role: "assistant", content: "", state: "queued", timestamp: "2026-09-29T08:00:00Z",
+      executionPlan: {
+        id: "plan-auto", state: "approved", objective: "发送工作报告", created_at: "2026-09-29T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "", position: 1, state: "pending" }],
+        resources: [], side_effects: ["external_connector_operation"], reasons: ["external_side_effect"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    }]);
+
+    expect(wrapper.get(".execution-plan-card header").text()).toContain("自动开始");
+    expect(wrapper.find(".execution-plan-card footer").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("已确认");
+    wrapper.unmount();
+  });
+
   it("renders a plan when empty repeated fields are omitted by the API", async () => {
     const wrapper = mountThread([{
       id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",

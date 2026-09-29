@@ -124,7 +124,10 @@ function evidenceActionLabel(evidence: Evidence) {
 function canOpenEvidence(evidence: Evidence) {
   return evidence.kind === "knowledge" && evidence.state === "succeeded" && Boolean(evidence.container_id && evidence.citation?.revision_id);
 }
-function planStateLabel(state: string) { return t(`sessions.executionPlan.states.${state}`); }
+function planStateLabel(plan: NonNullable<ConversationMessage["executionPlan"]>) {
+  if (plan.state === "approved" && !plan.reasons?.includes("user_requested")) return t("sessions.executionPlan.automaticStart");
+  return t(`sessions.executionPlan.states.${plan.state}`);
+}
 function planStepStateLabel(state: string) { return t(`sessions.executionPlan.stepStates.${state}`); }
 function planCodeLabel(group: "reasons" | "sideEffects", code: string) { return t(`sessions.executionPlan.${group}.${code}`); }
 function planCredits(hundredths: number | undefined) {
@@ -150,7 +153,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         <div v-else-if="message.role === 'assistant' && isPending(message) && message.finalizing" class="finalizing-state">{{ message.progressTitle || t('sessions.progress.finalizing') }}</div>
 
         <section v-if="message.role === 'assistant' && message.executionPlan" class="execution-plan-card" :class="`is-${message.executionPlan.state}`" aria-live="polite">
-          <header><div><small>{{ t('sessions.executionPlan.title') }}</small><strong>{{ message.executionPlan.objective }}</strong></div><span>{{ planStateLabel(message.executionPlan.state) }}</span></header>
+          <header><div><small>{{ t('sessions.executionPlan.title') }}</small><strong>{{ message.executionPlan.objective }}</strong></div><span>{{ planStateLabel(message.executionPlan) }}</span></header>
           <p v-if="message.executionPlan.generator === 'model_failed'" class="muted" role="status">{{ t('sessions.executionPlan.modelFailedHint') }}</p>
           <ol class="execution-plan-steps">
             <li v-for="step in message.executionPlan.steps ?? []" :key="step.id" :class="`is-${step.state}`"><span>{{ step.position }}</span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepStateLabel(step.state) }}</small></div></li>

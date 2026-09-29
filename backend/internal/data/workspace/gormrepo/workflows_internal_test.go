@@ -129,7 +129,7 @@ func TestPauseScheduleAfterThreeConsecutiveScheduledFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 	schedule := []byte(`{"enabled":true,"frequency":"daily","hour":9,"minute":0,"weekday":1,"timezone":"Asia/Shanghai"}`)
-	if err := db.Create(&workflowRecord{ID: workflowID, OwnerID: ownerID, Name: "Daily", Goal: "Report", Environment: []byte("[]"), Schedule: schedule, WorkspacePath: "workflows/" + ownerID + "/" + workflowID, Version: 1}).Error; err != nil {
+	if err := db.Create(&workflowRecord{ID: workflowID, OwnerID: ownerID, Name: "Daily", Goal: "Report", Environment: []byte("[]"), Schedule: schedule, KnowledgeBaseIDs: []byte("[]"), WorkspacePath: "workflows/" + ownerID + "/" + workflowID, Version: 1}).Error; err != nil {
 		t.Fatal(err)
 	}
 	for index := 0; index < 3; index++ {
@@ -191,7 +191,7 @@ func TestSessionInstructionMarksTheFirstMessageAsSessionIsolated(t *testing.T) {
 }
 
 func TestSessionMessagePairInitializesRuntimeActivities(t *testing.T) {
-	user, assistant := sessionMessagePairRecords("session-1", "hello", []byte(`[]`), []byte(`{"schema_version":2}`), nil)
+	user, assistant := sessionMessagePairRecords("session-1", "hello", []byte(`[]`), []byte(`{"schema_version":2}`), nil, false)
 	for _, message := range []messageRecord{user, assistant} {
 		if string(message.RuntimeActivities) != "[]" {
 			t.Fatalf("%s runtime activities = %q, want []", message.Role, message.RuntimeActivities)

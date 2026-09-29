@@ -24,6 +24,28 @@ func TestBuildExecutionPlanConditionalRules(t *testing.T) {
 	}
 }
 
+func TestAutomaticSafetyPlansDoNotWaitForManualConfirmation(t *testing.T) {
+	now := time.Date(2026, 9, 29, 8, 0, 0, 0, time.UTC)
+	stage := ExecutionStageSnapshot{Position: 1}
+	for _, test := range []struct {
+		name    string
+		context ExecutionPlanContext
+	}{
+		{name: "session with multiple stages", context: ExecutionPlanContext{Objective: "Review and summarize", Stages: []ExecutionStageSnapshot{stage, {Position: 2}}}},
+		{name: "workflow", context: ExecutionPlanContext{Objective: "Update workspace", Stages: []ExecutionStageSnapshot{stage}, Workflow: true}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := BuildExecutionPlan(test.context, now)
+			if err != nil || plan == nil {
+				t.Fatalf("build automatic Plan = %#v, %v", plan, err)
+			}
+			if plan.State != "approved" || plan.DecidedAt != nil {
+				t.Fatalf("automatic Plan needs manual confirmation: %#v", plan)
+			}
+		})
+	}
+}
+
 func TestBuildExecutionPlanDeduplicatesResourcesAndMarksSideEffects(t *testing.T) {
 	connector := CLIConnectorSnapshot{ID: "crm", Name: "CRM", Capabilities: json.RawMessage(`[{"risk":"high"}]`)}
 	stages := []ExecutionStageSnapshot{

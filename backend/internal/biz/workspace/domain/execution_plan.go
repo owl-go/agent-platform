@@ -115,8 +115,12 @@ func BuildExecutionPlan(input ExecutionPlanContext, now time.Time) (*ExecutionPl
 			estimatedCredits += stage.CreditRate.FallbackHundredths
 		}
 	}
+	state := "approved"
+	if preference == PlanPreferenceAlways {
+		state = "pending"
+	}
 	return &ExecutionPlan{
-		ID: uuid.NewString(), State: "pending", Objective: boundedPlanObjective(input.Objective), Steps: steps, Resources: resources,
+		ID: uuid.NewString(), State: state, Objective: boundedPlanObjective(input.Objective), Steps: steps, Resources: resources,
 		SideEffects: sideEffects, Reasons: reasons, EstimatedModelCalls: len(input.Stages), EstimatedCreditHundredths: estimatedCredits,
 		GenerationCreditHundredths: 0, Generator: "platform_rules", CreatedAt: now.UTC(), Version: 1,
 	}, nil
