@@ -8,7 +8,7 @@ import { displayArtifactNames } from "../artifactDisplay";
 import ArtifactDisclosure from "./ArtifactDisclosure.vue";
 import ConversationAttachments from "./ConversationAttachments.vue";
 import CreditConsumption from "./CreditConsumption.vue";
-import { runtimeEngineDisplayName, type Artifact, type Evidence, type ExpertStage } from "../api/client";
+import type { Artifact, Evidence, ExpertStage } from "../api/client";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 import { hasTaskWorkspaceContent } from "../taskWorkspace";
 
@@ -219,7 +219,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 
         <div v-if="message.role === 'assistant' && visibleStages(message).length" class="expert-stage-list">
           <details v-for="stage in visibleStages(message)" :key="`${message.id}-${stage.position}-${stage.expert_id}`">
-            <summary><span>{{ stage.position }}/{{ stage.total || message.stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template><template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary>
+            <summary><span>{{ stage.position }}/{{ stage.total || message.stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary>
             <div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, message.artifacts))"></div>
             <p v-else-if="stage.error">{{ stage.error }}</p>
             <button v-if="stage.final_text" type="button" class="stage-copy" @click="copy(stage.final_text, stageCopyKey(message.id, stage.position))">{{ isCopied(stageCopyKey(message.id, stage.position)) ? t('common.copied') : t('common.copy') }}</button>

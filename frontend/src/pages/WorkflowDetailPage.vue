@@ -4,7 +4,7 @@ import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder, PanelRightOpen } from "@l
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type Artifact, type Evidence, type Expert, type ExpertTeam, type GitSourceInput, type KnowledgeBase, type Run, type RunEvent, type RuntimeEngineStatus, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Evidence, type Expert, type ExpertTeam, type GitSourceInput, type KnowledgeBase, type Run, type RunEvent, type Workflow, type WorkflowInput, type WorkspaceEntry } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
@@ -536,7 +536,7 @@ function runInputText(item: Run, index: number) { const input = item.text_input 
 function runOutput(item: Run) { return (item.id === streamingRunID.value ? revealedRunOutput.value : "") || item.final_text || (item.final_json ? `\`\`\`json\n${JSON.stringify(item.final_json, null, 2)}\n\`\`\`` : "") || ""; }
 function runArtifacts(item: Run) { return fileArtifacts.value.filter((artifact) => artifact.run_id === item.id); }
 function runtimeActivity(event: RunEvent) {
-	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), historyLabel: t("workflows.runtimePrepared"), detail: typeof event.payload.runtime === "string" ? runtimeEngineDisplayName(event.payload.runtime as RuntimeEngineStatus["name"]) : "", kind: "runtime" as const, state: "completed" as const };
+	if (event.type === "runtime.started") return { label: t("sessions.progress.preparing"), historyLabel: t("workflows.runtimePrepared"), detail: "", kind: "runtime" as const, state: "completed" as const };
 	if (event.type === "reasoning.summary") return { label: t("workflows.reasoningSummary"), historyLabel: t("workflows.reasoningSummary"), detail: typeof event.payload.summary === "string" ? event.payload.summary : "", kind: "reasoning" as const, state: "completed" as const };
 	if (event.type === "command.requested") return { label: t("sessions.progress.using_tool"), historyLabel: t("sessions.progress.using_tool"), detail: runtimeCommandDetail(event), kind: "tool" as const, state: "running" as const, toolCallCount: 1 };
 	if (event.type === "command.completed") return { label: t("workflows.toolCompleted"), historyLabel: t("workflows.toolCompleted"), detail: runtimeCommandDetail(event), kind: "tool" as const, state: "completed" as const, toolCallCount: 1 };

@@ -412,6 +412,7 @@ describe("WorkflowDetailPage", () => {
     expect(streamRunEvents).toHaveBeenCalledWith("workflow-1", "run-1", expect.any(Function));
     expect(wrapper.get(".runtime-activity").text()).toContain("正在更新文件");
     expect(wrapper.get(".runtime-activity details").text()).toContain("运行环境已准备");
+    expect(wrapper.get(".runtime-activity details").text()).not.toContain("Codex");
     expect(wrapper.get(".runtime-activity details").text()).toContain("git status");
     expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项工具调用");
     expect(wrapper.get(".runtime-activity-history > summary").text()).toContain("1 项文件变化");
