@@ -2,9 +2,9 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type KnowledgeBase, type PlatformApi, type Run, type RunEvent, type Workflow } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type CLIConnectorDefinition, type ConnectorInstallation, type ConversationScope, type Expert, type KnowledgeBase, type PlatformApi, type Run, type RunEvent, type Workflow } from "../api/client";
 import { createAppI18n } from "../i18n";
-import { conversationApiStub } from "../test/conversation";
+import { conversationApiStub, emptySelection } from "../test/conversation";
 import { createAppRouter } from "../router";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ConversationComposer from "../components/ConversationComposer.vue";
@@ -95,6 +95,31 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.find("#command-approval-slot").exists()).toBe(true);
     wrapper.unmount();
     expect(embeddedCommandApproval.value).toBeUndefined();
+  });
+
+  it("shows independent Connector selection for each Workflow run", async () => {
+    const secondRun: Run = { ...run, id: "run-2", conversation_id: "run-2", queued_at: "2026-08-29T03:18:08Z" };
+    const selected = { id: "installation-1", name: "飞书", icon: "feishu", revision: "1" };
+    const definition: CLIConnectorDefinition = { id: selected.id, name: selected.name, icon: selected.icon, description: "", installation_type: "npm", npm_package: "@larksuite/cli", npm_version: "1.0.93", npm_integrity: "", executable: "lark-cli", authentication_driver: "feishu", capabilities: [], supported_architectures: ["linux-amd64"], recommended_skills: [], recommended_skill_ids: [], state: "available", mutable: false, version: 1, conformance_runtime_digests: [], managed_installation: true };
+    const installation: ConnectorInstallation = { id: selected.id, source: "feishu", active_revision_id: "revision-1", state: "active", authorized: true, version: 1, package_version: "1.0.93", name: selected.name, description: "", authentication_driver: "feishu", upgrade_available: false };
+    const api = apiStub({
+      listRuns: vi.fn(async () => [secondRun, run]),
+      listRunTurns: vi.fn(async (_workflowID: string, runID: string) => [runID === secondRun.id ? secondRun : run]),
+      getConversationSelection: vi.fn(async (scope: ConversationScope) => ({ ...emptySelection(), id: `selection-${scope.run_id}`, inherited_cli_connectors: [selected], disabled_connectors: scope.run_id === secondRun.id ? [`cli:${selected.id}`] : [] })),
+      listCLIConnectorDefinitions: vi.fn(async () => [definition]),
+      listConnectorInstallations: vi.fn(async () => [installation]),
+    });
+    const wrapper = await mountPage(api);
+    await wrapper.findAll('.run-row[role="button"]')[1]!.trigger("click");
+    await flushPromises();
+    expect(wrapper.get('.run-composer .composer-connector[aria-label="飞书"]').attributes("title")).toContain("已用于当前对话");
+    await wrapper.get(".run-conversation-head .back-link").trigger("click");
+    await wrapper.findAll('.run-row[role="button"]')[0]!.trigger("click");
+    await flushPromises();
+    const connector = wrapper.get('.run-composer .composer-connector[aria-label="飞书"]');
+    expect(connector.classes()).toContain("is-off");
+    expect(connector.attributes("title")).toContain("未用于当前对话");
+    wrapper.unmount();
   });
 
   it("offers advanced setup only after a successful validation run", async () => {

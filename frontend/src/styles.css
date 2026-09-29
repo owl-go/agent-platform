@@ -690,9 +690,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .composer-toolbar .composer-plus { border-color: transparent; color: var(--ink); background: transparent; }
 .composer-toolbar .composer-specialist { width: auto; display: inline-flex; padding: 0 9px; color: var(--ink); background: transparent; font-size: 14px; gap: 7px; max-width: 65%; font-weight: 600; }
 .composer-specialist span { overflow: hidden; text-overflow: ellipsis; }
-.composer-connector.is-off { opacity: .45; }
 .composer-file-input { display: none; }
 .connector-switch { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.connector-switch-label { display: grid; gap: 2px; }
+.connector-switch-label small { color: var(--aw-n7); font-size: .7rem; }
 .composer-menu { position: absolute; z-index: 45; bottom: calc(100% + 8px); left: 0; width: min(440px, 100%); padding: 9px; border: 1px solid var(--line); border-radius: var(--aw-radius-overlay); box-shadow: var(--shadow); background: var(--paper); color: var(--ink); }
 .composer-menu button { height: auto; min-height: 40px; font-size: 14px; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; text-align: left; border: 0; border-radius: 9px; background: transparent; color: inherit; }
 .composer-menu button:hover:not(:disabled), .composer-menu button.highlighted { background: var(--wash); }
@@ -784,6 +785,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 }
 
 .composer-toolbar .composer-connector { color: var(--green); background: var(--wash); }
+.composer-toolbar .composer-connector.is-off { color: var(--aw-n7); background: var(--aw-n2); border: 1px solid var(--aw-n4); }
 .composer-specialist .profile-icon { flex: none; width: 27px; height: 27px; border-radius: 8px; }
 .composer-specialist .profile-icon svg { width: 18px; height: 18px; }
 .knowledge-base-picker { min-width: 0; margin: 0; padding: 0; border: 0; }

@@ -411,12 +411,10 @@ async function chooseConnector(item: (typeof connectorRows.value)[number]) {
   await toggleConnector(item.kind, item.id);
 }
 async function setVisibleConnectorActive(kind: "mcp" | "cli", id: string, active: boolean) {
-  if (kind === "mcp") {
-    if (connectorEnabled(`mcp:${id}`) !== active) await toggleConnector(kind, id);
-    return;
-  }
+  if (connectorEnabled(`${kind}:${id}`) === active) return;
+  if (kind === "mcp" || !active || cliActivationIsOn(id)) { await toggleConnector(kind, id); return; }
   const definition = cli.value.find((item) => item.id === id);
-  if (definition) await setCLIActivation(definition, active, active);
+  if (definition) await setCLIActivation(definition, true, true);
 }
 
 async function refreshRequestedCLIAuthorization() {
@@ -693,8 +691,8 @@ onBeforeUnmount(() => { disposed = true; if (props.approvalExecutionId) clearCom
         <el-button class="composer-plus" circle :disabled="locked" :aria-label="t('composer.add')" :aria-expanded="Boolean(menu)" @click="openMenu('main')"><Plus :size="21" /></el-button>
         <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
         <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
-          <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
-          <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="item.kind === 'cli' ? cliActivationIsOn(item.id) : connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
+          <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="`${item.name} · ${t(connectorEnabled(item.key) ? 'composer.connectorSelected' : 'composer.connectorNotSelected')}`"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
+          <div class="connector-switch"><span class="connector-switch-label"><strong>{{ item.name }}</strong><small>{{ t(connectorEnabled(item.key) ? 'composer.connectorSelected' : 'composer.connectorNotSelected') }}</small></span><el-switch :model-value="connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
           <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
         </el-popover>
       </div>
