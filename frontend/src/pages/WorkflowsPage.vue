@@ -180,8 +180,8 @@ function successRate(workflow: Workflow) {
           <el-tag :type="stateType(workflow)" size="small">{{ stateLabel(workflow) }}</el-tag>
           <el-dropdown trigger="click" @command="handleWorkflowAction($event, workflow)"><el-button class="workflow-more" text circle :aria-label="t('common.more')" :title="t('common.more')"><MoreHorizontal /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="rename"><Pencil :size="14" />{{ t('common.rename') }}</el-dropdown-item><el-dropdown-item command="delete" divided><Trash2 :size="14" />{{ t('common.delete') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown>
         </div>
-        <h2>{{ workflow.name }}</h2>
-        <p class="workflow-goal">{{ workflow.goal }}</p>
+        <h2 :title="workflow.name">{{ workflow.name }}</h2>
+        <p class="workflow-goal" :title="workflow.goal">{{ workflow.goal }}</p>
         <div class="workflow-metrics">
           <span><small>{{ t('workflows.success30d') }}</small><strong>{{ successRate(workflow) }}</strong></span>
           <span><small>{{ t('workflows.runs30d') }}</small><strong>{{ workflow.run_count_30d || 0 }}</strong></span>
