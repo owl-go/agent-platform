@@ -324,8 +324,8 @@ export function resolveInitialLocale(stored: string | null, browserLanguage: str
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
 }
 
-Object.assign((zh as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "先制定计划", planFirstHint: "额外调用一次模型并按实际用量扣除 Credits；先展示具体计划，确认后再执行" });
-Object.assign((en as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "Plan first", planFirstHint: "Uses one extra model call and charges actual Credits; review the detailed plan before execution" });
+Object.assign((zh as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "先制定计划", planFirstHint: "额外调用一次模型并按计费规则扣除 Credits；先展示具体计划，确认后再执行" });
+Object.assign((en as unknown as { composer: Record<string, unknown> }).composer, { planFirst: "Plan first", planFirstHint: "Uses one extra metered model call; review the detailed plan before execution" });
 Object.assign(zh.sessions, { executionPlan: {
   title: "执行计划", resources: "将使用", sideEffectsTitle: "可能产生的变更", estimate: "预计消耗", generationCost: "制定计划", start: "按计划开始", edit: "修改要求", direct: "直接回答，不执行外部操作",
   estimateValue: "{calls} 次模型调用 · 最多约 {credits} Credits", generationCostValue: "平台规则生成 · {credits} Credits", modelGenerationCostValue: "模型生成 · {credits} Credits", modelFailedHint: "详细计划生成失败，当前显示规则计划；若模型已响应，仍按实际用量计费。可修改要求后重试。",
