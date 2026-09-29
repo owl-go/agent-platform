@@ -89,10 +89,14 @@ func isImageModelTestRequest(request *http.Request) bool {
 }
 
 func isEventStreamRequest(request *http.Request) bool {
+	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
+	if request.Method == http.MethodPost {
+		return len(parts) == 8 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "ai-apps" &&
+			parts[3] == "assistants" && parts[4] != "" && parts[5] == "conversations" && parts[6] != "" && parts[7] == "turns"
+	}
 	if request.Method != http.MethodGet {
 		return false
 	}
-	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
 	if len(parts) == 4 {
 		return parts[0] == "v1" && parts[1] == "runs" && parts[3] == "events"
 	}
