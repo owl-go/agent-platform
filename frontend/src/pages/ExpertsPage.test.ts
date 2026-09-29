@@ -57,11 +57,12 @@ describe("ExpertsPage", () => {
     expect(wrapper.get(".expert-card").text()).toContain("0 个技能 · 0 个连接器");
     expect(wrapper.get(".expert-card").text()).not.toContain("Codex");
     expect(wrapper.find(".expert-card > .el-card__body").exists()).toBe(true);
-    expect(wrapper.get(".tag-row .el-tag").classes()).toContain("is-round");
+    expect(wrapper.find(".expert-card-heading .profile-icon").exists()).toBe(true);
     expect(wrapper.find(".expert-category").exists()).toBe(false);
     expect(wrapper.find(".filter-label").exists()).toBe(false);
     expect(wrapper.get(".tag-filter").text()).not.toContain("Go");
     expect(wrapper.get(".expert-tags").text()).toContain("Go");
+    expect(wrapper.find(".expert-tags .el-tag").exists()).toBe(false);
     expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
   });
 

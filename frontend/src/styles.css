@@ -311,17 +311,25 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .expert-card-link { min-width: 0; color: inherit; text-decoration: none; }
 .catalog-grid .expert-card { height: 100%; border-color: var(--aw-n5); background: color-mix(in srgb, var(--aw-n0) 90%, transparent); transition: transform .2s ease, border-color .2s ease; }
 .catalog-grid .expert-card:hover { transform: translateY(-3px); border-color: var(--aw-n6); }
-.catalog-grid .expert-card > .el-card__body { height: 100%; padding: 22px; }
-.expert-card-layout { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 18px; align-items: start; height: 100%; }
+.catalog-grid .expert-card > .el-card__body { height: 100%; padding: var(--aw-space-4); }
+.expert-card-layout { height: 100%; }
 .expert-card-copy { min-width: 0; display: flex; flex-direction: column; height: 100%; }
-.expert-card-copy > p { min-height: 2.9em; margin: 0 0 17px; color: var(--muted); font-size: .82rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.expert-card-heading { display: flex; align-items: flex-start; gap: var(--aw-space-3); margin-bottom: var(--aw-space-3); }
+.expert-card-heading-copy { min-width: 0; flex: 1; }
+.expert-card-heading .profile-icon { width: 36px; height: 36px; flex-basis: 36px; border-radius: var(--aw-radius-input); }
+.expert-card-heading .profile-icon svg { width: 18px; height: 18px; }
+.expert-card-copy > p { margin: 0 0 var(--aw-space-3); color: var(--aw-n7); font-size: 13px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .catalog-avatar { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; background: var(--aw-n4); color: var(--green); }
 .catalog-avatar.team { background: var(--aw-code-text); color: var(--aw-n8); }
 .card-title-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.card-title-line h2 { min-width: 0; flex: 1 1 auto; overflow: hidden; margin: 2px 0 10px; font-size: 1.08rem; text-overflow: ellipsis; white-space: nowrap; }
+.card-title-line h2 { min-width: 0; flex: 1 1 auto; overflow: hidden; margin: 0; font-size: 16px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
 .card-title-line .el-tag { flex: 0 0 auto; }
-.expert-execution-profile { margin-bottom: 14px; color: var(--aw-n8); font-size: .75rem; font-weight: 600; }
-.catalog-grid .tag-row { margin-top: auto; padding-top: 4px; }
+.expert-execution-profile { margin-bottom: var(--aw-space-2); color: var(--aw-n7); font-size: 12px; font-weight: 400; }
+.expert-tags { display: flex; align-items: center; flex-wrap: wrap; gap: var(--aw-space-2); margin-top: auto; padding-top: var(--aw-space-1); color: var(--aw-n7); }
+.expert-tag { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 600; line-height: 1.5; }
+.expert-tag + .expert-tag::before { content: "·"; margin-right: var(--aw-space-2); color: var(--aw-n6); }
+.expert-tag-more { color: var(--aw-n6); font-size: 11px; font-weight: 600; }
+.catalog-grid .tag-row { margin-top: auto; padding-top: var(--aw-space-1); }
 .catalog-grid .tag-row .el-tag { --el-tag-bg-color: var(--aw-n3); --el-tag-border-color: var(--aw-n5); --el-tag-text-color: var(--aw-n9); height: 26px; padding: 0 10px; font-size: .7rem; font-weight: 600; }
 .member-preview { display: flex; flex-wrap: wrap; gap: 5px 18px; margin: 13px 0; padding-left: 20px; color: var(--aw-n8); font-size: .74rem; }
 .card-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px; }
@@ -514,7 +522,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
   .el-dialog__body { max-height: calc(100vh - 170px); overflow-y: auto; }
   .auth-card .el-card__body { padding: 32px 24px; }
   .resource-dialog .el-form-item.full { grid-column: auto; }
-  .catalog-grid .expert-card > .el-card__body { padding: 18px; }
+  .catalog-grid .expert-card > .el-card__body { padding: var(--aw-space-4); }
   .credit-grid { grid-template-columns: 1fr; }
   .admin-credit-grid { grid-template-columns: 1fr; }
   .image-preview-head { padding: 14px; }

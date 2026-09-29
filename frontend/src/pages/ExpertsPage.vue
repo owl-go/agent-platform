@@ -98,13 +98,12 @@ function toggleMine() {
       <article v-for="expert in section.items" :key="expert.id" class="expert-card-link catalog-activatable" role="button" tabindex="0" :aria-label="expert.name" @click="detailExpert = expert" @keydown.enter.self="detailExpert = expert" @keydown.space.self.prevent="detailExpert = expert">
         <el-card class="expert-card" shadow="hover"><el-button class="catalog-launch" type="primary" :disabled="!expert.available" @click.stop="summon('expert_id', expert.id)">{{ t('composer.summon') }}</el-button>
           <div class="expert-card-layout">
-            <ProfileIcon :icon="expert.icon" :background="expert.icon_background" />
             <div class="expert-card-copy">
-              <div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" round size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" round size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" round size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div>
+              <div class="expert-card-heading"><ProfileIcon :icon="expert.icon" :background="expert.icon_background" /><div class="expert-card-heading-copy"><div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div></div></div>
               <p>{{ expert.introduction }}</p>
               <ResourceTrustMeta :source="expert.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="expert.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="expert.available && expert.compatibility === 'verified' ? t('resources.verifiedAvailable') : expert.complete ? t('resources.unavailable') : t('experts.incomplete')" :status-tone="expert.available && expert.compatibility === 'verified' ? 'success' : 'warning'" :detail="expert.availability_reason || ''" />
               <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length + (expert.cli_connector_definition_ids?.length ?? 0) }) }}</small>
-              <div v-if="expert.expertise_tags.length > 1" class="tag-row expert-tags"><el-tag v-for="item in expert.expertise_tags.slice(1, 5)" :key="item" effect="light" round size="small">{{ item }}</el-tag><span v-if="expert.expertise_tags.length > 5" class="expert-tag-more">+{{ expert.expertise_tags.length - 5 }}</span></div>
+              <div v-if="expert.expertise_tags.length > 1" class="expert-tags" :aria-label="t('experts.expertise')"><span v-for="item in expert.expertise_tags.slice(1, 4)" :key="item" class="expert-tag">{{ item }}</span><span v-if="expert.expertise_tags.length > 4" class="expert-tag-more">+{{ expert.expertise_tags.length - 4 }}</span></div>
             </div>
           </div>
         </el-card>
@@ -119,13 +118,12 @@ function toggleMine() {
       <article v-for="team in visibleTeams" :key="team.id" class="expert-card-link catalog-activatable" role="button" tabindex="0" :aria-label="team.name" @click="detailTeam = team" @keydown.enter.self="detailTeam = team" @keydown.space.self.prevent="detailTeam = team">
         <el-card class="expert-card expert-team-card" shadow="hover"><el-button class="catalog-launch" type="primary" :disabled="!team.available" @click.stop="summon('expert_team_id', team.id)">{{ t('composer.summon') }}</el-button>
           <div class="expert-card-layout">
-            <ProfileIcon :icon="team.icon" :background="team.icon_background" team />
             <div class="expert-card-copy">
-              <div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" round size="small">{{ t('experts.teamUnavailable') }}</el-tag></div>
+              <div class="expert-card-heading"><ProfileIcon :icon="team.icon" :background="team.icon_background" team /><div class="expert-card-heading-copy"><div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" size="small">{{ t('experts.teamUnavailable') }}</el-tag></div></div></div>
               <p>{{ team.introduction }}</p>
               <ResourceTrustMeta :source="t('resources.userPublished')" :permission="t('resources.ownerOnly')" :status="team.available ? t('resources.available') : t('resources.unavailable')" :status-tone="team.available ? 'success' : 'warning'" />
               <ol class="member-preview"><li v-for="member in (team.members.length ? team.members : team.experts.map((expert) => ({ id: expert.id, name: expert.name, expert })))" :key="member.id"><span>{{ member.name }}</span><small>{{ member.expert.introduction }}</small></li></ol>
-              <div class="card-footer"><div class="tag-row expert-tags"><el-tag v-for="item in team.expertise_tags.slice(1, 5)" :key="item" effect="light" round size="small">{{ item }}</el-tag><span v-if="team.expertise_tags.length > 5" class="expert-tag-more">+{{ team.expertise_tags.length - 5 }}</span></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
+              <div class="card-footer"><div v-if="team.expertise_tags.length > 1" class="expert-tags" :aria-label="t('experts.expertise')"><span v-for="item in team.expertise_tags.slice(1, 4)" :key="item" class="expert-tag">{{ item }}</span><span v-if="team.expertise_tags.length > 4" class="expert-tag-more">+{{ team.expertise_tags.length - 4 }}</span></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
             </div>
           </div>
         </el-card>
