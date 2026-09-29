@@ -1,6 +1,6 @@
 # 固定的企业微信 CLI Skill 参考
 
-来源：`WecomTeam/wecom-cli` 提交 `f9b28151dc8d42f703db624fc9b26723c3c93fc5`，与包内 `@wecom/cli@1.3.4` 的版本和二进制源提交一致。原样收录上游 15 个 `SKILL.md`、其 references、assets、scripts、`docs/cli-reference.md` 和 MIT License。它们是命令用法资料；当前 Connector Revision 的命令范围只由 `cli.json` 和适配入口控制。
+来源：`WecomTeam/wecom-cli` 提交 `f9b28151dc8d42f703db624fc9b26723c3c93fc5`，与包内 `@wecom/cli@1.3.4` 的版本和二进制源提交一致。原样收录上游 15 个 `SKILL.md`、其 references、assets、scripts、`docs/cli-reference.md` 和 MIT License。它们是命令用法资料；当前 Connector Revision 的命令范围由从[能力目录](capabilities.json)生成的 `cli.json` 和适配入口共同控制。
 
 | 上游 Skill | 参考文件 |
 |---|---|

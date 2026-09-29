@@ -14,7 +14,8 @@ import tarfile
 import zipfile
 
 
-VERSION = "1.3.4"
+VERSION = "1.3.4"  # Reviewed upstream CLI release.
+PACKAGE_VERSION = "1.4.0"  # Connector policy revision; independent of the CLI.
 NPM_INTEGRITY = "sha512-vz47EsT/BKkHBONVt94xhZtUWhvMR4uF9Y4TTNUwF7PnLETqyFyrNNHwG3aTLmhMNC/ecqRWUUqvNgP90nreaQ=="
 NATIVE_SHA256 = {
     "arm64": "6275ed033c054946c00805040cb1b016a45681e1bf11cad855d24427db897f71",
@@ -32,18 +33,23 @@ EGRESS = ["qyapi.weixin.qq.com"]
 
 
 def capability(name, argv, risk, identity):
-    return {"id": name, "argv_prefix": argv, "risk": risk, "identities": [identity], "egress_hosts": EGRESS, "timeout_seconds": 60}
+    return {"id": name, "argv_prefix": argv, "risk": risk, "identities": [identity], "egress_hosts": EGRESS, "timeout_seconds": 180}
 
 
-CAPABILITIES = [
-    capability("identity_whoami", ["identity", "whoami"], "low", "user"),
-    capability("contact_users_search", ["contact", "users", "search"], "low", "user"),
-    capability("doc_search", ["doc", "search"], "low", "user"),
-    capability("doc_contents_get", ["doc", "contents", "get"], "low", "user"),
-    capability("todo_create", ["todo", "create"], "high", "user"),
-    capability("message_sessions_list", ["message", "aibot", "sessions", "list"], "low", "bot"),
-    capability("message_send", ["message", "aibot", "send"], "high", "bot"),
-]
+def reviewed_capabilities() -> list[dict]:
+    policies = json.loads((HERE / "capabilities.json").read_text())
+    capabilities = []
+    seen = set()
+    for policy in policies:
+        command = policy["command"].split(" ")
+        name = "_".join(command)
+        if not all(re.fullmatch(r"[a-z][a-z0-9]*", part) for part in command):
+            raise ValueError(f"invalid reviewed command: {command}")
+        if name in seen or policy["identity"] not in ("user", "bot") or policy["risk"] not in ("low", "high"):
+            raise ValueError(f"duplicate or invalid reviewed capability: {name}")
+        seen.add(name)
+        capabilities.append(capability(name, command, policy["risk"], policy["identity"]))
+    return capabilities
 
 
 def reviewed_bundle(source: bytes, arch: str) -> bytes:
@@ -68,7 +74,9 @@ def reviewed_bundle(source: bytes, arch: str) -> bytes:
     if native_member.mode & 0o111 == 0 or hashlib.sha256(native_binary).hexdigest() != NATIVE_SHA256[arch]:
         raise ValueError("native executable differs from the reviewed release")
     wrapper = (HERE / "wecom-workspace.mjs").read_bytes()
+    policy_module = (HERE / "policy.mjs").read_bytes()
     redactor = (HERE / "redact.mjs").read_bytes()
+    policy = (HERE / "capabilities.json").read_bytes()
     result = io.BytesIO()
     with gzip.GzipFile(fileobj=result, mode="wb", mtime=0) as compressed:
         with tarfile.open(fileobj=compressed, mode="w") as output:
@@ -88,6 +96,14 @@ def reviewed_bundle(source: bytes, arch: str) -> bytes:
             record.mode = 0o644
             record.size = len(redactor)
             output.addfile(record, io.BytesIO(redactor))
+            record = tarfile.TarInfo("node_modules/.bin/policy.mjs")
+            record.mode = 0o644
+            record.size = len(policy_module)
+            output.addfile(record, io.BytesIO(policy_module))
+            record = tarfile.TarInfo("node_modules/.bin/capabilities.json")
+            record.mode = 0o644
+            record.size = len(policy)
+            output.addfile(record, io.BytesIO(policy))
     return result.getvalue()
 
 
@@ -138,10 +154,10 @@ def main():
         raise ValueError("upstream npm tarball differs from the reviewed release")
     bundle = reviewed_bundle((builder / "bundle.tgz").read_bytes(), args.arch)
     metadata = {
-        "source": "wecom", "version": VERSION, "type": "cli", "name": "企业微信",
-        "description": "使用经审核的企业微信 CLI 命令访问当前 User 已授权的资源。",
-        "examples_zh": ["搜索企业微信文档", "创建企业微信待办"],
-        "examples_en": ["Search WeCom documents", "Create a WeCom task"],
+        "source": "wecom", "version": PACKAGE_VERSION, "type": "cli", "name": "企业微信",
+        "description": "通过企业微信 CLI 处理消息、邮件、文档、表格、待办、日程、会议、微盘和通讯录。",
+        "examples_zh": ["创建企业微信文档", "发送企业微信消息", "查询日程"],
+        "examples_en": ["Create a WeCom document", "Send a WeCom message", "Find a schedule"],
         "minPlatformVersion": "1.0.0", "auth_mode": "cli",
     }
     manifest = {
@@ -155,9 +171,9 @@ def main():
             "unAuth": {"argv": ["platform", "revoke"]},
         },
         "status_match": {"json_path": "$.credentials_present", "equals": True},
-        "capabilities": CAPABILITIES,
+        "capabilities": reviewed_capabilities(),
         "egress_hosts": EGRESS,
-        "timeout_seconds": 60,
+        "timeout_seconds": 180,
         "resource_limits": {"cpu_millis": 1000, "memory_mib": 512, "timeout_seconds": 900, "concurrency": 1, "child_processes": 8},
     }
     files = {
@@ -167,6 +183,7 @@ def main():
         "cli-bundle.tgz": bundle,
         "skills/wecom/SKILL.md": (HERE / "SKILL.md").read_bytes(),
         "skills/wecom/UPSTREAM.md": (HERE / "UPSTREAM.md").read_bytes(),
+        "skills/wecom/capabilities.json": (HERE / "capabilities.json").read_bytes(),
     }
     files.update(upstream_resources())
     args.output.parent.mkdir(parents=True, exist_ok=True)

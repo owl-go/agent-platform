@@ -1,20 +1,13 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { redact } from './redact.mjs';
+import { validateInvocation } from './policy.mjs';
 
 const args = process.argv.slice(2);
-const allowed = new Set([
-  'identity whoami',
-  'contact users search',
-  'doc search',
-  'doc contents get',
-  'todo create',
-  'message aibot sessions list',
-  'message aibot send',
-]);
 const directory = dirname(fileURLToPath(import.meta.url));
 const platformPackage = process.platform === 'linux' && process.arch === 'arm64' ? 'cli-linux-arm64' : process.platform === 'linux' && process.arch === 'x64' ? 'cli-linux-x64' : '';
 if (!platformPackage) {
@@ -26,11 +19,11 @@ const binary = join(directory, '..', '@wecom', platformPackage, 'bin', 'wecom-cl
 if (args.length === 1 && args[0] === '--help') {
   const check = spawnSync(binary, ['--version'], { encoding: 'utf8', timeout: 10000 });
   if (check.status !== 0 || !check.stdout?.includes('1.3.4')) process.exit(1);
-  process.stdout.write('wecom-workspace 1.3.4: reviewed commands are declared in cli.json\n');
+  process.stdout.write('wecom-workspace 1.4.0 (@wecom/cli 1.3.4): reviewed commands are declared in cli.json\n');
   process.exit(0);
 }
 if (args.length === 1 && args[0] === '--version') {
-  process.stdout.write('wecom-workspace 1.3.4\n');
+  process.stdout.write('wecom-workspace 1.4.0 (@wecom/cli 1.3.4)\n');
   process.exit(0);
 }
 
@@ -55,43 +48,13 @@ if (args[0] === 'platform' && (args[1] === 'authorize' || args[1] === 'revoke') 
   process.exit(1);
 }
 
-const prefix = [...allowed].find((command) => {
-  const parts = command.split(' ');
-  return parts.every((part, index) => args[index] === part);
-});
-if (!prefix || !botID || !secret) {
+const invocation = validateInvocation(args);
+if (!invocation || !botID || !secret) {
   process.stderr.write('The command is outside the reviewed policy or requires an active Connector Authorization.\n');
   process.exit(1);
 }
-const prefixLength = prefix.split(' ').length;
-const noArguments = prefix === 'identity whoami' || prefix === 'message aibot sessions list';
-let input = {};
-if (noArguments ? args.length !== prefixLength : args.length !== prefixLength + 2 || args[prefixLength] !== '--json' || Buffer.byteLength(args[prefixLength + 1] ?? '') > 65536) {
-  process.stderr.write('The command arguments are outside the reviewed policy.\n');
-  process.exit(1);
-}
-if (!noArguments) {
-  try {
-    input = JSON.parse(args[prefixLength + 1]);
-  } catch {
-    process.stderr.write('The command requires a JSON object.\n');
-    process.exit(1);
-  }
-  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
-    process.stderr.write('The command requires a JSON object.\n');
-    process.exit(1);
-  }
-}
-const valid = prefix === 'contact users search' ? Array.isArray(input.keywords) && input.keywords.length >= 1 && input.keywords.length <= 10
-  : prefix === 'doc search' ? Array.isArray(input.keywords)
-  : prefix === 'doc contents get' ? typeof input.docid === 'string' && input.docid.length > 0
-  : prefix === 'todo create' ? Array.isArray(input.items) && input.items.length >= 1 && input.items.length <= 20 && input.items.every((item) => typeof item?.title === 'string' && item.title.length > 0)
-  : prefix === 'message aibot send' ? typeof input.chat_id === 'string' && input.chat_id.length > 0 && input.msg_type === 'markdown' && typeof input.markdown?.content === 'string' && Buffer.byteLength(input.markdown.content) <= 20480
-  : true;
-if (!valid) {
-  process.stderr.write('The command body is outside the reviewed policy.\n');
-  process.exit(1);
-}
+const prefix = invocation.policy.command;
+const workspace = '/workspace';
 
 const time = Math.floor(Date.now() / 1000);
 const nonce = `cli_${Date.now()}_${randomBytes(4).toString('hex')}`;
@@ -120,7 +83,13 @@ const env = {
   WECOM_CLI_CONFIG_DIR: '/tmp/wecom-connector-config',
   WECOM_CLI_ACCESS_TOKEN: token,
 };
-const result = spawnSync(binary, args, { encoding: 'utf8', env, maxBuffer: 8 * 1024 * 1024, timeout: 60000 });
+let commandArgs = args;
+if (['disk files download', 'media download'].includes(prefix)) {
+  const output = join(workspace, '.wecom-downloads', randomBytes(8).toString('hex'));
+  mkdirSync(output, { recursive: true, mode: 0o700 });
+  commandArgs = [...args, '--output-dir', output];
+}
+const result = spawnSync(binary, commandArgs, { encoding: 'utf8', env, maxBuffer: 8 * 1024 * 1024, timeout: 180000 });
 if (result.error) {
   process.stderr.write('Unable to start the pinned WeCom CLI.\n');
   process.exit(1);
