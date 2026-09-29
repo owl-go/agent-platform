@@ -57,4 +57,4 @@ pnpm test
 pnpm build
 ```
 
-尚未执行线上部署和真实企业环境浏览器验收；这两项需要部署环境与真实用户权限，不能由本地自动化结果替代。
+已从 `main_temp` 的 `8d89c96` 部署到线上，发布与健康检查证据见 `docs/evidence/agent-workspace/2026-09-29-workflow-product-loop-deployment.md`。真实企业账号下的浏览器操作、Workflow 再次运行和 Schedule 触发仍需单独验收，不能由本地自动化或未认证路由检查替代。
