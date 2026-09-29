@@ -5,6 +5,21 @@ import { resolve } from "node:path";
 const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
 
 describe("conversation layout styles", () => {
+  it("keeps Workflow card text to one line and aligns the bottom actions", () => {
+    const title = styles.match(/\.workflow-card h2\s*\{([^}]*)\}/)?.[1];
+    const goal = styles.match(/\.workflow-goal\s*\{([^}]*)\}/)?.[1];
+    const body = styles.match(/\.workflow-card\.el-card > \.el-card__body\s*\{([^}]*)\}/)?.[1];
+    const footer = [...styles.matchAll(/\.workflow-card footer\s*\{([^}]*)\}/g)].at(-1)?.[1];
+
+    for (const text of [title, goal]) {
+      expect(text).toMatch(/white-space:\s*nowrap/);
+      expect(text).toMatch(/overflow:\s*hidden/);
+      expect(text).toMatch(/text-overflow:\s*ellipsis/);
+    }
+    expect(body).toMatch(/flex:\s*1/);
+    expect(footer).toMatch(/margin-top:\s*auto/);
+  });
+
   it("keeps execution activity titles and state on one readable row", () => {
     const summaryDeclarations = [...styles.matchAll(/\.runtime-activity \.activity-summary-group > summary\s*\{([^}]*)\}/g)]
       .map((match) => match[1])

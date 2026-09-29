@@ -43,7 +43,9 @@ describe("WorkflowsPage", () => {
     expect(listWorkflows).toHaveBeenCalledWith();
     expect(wrapper.text()).toContain("每周报告");
     expect(wrapper.get(".workflow-card h2").text()).toBe("每周报告");
+    expect(wrapper.get(".workflow-card h2").attributes("title")).toBe("每周报告");
     expect(wrapper.get(".workflow-goal").text()).toContain("整理本周进展");
+    expect(wrapper.get(".workflow-goal").attributes("title")).toBe("整理本周进展");
     expect(wrapper.get(".workflow-card").text()).toContain("30 天成功率");
     expect(wrapper.get(".workflow-card").text()).toContain("尚未运行");
     expect(wrapper.find(".workflow-card .workflow-more").exists()).toBe(true);
