@@ -620,9 +620,17 @@ async function fileToBase64(file: File): Promise<string> {
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid connector-catalog-grid">
         <article v-for="entry in section.packages" :key="`package:${entry.publication?.source || entry.installation?.source}`" class="el-card extension-catalog-card connector-catalog-card published-connector-card">
-          <ConnectorIcon class="connector-card-icon" :icon="entry.publication?.revision.icon || 'plug'" :size="42" />
-          <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ entry.publication?.revision.name || entry.installation?.name || entry.installation?.source }}</strong><el-tag v-if="entry.installation" :type="entry.installation.authorized ? 'success' : 'warning'" size="small">{{ entry.installation.authorized ? t('resources.connected') : t('resources.setupRequired') }}</el-tag><el-tag v-else size="small">{{ t('resources.availableToInstall') }}</el-tag></div>
+          <div class="extension-card-copy connector-card-copy">
+            <div class="connector-card-header">
+              <div class="connector-card-heading"><ConnectorIcon class="connector-card-icon" :icon="entry.publication?.revision.icon || 'plug'" :size="36" /><div class="extension-card-title"><strong>{{ entry.publication?.revision.name || entry.installation?.name || entry.installation?.source }}</strong><el-tag v-if="entry.installation" :type="entry.installation.authorized ? 'success' : 'warning'" size="small">{{ entry.installation.authorized ? t('resources.connected') : t('resources.setupRequired') }}</el-tag><el-tag v-else size="small">{{ t('resources.availableToInstall') }}</el-tag></div></div>
+              <div class="extension-card-actions">
+                <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
+                <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
+                <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
+                <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
+                <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
+              </div>
+            </div>
             <p>{{ entry.publication?.revision.description || entry.installation?.description }}</p>
             <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
             <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
@@ -632,32 +640,35 @@ async function fileToBase64(file: File): Promise<string> {
               <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
             </div>
           </div>
-          <div class="extension-card-actions">
-            <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
-            <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
-            <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
-            <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
-            <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
-          </div>
         </article>
         <article v-for="item in section.mcp" :key="`mcp:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showMCPDetails(item)" @keydown.enter.self="showMCPDetails(item)" @keydown.space.self.prevent="showMCPDetails(item)">
-          <ConnectorIcon class="connector-card-icon" :icon="item.icon" :size="42" />
-          <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag></div>
+          <div class="extension-card-copy connector-card-copy">
+            <div class="connector-card-header">
+              <div class="connector-card-heading"><ConnectorIcon class="connector-card-icon" :icon="item.icon" :size="36" /><div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag></div></div>
+              <div class="extension-card-actions" @click.stop>
+                <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
+                <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
+                <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
+                <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
+              </div>
+            </div>
             <p>{{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p>
             <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="item.tested ? t('resources.connectionTested') : item.test_pending ? t('resources.verificationPending') : t('resources.unverified')" :status-tone="item.tested ? 'success' : 'warning'" :detail="t('resources.isolatedRuntime')" />
           </div>
-          <div class="extension-card-actions" @click.stop>
-            <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
-            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
-            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
-            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
-          </div>
         </article>
         <article v-for="item in section.cli" :key="`cli:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showCLIDetails(item)" @keydown.enter.self="showCLIDetails(item)" @keydown.space.self.prevent="showCLIDetails(item)">
-          <ConnectorIcon class="connector-card-icon" :icon="item.icon || 'terminal'" :size="42" />
-          <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="item.managed_installation ? item.managed_authorized : enablementFor(item.id)?.state === 'enabled' && !cliNeedsActivation(item)" type="success" size="small">{{ t('common.enabled') }}</el-tag><el-tag v-else-if="!item.managed_installation && enablementFor(item.id)?.state === 'enabled'" type="warning" size="small">{{ t('resources.setupRequired') }}</el-tag></div>
+          <div class="extension-card-copy connector-card-copy">
+            <div class="connector-card-header">
+              <div class="connector-card-heading"><ConnectorIcon class="connector-card-icon" :icon="item.icon || 'terminal'" :size="36" /><div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="item.managed_installation ? item.managed_authorized : enablementFor(item.id)?.state === 'enabled' && !cliNeedsActivation(item)" type="success" size="small">{{ t('common.enabled') }}</el-tag><el-tag v-else-if="!item.managed_installation && enablementFor(item.id)?.state === 'enabled'" type="warning" size="small">{{ t('resources.setupRequired') }}</el-tag></div></div>
+              <div class="extension-card-actions" @click.stop>
+                <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="item.managed_installation ? !item.managed_authorized : enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
+                <el-button v-if="!item.managed_installation && item.state === 'available' && cliNeedsActivation(item)" circle type="primary" :aria-label="t('resources.enable')" :title="t('resources.enable')" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)"><Plus /></el-button>
+                <el-button v-if="!item.managed_installation && ['enabled', 'waiting_for_user'].includes(enablementFor(item.id)?.state ?? '')" circle :aria-label="t('resources.deactivate')" :title="t('resources.deactivate')" :loading="cliEnableBusy.includes(item.id)" @click="deactivateCLI(item)"><PowerOff /></el-button>
+                <el-button v-if="canManageCLI && !item.managed_installation && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
+                <el-button v-if="canManageCLI && !item.managed_installation && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
+                <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>
+              </div>
+            </div>
             <p>{{ cliDescription(item) }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p>
             <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="t('resources.allCanEnable')" :status="item.state === 'available' ? t('resources.runtimeVerified') : t(`resources.state.${item.state}`)" :status-tone="item.state === 'available' ? 'success' : item.state === 'failed' ? 'danger' : 'warning'" :detail="item.conformance_runtime_digests?.length ? t('resources.runtimeDigestCount', { count: item.conformance_runtime_digests.length }) : t('resources.noRuntimeEvidence')" />
             <small>{{ item.managed_installation ? `package · ${item.npm_package}@${item.npm_version}` : item.installation_type === 'upload' ? t('resources.zipUpload') : `npm · ${item.npm_package}@${item.npm_version}` }}</small>
@@ -673,14 +684,6 @@ async function fileToBase64(file: File): Promise<string> {
               </template>
             </div>
           </div>
-          <div class="extension-card-actions" @click.stop>
-            <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="item.managed_installation ? !item.managed_authorized : enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
-            <el-button v-if="!item.managed_installation && item.state === 'available' && cliNeedsActivation(item)" circle type="primary" :aria-label="t('resources.enable')" :title="t('resources.enable')" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)"><Plus /></el-button>
-            <el-button v-if="!item.managed_installation && ['enabled', 'waiting_for_user'].includes(enablementFor(item.id)?.state ?? '')" circle :aria-label="t('resources.deactivate')" :title="t('resources.deactivate')" :loading="cliEnableBusy.includes(item.id)" @click="deactivateCLI(item)"><PowerOff /></el-button>
-            <el-button v-if="canManageCLI && !item.managed_installation && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
-            <el-button v-if="canManageCLI && !item.managed_installation && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
-            <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>
-          </div>
         </article>
         <div v-if="!section.packages.length && !section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
       </div>
@@ -695,13 +698,19 @@ async function fileToBase64(file: File): Promise<string> {
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid skill-catalog-grid">
         <article v-for="item in section.items" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="skillDisplayName(item)" @click="openSkillDetails(item)" @keydown.enter.self="openSkillDetails(item)" @keydown.space.self.prevent="openSkillDetails(item)">
-          <ProfileIcon class="connector-card-icon" :icon="item.icon || 'sparkles'" />
-          <div class="extension-card-copy skill-card-copy"><strong>{{ skillDisplayName(item) }}</strong><p>{{ skillDescription(item) }}</p><ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" /><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
-          <div class="extension-card-actions">
-            <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
-            <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
-            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
-            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+          <div class="extension-card-copy skill-card-copy">
+            <div class="skill-card-header">
+              <div class="skill-card-heading"><ProfileIcon :icon="item.icon || 'sparkles'" /><strong>{{ skillDisplayName(item) }}</strong></div>
+              <div class="extension-card-actions" @click.stop>
+                <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
+                <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click="useSkill(item)"><Plus /></el-button>
+                <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openSkill(item)"><Pencil /></el-button>
+                <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+              </div>
+            </div>
+            <p>{{ skillDescription(item) }}</p>
+            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" />
+            <small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small>
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>

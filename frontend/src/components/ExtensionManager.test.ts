@@ -33,6 +33,9 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow, beginConnectorSetup } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    expect(wrapper.find(".published-connector-card .connector-card-heading .connector-card-icon").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card .connector-card-header > .extension-card-actions").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card > .connector-card-icon").exists()).toBe(false);
     await wrapper.get(".published-connector-card .extension-card-actions button").trigger("click");
     await flushPromises();
     expect(beginConnectorSetup).not.toHaveBeenCalled();
@@ -349,6 +352,9 @@ describe("ExtensionManager", () => {
     expect(skillGroups).toHaveLength(2);
     expect(skillGroups[0]!.text()).toContain("平台技能");
     expect(skillGroups[0]!.text()).toContain(platformSkill.name);
+    expect(skillGroups[0]!.find(".skill-card-heading .profile-icon").exists()).toBe(true);
+    expect(skillGroups[0]!.find(".skill-card-header > .extension-card-actions").exists()).toBe(true);
+    expect(skillGroups[0]!.find(".skill-catalog-card > .profile-icon").exists()).toBe(false);
     expect(skillGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(false);
     expect(skillGroups[1]!.text()).toContain("我的技能");
     expect(skillGroups[1]!.text()).toContain(mySkill.name);
@@ -575,6 +581,9 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     expect(wrapper.findAll(".connector-catalog-grid > .connector-catalog-card")).toHaveLength(2);
+    expect(wrapper.findAll(".connector-card-heading .connector-card-icon")).toHaveLength(2);
+    expect(wrapper.findAll(".connector-card-header > .extension-card-actions")).toHaveLength(2);
+    expect(wrapper.find(".connector-catalog-card > .connector-card-icon").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("第三方 CLI");
     wrapper.unmount();
   });
