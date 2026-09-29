@@ -7,6 +7,8 @@ import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import ConversationComposer from "../components/ConversationComposer.vue";
+import { embeddedCommandApproval } from "../commandApprovalPlacement";
 import WorkflowDetailPage from "./WorkflowDetailPage.vue";
 
 const workflow: Workflow = {
@@ -82,6 +84,17 @@ describe("WorkflowDetailPage", () => {
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
+  });
+
+  it("places the current Run approval beside its conversation composer", async () => {
+    const waitingRun: Run = { ...run, id: "run-2", conversation_id: run.id, turn_number: 2, state: "waiting_for_user", final_text: undefined };
+    const wrapper = await mountPage(apiStub({ listRunTurns: vi.fn(async () => [run, waitingRun]) }), `/workflows/${workflow.id}?open_run=${run.id}`);
+
+    expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(waitingRun.id);
+    expect(embeddedCommandApproval.value).toEqual({ executionKind: "run", executionID: waitingRun.id });
+    expect(wrapper.find("#command-approval-slot").exists()).toBe(true);
+    wrapper.unmount();
+    expect(embeddedCommandApproval.value).toBeUndefined();
   });
 
   it("offers advanced setup only after a successful validation run", async () => {

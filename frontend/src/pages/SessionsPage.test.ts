@@ -7,7 +7,7 @@ import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
 import ConversationComposer from "../components/ConversationComposer.vue";
-import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
+import { embeddedCommandApproval } from "../commandApprovalPlacement";
 import SessionsPage from "./SessionsPage.vue";
 
 const session: Session = {
@@ -67,7 +67,7 @@ describe("SessionsPage conversation layout", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
-    embeddedSessionApprovalID.value = undefined;
+    embeddedCommandApproval.value = undefined;
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
@@ -653,10 +653,10 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, active]);
 
     expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(active.id);
-    expect(embeddedSessionApprovalID.value).toBe(String(active.id));
-    expect(wrapper.find("#session-command-approval-slot").exists()).toBe(true);
+    expect(embeddedCommandApproval.value).toEqual({ executionKind: "session", executionID: String(active.id) });
+    expect(wrapper.find("#command-approval-slot").exists()).toBe(true);
     wrapper.unmount();
-    expect(embeddedSessionApprovalID.value).toBeUndefined();
+    expect(embeddedCommandApproval.value).toBeUndefined();
   });
 
   it("does not present an old runtime activity as current after failure", async () => {

@@ -2,12 +2,12 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, platformApiKey, type CommandApproval, type PlatformApi } from "../api/client";
-import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
+import { embeddedCommandApproval, placeCommandApproval } from "../commandApprovalPlacement";
 import { createAppI18n } from "../i18n";
 import ApprovalInbox from "./ApprovalInbox.vue";
 
 beforeEach(() => { vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible"); });
-afterEach(() => { embeddedSessionApprovalID.value = undefined; document.querySelector("#session-command-approval-slot")?.remove(); vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { embeddedCommandApproval.value = undefined; document.querySelector("#command-approval-slot")?.remove(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("ApprovalInbox", () => {
   it("checks idle approvals less frequently and pauses while the tab is hidden", async () => {
@@ -151,7 +151,7 @@ describe("ApprovalInbox", () => {
 
   it("places the current Session approval inside the conversation composer and keeps background approvals global", async () => {
     const target = document.createElement("div");
-    target.id = "session-command-approval-slot";
+    target.id = "command-approval-slot";
     document.body.append(target);
     const current = { id: "approval-session", execution_kind: "session", execution_id: "42", connector_name: "Feishu CLI", operation: "send", target: "current-chat", redacted_arguments: "message [redacted]", state: "pending", identity: "user", expires_at: "2026-09-08T12:00:00Z", version: 1 } as CommandApproval;
     const background = { ...current, id: "approval-run", execution_kind: "run", execution_id: "run-1", target: "background-chat" } as CommandApproval;
@@ -159,7 +159,7 @@ describe("ApprovalInbox", () => {
 
     const wrapper = mount(ApprovalInbox, { attachTo: document.body, global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
     await flushPromises();
-    embeddedSessionApprovalID.value = "42";
+    placeCommandApproval("session", "42");
     await flushPromises();
 
     expect(api.listCommandApprovals).toHaveBeenCalledTimes(2);
@@ -167,6 +167,34 @@ describe("ApprovalInbox", () => {
     expect(target.textContent).not.toContain("background-chat");
     expect(wrapper.text()).toContain("background-chat");
     expect(wrapper.text()).not.toContain("current-chat");
+    wrapper.unmount();
+  });
+
+  it("places only the current Run approval beside its composer and keeps unrelated approvals global", async () => {
+    const target = document.createElement("div");
+    target.id = "command-approval-slot";
+    document.body.append(target);
+    const current = { id: "approval-current", execution_kind: "run", execution_id: "run-2", connector_name: "飞书", operation: "send", target: "current-chat", state: "pending", expires_at: "2026-09-08T12:00:00Z", version: 1 } as CommandApproval;
+    const otherRun = { ...current, id: "approval-other-run", execution_id: "run-3", target: "other-run-chat" };
+    const otherSession = { ...current, id: "approval-other-session", execution_kind: "session" as const, target: "other-session-chat" };
+    const api = { listCommandApprovals: vi.fn().mockResolvedValue([current, otherRun, otherSession]) } as unknown as PlatformApi;
+    const wrapper = mount(ApprovalInbox, { attachTo: document.body, global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    placeCommandApproval("run", "run-2");
+    await flushPromises();
+
+    expect(target.textContent).toContain("current-chat");
+    expect(target.textContent).not.toContain("other-run-chat");
+    expect(target.textContent).not.toContain("other-session-chat");
+    expect(wrapper.text()).not.toContain("current-chat");
+    expect(wrapper.text()).toContain("other-run-chat");
+    expect(wrapper.text()).toContain("other-session-chat");
+
+    placeCommandApproval("run", "run-3");
+    await flushPromises();
+    expect(target.textContent).toContain("other-run-chat");
+    expect(target.textContent).not.toContain("current-chat");
+    expect(wrapper.text()).toContain("current-chat");
     wrapper.unmount();
   });
 });
