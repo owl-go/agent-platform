@@ -33,6 +33,9 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow, beginConnectorSetup } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    expect(wrapper.find(".published-connector-card .connector-card-heading .connector-card-icon").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card .connector-card-header > .extension-card-actions").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card > .connector-card-icon").exists()).toBe(false);
     await wrapper.get(".published-connector-card .extension-card-actions button").trigger("click");
     await flushPromises();
     expect(beginConnectorSetup).not.toHaveBeenCalled();
@@ -578,6 +581,9 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     expect(wrapper.findAll(".connector-catalog-grid > .connector-catalog-card")).toHaveLength(2);
+    expect(wrapper.findAll(".connector-card-heading .connector-card-icon")).toHaveLength(2);
+    expect(wrapper.findAll(".connector-card-header > .extension-card-actions")).toHaveLength(2);
+    expect(wrapper.find(".connector-catalog-card > .connector-card-icon").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("第三方 CLI");
     wrapper.unmount();
   });
