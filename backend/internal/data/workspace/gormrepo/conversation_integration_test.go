@@ -66,6 +66,42 @@ func conversationTestDatabase(t *testing.T) *gorm.DB {
 	return db
 }
 
+func TestPlannedSessionMessageWithConnectorUsesAllowedProgressStage(t *testing.T) {
+	db := conversationTestDatabase(t)
+	ctx := context.Background()
+	repository := New(db, nil)
+	owner, connection, model, sessionID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if err := db.Exec(query, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner)
+	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses"]','test')`, connection, owner)
+	exec(`INSERT INTO model_provider_credential_versions(connection_id,connection_version,api_key_ciphertext) VALUES(?,1,'test')`, connection)
+	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name) VALUES(?,?,'model','Model')`, model, connection)
+	defaults, _ := json.Marshal(map[string]string{"codex": model})
+	exec(`INSERT INTO personal_settings(user_id,default_runtime_engine,runtime_model_defaults) VALUES(?,'codex',?::jsonb)`, owner, string(defaults))
+	exec(`INSERT INTO sessions(id,owner_user_id) VALUES(?,?)`, sessionID, owner)
+	scope := domain.ConversationScope{SessionID: sessionID}
+	selection, err := repository.GetConversationSelection(ctx, owner, scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection.CLIConnectors = []domain.CLIConnectorSnapshot{{ID: uuid.NewString(), Name: "Feishu", Capabilities: json.RawMessage(`[{"risk":"high"}]`)}}
+	if err := db.Transaction(func(tx *gorm.DB) error { return saveConversationSelection(tx, owner, scope, &selection, false) }); err != nil {
+		t.Fatal(err)
+	}
+	_, assistant, err := repository.CreatePlannedMessagePair(ctx, owner, sessionID, "send a group message", nil, selection.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assistant.State != "waiting_for_user" || assistant.ExecutionPlan == nil || assistant.ProgressStage != "" {
+		t.Fatalf("planned Session message has invalid wait state: state=%q progress=%q plan=%t", assistant.State, assistant.ProgressStage, assistant.ExecutionPlan != nil)
+	}
+}
+
 func TestExistingConversationsUseCurrentExecutionDefaultsForNewTurns(t *testing.T) {
 	db := conversationTestDatabase(t)
 	ctx := context.Background()
