@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"agent-platform/backend/internal/icon"
 )
@@ -731,10 +732,10 @@ type WorkflowInput struct {
 }
 
 func (input WorkflowInput) Validate() error {
-	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
+	if nameLength := utf8.RuneCountInString(strings.TrimSpace(input.Name)); nameLength < 1 || nameLength > 100 {
 		return fmt.Errorf("%w: Workflow name must contain 1-100 characters", ErrInvalid)
 	}
-	if goal := strings.TrimSpace(input.Goal); len(goal) < 1 || len(goal) > 100_000 {
+	if goalLength := utf8.RuneCountInString(strings.TrimSpace(input.Goal)); goalLength < 1 || goalLength > 100_000 {
 		return fmt.Errorf("%w: Workflow goal must contain 1-100000 characters", ErrInvalid)
 	}
 	if input.ExpertID != nil && input.ExpertTeamID != nil {

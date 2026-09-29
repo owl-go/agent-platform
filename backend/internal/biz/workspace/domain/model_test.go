@@ -308,6 +308,28 @@ func TestWorkflowRejectsLegacyExecutionOverrides(t *testing.T) {
 	}
 }
 
+func TestWorkflowInputCountsUnicodeCharacters(t *testing.T) {
+	request := strings.Repeat("中", 35) // The reported 35-character name occupies 105 UTF-8 bytes.
+	for _, test := range []struct {
+		name    string
+		input   WorkflowInput
+		wantErr bool
+	}{
+		{name: "35 Chinese characters under the form limit", input: WorkflowInput{Name: request, Goal: request}},
+		{name: "name at 100 characters", input: WorkflowInput{Name: strings.Repeat("中", 100), Goal: "发送消息"}},
+		{name: "name over 100 characters", input: WorkflowInput{Name: strings.Repeat("中", 101), Goal: "发送消息"}, wantErr: true},
+		{name: "goal at 100000 characters", input: WorkflowInput{Name: "工作流", Goal: strings.Repeat("中", 100_000)}},
+		{name: "goal over 100000 characters", input: WorkflowInput{Name: "工作流", Goal: strings.Repeat("中", 100_001)}, wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.input.Validate()
+			if test.wantErr && !errors.Is(err, ErrInvalid) || !test.wantErr && err != nil {
+				t.Fatalf("Validate() error = %v, wantErr = %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func TestScheduleUpcomingUsesConfiguredTimezoneAndFrequency(t *testing.T) {
 	schedule := Schedule{Enabled: true, Frequency: "daily", Hour: 9, Minute: 30, Timezone: "Asia/Shanghai"}
 	after := time.Date(2026, time.September, 29, 0, 0, 0, 0, time.UTC)
