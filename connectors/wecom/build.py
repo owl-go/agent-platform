@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import posixpath
 import re
 import tarfile
 import zipfile
@@ -18,6 +19,13 @@ NPM_INTEGRITY = "sha512-vz47EsT/BKkHBONVt94xhZtUWhvMR4uF9Y4TTNUwF7PnLETqyFyrNNHw
 NATIVE_SHA256 = {
     "arm64": "6275ed033c054946c00805040cb1b016a45681e1bf11cad855d24427db897f71",
     "x64": "9d976b5c717b4f67667c96cd6115e4441d7ef6ff3a8b114b53806f7070bb1d92",
+}
+UPSTREAM_SHA256 = "db63f990446b0a41d03fdc1bca6efafd674d0b930addae27128941168d3ae7e5"
+UPSTREAM_SKILLS = {
+    "wecomcli-calendar", "wecomcli-contact", "wecomcli-disk", "wecomcli-doc-manage",
+    "wecomcli-doc", "wecomcli-email", "wecomcli-media", "wecomcli-meeting",
+    "wecomcli-message", "wecomcli-pptx", "wecomcli-shared", "wecomcli-sheet",
+    "wecomcli-smartpage", "wecomcli-smartsheet", "wecomcli-todo",
 }
 HERE = Path(__file__).resolve().parent
 EGRESS = ["qyapi.weixin.qq.com"]
@@ -83,6 +91,35 @@ def reviewed_bundle(source: bytes, arch: str) -> bytes:
     return result.getvalue()
 
 
+def upstream_resources() -> dict[str, bytes]:
+    archive_body = (HERE / "upstream-v1.3.4.tar.gz").read_bytes()
+    if hashlib.sha256(archive_body).hexdigest() != UPSTREAM_SHA256:
+        raise ValueError("upstream Skill archive differs from the reviewed source")
+    resources = {}
+    with tarfile.open(fileobj=io.BytesIO(archive_body), mode="r:gz") as archive:
+        for member in archive:
+            if member.isdir():
+                continue
+            name = member.name.removeprefix("./")
+            if not member.isfile() or name.startswith("/") or ".." in Path(name).parts or name in resources:
+                raise ValueError("unsafe upstream Skill resource")
+            resources[name] = archive.extractfile(member).read()
+    skills = {Path(name).parent.name for name in resources if name.startswith("skills/") and name.endswith("/SKILL.md")}
+    if skills != UPSTREAM_SKILLS or len(resources) != 125 or "docs/cli-reference.md" not in resources or "LICENSE" not in resources:
+        raise ValueError("upstream Skill archive is incomplete")
+    for name, body in resources.items():
+        if not name.endswith(".md"):
+            continue
+        for raw in re.findall(rb"\[[^\]]*\]\(([^)]+)\)", body):
+            target = raw.decode("utf-8").split("#", 1)[0].strip()
+            if not target.startswith(("references/", "scripts/", "assets/", "../", "./")):
+                continue
+            resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
+            if resolved not in resources and not any(path.startswith(resolved.rstrip("/") + "/") for path in resources):
+                raise ValueError(f"upstream Skill reference is missing: {name} -> {target}")
+    return {"skills/wecom/references/upstream/" + name: body for name, body in resources.items()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--builder-output", required=True, type=Path)
@@ -129,7 +166,9 @@ def main():
         "icon.svg": (HERE / "icon.svg").read_bytes(),
         "cli-bundle.tgz": bundle,
         "skills/wecom/SKILL.md": (HERE / "SKILL.md").read_bytes(),
+        "skills/wecom/UPSTREAM.md": (HERE / "UPSTREAM.md").read_bytes(),
     }
+    files.update(upstream_resources())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, body in sorted(files.items()):
