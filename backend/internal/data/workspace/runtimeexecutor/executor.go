@@ -1862,8 +1862,8 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
 				continue
 			}
-			if connector.PackageObjectKey != "" && (connector.AuthenticationDriver == "feishu" || connector.AuthenticationDriver == "dingtalk") && len(capabilities) > 40 {
-				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity user [--target <target>] -- <reviewed-prefix> <arguments>. Do not assume a documented operation is unavailable without checking the catalog.", connector.Name, connector.ID, connector.ID))
+			if connector.PackageObjectKey != "" && (connector.AuthenticationDriver == "feishu" || connector.AuthenticationDriver == "dingtalk" || connector.Executable == "wecom-workspace") && len(capabilities) > 40 {
+				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity <reviewed-identity> [--target <target>] -- <reviewed-prefix> <arguments>. Copy the identity from the catalog; do not assume a documented operation is unavailable without checking it.", connector.Name, connector.ID, connector.ID))
 				continue
 			}
 			for _, capability := range capabilities {

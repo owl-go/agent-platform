@@ -1,5 +1,7 @@
 import hashlib
+import json
 from pathlib import Path
+import re
 import unittest
 
 from connectors.wecom import build
@@ -19,6 +21,25 @@ class UpstreamResourcesTest(unittest.TestCase):
         )
         self.assertIn("skills/wecom/references/upstream/docs/cli-reference.md", resources)
         self.assertIn("skills/wecom/references/upstream/LICENSE", resources)
+
+    def test_reviewed_catalog_matches_pinned_upstream_commands(self):
+        resources = build.upstream_resources()
+        upstream = "\n".join(
+            body.decode("utf-8") for name, body in resources.items()
+            if name.startswith("skills/wecom/references/upstream/skills/") and name.endswith(".md")
+        )
+        documented = set(re.findall(r"wecom-cli ((?:[a-z][a-z0-9-]*)(?: [a-z][a-z0-9-]*){1,4})", upstream))
+        reviewed = json.loads((build.HERE / "capabilities.json").read_text())
+        commands = {item["command"] for item in reviewed}
+        self.assertEqual(len(reviewed), len(commands))
+        self.assertEqual(len(commands), 90)
+        self.assertTrue(commands <= documented)
+        self.assertEqual(commands, {" ".join(capability["argv_prefix"]) for capability in build.reviewed_capabilities()})
+        for capability in build.reviewed_capabilities():
+            self.assertEqual(capability["id"], "_".join(capability["argv_prefix"]))
+            self.assertEqual(capability["risk"], "low" if capability["argv_prefix"][-1] in {"whoami", "search", "list", "get", "query", "download", "extract"} else "high")
+        for item in reviewed:
+            self.assertNotIn(item["command"].split()[0], {"auth", "schema", "cache", "slide"})
 
 
 if __name__ == "__main__":
