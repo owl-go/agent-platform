@@ -1,6 +1,8 @@
-# 钉钉 CLI Connector Package 构建草案
+# 钉钉 CLI Connector Package 构建与上架
 
-本工具把钉钉官方 `dingtalk-workspace-cli@1.0.62` 的 Linux amd64/arm64 二进制及同版 MultiSkill 打入项目的 CLI Connector Package。它从同一版 CLI 的 `schema --all` 生成命令策略：保留 1,409 个 `available` 工具，读操作为低风险，其余操作一律经过平台单次批准。另开放 `version`、`schema`、`profile list` 和 `auth status` 四个只读诊断命令。`--include-admin` 包含开发者应用、PAT、审计、事件等管理命令；省略时只保留业务产品。
+本工具把固定钉钉 `dingtalk-workspace-cli@1.0.62` 源码构建的 Linux amd64/arm64 二进制及同版 MultiSkill 打入版本为 `1.0.64` 的 CLI Connector Package。它从同一版 CLI 的 `schema --all` 生成命令策略：保留 1,409 个 `available` 工具，读操作为低风险，其余操作一律经过平台单次批准，另开放 `version` 和 `schema` 两个只读诊断命令。托管连接器不开放 `profile list` 和 `auth status`，因为它们只检查 CLI 本地 Profile，无法反映平台注入的短期令牌，会把有效平台授权误报为未登录。`--include-admin` 包含开发者应用、PAT、审计、事件等管理命令；省略时只保留业务产品。
+
+高风险 capability 的任何 broker 调用，包括同一命令的 `--help` 和 `--dry-run`，都要在 `agent-cli` 命令分隔符前提供具体、可展示且不含 Secret 的 `--target`。该 target 会进入不可变命令摘要和批准卡；遗漏它会在批准记录落库前得到 `user_action_unavailable`。DWS 自身要求 `--yes` 的写操作把该参数放进同一份待平台批准的 argv，平台仍会先等待一次性用户批准，批准后才启动 DWS。
 
 上游来源固定为 [钉钉 Workspace CLI](https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli) 的 npm 1.0.62 发布包。构建时校验 npm SHA-512 和包内三个资产的 SHA-256，不执行 npm 安装脚本。`schema --all` 必须由同版二进制导出，构建器校验其 catalog hash 和工具数。产出的 ZIP 还必须经仓库的 `connectorpackage.Parse` 验证。
 
@@ -17,16 +19,21 @@ docker run --rm --platform linux/amd64 --network none --read-only \
   --mount type=bind,src=/tmp/dingtalk-linux,dst=/review,readonly=true \
   --entrypoint /review/dws \
   <runtime-image@sha256:digest> schema --all --format json > /tmp/dingtalk-schema.json
+scripts/connectors/dingtalk/build-patched-cli.sh <pinned-upstream-checkout> /tmp/dingtalk-patched
 python3 scripts/connectors/dingtalk/build.py \
   --npm-tgz /tmp/dingtalk-workspace-cli-1.0.62.tgz \
   --schema /tmp/dingtalk-schema.json \
   --runtime-image <runtime-image@sha256:digest> \
   --runtime-version <exact-node-version> \
   --include-admin \
-  --output /tmp/dingtalk-1.0.62-draft.zip
-go -C backend run ./cmd/connector-package-validate /tmp/dingtalk-1.0.62-draft.zip
+  --amd64-binary /tmp/dingtalk-patched/dws-linux-amd64 \
+  --arm64-binary /tmp/dingtalk-patched/dws-linux-arm64 \
+  --output /tmp/dingtalk-1.0.64.zip
+go -C backend run ./cmd/connector-package-validate /tmp/dingtalk-1.0.64.zip
 ```
 
-这个 ZIP **尚不能发布或当作已连接使用**。目前平台的 `connector_package` driver 只向隔离 CLI Container 注入 `CONNECTOR_CREDENTIALS_JSON`；钉钉 DWS 使用自己的设备流登录和加密本地 profile，不能从该 JSON 恢复登录。现有 `BeginConnectorAuthorizationFlow` 与 `CompleteConnectorAuthorizationFlow` 也只调用飞书授权服务。必须新增经审查的钉钉授权/凭证物化适配，并在目标 Linux + `runsc`、确切 bundle SHA-256 和 Runtime Registry RepoDigest 上运行 Conformance，之后才可暂存、发布并供 User 授权安装。仅有本地镜像 Digest 或普通 Docker `runc` 冒烟测试都不等于这项证据。
+先从钉钉仓库固定提交 `70323e1486e64b1ca823fa2bd9c48b9b07f88519` 执行 `build-patched-cli.sh <upstream-checkout> /tmp/dingtalk-patched`。该构建只增加受审查的环境变量令牌入口，不把 Secret 写入参数。平台的钉钉授权适配器执行设备流并校验组织 CLI 可用状态；换票结果缺少用户 ID 时用新令牌查询当前用户身份。刷新凭证保存在平台加密存储中，单次 CLI 进程只接收短期令牌。
+
+包解析成功不等于可以上架。必须在目标 Linux + `runsc`，对确切 `cli-bundle.tgz` SHA-256 和 Registry Runtime RepoDigest 执行 Conformance，并由平台记录通过证据，才能调用 Administrator Stage 与 Publish。缺少证据时 Stage 会拒绝。上架后 User 还须安装并通过钉钉设备授权；组织管理员未开放 CLI 访问时授权会失败。未使用真实账号验证的产品 API 不应声称已经通过生产调用。
 
 上游 Schema 不提供本项目可直接重验的细粒度 OAuth scopes，当前 manifest 不填写虚构 scopes。Egress 域名取自本版 CLI 中的钉钉端点静态清单，发布前还需要真实账号验证所选产品的网络访问。Schema 标为 `unavailable` 的 26 个工具、未纳入 Schema 的原始 API 等命令不会放行，因为当前平台无法给它们建立可审查的逐命令策略。用户对钉钉组织的 CLI 访问也须经组织管理员批准。

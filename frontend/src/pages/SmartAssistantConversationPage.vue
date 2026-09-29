@@ -26,6 +26,17 @@ const avatarUrl = ref("");
 let controller: AbortController | undefined;
 let avatarController: AbortController | undefined;
 
+function failureMessage(code = "") {
+  const keys: Record<string, string> = {
+    model_authentication: "failureAuthentication",
+    model_rate_limited: "failureRateLimited",
+    model_unavailable: "failureUnavailable",
+    model_configuration: "failureConfiguration",
+    model_response_invalid: "failureInvalidResponse",
+  };
+  return t(`aiApplications.chat.${keys[code] ?? "failed"}`);
+}
+
 function replaceAvatar(url = "") {
   if (avatarUrl.value && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(avatarUrl.value);
   avatarUrl.value = url;
@@ -154,7 +165,7 @@ onBeforeUnmount(() => { controller?.abort(); avatarController?.abort(); replaceA
             <MessageCircle v-else :size="20" aria-hidden="true" />
           </div>
           <div class="assistant-conversation-bubble">
-            <div v-if="turn.state === 'failed'" class="assistant-conversation-failure" role="alert"><CircleAlert :size="17" aria-hidden="true" />{{ t('aiApplications.chat.failed') }}</div>
+            <div v-if="turn.state === 'failed'" class="assistant-conversation-failure" role="alert"><CircleAlert :size="17" aria-hidden="true" />{{ failureMessage(turn.failure_code) }}</div>
             <div v-if="turn.answer" class="markdown-body" v-html="renderMarkdown(turn.answer)" />
             <div v-else-if="turn.state !== 'failed'" class="assistant-conversation-thinking">{{ t(`aiApplications.chat.${turn.state === 'generating' ? 'thinking' : turn.state}`) }}</div>
           </div>

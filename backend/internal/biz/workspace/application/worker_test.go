@@ -12,6 +12,7 @@ import (
 type cancellationRepository struct {
 	claimed   atomic.Bool
 	requested atomic.Bool
+	failed    atomic.Bool
 	finished  chan struct{}
 }
 
@@ -26,7 +27,8 @@ func (*cancellationRepository) FinishSucceeded(context.Context, ExecutionJob, Ex
 	return nil
 }
 
-func (*cancellationRepository) FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error {
+func (repository *cancellationRepository) FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error {
+	repository.failed.Store(true)
 	return nil
 }
 
@@ -124,5 +126,43 @@ func TestWorkerStopsActiveExecutionAfterCancellationRequest(t *testing.T) {
 	}
 	if err := <-done; err != nil {
 		t.Fatalf("ProcessNext: %v", err)
+	}
+}
+
+func TestWorkerLeavesActiveExecutionForRecoveryOnShutdown(t *testing.T) {
+	repository := &cancellationRepository{finished: make(chan struct{})}
+	executor := &cancellationExecutor{started: make(chan struct{})}
+	worker, err := NewWorker(repository, executor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	done := make(chan error, 1)
+	go func() {
+		_, processErr := worker.ProcessNext(ctx)
+		done <- processErr
+	}()
+	select {
+	case <-executor.started:
+	case <-time.After(time.Second):
+		t.Fatal("executor did not start")
+	}
+	stop()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("ProcessNext: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("worker did not stop")
+	}
+	if repository.failed.Load() {
+		t.Fatal("worker shutdown incorrectly marked the response failed")
+	}
+	select {
+	case <-repository.finished:
+		t.Fatal("worker shutdown incorrectly marked the response cancelled")
+	default:
 	}
 }

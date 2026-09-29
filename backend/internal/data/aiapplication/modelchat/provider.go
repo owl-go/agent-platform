@@ -22,7 +22,7 @@ func New() *Provider { return &Provider{client: &http.Client{Timeout: 3 * time.M
 func (provider *Provider) Generate(ctx context.Context, input application.ChatRequest, onDelta func(string) error) (application.ChatResult, error) {
 	endpoint, payload, err := buildRequest(input)
 	if err != nil {
-		return application.ChatResult{}, err
+		return application.ChatResult{}, &application.ChatError{Code: application.ChatFailureConfiguration, Message: "prepare Assistant model request", Cause: err}
 	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {
@@ -30,7 +30,7 @@ func (provider *Provider) Generate(ctx context.Context, input application.ChatRe
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(encoded))
 	if err != nil {
-		return application.ChatResult{}, err
+		return application.ChatResult{}, &application.ChatError{Code: application.ChatFailureConfiguration, Message: "create Assistant model request", Cause: err}
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "text/event-stream, application/json")
@@ -44,20 +44,35 @@ func (provider *Provider) Generate(ctx context.Context, input application.ChatRe
 	}
 	response, err := provider.client.Do(request)
 	if err != nil {
-		return application.ChatResult{}, fmt.Errorf("call Assistant model: %w", err)
+		return application.ChatResult{}, &application.ChatError{Code: application.ChatFailureUnavailable, Message: "call Assistant model", Cause: err}
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
-		return application.ChatResult{}, fmt.Errorf("Assistant model returned status %d", response.StatusCode)
+		return application.ChatResult{}, assistantModelStatusError(response.StatusCode)
 	}
 	if strings.Contains(response.Header.Get("Content-Type"), "text/event-stream") {
 		return decodeStream(response.Body, input.Protocol, onDelta)
 	}
 	if input.Stream {
-		return application.ChatResult{}, fmt.Errorf("Assistant model did not provide a streaming response")
+		return application.ChatResult{}, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "Assistant model did not provide a streaming response"}
 	}
 	return decodeJSON(response.Body, input.Protocol, onDelta)
+}
+
+func assistantModelStatusError(status int) error {
+	code := application.ChatFailureRequest
+	switch {
+	case status == http.StatusUnauthorized || status == http.StatusForbidden:
+		code = application.ChatFailureAuthentication
+	case status == http.StatusTooManyRequests:
+		code = application.ChatFailureRateLimited
+	case status >= http.StatusInternalServerError:
+		code = application.ChatFailureUnavailable
+	case status == http.StatusBadRequest || status == http.StatusNotFound || status == http.StatusUnprocessableEntity:
+		code = application.ChatFailureConfiguration
+	}
+	return &application.ChatError{Code: code, Message: fmt.Sprintf("Assistant model returned status %d", status)}
 }
 
 func buildRequest(input application.ChatRequest) (string, any, error) {
@@ -74,13 +89,18 @@ func buildRequest(input application.ChatRequest) (string, any, error) {
 	}
 	switch input.Protocol {
 	case "openai_chat":
-		payload := map[string]any{"model": input.ModelID, "messages": input.Messages, "stream": input.Stream}
-		if input.Stream {
-			payload["stream_options"] = map[string]bool{"include_usage": true}
-		}
+		// Some OpenAI-compatible Codex gateways only accept streaming Chat
+		// Completions. Keep transport streaming enabled for internal stages such
+		// as classification and summarization; a nil onDelta still aggregates
+		// the complete response without exposing intermediate output.
+		payload := map[string]any{"model": input.ModelID, "messages": input.Messages, "stream": true}
+		payload["stream_options"] = map[string]bool{"include_usage": true}
 		return base + "/chat/completions", payload, nil
 	case "openai_responses":
-		return base + "/responses", map[string]any{"model": input.ModelID, "input": input.Messages, "stream": input.Stream}, nil
+		// The Codex Responses transport requires SSE even for internal stages.
+		// A nil onDelta keeps classification and summarization output private
+		// while decodeStream still aggregates the final text and Usage.
+		return base + "/responses", map[string]any{"model": input.ModelID, "input": input.Messages, "stream": true}, nil
 	case "anthropic_messages":
 		var system string
 		messages := make([]application.ChatMessage, 0, len(input.Messages))
@@ -170,7 +190,7 @@ type tokenUsage struct {
 func decodeJSON(reader io.Reader, protocol string, onDelta func(string) error) (application.ChatResult, error) {
 	var event modelEvent
 	if err := json.NewDecoder(io.LimitReader(reader, 4*1024*1024)).Decode(&event); err != nil {
-		return application.ChatResult{}, fmt.Errorf("decode Assistant model response: %w", err)
+		return application.ChatResult{}, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "decode Assistant model response", Cause: err}
 	}
 	text := ""
 	switch protocol {
@@ -200,7 +220,7 @@ func decodeJSON(reader io.Reader, protocol string, onDelta func(string) error) (
 		}
 	}
 	if text == "" {
-		return application.ChatResult{}, fmt.Errorf("Assistant model returned no text")
+		return application.ChatResult{}, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "Assistant model returned no text"}
 	}
 	if onDelta != nil {
 		if err := onDelta(text); err != nil {
@@ -228,7 +248,7 @@ func decodeStream(reader io.Reader, protocol string, onDelta func(string) error)
 		}
 		var event modelEvent
 		if err := json.Unmarshal([]byte(data), &event); err != nil {
-			return result, fmt.Errorf("decode Assistant model stream: %w", err)
+			return result, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "decode Assistant model stream", Cause: err}
 		}
 		chunk := ""
 		switch protocol {
@@ -261,7 +281,7 @@ func decodeStream(reader io.Reader, protocol string, onDelta func(string) error)
 		if chunk != "" {
 			result.Text += chunk
 			if len(result.Text) > 256*1024 {
-				return result, fmt.Errorf("Assistant model output exceeds limit")
+				return result, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "Assistant model output exceeds limit"}
 			}
 			if onDelta != nil {
 				if err := onDelta(chunk); err != nil {
@@ -272,13 +292,13 @@ func decodeStream(reader io.Reader, protocol string, onDelta func(string) error)
 		applyUsage(&result, event)
 	}
 	if err := scanner.Err(); err != nil {
-		return result, fmt.Errorf("read Assistant model stream: %w", err)
+		return result, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "read Assistant model stream", Cause: err}
 	}
 	if limited.N <= 0 {
-		return result, fmt.Errorf("Assistant model stream exceeds limit")
+		return result, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "Assistant model stream exceeds limit"}
 	}
 	if result.Text == "" {
-		return result, fmt.Errorf("Assistant model returned no text")
+		return result, &application.ChatError{Code: application.ChatFailureInvalidResponse, Message: "Assistant model returned no text"}
 	}
 	return result, nil
 }

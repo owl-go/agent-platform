@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -14,8 +16,10 @@ import (
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
+	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
+	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -432,6 +436,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		return nil, publicError(err)
 	}
 	refreshToken := ""
+	appID := ""
 	switch current.CredentialFormat {
 	case "json":
 		if current.CredentialAAD == "" {
@@ -443,10 +448,16 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		}
 		var credentials struct {
 			RefreshToken string `json:"refresh_token"`
+			ClientID     string `json:"client_id"`
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
+			if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
+				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
+				appID = credentials.ClientID
+			}
 		}
+		clear(plaintext)
 	case "access_token":
 		if len(current.RefreshCredentialCiphertext) > 0 && current.RefreshCredentialAAD != "" {
 			plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
@@ -459,26 +470,34 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if strings.TrimSpace(refreshToken) == "" {
 		return nil, publicError(fmt.Errorf("%w: this authorization must be completed again", domain.ErrConflict))
 	}
-	appID, appSecret, err := driver.Application(ctx, principal.UserID, request.InstallationId)
+	resolvedAppID, appSecret, err := driver.Application(ctx, principal.UserID, request.InstallationId)
 	if err != nil {
 		return nil, publicError(err)
+	}
+	if appID == "" {
+		appID = resolvedAppID
 	}
 	result, err := driver.Refresh(ctx, appID, appSecret, refreshToken)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if current.ExternalIdentityID != "" && current.ExternalIdentityID != result.ExternalID {
+	if result.ExternalID != "" && current.ExternalIdentityID != "" && current.ExternalIdentityID != result.ExternalID {
 		return nil, publicError(fmt.Errorf("%w: refreshed authorization belongs to a different account", domain.ErrConflict))
+	}
+	if result.ExternalID == "" {
+		result.ExternalID = current.ExternalIdentityID
+		result.DisplayName = current.ExternalDisplayName
 	}
 	if len(result.Scopes) == 0 {
 		result.Scopes = append([]string(nil), current.Scopes...)
 	}
-	refreshedCredentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken})
+	refreshedCredentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
 	if err != nil {
 		return nil, publicError(err)
 	}
 	aad := connectorAuthorizationAAD(principal.UserID, request.InstallationId, result.ExternalID)
 	ciphertext, err := service.box.Encrypt(refreshedCredentials, aad)
+	clear(refreshedCredentials)
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -489,7 +508,11 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	current.CredentialAAD = aad
 	current.CredentialFormat = "json"
 	current.State = domain.ConnectorAuthorizationActive
-	current.ExpiresAt = &result.ExpiresAt
+	expiry := result.ExpiresAt
+	if !result.RefreshExpiresAt.IsZero() {
+		expiry = result.RefreshExpiresAt
+	}
+	current.ExpiresAt = &expiry
 	updated, err := repository.RefreshConnectorAuthorization(ctx, current, request.ExpectedVersion, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: request.InstallationId, Operation: "refresh_authorization", IdentityRef: current.IdentityRef, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
@@ -691,18 +714,50 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
 	if err != nil {
+		if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
+			if errors.Is(err, dingtalkcli.ErrApprovalConsumed) {
+				// DingTalk authorization codes are single-use. A failed exchange or
+				// CLI permission check cannot be repaired by polling this flow again.
+				if deleteErr := repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID); deleteErr != nil {
+					return nil, publicError(deleteErr)
+				}
+			}
+			slog.WarnContext(ctx, "DingTalk Connector authorization failed", "cause", err.Error())
+			var restriction *dingtalkcli.CLIRestrictionError
+			switch {
+			case errors.As(err, &restriction) && restriction.Reason == "enterprise_not_authorized":
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_enterprise_denied", "DingTalk organization denied CLI access")
+			case errors.As(err, &restriction) && (restriction.Reason == "user_forbidden" || restriction.Reason == "user_not_allowed"):
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_user_denied", "DingTalk user is outside CLI access scope")
+			case errors.As(err, &restriction) && restriction.Reason == "channel_required":
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_channel_required", "DingTalk organization requires a CLI channel")
+			case errors.As(err, &restriction) && restriction.Reason == "no_auth":
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_auth_expired", "DingTalk CLI authorization is unavailable")
+			case errors.Is(err, dingtalkcli.ErrCLIAuthDisabled):
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_cli_access_disabled", "DingTalk organization has not enabled CLI access")
+			case errors.Is(err, dingtalkcli.ErrIdentityMismatch):
+				return nil, kratoserrors.New(http.StatusUnprocessableEntity, "dingtalk_identity_mismatch", "DingTalk authorization returned a different organization")
+			default:
+				return nil, kratoserrors.New(http.StatusBadGateway, "dingtalk_authorization_failed", "DingTalk authorization could not be completed")
+			}
+		}
 		return nil, publicError(err)
 	}
-	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken})
+	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
 	if err != nil {
 		return nil, publicError(err)
 	}
 	aad := connectorAuthorizationAAD(principal.UserID, flow.InstallationID, result.ExternalID)
 	ciphertext, err := service.box.Encrypt(credentials, aad)
+	clear(credentials)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: &result.ExpiresAt}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	expiry := result.ExpiresAt
+	if !result.RefreshExpiresAt.IsZero() {
+		expiry = result.RefreshExpiresAt
+	}
+	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: &expiry}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -745,7 +800,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	if policy.CLI != nil {
 		switch policy.CLI.AuthenticationDriver {
-		case "feishu":
+		case "feishu", "dingtalk":
 			return "interactive"
 		case "connector_package":
 			return "provided"
@@ -808,8 +863,8 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 }
 
 func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
-	if pkg.CLI != nil && pkg.CLI.AuthenticationDriver == "feishu" {
-		return fmt.Errorf("%w: the Feishu authentication driver is reserved for a Conformance-backed platform publication", domain.ErrInvalid)
+	if pkg.CLI != nil && (pkg.CLI.AuthenticationDriver == "feishu" || pkg.CLI.AuthenticationDriver == "dingtalk") {
+		return fmt.Errorf("%w: interactive authentication drivers are reserved for Conformance-backed platform publications", domain.ErrInvalid)
 	}
 	return nil
 }
@@ -817,6 +872,9 @@ func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
 func validatePlatformConnectorPackage(pkg connectorpackage.Package) error {
 	if pkg.CLI == nil {
 		return nil
+	}
+	if (pkg.Metadata.Source == "dingtalk") != (pkg.CLI.AuthenticationDriver == "dingtalk") {
+		return fmt.Errorf("%w: DingTalk authorization driver must match the reviewed DingTalk package source", domain.ErrInvalid)
 	}
 	if len(pkg.CLIBundle) == 0 || len(pkg.CLIBundleSHA256) != 64 {
 		return fmt.Errorf("%w: a platform CLI publication requires an immutable executable bundle", domain.ErrInvalid)

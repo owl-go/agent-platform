@@ -1,5 +1,47 @@
-import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
+import { createRouter, createWebHistory, type Router, type RouterHistory } from "vue-router";
 import SessionsPage from "./pages/SessionsPage.vue";
+
+const staleReleaseReloadKey = "agent-workspace:stale-release-reload";
+
+type NavigationRecoveryBrowser = {
+  location: Pick<Location, "assign">;
+  sessionStorage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+};
+
+function isLazyModuleLoadFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLocaleLowerCase();
+  return [
+    "failed to fetch dynamically imported module",
+    "error loading dynamically imported module",
+    "importing a module script failed",
+    "failed to load module script",
+    "chunkloaderror",
+    "loading chunk",
+  ].some((fragment) => message.includes(fragment));
+}
+
+export function installStaleReleaseRecovery(
+  router: Router,
+  browser: NavigationRecoveryBrowser = window,
+): Router {
+  router.onError((error, to) => {
+    if (!isLazyModuleLoadFailure(error)) return;
+    const target = to.fullPath;
+    if (browser.sessionStorage.getItem(staleReleaseReloadKey) === target) {
+      browser.sessionStorage.removeItem(staleReleaseReloadKey);
+      return;
+    }
+    browser.sessionStorage.setItem(staleReleaseReloadKey, target);
+    browser.location.assign(target);
+  });
+  router.afterEach((to, _from, failure) => {
+    if (!failure && browser.sessionStorage.getItem(staleReleaseReloadKey) === to.fullPath) {
+      browser.sessionStorage.removeItem(staleReleaseReloadKey);
+    }
+  });
+  return router;
+}
 
 export type Surface = "sessions" | "workflows" | "experts" | "resources" | "knowledge-bases" | "ai-creation" | "ai-applications" | "settings";
 
@@ -10,7 +52,7 @@ declare module "vue-router" {
 }
 
 export function createAppRouter(history: RouterHistory = createWebHistory()) {
-  return createRouter({
+  return installStaleReleaseRecovery(createRouter({
     history,
     routes: [
       { path: "/", redirect: "/sessions" },
@@ -37,8 +79,6 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
           { path: "assistants/:assistantId", name: "smart-assistant-detail", component: () => import("./pages/SmartAssistantDetailPage.vue"), meta: { surface: "ai-applications" } },
           { path: "assistants/:assistantId/conversations/:conversationId", name: "smart-assistant-conversation", component: () => import("./pages/SmartAssistantConversationPage.vue"), meta: { surface: "ai-applications" } },
           { path: "knowledge-bases", name: "ai-application-knowledge-bases", component: () => import("./pages/KnowledgeBasesPage.vue"), meta: { surface: "ai-applications" } },
-          { path: "digital-humans", name: "digital-humans", component: () => import("./pages/DigitalHumansPage.vue"), meta: { surface: "ai-applications" } },
-          { path: "digital-humans/:digitalHumanId", name: "digital-human-detail", component: () => import("./pages/DigitalHumanDetailPage.vue"), meta: { surface: "ai-applications" } },
         ],
       },
       { path: "/ai-creation/image-generation", redirect: "/ai-apps/image-creation" },
@@ -46,5 +86,5 @@ export function createAppRouter(history: RouterHistory = createWebHistory()) {
       { path: "/admin/users", name: "users", component: () => import("./pages/UsersPage.vue") },
       { path: "/:pathMatch(.*)*", redirect: "/sessions" },
     ],
-  });
+  }));
 }

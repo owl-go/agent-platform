@@ -38,6 +38,20 @@ class DingTalkBuilderTest(unittest.TestCase):
         self.assertIn(("doc", "search"), paths)
         self.assertNotIn(("pat", "token", "revoke"), paths)
 
+    def test_managed_package_omits_local_profile_auth_diagnostics(self):
+        capabilities = builder.reviewed_capabilities(self.schema([self.tool("chat create")]), include_admin=False)
+        paths = {tuple(item["argv_prefix"]) for item in capabilities}
+        self.assertNotIn(("auth", "status"), paths)
+        self.assertNotIn(("profile", "list"), paths)
+
+    def test_skill_requires_platform_target_for_every_high_risk_invocation(self):
+        self.assertIn(
+            'agent-cli --connector <id> --capability <capability-id> --identity user --target "<具体目标>" -- <DWS 子命令和参数>',
+            builder.SKILL,
+        )
+        self.assertIn("包括 `--help` 和 `--dry-run`", builder.SKILL)
+        self.assertIn("不得把 `user_action_unavailable` 解释为钉钉确认功能缺失", builder.SKILL)
+
     def test_overlapping_command_cannot_weaken_policy(self):
         schema = self.schema([self.tool("doc read"), self.tool("doc read hidden", effect="write")])
         with self.assertRaisesRegex(ValueError, "overlapping"):

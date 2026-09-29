@@ -135,7 +135,7 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 	}
 	if err := service.releaseInterruptedAssistantCredits(request.Context(), owner, conversation.ID); err != nil {
 		finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(request.Context()), 10*time.Second)
-		_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, "failed", "", "", "", 0, 0)
+		_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, "failed", "", "", "", "assistant_failed", 0, 0)
 		finishCancel()
 		service.writeAIResult(writer, nil, err)
 		return
@@ -149,7 +149,7 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 	if err := writeAssistantEvent(writer, flusher, "thinking", map[string]any{"turn_id": turn.ID, "message": "思考中..."}); err != nil {
 		finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer finishCancel()
-		_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, "cancelled", "", "", "", 0, 0)
+		_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, "cancelled", "", "", "", "", 0, 0)
 		return
 	}
 	answer, answerErr := service.answerAssistantTurn(ctx, owner, conversation, turn, input.FAQID, "authenticated", func(delta string) error {
@@ -161,13 +161,14 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 	}
 	finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer finishCancel()
-	completed, finishErr := service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, state, answer.source, answer.faqID, answer.text, answer.inputTokens, answer.outputTokens)
+	failureCode := assistantTurnFailureCode(answerErr)
+	completed, finishErr := service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, state, answer.source, answer.faqID, answer.text, failureCode, answer.inputTokens, answer.outputTokens)
 	if finishErr != nil {
 		_ = writeAssistantEvent(writer, flusher, "error", map[string]string{"message": "对话记录保存失败，请刷新重试"})
 		return
 	}
 	if answerErr != nil && !errors.Is(answerErr, context.Canceled) {
-		_ = writeAssistantEvent(writer, flusher, "error", map[string]string{"message": "对话失败，请重试"})
+		_ = writeAssistantEvent(writer, flusher, "error", map[string]string{"code": failureCode, "message": "对话失败，请重试"})
 	}
 	_ = writeAssistantEvent(writer, flusher, "done", completed)
 }

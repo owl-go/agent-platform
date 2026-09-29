@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/secretcrypto"
 )
@@ -25,10 +26,52 @@ type connectorAuthorizationChallenge struct {
 }
 
 type connectorAuthorizationGrant struct {
-	ExternalID, DisplayName   string
-	AccessToken, RefreshToken string
-	Scopes                    []string
-	ExpiresAt                 time.Time
+	ExternalID, DisplayName     string
+	AccessToken, RefreshToken   string
+	ClientID                    string
+	Scopes                      []string
+	ExpiresAt, RefreshExpiresAt time.Time
+}
+
+type dingtalkConnectorAuthorizationDriver struct{ client *dingtalkcli.Client }
+
+func (driver dingtalkConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+
+func (driver dingtalkConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, _ []string) (connectorAuthorizationChallenge, error) {
+	value, err := driver.client.Begin(ctx)
+	if err != nil {
+		return connectorAuthorizationChallenge{}, err
+	}
+	return connectorAuthorizationChallenge{State: value.State, ActionURL: value.ActionURL, ExpiresAt: value.ExpiresAt}, nil
+}
+
+func (driver dingtalkConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	value, err := driver.client.Poll(ctx, state)
+	return dingtalkAuthorizationGrant(value), translateDingTalkAuthorizationError(err)
+}
+
+func (driver dingtalkConnectorAuthorizationDriver) Refresh(ctx context.Context, clientID, _, token string) (connectorAuthorizationGrant, error) {
+	value, err := driver.client.Refresh(ctx, clientID, token)
+	return dingtalkAuthorizationGrant(value), err
+}
+
+func dingtalkAuthorizationGrant(value dingtalkcli.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{ExternalID: value.ExternalID, DisplayName: value.DisplayName, AccessToken: value.AccessToken, RefreshToken: value.RefreshToken, ClientID: value.ClientID, ExpiresAt: value.ExpiresAt, RefreshExpiresAt: value.RefreshExpiresAt}
+}
+
+func translateDingTalkAuthorizationError(err error) error {
+	switch {
+	case errors.Is(err, dingtalkcli.ErrPending):
+		return errConnectorAuthorizationPending
+	case errors.Is(err, dingtalkcli.ErrDenied):
+		return errConnectorAuthorizationDenied
+	case errors.Is(err, dingtalkcli.ErrExpired):
+		return errConnectorAuthorizationExpired
+	default:
+		return err
+	}
 }
 
 // This seam keeps the User-owned flow and credential lifecycle in the platform.
@@ -103,6 +146,9 @@ func translateFeishuAuthorizationError(err error) error {
 func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolicy, repository connectorPackageRepository) (interactiveConnectorAuthorizationDriver, error) {
 	if err := validateInteractiveConnectorDriver(policy); err != nil {
 		return nil, err
+	}
+	if policy.CLI.AuthenticationDriver == "dingtalk" {
+		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil
 	}
 	if service.feishu == nil {
 		return nil, fmt.Errorf("%w: Feishu authorization adapter is unavailable", domain.ErrInvalid)

@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { createAppRouter } from "./router";
+import { createAppRouter, installStaleReleaseRecovery } from "./router";
 
 describe("application routes", () => {
   afterEach(() => {
@@ -17,13 +17,18 @@ describe("application routes", () => {
     expect(router.currentRoute.value.fullPath).toBe("/ai-apps/image-creation");
   });
 
-  it("keeps canonical assistant and digital human detail routes under AI Applications", async () => {
+  it("keeps the canonical assistant detail route under AI Applications", async () => {
     const router = createAppRouter(createMemoryHistory());
 
     await router.push("/ai-apps/assistants/assistant-1");
     expect(router.currentRoute.value.name).toBe("smart-assistant-detail");
+  });
+
+  it("does not expose the removed Digital Human routes", async () => {
+    const router = createAppRouter(createMemoryHistory());
+
     await router.push("/ai-apps/digital-humans/human-1");
-    expect(router.currentRoute.value.name).toBe("digital-human-detail");
+    expect(router.currentRoute.value.fullPath).toBe("/sessions");
   });
 
   it("keeps the top-level Knowledge Bases route distinct from the AI Applications route", async () => {
@@ -36,5 +41,58 @@ describe("application routes", () => {
     await router.push("/ai-apps/knowledge-bases");
     expect(router.currentRoute.value.name).toBe("ai-application-knowledge-bases");
     expect(router.currentRoute.value.meta.surface).toBe("ai-applications");
+  });
+
+  it("reloads the intended route when a deployed lazy module is unavailable", () => {
+    const onError = vi.fn();
+    const afterEach = vi.fn();
+    const assign = vi.fn();
+    const storage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    };
+
+    installStaleReleaseRecovery(
+      { onError, afterEach } as never,
+      { location: { assign }, sessionStorage: storage } as never,
+    );
+    const recover = onError.mock.calls[0]?.[0];
+    recover?.(
+      new TypeError("Failed to fetch dynamically imported module: /assets/SmartAssistantDetailPage-old.js"),
+      { fullPath: "/ai-apps/assistants/assistant-1" },
+    );
+
+    expect(storage.setItem).toHaveBeenCalledWith(
+      "agent-workspace:stale-release-reload",
+      "/ai-apps/assistants/assistant-1",
+    );
+    expect(assign).toHaveBeenCalledWith("/ai-apps/assistants/assistant-1");
+  });
+
+  it("does not loop when the refreshed release still cannot load the route", () => {
+    const target = "/ai-apps/assistants/assistant-1";
+    const onError = vi.fn();
+    const assign = vi.fn();
+    const storage = {
+      getItem: vi.fn(() => target),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    };
+
+    installStaleReleaseRecovery(
+      { onError, afterEach: vi.fn() } as never,
+      { location: { assign }, sessionStorage: storage } as never,
+    );
+    const recover = onError.mock.calls[0]?.[0];
+    recover?.(
+      new TypeError("Failed to fetch dynamically imported module: /assets/SmartAssistantDetailPage-old.js"),
+      { fullPath: target },
+    );
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(storage.removeItem).toHaveBeenCalledWith(
+      "agent-workspace:stale-release-reload",
+    );
   });
 });
