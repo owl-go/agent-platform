@@ -162,6 +162,33 @@ func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Pr
 	return &cliconnector.Builder{Packages: packages, Uploads: cliconnector.ZIPPackageBuilder{}, Store: store, Sources: store, Conformance: conformance, RuntimeDigests: runtimeDigests}, nil
 }
 
+// ReverifyActiveCLIConnectors is a one-shot release gate. It uses the same
+// isolated Conformance suite and Object Store as normal CLI installation, but
+// tests already-installed immutable bundles against the candidate Runtime.
+func ReverifyActiveCLIConnectors(ctx context.Context, config platformconfig.Config, database *gormdb.Database, objects objectstore.Provider) (int, error) {
+	builder, err := newCLIConnectorBuilder(config, objects)
+	if err != nil {
+		return 0, err
+	}
+	if builder == nil {
+		return 0, fmt.Errorf("CLI Builder is disabled; cannot verify installed Connectors")
+	}
+	store, err := cliconnector.NewArtifactStore(objects)
+	if err != nil {
+		return 0, err
+	}
+	repository := workspacerepo.New(database.ORM(), nil)
+	verified := 0
+	for _, digest := range builder.RuntimeDigests {
+		count, err := cliconnector.ReverifyCLIBundles(ctx, repository, store, builder.Conformance, digest)
+		verified += count
+		if err != nil {
+			return verified, fmt.Errorf("verify active CLI Connectors for %s: %w", digest, err)
+		}
+	}
+	return verified, nil
+}
+
 func NewServers(database *gormdb.Database, worker *Worker, warm *containerprocess.WarmManager, config platformconfig.Config) ([]transport.Server, error) {
 	state := workerserver.NewState()
 	interval := config.Worker.PollInterval.Value()

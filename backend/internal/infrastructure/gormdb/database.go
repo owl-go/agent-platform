@@ -23,6 +23,17 @@ type Database struct {
 }
 
 func Open(ctx context.Context, config Config) (*Database, error) {
+	return open(ctx, config, true)
+}
+
+// OpenWithoutMigrations is reserved for pre-cutover release checks against the
+// existing schema. The normal API and Worker entrypoints must continue to use
+// Open so their immutable migrations are applied during service startup.
+func OpenWithoutMigrations(ctx context.Context, config Config) (*Database, error) {
+	return open(ctx, config, false)
+}
+
+func open(ctx context.Context, config Config, migrate bool) (*Database, error) {
 	if config.DSN == "" {
 		return nil, fmt.Errorf("database DSN is required")
 	}
@@ -51,9 +62,11 @@ func Open(ctx context.Context, config Config) (*Database, error) {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("ping PostgreSQL: %w", err)
 	}
-	if err := Migrate(ctx, db); err != nil {
-		_ = sqlDB.Close()
-		return nil, err
+	if migrate {
+		if err := Migrate(ctx, db); err != nil {
+			_ = sqlDB.Close()
+			return nil, err
+		}
 	}
 	return &Database{db: db}, nil
 }
