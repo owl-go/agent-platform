@@ -8,6 +8,10 @@ from connectors.wecom import build
 
 
 class UpstreamResourcesTest(unittest.TestCase):
+    def test_runsc_process_limit_allows_connector_container_startup(self):
+        # Production runsc could not start its sandbox with a limit of eight.
+        self.assertGreaterEqual(build.RESOURCE_LIMITS["child_processes"], 128)
+
     def test_pinned_upstream_skills_are_complete(self):
         archive = Path(build.HERE / "upstream-v1.3.4.tar.gz").read_bytes()
         self.assertEqual(hashlib.sha256(archive).hexdigest(), build.UPSTREAM_SHA256)
