@@ -493,9 +493,42 @@ func enqueueDueSchedule(tx *gorm.DB, now time.Time) error {
 		if failureErr := createFailedScheduledRun(tx, workflow, err, now); failureErr != nil {
 			return failureErr
 		}
+		paused, pauseErr := pauseScheduleAfterConsecutiveFailures(tx, workflow.ID)
+		if pauseErr != nil || paused {
+			return pauseErr
+		}
 	}
 	next := nextScheduledAt(&schedule, now)
 	return tx.Model(&workflowRecord{}).Where("id = ?", workflow.ID).Update("next_scheduled_at", next).Error
+}
+
+func pauseScheduleAfterConsecutiveFailures(tx *gorm.DB, workflowID string) (bool, error) {
+	var states []string
+	if err := tx.Model(&runRecord{}).
+		Where("workflow_id = ? AND trigger = 'scheduled' AND id = conversation_id", workflowID).
+		Order("queued_at DESC, id DESC").Limit(3).Pluck("state", &states).Error; err != nil {
+		return false, err
+	}
+	if len(states) < 3 || states[0] != "failed" || states[1] != "failed" || states[2] != "failed" {
+		return false, nil
+	}
+	var workflow workflowRecord
+	if err := tx.Select("id", "schedule").Where("id = ?", workflowID).Take(&workflow).Error; err != nil {
+		return false, err
+	}
+	var schedule domain.Schedule
+	if err := json.Unmarshal(workflow.Schedule, &schedule); err != nil {
+		return false, err
+	}
+	schedule.Enabled = false
+	encoded, err := marshal(schedule)
+	if err != nil {
+		return false, err
+	}
+	if err := tx.Model(&workflowRecord{}).Where("id = ?", workflowID).Updates(map[string]any{"schedule": encoded, "next_scheduled_at": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func createFailedScheduledRun(tx *gorm.DB, workflow workflowRecord, cause error, now time.Time) error {
@@ -1343,7 +1376,7 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(updates).Error
 		}
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "workflow_id", "trigger", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "failed", message, now)
@@ -1360,7 +1393,14 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
-		return appendRunEvents(tx, job.ID, nil, "run.failed", now)
+		if err := appendRunEvents(tx, job.ID, nil, "run.failed", now); err != nil {
+			return err
+		}
+		if row.Trigger == "scheduled" && row.WorkflowID != nil {
+			_, err := pauseScheduleAfterConsecutiveFailures(tx, *row.WorkflowID)
+			return err
+		}
+		return nil
 	})
 }
 

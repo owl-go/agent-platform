@@ -134,6 +134,7 @@ const OperationAgentWorkspaceServiceListWorkflows = "/workspace.v1.AgentWorkspac
 const OperationAgentWorkspaceServiceListWorkspaceEntries = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
 const OperationAgentWorkspaceServiceOptimizeImagePrompt = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
 const OperationAgentWorkspaceServicePreviewSessionWorkflowDraft = "/workspace.v1.AgentWorkspaceService/PreviewSessionWorkflowDraft"
+const OperationAgentWorkspaceServicePreviewWorkflowSchedule = "/workspace.v1.AgentWorkspaceService/PreviewWorkflowSchedule"
 const OperationAgentWorkspaceServicePublishCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
 const OperationAgentWorkspaceServicePublishConnectorRevision = "/workspace.v1.AgentWorkspaceService/PublishConnectorRevision"
 const OperationAgentWorkspaceServiceRedeemCreditCode = "/workspace.v1.AgentWorkspaceService/RedeemCreditCode"
@@ -146,6 +147,7 @@ const OperationAgentWorkspaceServiceResetUserPassword = "/workspace.v1.AgentWork
 const OperationAgentWorkspaceServiceResolveConversationSelection = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
 const OperationAgentWorkspaceServiceRetrySessionMessage = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
 const OperationAgentWorkspaceServiceReviseImageModel = "/workspace.v1.AgentWorkspaceService/ReviseImageModel"
+const OperationAgentWorkspaceServiceRevokeWorkflowCredential = "/workspace.v1.AgentWorkspaceService/RevokeWorkflowCredential"
 const OperationAgentWorkspaceServiceRunWorkflow = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
 const OperationAgentWorkspaceServiceSelectConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/SelectConnectorAuthorization"
 const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
@@ -297,6 +299,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
 	OptimizeImagePrompt(context.Context, *OptimizeImagePromptRequest) (*OptimizeImagePromptResponse, error)
 	PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error)
+	PreviewWorkflowSchedule(context.Context, *PreviewWorkflowScheduleRequest) (*PreviewWorkflowScheduleResponse, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	PublishConnectorRevision(context.Context, *PublishConnectorRevisionRequest) (*ConnectorPublication, error)
 	RedeemCreditCode(context.Context, *RedeemCreditCodeRequest) (*CreditBalance, error)
@@ -309,6 +312,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error)
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
 	ReviseImageModel(context.Context, *ReviseImageModelRequest) (*ImageModel, error)
+	RevokeWorkflowCredential(context.Context, *RevokeWorkflowCredentialRequest) (*DeleteResponse, error)
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
 	SelectConnectorAuthorization(context.Context, *SelectConnectorAuthorizationRequest) (*ConnectorInstallation, error)
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
@@ -408,9 +412,11 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/workflows", _AgentWorkspaceService_CreateWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_GetWorkflow0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_UpdateWorkflow0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/schedule-preview", _AgentWorkspaceService_PreviewWorkflowSchedule0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_DeleteWorkflow0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GenerateWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_GetWorkflowCredential0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}/api-credential", _AgentWorkspaceService_RevokeWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/api-token", _AgentWorkspaceService_ExchangeWorkflowCredential0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_RunWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/runs", _AgentWorkspaceService_ListRuns0_HTTP_Handler(srv))
@@ -1801,6 +1807,25 @@ func _AgentWorkspaceService_UpdateWorkflow0_HTTP_Handler(srv AgentWorkspaceServi
 	}
 }
 
+func _AgentWorkspaceService_PreviewWorkflowSchedule0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in PreviewWorkflowScheduleRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServicePreviewWorkflowSchedule)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.PreviewWorkflowSchedule(ctx, req.(*PreviewWorkflowScheduleRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*PreviewWorkflowScheduleResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_DeleteWorkflow0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in DeleteWorkflowRequest
@@ -1863,6 +1888,28 @@ func _AgentWorkspaceService_GetWorkflowCredential0_HTTP_Handler(srv AgentWorkspa
 			return err
 		}
 		reply := out.(*WorkflowCredential)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_RevokeWorkflowCredential0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in RevokeWorkflowCredentialRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceRevokeWorkflowCredential)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RevokeWorkflowCredential(ctx, req.(*RevokeWorkflowCredentialRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -3985,6 +4032,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListWorkspaceEntries(ctx context.Context, req *ListWorkspaceEntriesRequest, opts ...http.CallOption) (rsp *ListWorkspaceEntriesResponse, err error)
 	OptimizeImagePrompt(ctx context.Context, req *OptimizeImagePromptRequest, opts ...http.CallOption) (rsp *OptimizeImagePromptResponse, err error)
 	PreviewSessionWorkflowDraft(ctx context.Context, req *PreviewSessionWorkflowDraftRequest, opts ...http.CallOption) (rsp *SessionWorkflowDraft, err error)
+	PreviewWorkflowSchedule(ctx context.Context, req *PreviewWorkflowScheduleRequest, opts ...http.CallOption) (rsp *PreviewWorkflowScheduleResponse, err error)
 	PublishCLIConnectorDefinition(ctx context.Context, req *PublishCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	PublishConnectorRevision(ctx context.Context, req *PublishConnectorRevisionRequest, opts ...http.CallOption) (rsp *ConnectorPublication, err error)
 	RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
@@ -3997,6 +4045,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ResolveConversationSelection(ctx context.Context, req *ResolveConversationSelectionRequest, opts ...http.CallOption) (rsp *ConversationSelection, err error)
 	RetrySessionMessage(ctx context.Context, req *RetrySessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
 	ReviseImageModel(ctx context.Context, req *ReviseImageModelRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
+	RevokeWorkflowCredential(ctx context.Context, req *RevokeWorkflowCredentialRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	RunWorkflow(ctx context.Context, req *RunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
 	SelectConnectorAuthorization(ctx context.Context, req *SelectConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *ConnectorInstallation, err error)
 	SendSessionMessage(ctx context.Context, req *SendSessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
@@ -5957,6 +6006,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) PreviewSessionWorkflowDraft(ctx co
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) PreviewWorkflowSchedule(ctx context.Context, in *PreviewWorkflowScheduleRequest, opts ...http.CallOption) (*PreviewWorkflowScheduleResponse, error) {
+	var out PreviewWorkflowScheduleResponse
+	pattern := "/api/v1/workflows/schedule-preview"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServicePreviewWorkflowSchedule),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) PublishCLIConnectorDefinition(ctx context.Context, in *PublishCLIConnectorDefinitionRequest, opts ...http.CallOption) (*CLIConnectorDefinition, error) {
 	var out CLIConnectorDefinition
 	pattern := "/api/v1/admin/connectors/cli/{definition_id}/publish"
@@ -6155,6 +6221,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ReviseImageModel(ctx context.Conte
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) RevokeWorkflowCredential(ctx context.Context, in *RevokeWorkflowCredentialRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/workflows/{workflow_id}/api-credential"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceRevokeWorkflowCredential),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

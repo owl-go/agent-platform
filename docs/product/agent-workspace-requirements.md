@@ -148,21 +148,22 @@ The detailed conversation specialist/resource selection rules and accepted revis
 
 ### 5.2 Detail Page
 
-The Workflow detail page contains four tabs in this order:
+The Workflow detail page defaults to an operational Overview and contains five tabs in this order:
 
-1. Artifacts
-2. Workspace
-3. Run History
-4. Settings
+1. Overview: goal, latest state, 30-day success ratio, next Schedule time, action-required recovery, and the three most recent Run Conversations
+2. Run History
+3. Artifacts
+4. Workspace
+5. Settings
 
-Run polling is limited to visible Run Conversations, Run History, and Artifacts. Settings and Workspace browsing do not repeatedly request Runs or Artifacts. Visible active execution refreshes Run state every 1.5 seconds; idle history checks every 30 seconds for scheduled or API Runs. Artifacts refresh on execution changes or when opening their tab, rather than on every idle poll. Hidden browser tabs pause polling and refresh when visible again; requests do not overlap.
+Run polling is limited to visible Run Conversations, Overview, Run History, and Artifacts. Settings and Workspace browsing do not repeatedly request Runs or Artifacts. Visible active execution refreshes Run state every 1.5 seconds; idle operational views check every 30 seconds for scheduled or API Runs. Artifacts refresh on execution changes or when opening their tab, rather than on every idle poll. Hidden browser tabs pause polling and refresh when visible again; requests do not overlap.
 
 Settings contains five collapsed sections:
 
 - Basic: name, goal, optional Expert or Expert Team
-- Execution: read-only Personal Settings execution summary, plus environment variables
-- Schedule: hourly, daily, or weekly trigger with time and optional time-zone override
-- API Credential: generate or regenerate API Key/API Secret and show the JWT exchange and Bearer invocation examples
+- Execution Resources: Knowledge Bases and environment variables
+- Schedule: hourly, daily, or weekly trigger with time and optional time-zone override; previewing returns the next three server-calculated trigger times before saving
+- API Credential: generate, safely rotate, or revoke API Key/API Secret and show the JWT exchange and Bearer invocation examples
 - Git Source: URL, branch, public HTTPS/account-password/private-key authentication, safe local Git config, and optional Workflow-scoped SSH config
 
 ### 5.3 Triggers And Input
@@ -199,11 +200,13 @@ Settings contains five collapsed sections:
 - The one-shot result read uses the same `GET /runs/{runId}` endpoint after the Run reaches a terminal state and returns the complete `final_text` or `final_json`.
 - `Idempotency-Key` prevents external retries from creating duplicate Runs.
 - A Workflow credential authorizes only starting and inspecting that Workflow. It cannot access Settings, Workspace mutation, another Workflow, or User APIs.
+- Rotating a Workflow credential immediately invalidates the previous Key and Secret and requires an explicit impact confirmation. Revocation disables API access without deleting the Workflow or historical Runs.
 
 ### 5.6 Schedule
 
 - A Workflow can have one optional hourly, daily, or weekly Scheduled Trigger.
 - Personal Settings provides the default time zone. The Workflow schedule may override it.
+- Schedule editing can request a server-calculated preview of the next three trigger times without saving. Three consecutive failed Scheduled Runs automatically disable that Schedule, clear its next trigger, and surface the failed Workflow as requiring attention.
 - A queued scheduled Run waits behind the active Run for the same Workflow. Queue order is shared with manual, API, follow-up, and rerun requests and is FIFO.
 - Deleting a Workflow or disabling its owner stops future scheduling.
 

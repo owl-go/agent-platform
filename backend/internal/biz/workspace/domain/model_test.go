@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestValidateConnectorIcon(t *testing.T) {
@@ -304,6 +305,25 @@ func TestWorkflowRejectsLegacyExecutionOverrides(t *testing.T) {
 	input := WorkflowInput{Name: "Workflow", Goal: "Do the work", ProviderModelID: &modelID, RuntimeEngine: &runtime}
 	if !errors.Is(input.Validate(), ErrInvalid) {
 		t.Fatal("legacy Workflow execution overrides were accepted")
+	}
+}
+
+func TestScheduleUpcomingUsesConfiguredTimezoneAndFrequency(t *testing.T) {
+	schedule := Schedule{Enabled: true, Frequency: "daily", Hour: 9, Minute: 30, Timezone: "Asia/Shanghai"}
+	after := time.Date(2026, time.September, 29, 0, 0, 0, 0, time.UTC)
+	items := schedule.Upcoming(after, 3)
+	want := []time.Time{
+		time.Date(2026, time.September, 29, 1, 30, 0, 0, time.UTC),
+		time.Date(2026, time.September, 30, 1, 30, 0, 0, time.UTC),
+		time.Date(2026, time.October, 1, 1, 30, 0, 0, time.UTC),
+	}
+	if len(items) != len(want) {
+		t.Fatalf("Upcoming() returned %d items, want %d", len(items), len(want))
+	}
+	for index := range want {
+		if !items[index].Equal(want[index]) {
+			t.Fatalf("Upcoming()[%d] = %s, want %s", index, items[index], want[index])
+		}
 	}
 }
 
