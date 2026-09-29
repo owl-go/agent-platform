@@ -120,6 +120,19 @@ describe("SessionsPage conversation layout", () => {
     wrapper.unmount();
   });
 
+  it("opens Workflow save when the preview omits empty resources and files", async () => {
+    const api = apiStub([{ ...messages[0]! }, { ...messages[1]!, state: "completed" }]);
+    api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "布局验收", suggested_goal: "我的消息", specialist_name: "默认执行配置" } as Awaited<ReturnType<PlatformApi["previewSessionWorkflowDraft"]>>));
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get(".message.assistant .message-actions button").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get<HTMLInputElement>(".workflow-save-dialog input").element.value).toBe("布局验收");
+    expect(wrapper.get(".workflow-save-dialog").text()).toContain("本次未使用额外技能或连接器");
+    wrapper.unmount();
+  });
+
   it("shows task details only for a task-bearing response and reopens them from history", async () => {
     const taskMessages = [messages[0]!, {
       ...messages[1]!,

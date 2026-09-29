@@ -282,11 +282,11 @@ async function openWorkflowSave(messageID: string) {
       await router.push({ path: `/workflows/${draft.existing_link.workflow_id}`, query: { open_run: draft.existing_link.validation_run_id, from_session: draft.existing_link.session_id } });
       return;
     }
-    workflowDraft.value = draft;
+    workflowDraft.value = { ...draft, resources: draft.resources ?? [], files: draft.files ?? [] };
     workflowDraftMessageID.value = numericID;
     workflowDraftName.value = draft.suggested_name;
     workflowDraftGoal.value = draft.suggested_goal;
-    workflowFileDestinations.value = Object.fromEntries(draft.files.map((file) => [file.source_key, file.available ? "workspace" : "exclude"]));
+    workflowFileDestinations.value = Object.fromEntries((draft.files ?? []).map((file) => [file.source_key, file.available ? "workspace" : "exclude"]));
   } catch { error.value = t("sessions.workflowSave.loadFailed"); }
   finally { loadingWorkflowDraft.value = false; }
 }
