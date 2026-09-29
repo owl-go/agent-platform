@@ -1146,6 +1146,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .task-workspace-counts dt, .task-workspace-result dt { color: var(--aw-n6); font-size: 10px; }
 .task-workspace-counts dd, .task-workspace-result dd { margin: 0; color: var(--aw-n9); font: 600 12px/1.5 var(--aw-font-mono); }
 .task-workspace-files { display: grid; gap: 6px; }
+.task-workspace-plan-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.task-workspace-plan-actions .el-button + .el-button { margin-left: 0; }
 .task-workspace-files button { min-width: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--aw-n4); border-radius: var(--aw-radius-input); background: var(--aw-n0); color: var(--aw-n8); text-align: left; }
 .task-workspace-files button:hover:not(:disabled) { border-color: var(--aw-primary-border); background: var(--aw-primary-soft); }
 .task-workspace-files button:disabled { opacity: .55; }

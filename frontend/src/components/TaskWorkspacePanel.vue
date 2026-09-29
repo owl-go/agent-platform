@@ -7,7 +7,7 @@ import type { Artifact, Attachment, Evidence } from "../api/client";
 import type { ConversationMessage } from "../conversationThread";
 
 const props = defineProps<{ message: ConversationMessage; loadAttachment: (id: string) => Promise<Blob> }>();
-const emit = defineEmits<{ close: []; downloadArtifact: [artifact: Artifact]; openEvidence: [evidence: Evidence]; attachmentError: []; saveWorkflow: [messageID: string] }>();
+const emit = defineEmits<{ close: []; downloadArtifact: [artifact: Artifact]; openEvidence: [evidence: Evidence]; attachmentError: []; saveWorkflow: [messageID: string]; planDecision: [messageID: string, decision: "start" | "direct" | "cancel"]; editPlan: [messageID: string] }>();
 const { t, locale } = useI18n();
 const consumedCredits = computed(() => {
   const raw: unknown = props.message.creditConsumption?.total_hundredths;
@@ -54,7 +54,13 @@ async function downloadAttachment(item: Attachment) {
     <div class="task-workspace-scroll">
       <section v-if="message.executionPlan" class="task-workspace-section">
         <h3>{{ t('taskWorkspace.plan') }}</h3><p class="task-workspace-objective">{{ message.executionPlan.objective }}</p>
-        <ol class="task-workspace-steps"><li v-for="step in message.executionPlan.steps" :key="step.id" :class="`is-${step.state}`"><span></span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepState(step.state) }}</small></div></li></ol>
+        <ol class="task-workspace-steps"><li v-for="step in message.executionPlan.steps ?? []" :key="step.id" :class="`is-${step.state}`"><span></span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepState(step.state) }}</small></div></li></ol>
+        <div v-if="message.executionPlan.state === 'pending'" class="task-workspace-plan-actions">
+          <el-button type="primary" @click="emit('planDecision', message.id, 'start')">{{ t('sessions.executionPlan.start') }}</el-button>
+          <el-button @click="emit('editPlan', message.id)">{{ t('sessions.executionPlan.edit') }}</el-button>
+          <el-button v-if="!message.executionPlan.side_effects?.length" @click="emit('planDecision', message.id, 'direct')">{{ t('sessions.executionPlan.direct') }}</el-button>
+          <el-button text @click="emit('planDecision', message.id, 'cancel')">{{ t('common.cancel') }}</el-button>
+        </div>
       </section>
       <section v-if="message.evidence?.length || message.activities?.length || message.stages?.length" class="task-workspace-section">
         <h3>{{ t('taskWorkspace.evidence') }}</h3>
