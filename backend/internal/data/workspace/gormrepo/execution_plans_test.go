@@ -25,6 +25,30 @@ func TestDecideExecutionPlanRejectsDirectSideEffectBypass(t *testing.T) {
 	}
 }
 
+func TestSessionMessagePairOnlyWaitsForRequestedPlan(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		planState string
+		wantState string
+	}{
+		{name: "automatic safety Plan", planState: "approved", wantState: "queued"},
+		{name: "explicit Plan", planState: "pending", wantState: "waiting_for_user"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			plan := testExecutionPlan("external_connector_operation")
+			plan.State = test.planState
+			encoded, err := json.Marshal(plan)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, assistant := sessionMessagePairRecords("session", "request", []byte("[]"), []byte("{}"), encoded, plan.State == "pending")
+			if assistant.State != test.wantState {
+				t.Fatalf("assistant state = %q, want %q", assistant.State, test.wantState)
+			}
+		})
+	}
+}
+
 func TestExecutionPlanLifecycleProjection(t *testing.T) {
 	plan := testExecutionPlan()
 	if err := decideExecutionPlan(&plan, "start", 1, time.Now()); err != nil {

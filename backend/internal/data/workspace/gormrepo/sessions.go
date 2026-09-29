@@ -381,19 +381,21 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 			return err
 		}
 		var executionPlan []byte
+		planPending := false
 		if conditionalPlan {
 			plan, err := domain.BuildExecutionPlan(domain.ExecutionPlanContext{Objective: content, Preference: preference, Stages: snapshot.Stages}, time.Now().UTC())
 			if err != nil {
 				return err
 			}
 			if plan != nil {
+				planPending = plan.State == "pending"
 				executionPlan, err = marshal(plan)
 				if err != nil {
 					return err
 				}
 			}
 		}
-		user, assistant = sessionMessagePairRecords(sessionID, content, encodedAttachments, encodedSnapshot, executionPlan)
+		user, assistant = sessionMessagePairRecords(sessionID, content, encodedAttachments, encodedSnapshot, executionPlan, planPending)
 		if err := tx.Create(&user).Error; err != nil {
 			return err
 		}
@@ -421,7 +423,7 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 	return messageDomain(user), messageDomain(assistant), nil
 }
 
-func sessionMessagePairRecords(sessionID, content string, attachments, responseSnapshot, executionPlan []byte) (messageRecord, messageRecord) {
+func sessionMessagePairRecords(sessionID, content string, attachments, responseSnapshot, executionPlan []byte, planPending bool) (messageRecord, messageRecord) {
 	emptyJSONList := []byte("[]")
 	user := messageRecord{
 		SessionID: sessionID, Role: "user", State: "completed", Content: content,
@@ -431,7 +433,7 @@ func sessionMessagePairRecords(sessionID, content string, attachments, responseS
 		SessionID: sessionID, Role: "assistant", State: "queued", ProgressStage: "preparing",
 		ResponseSnapshot: responseSnapshot, Attachments: emptyJSONList, ExpertStages: emptyJSONList, RuntimeActivities: emptyJSONList, Evidence: emptyJSONList, ExecutionPlan: executionPlan,
 	}
-	if len(executionPlan) > 0 {
+	if planPending {
 		assistant.State = "waiting_for_user"
 		assistant.ProgressStage = ""
 	}
