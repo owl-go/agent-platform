@@ -81,6 +81,8 @@ describe("ConversationComposer", () => {
   const { wrapper, submit } = await setup();
   await wrapper.get(".composer-plan-toggle").trigger("click");
   expect(wrapper.get(".composer-plan-toggle").attributes("aria-pressed")).toBe("true");
+  expect(wrapper.get(".composer-plan-toggle").attributes("aria-description")).toContain("额外调用一次模型并按实际用量扣除 Credits");
+  expect(wrapper.get(".composer-plan-cost-note").text()).toContain("额外调用一次模型并按实际用量扣除 Credits");
   const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.textContent = "先列计划"; await editor.trigger("input");
   await wrapper.get('[aria-label="发送"]').trigger("click"); await flushPromises();
   expect(submit).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ plan_preference: "always" }) }));

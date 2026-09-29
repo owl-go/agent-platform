@@ -699,12 +699,13 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
       </div>
       <div class="composer-toolbar-actions">
         <el-tooltip :content="t('composer.planFirstHint')" placement="top">
-          <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
+          <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" :aria-description="t('composer.planFirstHint')" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
         </el-tooltip>
         <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
         <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
       </div>
     </div>
+    <p v-if="planFirst" class="composer-plan-cost-note" role="status">{{ t('composer.planFirstHint') }}</p>
     <input ref="fileInput" class="composer-file-input" type="file" multiple :disabled="locked" @change="chooseLocal">
     <section v-if="menu" class="composer-menu" :aria-label="t('composer.add')">
       <template v-if="menu === 'main'">
