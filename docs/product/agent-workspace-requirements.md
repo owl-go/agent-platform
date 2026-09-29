@@ -148,15 +148,14 @@ The detailed conversation specialist/resource selection rules and accepted revis
 
 ### 5.2 Detail Page
 
-The Workflow detail page defaults to an operational Overview and contains five tabs in this order:
+The Workflow detail page defaults to an operational Overview and contains four tabs in this order:
 
 1. Overview: goal, latest state, 30-day success ratio, next Schedule time, action-required recovery, and the three most recent Run Conversations
 2. Run History
-3. Artifacts
-4. Workspace
-5. Settings
+3. Workspace
+4. Settings
 
-Run polling is limited to visible Run Conversations, Overview, Run History, and Artifacts. Settings and Workspace browsing do not repeatedly request Runs or Artifacts. Visible active execution refreshes Run state every 1.5 seconds; idle operational views check every 30 seconds for scheduled or API Runs. Artifacts refresh on execution changes or when opening their tab, rather than on every idle poll. Hidden browser tabs pause polling and refresh when visible again; requests do not overlap.
+Run polling is limited to visible Run Conversations, Overview, and Run History. Settings and Workspace browsing do not repeatedly request Runs or Artifacts. Visible active execution refreshes Run state every 1.5 seconds; idle operational views check every 30 seconds for scheduled or API Runs. Artifacts remain attached to their producing Run Conversation and refresh when execution changes, rather than on every idle poll. Historical links to the removed Artifacts tab open Run History. Hidden browser tabs pause polling and refresh when visible again; requests do not overlap.
 
 Settings contains five collapsed sections:
 

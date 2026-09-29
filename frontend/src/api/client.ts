@@ -500,7 +500,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
     decideSessionExecutionPlan(sessionID, messageID, decision, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/plan-decision`, json("POST", { decision, expected_version: version }, signal)); },
-    previewSessionWorkflowDraft(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow-draft`, { signal }); },
+    async previewSessionWorkflowDraft(sessionID, messageID, signal) {
+      const draft = await call<SessionWorkflowDraft>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow-draft`, { signal });
+      return { ...draft, resources: draft.resources ?? [], files: draft.files ?? [] };
+    },
     async createWorkflowFromSession(sessionID, messageID, input, signal) {
       const result = await call<SessionWorkflowCreation>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow`, json("POST", input, signal));
       return { ...result, validation_run: normalizeRun(result.validation_run) };

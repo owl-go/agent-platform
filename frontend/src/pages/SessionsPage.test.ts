@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot, type SessionWorkflowCreation } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
@@ -101,7 +101,12 @@ describe("SessionsPage conversation layout", () => {
     ] as SessionMessage[];
     const api = apiStub(successful);
     api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "周报", suggested_goal: "生成本周周报", specialist_name: "默认执行配置", resources: [{ kind: "skill", id: "skill-1", name: "Report" }], files: [{ source_key: "attachment:attachment-1", kind: "attachment", name: "brief.pdf", size: 2048, available: true }] }));
-    api.createWorkflowFromSession = vi.fn<PlatformApi["createWorkflowFromSession"]>(() => new Promise(() => undefined));
+    api.createWorkflowFromSession = vi.fn<PlatformApi["createWorkflowFromSession"]>(async () => ({
+      workflow: { id: "workflow-1", name: "周报", goal: "生成本周周报", environment: [], api_credential_configured: false, deleted: false, created_at: session.created_at, updated_at: session.updated_at, version: 1 },
+      validation_run: { id: "run-1", conversation_id: "run-1", turn_number: 1, workflow_id: "workflow-1", workflow_name: "周报", trigger: "session_conversion", state: "waiting_for_user", queued_at: session.updated_at, elapsed_ms: 0 },
+      link: { session_id: session.id, message_id: 2, workflow_id: "workflow-1", workflow_name: "周报", validation_run_id: "run-1", created_at: session.updated_at },
+      replayed: false,
+    } satisfies SessionWorkflowCreation));
     const wrapper = await mountPageWithAPI(api);
 
     await wrapper.get(".message.assistant .message-actions button").trigger("click");
@@ -117,6 +122,21 @@ describe("SessionsPage conversation layout", () => {
       goal: "生成本周周报",
       files: [{ source_key: "attachment:attachment-1", destination: "workspace" }],
     });
+    await vi.waitFor(() => expect(wrapper.vm.$route.path).toBe("/workflows/workflow-1"));
+    expect(wrapper.vm.$route.query).toMatchObject({ open_run: "run-1", from_session: session.id });
+    wrapper.unmount();
+  });
+
+  it("opens Workflow save when the preview omits empty resources and files", async () => {
+    const api = apiStub([{ ...messages[0]! }, { ...messages[1]!, state: "completed" }]);
+    api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "布局验收", suggested_goal: "我的消息", specialist_name: "默认执行配置" } as Awaited<ReturnType<PlatformApi["previewSessionWorkflowDraft"]>>));
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get(".message.assistant .message-actions button").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get<HTMLInputElement>(".workflow-save-dialog input").element.value).toBe("布局验收");
+    expect(wrapper.get(".workflow-save-dialog").text()).toContain("本次未使用额外技能或连接器");
     wrapper.unmount();
   });
 

@@ -16,7 +16,7 @@ import { cliAuthorizationRequestFromEvents } from "../cliAuthorization";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 import { latestTaskWorkspaceMessage } from "../taskWorkspace";
 
-type Tab = "overview" | "history" | "artifacts" | "workspace" | "settings";
+type Tab = "overview" | "history" | "workspace" | "settings";
 type SettingsSection = "basic" | "resources" | "schedule" | "api" | "git";
 const api = inject(platformApiKey)!;
 const route = useRoute(); const router = useRouter(); const { t, locale } = useI18n();
@@ -26,8 +26,8 @@ const runConversationElement = ref<HTMLElement>();
 const runComposerLayer = ref<HTMLElement>();
 const settingsFormElement = ref<HTMLFormElement>();
 const runComposerClearance = ref(154);
-const allowedTabs: Tab[] = ["overview", "history", "artifacts", "workspace", "settings"];
-const initialTab = allowedTabs.includes(route.query.tab as Tab) ? route.query.tab as Tab : "overview";
+const allowedTabs: Tab[] = ["overview", "history", "workspace", "settings"];
+const initialTab = route.query.tab === "artifacts" ? "history" : allowedTabs.includes(route.query.tab as Tab) ? route.query.tab as Tab : "overview";
 const tab = ref<Tab>(initialTab); const workflow = ref<Workflow>(); const experts = ref<Expert[]>([]); const expertTeams = ref<ExpertTeam[]>([]); const knowledgeBases = ref<KnowledgeBase[]>([]); const runs = ref<Run[]>([]); const selectedRun = ref<Run>(); const conversationRuns = ref<Run[]>([]); const runEvents = ref<RunEvent[]>([]); const runEventsByID = ref<Record<string, RunEvent[]>>({}); const eventRunID = ref(""); const streamingRunID = ref(""); const revealedRunOutput = ref(""); const sendingFollowUp = ref(false); const artifacts = ref<Artifact[]>([]); const entries = ref<WorkspaceEntry[]>([]); const workspacePath = ref(""); const loading = ref(true); const error = ref(""); const running = ref(false); const preview = ref<{ path: string; content: string }>(); const credential = ref<{ api_key: string; api_secret: string }>();
 const credentialError = ref("");
 const revealApiSecret = ref(false);
@@ -58,7 +58,7 @@ const selectedKnowledgeBaseIDs = computed<string[]>({
   set: (value) => { settingsForm.value.knowledge_base_ids = [...new Set(value)]; },
 });
 const workflowValidated = computed(() => runs.value.some((item) => item.state === "succeeded"));
-const tabs: Tab[] = ["overview", "history", "artifacts", "workspace", "settings"];
+const tabs: Tab[] = ["overview", "history", "workspace", "settings"];
 const fileArtifacts = computed(() => artifacts.value.filter((item) => item.kind === "file"));
 const latestRun = computed(() => runs.value[0]);
 const recentRuns = computed(() => runs.value.slice(0, 3));
@@ -145,7 +145,7 @@ watch(tab, (value) => {
   void router.replace({ query: { ...route.query, tab: value } });
   if (value === "workspace" && workflow.value && !workflow.value.deleted) void loadDirectory(workspacePath.value);
   if (value === "settings" && workflow.value && !workflow.value.deleted) void loadCredential();
-  if (!loading.value && (value === "overview" || value === "history" || value === "artifacts")) void refreshRuns(value === "artifacts");
+  if (!loading.value && (value === "overview" || value === "history")) void refreshRuns();
 });
 watch(() => settingsForm.value.schedule, () => { schedulePreview.value = []; }, { deep: true });
 watch(() => gitForm.value.authentication, () => { clearGitCredential(); editingGitCredential.value = false; });
@@ -160,6 +160,7 @@ let revealTimer: ReturnType<typeof setTimeout> | undefined;
 let revealTarget = "";
 let runComposerObserver: ResizeObserver | undefined;
 onMounted(async () => {
+  if (route.query.tab === "artifacts") await router.replace({ query: { ...route.query, tab: "history" } });
   if (typeof ResizeObserver !== "undefined") runComposerObserver = new ResizeObserver(measureRunComposer);
   window.addEventListener("resize", measureRunComposer);
   document.addEventListener("visibilitychange", resumeRunPolling);
@@ -216,10 +217,10 @@ async function loadCredential() {
   }
 }
 function isActiveRun(item: Run) { return item.state === "queued" || item.state === "running" || item.state === "waiting_for_user"; }
-function canRefreshRuns() { return !disposed && !loading.value && document.visibilityState !== "hidden" && (Boolean(selectedRun.value) || tab.value === "overview" || tab.value === "history" || tab.value === "artifacts"); }
+function canRefreshRuns() { return !disposed && !loading.value && document.visibilityState !== "hidden" && (Boolean(selectedRun.value) || tab.value === "overview" || tab.value === "history"); }
 async function resumeRunPolling() {
   if (!canRefreshRuns()) return;
-  await refreshRuns(tab.value === "artifacts");
+  await refreshRuns();
   const active = activeConversationRun.value;
   if (!active || !selectedRun.value) return;
   eventController?.abort();
@@ -579,7 +580,6 @@ function enableSchedule() { settingsForm.value.schedule = settingsForm.value.sch
 async function openArtifact(item: Artifact) { if (item.kind === "file" && !item.expired) { try { const blob = await api.getArtifactDownload(workflowID.value, item.id); const url = URL.createObjectURL(blob); triggerBrowserDownload(url, item.name); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { error.value = t("errors.generic"); } } }
 async function openEvidence(evidence: Evidence) { if (!evidence.container_id || !evidence.citation?.revision_id) return; try { const blob = await api.downloadKnowledgeEvidence(evidence.container_id, evidence.source_id, evidence.citation.revision_id); const url = URL.createObjectURL(blob); triggerBrowserDownload(url, evidence.source_name); window.setTimeout(() => URL.revokeObjectURL(url), 0); } catch { error.value = t("sessions.executionEvidence.sourceUnavailable"); } }
 function triggerBrowserDownload(url: string, name: string) { const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.rel = "noopener noreferrer"; anchor.click(); }
-function formatFileSize(size: number) { if (size < 1024) return `${size} B`; if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`; return `${(size / (1024 * 1024)).toFixed(1)} MB`; }
 function stateLabel(state: Run["state"]) { return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "running" ? t("common.running") : state === "waiting_for_user" ? t("common.waitingForUser") : state === "queued" ? t("common.queued") : state; }
 function stageStateLabel(state: string) { return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state; }
 function triggerLabel(trigger: Run["trigger"]) { return t(`workflows.${trigger}`); }
@@ -619,7 +619,6 @@ function decodeBase64(value: string) { try { return decodeURIComponent(escape(at
 	        <aside v-if="latestRun && (latestRun.state === 'failed' || latestRun.state === 'waiting_for_user')" class="workflow-attention-card"><div><strong>{{ latestRun.state === 'failed' ? t('workflows.recoveryRequired') : t('workflows.actionRequired') }}</strong><p>{{ latestRun.error || (latestRun.state === 'waiting_for_user' ? t('workflows.planWaitingHint') : t('workflows.runFailedHint')) }}</p></div><el-button type="primary" @click="openRun(latestRun)">{{ latestRun.state === 'failed' ? t('workflows.recoverAction') : t('workflows.continueAction') }}</el-button></aside>
 	        <section class="workflow-recent-runs"><header><h3>{{ t('workflows.recentRuns') }}</h3><el-button v-if="runs.length > 3" text @click="tab = 'history'">{{ t('workflows.viewAllRuns') }}</el-button></header><div v-if="recentRuns.length" class="workflow-recent-list"><button v-for="item in recentRuns" :key="item.id" type="button" @click="openRun(item)"><span><strong>{{ stateLabel(item.state) }}</strong><small>{{ triggerLabel(item.trigger) }}</small></span><time>{{ new Date(item.queued_at).toLocaleString() }}</time><span>→</span></button></div><div v-else class="workflow-overview-empty"><p>{{ t('workflows.noRunsOverview') }}</p><el-button type="primary" @click="runNow">{{ t('workflows.validateAction') }}</el-button></div></section>
 	      </div>
-	      <div v-if="tab === 'artifacts'" class="tab-content"><div v-if="!fileArtifacts.length" class="empty-inline"><span>◇</span><p>{{ t('workflows.artifactsEmpty') }}</p><small>{{ t('workflows.artifactsEmptyHint') }}</small></div><div v-else class="artifact-list"><article v-for="item in fileArtifacts" :key="item.id" role="button" tabindex="0" @click="openArtifact(item)" @keydown.enter="openArtifact(item)"><span class="file-icon" aria-hidden="true"><FileText /></span><div><strong>{{ item.name }}</strong><small>{{ formatFileSize(item.size) }} <template v-if="item.expired">· {{ t('workflows.expired') }}</template></small></div><code>{{ (item.sha256 || '').slice(0, 12) }}</code></article></div></div>
 	      <div v-if="tab === 'workspace'" class="tab-content"><div class="file-browser"><button v-if="workspacePath" class="file-row" @click="loadDirectory(parentPath())"><span class="file-icon" aria-hidden="true"><ArrowUp /></span><strong>..</strong></button><div v-for="entry in entries" :key="entry.path" class="file-row" role="button" tabindex="0" @click="openEntry(entry)" @keydown.enter="openEntry(entry)"><span class="file-icon" aria-hidden="true"><Folder v-if="entry.directory" /><FileText v-else /></span><strong>{{ entry.name }}</strong><small>{{ entry.directory ? '—' : `${entry.size} B` }}</small><time>{{ new Date(entry.modified_at).toLocaleString() }}</time><button v-if="!entry.directory" class="text-button" :aria-label="t('common.download')" @click.stop="downloadEntry(entry)">↓</button></div><div v-if="!entries.length" class="empty-inline"><span>□</span><p>{{ t('workflows.workspaceEmpty') }}</p><small>{{ t('workflows.workspaceEmptyHint') }}</small></div></div></div>
 	      <div v-if="tab === 'history'" class="tab-content"><el-empty v-if="!runs.length" :description="t('workflows.noRuns')" /><div v-else class="run-table"><div class="run-row run-head"><span>{{ t('workflows.started') }}</span><span>{{ t('workflows.trigger') }}</span><span>{{ t('workflows.state') }}</span><span>{{ t('workflows.duration') }}</span><span></span></div><div v-for="item in runs" :key="item.id" class="run-row" role="button" tabindex="0" @click="openRun(item)" @keydown.enter="openRun(item)"><span><strong>{{ new Date(item.started_at || item.queued_at).toLocaleString() }}</strong><small>{{ item.id.slice(0, 8) }}</small></span><span>{{ triggerLabel(item.trigger) }}</span><span><el-tag :type="item.state === 'succeeded' ? 'success' : item.state === 'failed' ? 'danger' : 'primary'" size="small">{{ stateLabel(item.state) }}</el-tag><small v-if="item.state === 'queued' && item.queue_position">{{ t('workflows.queuePosition') }}: {{ item.queue_position }}</small></span><span>{{ formatDuration(item.elapsed_ms, locale as SupportedLocale) }}</span><span class="run-actions"><el-button v-if="item.state === 'queued' || item.state === 'running' || item.state === 'waiting_for_user'" size="small" @click.stop="cancelRun(item)">{{ t('common.cancel') }}</el-button><el-button v-else-if="!workflow.deleted" size="small" @click.stop="rerun(item)">{{ t('workflows.rerun') }}</el-button></span></div></div></div>
 	      <form v-if="tab === 'settings' && !workflow.deleted" ref="settingsFormElement" class="tab-content settings-form" @submit.prevent="saveSettings">

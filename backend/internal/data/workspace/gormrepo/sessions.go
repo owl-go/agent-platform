@@ -433,7 +433,7 @@ func sessionMessagePairRecords(sessionID, content string, attachments, responseS
 	}
 	if len(executionPlan) > 0 {
 		assistant.State = "waiting_for_user"
-		assistant.ProgressStage = "plan_review"
+		assistant.ProgressStage = ""
 	}
 	return user, assistant
 }

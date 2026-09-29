@@ -96,7 +96,7 @@ describe("WorkflowDetailPage", () => {
     expect(validated.get(".workflow-next-steps").text()).toContain("连接代码仓库");
     await validated.get(".workflow-next-steps .el-button").trigger("click");
     await flushPromises();
-    expect(validated.findAll(".tabs button")[4]!.classes()).toContain("active");
+    expect(validated.findAll(".tabs button")[3]!.classes()).toContain("active");
     expect((validated.get("#workflow-settings-schedule").element as HTMLDetailsElement).open).toBe(true);
     validated.unmount();
   });
@@ -120,7 +120,7 @@ describe("WorkflowDetailPage", () => {
     vi.useFakeTimers();
     const api = apiStub();
     const wrapper = await mountPage(api);
-    await wrapper.findAll(".tabs button")[4]!.trigger("click");
+    await wrapper.findAll(".tabs button")[3]!.trigger("click");
     vi.mocked(api.listRuns).mockClear(); vi.mocked(api.listArtifacts).mockClear();
     await vi.advanceTimersByTimeAsync(60_000);
     expect(api.listRuns).not.toHaveBeenCalled();
@@ -515,23 +515,27 @@ describe("WorkflowDetailPage", () => {
     vi.useRealTimers();
   });
 
-  it("shows only files as artifacts and ignores legacy final-result records", async () => {
+  it("keeps files under their producing Run and ignores legacy final-result records", async () => {
     const legacyResult: Artifact = { id: "result-1", run_id: run.id, kind: "result", name: "Final result", path: "", size: 0, text_preview: "done", expired: false, created_at: run.ended_at! };
     const generatedFile: Artifact = { id: "file-1", run_id: run.id, kind: "file", name: "report.md", path: "report.md", size: 12, sha256: "abc", expired: false, created_at: run.ended_at! };
     const wrapper = await mountPage(apiStub({ listArtifacts: vi.fn(async () => [legacyResult, generatedFile]) }));
 
-    await wrapper.findAll(".tabs button").at(2)!.trigger("click");
-    await wrapper.vm.$nextTick();
-    expect(wrapper.get(".artifact-list").text()).toContain("report.md");
-    expect(wrapper.get(".artifact-list").text()).not.toContain("Final result");
-
-    await wrapper.findAll(".tabs button").at(1)!.trigger("click");
+    expect(wrapper.findAll(".tabs button").map((item) => item.text())).toEqual(["概览", "运行记录", "工作空间", "设置"]);
+    expect(wrapper.find(".artifact-list").exists()).toBe(false);
     await wrapper.get(".run-row:not(.run-head)").trigger("click");
     await flushPromises();
     expect(wrapper.findAll(".artifact-disclosure-links button").map((item) => item.text())).toEqual(["查看所有产物 (1)", "查看所有变更 (1)"]);
     await wrapper.findAll(".artifact-disclosure-links button")[0]!.trigger("click");
     expect(wrapper.get(".generated-artifacts").text()).toContain("report.md");
     expect(wrapper.get(".generated-artifacts").text()).not.toContain("Final result");
+    wrapper.unmount();
+  });
+
+  it("routes an old Artifacts tab link to Run History", async () => {
+    const wrapper = await mountPage(apiStub(), `/workflows/${workflow.id}?tab=artifacts`);
+    expect(wrapper.findAll(".tabs button").map((item) => item.text())).toEqual(["概览", "运行记录", "工作空间", "设置"]);
+    expect(wrapper.findAll(".tabs button")[1]!.classes()).toContain("active");
+    expect(wrapper.vm.$route.query.tab).toBe("history");
     wrapper.unmount();
   });
 
@@ -581,7 +585,7 @@ describe("WorkflowDetailPage", () => {
 
   it("keeps Workflow setting sections summarized and collapsed by default", async () => {
     const wrapper = await mountPage();
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
     const sections = wrapper.findAll(".settings-section");
@@ -600,7 +604,7 @@ describe("WorkflowDetailPage", () => {
   it("previews the next three Schedule times without saving", async () => {
     const previewWorkflowSchedule = vi.fn(async () => ["2026-09-30T01:00:00Z", "2026-10-01T01:00:00Z", "2026-10-02T01:00:00Z"]);
     const wrapper = await mountPage(apiStub({ previewWorkflowSchedule }));
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.get("#workflow-settings-schedule > .button").trigger("click");
     await wrapper.get(".schedule-preview .el-button").trigger("click");
     await flushPromises();
@@ -619,7 +623,7 @@ describe("WorkflowDetailPage", () => {
     const api = apiStub({ listKnowledgeBases: vi.fn(async () => knowledgeBases), updateWorkflow });
     const wrapper = await mountPage(api);
 
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
     const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
@@ -645,7 +649,7 @@ describe("WorkflowDetailPage", () => {
       generateWorkflowCredential: vi.fn(async () => ({ api_key: "awk_test", api_secret: "aws_test", created_at: "2026-09-12T00:00:00Z" })),
     });
     const wrapper = await mountPage(api);
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.get(".api-credential-actions .button").trigger("click");
     await flushPromises();
 
@@ -691,7 +695,7 @@ describe("WorkflowDetailPage", () => {
     const api = apiStub({ getWorkflow: vi.fn(async () => savedWorkflow), getWorkflowCredential });
     const wrapper = await mountPage(api);
 
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await flushPromises();
 
     expect(getWorkflowCredential).toHaveBeenCalledWith(workflow.id);
@@ -712,7 +716,7 @@ describe("WorkflowDetailPage", () => {
       generateWorkflowCredential,
       revokeWorkflowCredential,
     }));
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await flushPromises();
 
     await wrapper.get(".api-credential-actions .button").trigger("click");
@@ -745,7 +749,7 @@ describe("WorkflowDetailPage", () => {
     } as unknown as Expert;
     const wrapper = await mountPage(apiStub({ listExperts: vi.fn(async () => [incompleteExpert]) }));
 
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
     expect(wrapper.get(".settings-section").text()).toContain("待完善专家");
@@ -758,7 +762,7 @@ describe("WorkflowDetailPage", () => {
       .mockRejectedValueOnce(new ApiError("validation", 422, "git_workspace_not_empty"))
       .mockResolvedValue(workflow);
     const wrapper = await mountPage(apiStub({ configureWorkflowGitSource }));
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     const url = wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]');
     await url.setValue("git@git.example.com:team/project.git");
     await wrapper.get(".git-settings .button.primary").trigger("click");
@@ -777,7 +781,7 @@ describe("WorkflowDetailPage", () => {
   it("submits a Workflow-scoped SSH config for private Git clone", async () => {
     const configureWorkflowGitSource = vi.fn(async () => workflow);
     const wrapper = await mountPage(apiStub({ configureWorkflowGitSource }));
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
     await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("ssh");
@@ -797,7 +801,7 @@ describe("WorkflowDetailPage", () => {
     const saved: Workflow = { ...workflow, git_source: { url: "git@git.example.com:team/project.git", branch: "main", authentication: "ssh", config: [], credential_configured: true } };
     const configureWorkflowGitSource = vi.fn(async () => saved);
     const wrapper = await mountPage(apiStub({ configureWorkflowGitSource }));
-    await wrapper.findAll(".tabs button")[4]!.trigger("click");
+    await wrapper.findAll(".tabs button")[3]!.trigger("click");
     await wrapper.get<HTMLSelectElement>('.git-settings select').setValue("ssh");
     await wrapper.get<HTMLTextAreaElement>('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').setValue("synthetic-private-key");
     await wrapper.get(".git-settings .button.primary").trigger("click"); await flushPromises();
@@ -810,7 +814,7 @@ describe("WorkflowDetailPage", () => {
     wrapper.unmount();
 
     const reopened = await mountPage(apiStub({ getWorkflow: vi.fn(async () => saved) }));
-    await reopened.findAll(".tabs button")[4]!.trigger("click");
+    await reopened.findAll(".tabs button")[3]!.trigger("click");
     expect(reopened.find('textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]').exists()).toBe(false);
     expect(reopened.get(".git-credential-status").text()).toContain("已保存");
     reopened.unmount();
@@ -819,7 +823,7 @@ describe("WorkflowDetailPage", () => {
   it.each(["ssh", "basic"] as const)("keeps only an explicitly entered %s replacement after failure and clears it when authentication changes", async (authentication) => {
     const saved: Workflow = { ...workflow, git_source: { url: "https://git.example.com/team/project.git", branch: "main", authentication, config: [], credential_configured: true } };
     const wrapper = await mountPage(apiStub({ getWorkflow: vi.fn(async () => saved), configureWorkflowGitSource: vi.fn(async () => { throw new ApiError("validation", 422, "git_authentication_failed"); }) }));
-    await wrapper.findAll(".tabs button")[4]!.trigger("click");
+    await wrapper.findAll(".tabs button")[3]!.trigger("click");
     const selector = authentication === "ssh" ? 'textarea[placeholder*="BEGIN OPENSSH PRIVATE KEY"]' : 'input[type="password"]';
     expect(wrapper.find(selector).exists()).toBe(false);
     await wrapper.get(".git-credential-status button").trigger("click");
@@ -837,7 +841,7 @@ describe("WorkflowDetailPage", () => {
 
   it("accepts SCP-style SSH repository addresses in native form validation", async () => {
     const wrapper = await mountPage();
-    await wrapper.findAll(".tabs button").at(4)!.trigger("click");
+    await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
     const input = wrapper.get<HTMLInputElement>('.git-settings input[placeholder*="git@github.com"]');
