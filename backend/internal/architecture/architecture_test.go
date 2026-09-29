@@ -189,6 +189,23 @@ func TestPlatformDeploymentBuildsPinsAndSmokesUnifiedRuntime(t *testing.T) {
 	}
 }
 
+func TestPlatformDeploymentReverifiesCLIConnectorsBeforeCutover(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(contents)
+	verify := strings.Index(script, "-reverify-cli-connectors")
+	cutover := strings.Index(script, "stage \"Activate source, migrate, and replace services\"")
+	if verify < 0 || cutover <= verify {
+		t.Fatal("CLI bundle Conformance must run before service cutover")
+	}
+	if !strings.Contains(script, `candidate_env_file="${env_file}.candidate-${release_id}"`) || !strings.Contains(script, `candidate_config_file="${config_file}.candidate-${release_id}"`) {
+		t.Fatal("candidate Runtime configuration must not replace live configuration before Conformance passes")
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", ".."))

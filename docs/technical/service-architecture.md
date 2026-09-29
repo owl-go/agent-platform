@@ -79,6 +79,8 @@ CLI 安装草稿允许认证 Driver 暂未解析；追加式 Migration `000029_c
 
 当前产品以全新基线 Migration `000001_agent_workspace.sql` 建库，后续修正只通过不可变的追加式 Migration 演进；`000005_model_provider_connections.sql` 将早期 Model Profile 数据清空并替换为 Model Provider Connection、Provider Model 与版本化凭证结构，后续 Migration 删除模型类型字段，`000014_global_model_catalog.sql` 再把已有连接与模型目录提升为全局可读资源并保留原凭证加密作用域。Provider Model 优先来自供应商 `/models`，失败或不支持时使用平台维护的厂商默认列表，Administrator 也可显式补充。从旧企业控制面切换前必须备份并重建业务数据库；不支持把旧 Organization/Team/Agent Release 数据猜测性映射为新 User 私有数据。
 
+发布前的一次性 CLI Connector Runtime 复验使用 `gormdb.OpenWithoutMigrations` 连接现有 Schema，不提前触发新 Release 的 Migration；正常 API/Worker 启动仍使用 `gormdb.Open`。复验只在现有 Conformance 表中记录已在候选 Runtime 上真实通过的不可变 bundle 组合，失败不进入服务切换。
+
 Credits 通过新的追加式 Migration 引入，不修改既有 Migration。Migration 为现有 User 建立上线当日的 600 Credit Allocation，兑换余额从零开始；只有在目标环境实际运行 Migration 后才能报告为已执行。
 
 AI Creation 通过新的追加式 Migration 引入 Image Model revisions、独立 Prompt Optimization 设置、Image Credit Rate revisions、Image Credit Reservations、Image Generation Records、Reference Images、Generated Images 和每 User 最近选择；后续追加式 Migration 将 Image Model 和 Prompt Optimization 从 Model Provider Connection 解耦，旧凭证不复制，需由 Administrator 重新填写。固定图片价格变更通过新的 Image Model revision 将所有当前模型费率设为每张 50 Credits，并将已配置百炼原生 Endpoint 的输出选项归一为其支持的自动质量、PNG 和不透明背景；既有 Image Generation Record 的冻结快照保持不变。对象内容保留在私有 Object Storage，数据库只保存经过校验的逻辑 Object Key、SHA-256、大小、格式和像素尺寸。
