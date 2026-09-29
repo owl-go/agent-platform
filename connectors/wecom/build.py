@@ -15,7 +15,9 @@ import zipfile
 
 
 VERSION = "1.3.4"  # Reviewed upstream CLI release.
-PACKAGE_VERSION = "1.4.0"  # Connector policy revision; independent of the CLI.
+PACKAGE_VERSION = "1.4.1"  # Connector policy revision; independent of the CLI.
+# runsc needs room for its sandbox processes before Node and the CLI can start.
+RESOURCE_LIMITS = {"cpu_millis": 1000, "memory_mib": 512, "timeout_seconds": 900, "concurrency": 1, "child_processes": 128}
 NPM_INTEGRITY = "sha512-vz47EsT/BKkHBONVt94xhZtUWhvMR4uF9Y4TTNUwF7PnLETqyFyrNNHwG3aTLmhMNC/ecqRWUUqvNgP90nreaQ=="
 NATIVE_SHA256 = {
     "arm64": "6275ed033c054946c00805040cb1b016a45681e1bf11cad855d24427db897f71",
@@ -174,7 +176,7 @@ def main():
         "capabilities": reviewed_capabilities(),
         "egress_hosts": EGRESS,
         "timeout_seconds": 180,
-        "resource_limits": {"cpu_millis": 1000, "memory_mib": 512, "timeout_seconds": 900, "concurrency": 1, "child_processes": 8},
+        "resource_limits": RESOURCE_LIMITS,
     }
     files = {
         "connector-meta.json": json.dumps(metadata, ensure_ascii=False, separators=(",", ":")).encode(),
