@@ -17,6 +17,11 @@ import (
 
 const assistantScopeRefusal = "对不起，我暂时无法回答此类问题"
 
+var assistantScopeInquiryFragments = []string{
+	"业务范围", "服务范围", "回答什么", "回答哪些", "能处理什么", "能处理哪些",
+	"可以处理什么", "可以处理哪些", "可以做什么", "能做什么", "可以咨询什么", "支持什么业务",
+}
+
 type assistantAnswer struct {
 	text, source, faqID       string
 	inputTokens, outputTokens int64
@@ -67,6 +72,39 @@ func selectAssistantModel(connections []workspacedomain.ModelProviderConnection,
 		}
 	}
 	return aiappdomain.AssistantModel{}, fmt.Errorf("%w: selected Provider Model is unavailable", aiappdomain.ErrInvalid)
+}
+
+func isAssistantScopeInquiry(question string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(question))
+	normalized = strings.NewReplacer(" ", "", "\t", "", "\n", "", "？", "", "?", "", "。", "", ".", "", "，", "", ",", "").Replace(normalized)
+	for _, fragment := range assistantScopeInquiryFragments {
+		if strings.Contains(normalized, fragment) {
+			return true
+		}
+	}
+	return strings.Contains(normalized, "whatcan") && (strings.Contains(normalized, "answer") || strings.Contains(normalized, "do") || strings.Contains(normalized, "help"))
+}
+
+func matchAssistantScopeFAQ(faqs []aiappdomain.FAQ, question string) (aiappdomain.FAQ, bool) {
+	if !isAssistantScopeInquiry(question) {
+		return aiappdomain.FAQ{}, false
+	}
+	for _, faq := range faqs {
+		if faq.Enabled && isAssistantScopeInquiry(faq.Question) {
+			return faq, true
+		}
+	}
+	return aiappdomain.FAQ{}, false
+}
+
+func assistantScopeFallback(assistant aiappdomain.SmartAssistant) string {
+	for _, scope := range []string{assistant.AnswerScope, assistant.ServiceGoal, assistant.Description} {
+		scope = strings.TrimSpace(scope)
+		if scope != "" && !strings.Contains(scope, "【业务范围") && !strings.Contains(scope, "【填写业务范围") {
+			return "我可以处理以下业务范围：\n" + scope
+		}
+	}
+	return "当前尚未配置具体业务范围，请联系管理员完善智能助手配置。"
 }
 
 func (service *Service) runAssistantModel(ctx context.Context, owner, turnID string, stage int, model aiappdomain.AssistantModel, messages []aiapp.ChatMessage, stream bool, onDelta func(string) error) (aiapp.ChatResult, error) {
@@ -135,6 +173,14 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 			}
 		}
 		return result, fmt.Errorf("%w: FAQ is unavailable", aiappdomain.ErrInvalid)
+	}
+	if faq, ok := matchAssistantScopeFAQ(enabled, turn.Question); ok {
+		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
+		return result, nil
+	}
+	if isAssistantScopeInquiry(turn.Question) {
+		result.text, result.source = assistantScopeFallback(assistant), "configuration"
+		return result, nil
 	}
 	faqChoices := make([]map[string]string, 0, len(enabled))
 	for _, faq := range enabled {
