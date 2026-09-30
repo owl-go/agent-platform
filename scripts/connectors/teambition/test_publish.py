@@ -1,0 +1,50 @@
+import importlib.util
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+spec = importlib.util.spec_from_file_location('teambition_publish', Path(__file__).with_name('publish.py'))
+publisher = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(publisher)
+
+
+class PublicationLifecycleTest(unittest.TestCase):
+    def test_old_package_revision_supplies_exact_conformance_without_new_definition(self):
+        revisions = [{'revision': {'package_version': '0.3.3', 'bundle_sha256': 'bundle',
+                                  'runtime_digests': ['digest'], 'conformance_available': True}}]
+        self.assertTrue(publisher.has_verified_revision(revisions, 'bundle', 'digest'))
+        self.assertFalse(publisher.has_verified_revision(revisions, 'other-bundle', 'digest'))
+        self.assertFalse(publisher.has_verified_revision(revisions, 'bundle', 'other-runtime'))
+
+    def run_cleanup(self, usage):
+        calls = []
+        definition = {'id': 'stage-id', 'name': 'Teambition package build 0.3.3 hash', 'version': 5,
+                      'npm_package': '@agent-platform/teambition-connector', 'state': 'disabled'}
+        deleted = False
+
+        def fake_api(base, token, method, path, body=None):
+            nonlocal deleted
+            calls.append((method, path))
+            if method == 'DELETE':
+                deleted = True
+                return {'deleted': True}
+            if path.endswith('/cli-health'):
+                return {'items': [{'definition_id': 'stage-id', **usage}]}
+            return {'items': [] if deleted else [definition]}
+
+        with patch.object(publisher, 'api', fake_api):
+            publisher.cleanup_staging_definitions('base', 'token')
+        return calls
+
+    def test_disabled_build_definition_is_soft_deleted_instead_of_left_as_a_second_card(self):
+        calls = self.run_cleanup({'enablement_count': 0})
+        self.assertIn(('DELETE', '/api/v1/admin/connectors/cli/stage-id?expected_version=5'), calls)
+        self.assertFalse(any(path.endswith('/disable') for _, path in calls))
+
+    def test_cleanup_stops_before_revoking_any_existing_user_usage(self):
+        with self.assertRaisesRegex(RuntimeError, 'user usage'):
+            self.run_cleanup({'enablement_count': 1})
+
+
+if __name__ == '__main__':
+    unittest.main()
