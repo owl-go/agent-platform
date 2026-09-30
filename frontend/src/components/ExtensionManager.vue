@@ -89,6 +89,8 @@ const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
 const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string }>();
 const providedConnectionBusy = ref(false);
+const notionConnection = ref<{ installation: ConnectorInstallation; token: string }>();
+const notionConnectionBusy = ref(false);
 const connectorFlowWindows = new Map<string, Window | null>();
 const reportedAuthorizationFlowErrors = new Set<string>();
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
@@ -233,6 +235,34 @@ async function saveProvidedConnection() {
     await refresh();
   } catch (cause) { reportError(cause, "providedCredentialsInvalid"); }
   finally { providedConnectionBusy.value = false; }
+}
+function openNotionConnection(installation: ConnectorInstallation) {
+  notionConnection.value = { installation, token: "" };
+}
+function closeNotionConnection() {
+  if (notionConnectionBusy.value) return;
+  if (notionConnection.value) notionConnection.value.token = "";
+  notionConnection.value = undefined;
+}
+async function saveNotionConnection() {
+  const form = notionConnection.value;
+  if (!form || notionConnectionBusy.value) return;
+  const token = form.token.trim();
+  if (!token) {
+    reportError(new ApiError("validation", 422, "invalid_input"), "notionCredentialsInvalid");
+    return;
+  }
+  notionConnectionBusy.value = true;
+  try {
+    await api.connectConnector(form.installation.id, "user", [], JSON.stringify({ token }));
+    form.token = "";
+    notionConnection.value = undefined;
+    await refresh();
+  } catch (cause) { reportError(cause, "notionCredentialsInvalid"); }
+  finally {
+    form.token = "";
+    notionConnectionBusy.value = false;
+  }
 }
 async function setupPublishedConnector(item: ConnectorInstallation, publication?: ConnectorPublication) {
   const popup = window.open("about:blank", "_blank");
@@ -653,6 +683,7 @@ async function fileToBase64(file: File): Promise<string> {
                 <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
                 <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
                 <el-button v-else-if="entry.installation?.source === 'wecom' && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)">{{ t('resources.connect') }}</el-button>
+                <el-button v-else-if="entry.installation?.source === 'notion' && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openNotionConnection(entry.installation)">{{ t('resources.continueSetup') }}</el-button>
                 <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
                 <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
                 <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
@@ -757,6 +788,14 @@ async function fileToBase64(file: File): Promise<string> {
         <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
         <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
         <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
+      </form>
+    </div>
+    <div v-if="notionConnection" class="modal-layer" @click.self="closeNotionConnection">
+      <form class="modal-card el-card" data-testid="notion-connector-form" autocomplete="off" @submit.prevent="saveNotionConnection">
+        <h2>{{ t('resources.connectAccount', { name: notionConnection.installation.name }) }}</h2>
+        <label>{{ t('resources.notionToken') }}<input v-model="notionConnection.token" data-testid="notion-connector-token" type="password" autocomplete="off" spellcheck="false" required></label>
+        <small class="muted">{{ t('resources.notionTokenHint') }}</small>
+        <div class="modal-actions"><el-button :disabled="notionConnectionBusy" @click="closeNotionConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="notionConnectionBusy">{{ t('resources.connect') }}</el-button></div>
       </form>
     </div>
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-conversation" @click="createConnectorSession"><strong>{{ t('resources.createConnectorInConversation') }}</strong><span>{{ t('resources.createConnectorInConversationHint') }}</span></button><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-package" @click="chooseConnectorKind('package')"><strong>{{ t('resources.connectorPackageUpload') }}</strong><span>{{ t('resources.connectorPackageUploadHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>

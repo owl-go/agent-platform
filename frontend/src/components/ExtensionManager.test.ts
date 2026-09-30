@@ -25,6 +25,28 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
 }
 
 describe("ExtensionManager", () => {
+  it("lets an installed Notion package connect its token from the setup-required card", async () => {
+    const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "active" as const, authorized: false, version: 1, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connected = { ...installation, authorized: true, selected_authorization_id: "authorization-1" };
+    const connectConnector = vi.fn(async () => connected);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [connectConnector.mock.calls.length ? connected : installation]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      expect(wrapper.get(".published-connector-card").text()).toContain("需要设置");
+      const setup = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "继续完成授权");
+      expect(setup).toBeDefined();
+      await setup!.trigger("click");
+      await new DOMWrapper(document.body).get('[data-testid="notion-connector-token"]').setValue("secret-token");
+      await new DOMWrapper(document.body).get('[data-testid="notion-connector-form"]').trigger("submit");
+      await flushPromises();
+      expect(connectConnector).toHaveBeenCalledWith(installation.id, "user", [], JSON.stringify({ token: "secret-token" }));
+      expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+      expect(document.body.querySelector('[data-testid="notion-connector-token"]')).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   it("connects a published WeCom package with provided Bot credentials", async () => {
     let authorized = false;
     const installation = { id: "installation-1", source: "wecom", active_revision_id: "revision-1", state: "active" as const, authorized: false, version: 1, package_version: "1.3.4", name: "企业微信", description: "", authentication_driver: "connector_package", upgrade_available: false };

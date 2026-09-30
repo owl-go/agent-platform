@@ -188,6 +188,7 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorType: "连接器类型", connectionAddress: "连接地址", connectedApplication: "已连接应用", mcpDetailDescription: "通过标准 MCP 协议为会话、工作流和专家提供外部能力。" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorType: "Connector type", connectionAddress: "Connection", connectedApplication: "Connected application", mcpDetailDescription: "Provides external capabilities to Sessions, Workflows, and Experts through the standard MCP protocol." });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, {
+  connectAccount: "连接{name}", notionToken: "Notion API Token", notionTokenHint: "请在 Notion 创建有 Notion API 权限的 Token，并在这里输入。", notionCredentialsInvalid: "请输入有效的 Notion API Token。",
   connectorAuthorizeNow: "打开授权页面", connectorAuthorizationPending: "等待在对应应用中完成授权", connectorAuthorizationInvalidInput: "无法发起账号授权，请刷新页面后重试。",
   dingtalkCLIAccessDisabled: "钉钉账号已确认授权，但当前企业或账号尚未获得 CLI 使用权限。请联系钉钉企业管理员检查开放范围，处理后再点击“继续完成授权”。",
   dingtalkCLIEnterpriseDenied: "钉钉账号已确认授权，但未通过企业的 CLI 安全认证。请联系钉钉企业管理员开放 CLI 使用权限；处理后重新授权。",
@@ -198,6 +199,7 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
   dingtalkAuthorizationFailed: "钉钉已确认授权，但连接器未能完成账号连接。请点击“继续完成授权”重新授权；若仍失败，请联系管理员检查服务日志。"
 });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, {
+  connectAccount: "Connect {name}", notionToken: "Notion API token", notionTokenHint: "Create a token with Notion API access in Notion and enter it here.", notionCredentialsInvalid: "Enter a valid Notion API token.",
   connectorAuthorizeNow: "Open authorization page", connectorAuthorizationPending: "Waiting for authorization in the connected app", connectorAuthorizationInvalidInput: "Could not start account authorization. Refresh and retry.",
   dingtalkCLIAccessDisabled: "DingTalk authorization was approved, but this organization or account does not have CLI access. Ask your DingTalk administrator to check access, then continue authorization.",
   dingtalkCLIEnterpriseDenied: "DingTalk approved the account sign-in but denied enterprise CLI security access. Ask your DingTalk administrator to enable CLI access, then authorize again.",
