@@ -12,6 +12,58 @@ import (
 	"github.com/google/uuid"
 )
 
+func TestConnectorInstallationCanBeReinstalledAfterUninstall(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "notion", Version: "0.23.13", Mode: domain.ConnectorModeCLI, PackageSHA256: strings.Repeat("a", 64), RuntimePolicy: []byte(`{"auth_mode":"cli"}`), ObjectKey: "connectors/notion/package.zip"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	install := func() (domain.ConnectorInstallation, error) {
+		return repository.InstallConnectorWithAudit(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "notion", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive}, domain.ConnectorAuditRecord{OwnerID: owner, RevisionID: revision.ID, Operation: "install_published", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	}
+	first, err := install()
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorization, err := repository.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: first.ID, IdentityRef: "user", CredentialCiphertext: []byte("encrypted-test-token"), CredentialAAD: "test-aad", CredentialFormat: "json"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := repository.ListConnectorInstallations(ctx, owner)
+	if err != nil || len(current) != 1 || current[0].AuthorizationID != authorization.ID {
+		t.Fatalf("authorized installation = %#v, %v", current, err)
+	}
+	uninstalled, err := repository.SetConnectorInstallationStateWithAudit(ctx, owner, first.ID, domain.ConnectorInstallationUninstalled, current[0].Version, domain.ConnectorAuditRecord{OwnerID: owner, InstallationID: first.ID, Operation: "uninstall", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil || uninstalled.State != domain.ConnectorInstallationUninstalled {
+		t.Fatalf("uninstall = %#v, %v", uninstalled, err)
+	}
+	reinstalled, err := install()
+	if err != nil {
+		t.Fatalf("reinstall after uninstall: %v", err)
+	}
+	if reinstalled.ID != first.ID || reinstalled.State != domain.ConnectorInstallationActive || reinstalled.Version != uninstalled.Version+1 || reinstalled.AuthorizationID != "" {
+		t.Fatalf("reinstalled installation = %#v", reinstalled)
+	}
+	installations, err := repository.ListConnectorInstallations(ctx, owner)
+	if err != nil || len(installations) != 1 || installations[0].Authorized {
+		t.Fatalf("reinstalled catalog entry = %#v, %v", installations, err)
+	}
+	var stored connectorAuthorizationRecord
+	if err := db.Where("id = ?", authorization.ID).Take(&stored).Error; err != nil || stored.State != string(domain.ConnectorAuthorizationDisconnected) || len(stored.CredentialCiphertext) != 0 {
+		t.Fatalf("previous authorization was reused: state=%q credential_length=%d error=%v", stored.State, len(stored.CredentialCiphertext), err)
+	}
+	var installAudits int64
+	if err := db.Table("connector_package_audit_records").Where("installation_id = ? AND operation = ?", first.ID, "install_published").Count(&installAudits).Error; err != nil || installAudits != 2 {
+		t.Fatalf("reinstall audit count = %d, %v", installAudits, err)
+	}
+}
+
 func TestConnectorPublicationAndMultipleAuthorizationSelection(t *testing.T) {
 	db := conversationTestDatabase(t)
 	repository := New(db, nil)
