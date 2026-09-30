@@ -11,6 +11,9 @@ describe("ConnectorIcon", () => {
     const feishu = mount(ConnectorIcon, { props: { icon: "feishu" } });
     expect(feishu.find("img").attributes("src")).toContain("feishu.png");
 
+    const notion = mount(ConnectorIcon, { props: { icon: "notion" } });
+    expect(notion.find("img").attributes("src")).toContain("Notion%20connector");
+
     const preset = mount(ConnectorIcon, { props: { icon: "terminal" } });
     expect(preset.find("img").exists()).toBe(false);
     expect(preset.find(".profile-icon").exists()).toBe(true);

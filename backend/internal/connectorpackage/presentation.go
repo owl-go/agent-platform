@@ -4,7 +4,7 @@ package connectorpackage
 // Connectors. Other packages keep the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
-	case "feishu", "dingtalk":
+	case "feishu", "dingtalk", "notion":
 		return source
 	}
 	return "plug"
