@@ -52,6 +52,8 @@ python3 publish.py \
 
 ## 已执行的发布证据（2026-09-30）
 
-平台 Publication 已为 `available`，修订 `262b03b4-b10c-4eb2-bef0-b552d42e2a92`、版本 `0.3.3`。生产 Worker 的 exact bundle/Runtime 验证及证据边界见 `docs/technical/connector-platform.md` 的 Teambition 段落。发布构建来自 `main_temp`；首次发布的临时 legacy Definition 当时仅 disabled，导致管理员目录出现第二张卡片；该问题由后续 0.3.4 修订的软删除流程修复。平台用户使用 managed Publication。未替任何 User 安装或授权。
+平台 Publication 当前为 `available`，修订 `8bd71134-c739-477e-9806-fbe733a2a448`、版本 `0.3.4`，复用 0.3.3 的同一 bundle/Runtime 运行验证。生产 Worker 的 exact bundle/Runtime 验证及证据边界见 `docs/technical/connector-platform.md` 的 Teambition 段落。发布构建来自 `main_temp`；首次发布的临时 legacy Definition 当时仅 disabled，导致管理员目录出现第二张卡片；该问题由后续 0.3.4 修订的软删除流程修复。平台用户使用 managed Publication。未替任何 User 安装或授权。
 
 实际通过：Node launcher 三项边界测试、Python 构建器三项测试、目标 Go 包测试、`make test`、`make build`、最终 ZIP 的 `connectorpackage.Parse`、生产 Worker Linux + runsc Conformance，以及 native `--version`、无凭证状态、未放行命令拒绝检查。功能分支和 `main_temp` 均已执行测试与构建；同一输入再次构建的包逐字节一致。未执行真实 Teambition 账号业务 API、其他 Runtime Digest、私有部署、完整模型 Runtime Production Conformance；未改 Web 或 Runtime 镜像，对应构建门禁不适用。
+
+0.3.4 修复验收：公共 catalog 只有一个 Teambition Publication；管理员 legacy catalog 没有临时构建条目。原 Definition 已软删除，Conformance 行仍在。再次运行发布脚本返回同一修订，未新增 Definition。Playwright 检查「全部状态」下的实际卡片，只有一个「钉钉项目」，品牌 PNG 加载成功（128×128），显示版本 0.3.4。六项 Python 测试、目标 Go 测试和功能分支／main_temp 的 `make test`、`make build` 均通过。图标 API 镜像从 main_temp `1e120f7` 构建并通过容器健康检查；未改变 Runtime 镜像。非敏感响应与卡片截图保存在忽略目录 `outputs/teambition/evidence-0.3.4`。
