@@ -25,6 +25,28 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
 }
 
 describe("ExtensionManager", () => {
+  it("lets an installed Notion package connect its token from the setup-required card", async () => {
+    const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "active" as const, authorized: false, version: 1, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connected = { ...installation, authorized: true, selected_authorization_id: "authorization-1" };
+    const connectConnector = vi.fn(async () => connected);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [connectConnector.mock.calls.length ? connected : installation]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      expect(wrapper.get(".published-connector-card").text()).toContain("需要设置");
+      const setup = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "继续完成授权");
+      expect(setup).toBeDefined();
+      await setup!.trigger("click");
+      await new DOMWrapper(document.body).get('[data-testid="provided-connector-credentials"]').setValue("secret-token");
+      await new DOMWrapper(document.body).get('[data-testid="provided-connector-form"]').trigger("submit");
+      await flushPromises();
+      expect(connectConnector).toHaveBeenCalledWith(installation.id, "user", [], JSON.stringify({ token: "secret-token" }));
+      expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+      expect(document.body.querySelector('[data-testid="provided-connector-credentials"]')).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   it("opens DingTalk device authorization from an installed package without Feishu application setup", async () => {
     const installation = { id: "installation-1", source: "dingtalk", active_revision_id: "revision-1", state: "active", authorized: false, version: 1, package_version: "1.0.62", name: "钉钉", description: "", authentication_driver: "dingtalk", upgrade_available: false };
     const publication = { source: "dingtalk", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "dingtalk", package_version: "1.0.62", mode: "cli", sha256: "a".repeat(64), name: "钉钉", description: "", icon: "plug", authentication_driver: "dingtalk", runtime_digests: [], conformance_available: true, required_scopes: [] } };
