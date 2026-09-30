@@ -241,15 +241,14 @@ func (repository *Repository) installConnector(ctx context.Context, input domain
 		}
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND package_source = ?", input.OwnerID, input.PackageSource).Take(&row).Error
 		if err == nil {
-			if row.State == string(domain.ConnectorInstallationUninstalled) {
-				return domain.ErrConflict
-			}
 			updates := map[string]any{"active_revision_id": input.ActiveRevisionID, "state": string(domain.ConnectorInstallationActive), "updated_at": input.UpdatedAt, "version": gorm.Expr("version + 1")}
 			var oldRevision connectorRevisionRecord
 			if err := tx.Where("id = ?", row.ActiveRevisionID).Take(&oldRevision).Error; err != nil {
 				return err
 			}
-			if oldRevision.Mode != revision.Mode {
+			if row.State == string(domain.ConnectorInstallationUninstalled) {
+				updates["authorization_id"] = nil
+			} else if oldRevision.Mode != revision.Mode {
 				updates["authorization_id"] = nil
 				if row.AuthorizationID != nil {
 					if err := tx.Model(&connectorAuthorizationRecord{}).Where("id = ?", *row.AuthorizationID).Updates(map[string]any{"state": string(domain.ConnectorAuthorizationDisconnected), "credential_ciphertext": []byte{}, "refresh_credential_ciphertext": nil, "refresh_credential_aad": "", "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}).Error; err != nil {
