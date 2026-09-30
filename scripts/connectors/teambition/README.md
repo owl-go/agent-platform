@@ -46,6 +46,6 @@ python3 publish.py \
   --evidence-directory <release-evidence-directory>
 ```
 
-脚本用部署管理员的 OIDC + PKCE 登录，不输出登录材料。通过现有管理员 CLI upload/publish API 让 Worker 执行 ZIP 构建和 Linux + runsc Conformance，校验返回的 exact bundle SHA-256 与当前 Runtime Digest，再 disable 临时 legacy Definition（保留真实证据），通过 Stage/Publish API 发布 managed Publication。再次运行复用同一构建和修订；失败保持平台状态，不写入伪造的通过记录或直接修改数据库。`source.zip` 与外层包不一致时在 Stage 之前拒绝。
+脚本用部署管理员的 OIDC + PKCE 登录，不输出登录材料。在部署主机上传大包时可传 `--api-base <已核实的本机容器 API origin>`，避免公网回流占满普通 API 的请求期限；默认使用公网平台 origin。API 地址必须属于本次授权的平台，鉴权和服务端校验照常执行。通过现有管理员 CLI upload/publish API 让 Worker 执行 ZIP 构建和 Linux + runsc Conformance，校验返回的 exact bundle SHA-256 与当前 Runtime Digest，再 disable 临时 legacy Definition（保留真实证据），通过 Stage/Publish API 发布 managed Publication。再次运行复用同一构建和修订；失败保持平台状态，不写入伪造的通过记录或直接修改数据库。`source.zip` 与外层包不一致时在 Stage 之前拒绝。
 
 发布证据只包含非敏感的 build、stage、publication 和 health 响应。Conformance 通过仅证明这个 bundle 在这个 Runtime 可启动；真实 Teambition 账号授权、项目查询、任务写入、业务权限和动态帮助仍需实际账号验证。其他 Runtime Digest、私有部署和交互式 OAuth 均不由本修订宣称已验证。
