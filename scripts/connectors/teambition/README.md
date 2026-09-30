@@ -1,0 +1,51 @@
+# 钉钉项目（Teambition）CLI Connector Package
+
+固定上游 `@tng/teambition-mcp-cli@0.3.3`，使用 npm SHA-512 与两个 Linux 资产 SHA-256 校验，无安装脚本执行。官方 Skill 2.0.2 下载包单独固定 SHA-256；保留其业务编排及两份 TQL 参考。本包的来源是 `teambition`，与钉钉 DWS `dingtalk` 独立。
+
+上游文档：[Teambition Skill 使用指南](https://open.teambition.com/docs/documents/6a561ee8662d4dfb252d0bb8)。公有云 CLI 连接 `https://open.teambition.com/api/mcp/v2`。CLI 动态发现帮助与命令；本文档不把服务端目录的变化直接转为授权策略。
+
+## 包与授权
+
+包内只开放 `capabilities.json` 的 17 项策略：官方文档/Skill 明确出现的项目、任务查询，文件链接查询，任务创建/移动，只读文档检索、工具目录/Schema 及帮助。任务创建/移动是高风险操作，包括其叶子 `--help`，需平台具体 target 和一次性批准。状态更新、评论、成员管理及其他动态操作尚未进入本修订；获取相应账号的最新工具目录并审阅后再发布新修订。
+
+上游 OAuth + PKCE 适用于本地 CLI。平台目前没有 Teambition 交互式 OAuth driver；本修订使用内置 `connector_package` 的加密托管凭证入口，只接受 JSON 的 `user_token` 字段（填写该账号真实兼容 UserToken）。单次进程桥接到官方 `TEAMBITION_MCP_TOKEN`，CLI 的临时 HOME 与缓存执行后删除。Token 不放进参数、包或 Skill。平台安装与连接由各 User 独立完成；本构建和发布流程不替 User 授权。
+
+包内 `platform status` 仅验证凭证格式，返回 `configured` 与 `verification: credential_shape_only`，不验证 Token 有效性或业务权限。上游 `--help` 会请求动态 MCP 目录，所以 wrapper 的总览帮助是本修订离线策略列表；Conformance 还应检查实际 native `--version`。图标是明确的 TB 字母标识，没有宣称是官方品牌资产。
+
+## 构建与检查
+
+在仓库根目录执行，使用当前生产 Registry RepoDigest 与真实 Node 版本：
+
+```bash
+npm pack @tng/teambition-mcp-cli@0.3.3 --pack-destination /tmp --ignore-scripts --silent
+curl -fL -o /tmp/teambition-skills.zip \
+  https://file.teambition.net/public/teambition-cli/skills/teambition/teambition.zip
+python3 scripts/connectors/teambition/build.py \
+  --npm-tgz /tmp/tng-teambition-mcp-cli-0.3.3.tgz \
+  --skill-zip /tmp/teambition-skills.zip \
+  --runtime-image <registry/repository@sha256:digest> \
+  --runtime-version <exact-node-version> \
+  --output <absolute-output-directory>/teambition-0.3.3.zip
+go -C backend run ./cmd/connector-package-validate <absolute-package-path>
+node --test scripts/connectors/teambition/launcher.test.cjs
+python3 -m unittest discover -s scripts/connectors/teambition -p 'test_*.py'
+go -C backend test ./internal/connectorpackage/... ./internal/cliconnector/...
+```
+
+构建器同时输出 `.source.zip`。它用 `cli-connector-bundle` 调用现有 `ZIPPackageBuilder`，使平台从同一 source ZIP 构建的 bundle 与外层包逐字节一致；包和 source ZIP 的产物放在不提交的输出目录。构建器输出 `conformance: not_run`，只有真实生产 Worker 执行后才能记录通过。
+
+## 平台发布
+
+代码先提交、推送并集成到 `main_temp`，通过适用门禁。将同一输出包、source ZIP 和发布脚本传到已授权的部署主机，在主机读取其现有平台环境配置；不要将环境配置或 Token 拉到仓库。
+
+```bash
+python3 publish.py \
+  --config /opt/agent-platform/config/platform.env \
+  --package <package-path> \
+  --source <source-zip-path> \
+  --evidence-directory <release-evidence-directory>
+```
+
+脚本用部署管理员的 OIDC + PKCE 登录，不输出登录材料。通过现有管理员 CLI upload/publish API 让 Worker 执行 ZIP 构建和 Linux + runsc Conformance，校验返回的 exact bundle SHA-256 与当前 Runtime Digest，再 disable 临时 legacy Definition（保留真实证据），通过 Stage/Publish API 发布 managed Publication。再次运行复用同一构建和修订；失败保持平台状态，不写入伪造的通过记录或直接修改数据库。`source.zip` 与外层包不一致时在 Stage 之前拒绝。
+
+发布证据只包含非敏感的 build、stage、publication 和 health 响应。Conformance 通过仅证明这个 bundle 在这个 Runtime 可启动；真实 Teambition 账号授权、项目查询、任务写入、业务权限和动态帮助仍需实际账号验证。其他 Runtime Digest、私有部署和交互式 OAuth 均不由本修订宣称已验证。
