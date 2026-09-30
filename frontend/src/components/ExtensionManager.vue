@@ -89,8 +89,6 @@ const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
 const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string }>();
 const providedConnectionBusy = ref(false);
-const notionConnection = ref<{ installation: ConnectorInstallation; token: string }>();
-const notionConnectionBusy = ref(false);
 const connectorFlowWindows = new Map<string, Window | null>();
 const reportedAuthorizationFlowErrors = new Set<string>();
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
@@ -104,6 +102,7 @@ const cliEnableBusy = ref<string[]>([]);
 const cliAuthorizationBusy = ref<string[]>([]);
 const cliSetupWindows = new Map<string, Window | null>();
 let cliCompletionBusy = false;
+let publishedCompletionBusy = false;
 let disposed = false;
 const showCLI = ref(false);
 const showConnectorKind = ref(false);
@@ -236,44 +235,25 @@ async function saveProvidedConnection() {
   } catch (cause) { reportError(cause, "providedCredentialsInvalid"); }
   finally { providedConnectionBusy.value = false; }
 }
-function openNotionConnection(installation: ConnectorInstallation) {
-  notionConnection.value = { installation, token: "" };
-}
 async function startNotionConnection(installation: ConnectorInstallation, publication?: ConnectorPublication) {
-  if (installation.state === "active") { openNotionConnection(installation); return; }
-  if (installation.state !== "disabled" || !publication || connectorOperationBusy(installation.source)) return;
+  if (connectorOperationBusy(installation.source) || installation.state === "disabled" && !publication) return;
+  const popup = window.open("about:blank", "_blank");
+  connectorFlowWindows.set(installation.id, popup);
   connectorBusy.value = [...connectorBusy.value, installation.source];
   try {
-    const activated = await api.installPublishedConnector(publication.source);
-    await refresh();
-    if (!activated.authorized) openNotionConnection(activated);
-  } catch (cause) { reportError(cause); }
+    let active = installation;
+    if (installation.state === "disabled") active = await api.installPublishedConnector(publication!.source);
+    else if (installation.upgrade_available && publication) active = await api.upgradeConnectorInstallation(installation.id, installation.version);
+    if (active !== installation) await refresh();
+    if (!active.authorized) await beginPublishedConnectorAuthorization(active, publication, popup);
+    else { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); }
+  } catch (cause) { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); reportError(cause, "connectorAuthorizationInvalidInput"); }
   finally { connectorBusy.value = connectorBusy.value.filter((source) => source !== installation.source); }
 }
-function closeNotionConnection() {
-  if (notionConnectionBusy.value) return;
-  if (notionConnection.value) notionConnection.value.token = "";
-  notionConnection.value = undefined;
-}
-async function saveNotionConnection() {
-  const form = notionConnection.value;
-  if (!form || notionConnectionBusy.value) return;
-  const token = form.token.trim();
-  if (!token) {
-    reportError(new ApiError("validation", 422, "invalid_input"), "notionCredentialsInvalid");
-    return;
-  }
-  notionConnectionBusy.value = true;
-  try {
-    await api.connectConnector(form.installation.id, "user", [], JSON.stringify({ token }));
-    form.token = "";
-    notionConnection.value = undefined;
-    await refresh();
-  } catch (cause) { reportError(cause, "notionCredentialsInvalid"); }
-  finally {
-    form.token = "";
-    notionConnectionBusy.value = false;
-  }
+function notionVerificationCode(actionURL?: string) {
+  if (!actionURL) return "";
+  try { return new URL(actionURL).searchParams.get("verificationCode") ?? ""; }
+  catch { return ""; }
 }
 async function setupPublishedConnector(item: ConnectorInstallation, publication?: ConnectorPublication) {
   const popup = window.open("about:blank", "_blank");
@@ -298,36 +278,40 @@ async function beginPublishedConnectorAuthorization(item: ConnectorInstallation,
   if (flow.state === "waiting_for_user" && flow.action_url) popup?.location.replace(flow.action_url);
 }
 async function completePublishedConnectorFlows() {
+  if (publishedCompletionBusy) return;
+  publishedCompletionBusy = true;
   lastCLICompletionPoll = Date.now();
-  for (const [installationID, setup] of Object.entries(connectorSetups.value)) {
-    if (setup.state !== "waiting_for_user") continue;
-    try {
-      const completed = await api.completeConnectorSetup(setup.id);
-      connectorSetups.value = { ...connectorSetups.value, [installationID]: completed };
-      if (completed.state === "completed") {
-        const installation = connectorInstallations.value.find((item) => item.id === installationID);
-        if (installation) await beginPublishedConnectorAuthorization(installation, connectorPublications.value.find((item) => item.source === installation.source), connectorFlowWindows.get(installationID));
-      }
-    } catch (cause) { reportError(cause); }
-  }
-  for (const [installationID, flow] of Object.entries(connectorAuthorizationFlows.value)) {
-    if (flow.state !== "waiting_for_user") continue;
-    try {
-      const completed = await api.completeConnectorAuthorizationFlow(flow.id);
-      reportedAuthorizationFlowErrors.delete(flow.id);
-      connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
-      if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
-    } catch (cause) {
-      if (cause instanceof ApiError && ["dingtalk_cli_access_disabled", "dingtalk_cli_enterprise_denied", "dingtalk_cli_user_denied", "dingtalk_cli_channel_required", "dingtalk_cli_auth_expired", "dingtalk_identity_mismatch", "dingtalk_authorization_failed"].includes(cause.code)) {
-        const remaining = { ...connectorAuthorizationFlows.value };
-        delete remaining[installationID];
-        connectorAuthorizationFlows.value = remaining;
-        closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null);
-        connectorFlowWindows.delete(installationID);
-      }
-      if (!reportedAuthorizationFlowErrors.has(flow.id)) { reportedAuthorizationFlowErrors.add(flow.id); reportError(cause); }
+  try {
+    for (const [installationID, setup] of Object.entries(connectorSetups.value)) {
+      if (setup.state !== "waiting_for_user") continue;
+      try {
+        const completed = await api.completeConnectorSetup(setup.id);
+        connectorSetups.value = { ...connectorSetups.value, [installationID]: completed };
+        if (completed.state === "completed") {
+          const installation = connectorInstallations.value.find((item) => item.id === installationID);
+          if (installation) await beginPublishedConnectorAuthorization(installation, connectorPublications.value.find((item) => item.source === installation.source), connectorFlowWindows.get(installationID));
+        }
+      } catch (cause) { reportError(cause); }
     }
-  }
+    for (const [installationID, flow] of Object.entries(connectorAuthorizationFlows.value)) {
+      if (flow.state !== "waiting_for_user") continue;
+      try {
+        const completed = await api.completeConnectorAuthorizationFlow(flow.id);
+        reportedAuthorizationFlowErrors.delete(flow.id);
+        connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
+        if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
+      } catch (cause) {
+        if (cause instanceof ApiError && ["dingtalk_cli_access_disabled", "dingtalk_cli_enterprise_denied", "dingtalk_cli_user_denied", "dingtalk_cli_channel_required", "dingtalk_cli_auth_expired", "dingtalk_identity_mismatch", "dingtalk_authorization_failed"].includes(cause.code)) {
+          const remaining = { ...connectorAuthorizationFlows.value };
+          delete remaining[installationID];
+          connectorAuthorizationFlows.value = remaining;
+          closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null);
+          connectorFlowWindows.delete(installationID);
+        }
+        if (!reportedAuthorizationFlowErrors.has(flow.id)) { reportedAuthorizationFlowErrors.add(flow.id); reportError(cause); }
+      }
+    }
+  } finally { publishedCompletionBusy = false; }
 }
 async function refreshSkillDocuments() {
   let failed = false;
@@ -705,7 +689,7 @@ async function fileToBase64(file: File): Promise<string> {
             <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
             <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
             <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
-            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
+            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <span v-if="entry.installation.source === 'notion' && notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url)">{{ t('resources.notionVerifyCode', { code: notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url) }) }}</span> <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
             <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions">
               <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
             </div>
@@ -800,14 +784,6 @@ async function fileToBase64(file: File): Promise<string> {
         <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
         <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
         <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
-      </form>
-    </div>
-    <div v-if="notionConnection" class="modal-layer" @click.self="closeNotionConnection">
-      <form class="modal-card el-card" data-testid="notion-connector-form" autocomplete="off" @submit.prevent="saveNotionConnection">
-        <h2>{{ t('resources.connectAccount', { name: notionConnection.installation.name }) }}</h2>
-        <label>{{ t('resources.notionToken') }}<input v-model="notionConnection.token" data-testid="notion-connector-token" type="password" autocomplete="off" spellcheck="false" required></label>
-        <small class="muted">{{ t('resources.notionTokenHint') }}</small>
-        <div class="modal-actions"><el-button :disabled="notionConnectionBusy" @click="closeNotionConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="notionConnectionBusy">{{ t('resources.connect') }}</el-button></div>
       </form>
     </div>
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-conversation" @click="createConnectorSession"><strong>{{ t('resources.createConnectorInConversation') }}</strong><span>{{ t('resources.createConnectorInConversationHint') }}</span></button><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-package" @click="chooseConnectorKind('package')"><strong>{{ t('resources.connectorPackageUpload') }}</strong><span>{{ t('resources.connectorPackageUploadHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>

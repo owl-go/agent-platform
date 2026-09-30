@@ -120,6 +120,7 @@ func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
 		want   string
 	}{
 		{"Feishu device flow", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, "interactive"},
+		{"Notion CLI browser login", connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "notion", Version: "0.23.13"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "interactive"},
 		{"reviewed CLI credentials", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "provided"},
 		{"reviewed MCP credentials", connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, "provided"},
 		{"no authorization", connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, "none"},
@@ -130,6 +131,14 @@ func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
 				t.Fatalf("mode = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestNotionBrowserLoginStoresRuntimeTokenWithoutRefreshMetadata(t *testing.T) {
+	policy := connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "notion"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}
+	fields := connectorAuthorizationCredentialFields(policy, connectorAuthorizationGrant{AccessToken: "ntn_secret-value"})
+	if len(fields) != 1 || fields["token"] != "ntn_secret-value" {
+		t.Fatalf("Notion runtime credential fields = %v", fields)
 	}
 }
 

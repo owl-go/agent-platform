@@ -743,7 +743,7 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		}
 		return nil, publicError(err)
 	}
-	credentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
+	credentials, err := json.Marshal(connectorAuthorizationCredentialFields(policy, result))
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -753,11 +753,15 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	if err != nil {
 		return nil, publicError(err)
 	}
-	expiry := result.ExpiresAt
-	if !result.RefreshExpiresAt.IsZero() {
-		expiry = result.RefreshExpiresAt
+	var expiry *time.Time
+	if !result.ExpiresAt.IsZero() {
+		value := result.ExpiresAt
+		if !result.RefreshExpiresAt.IsZero() {
+			value = result.RefreshExpiresAt
+		}
+		expiry = &value
 	}
-	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: &expiry}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: expiry}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -799,6 +803,9 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	if policy.CLI != nil {
+		if isNotionCLILoginPolicy(policy) {
+			return "interactive"
+		}
 		switch policy.CLI.AuthenticationDriver {
 		case "feishu", "dingtalk":
 			return "interactive"
@@ -810,6 +817,17 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 		return "provided"
 	}
 	return "none"
+}
+
+func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "notion" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
+}
+
+func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
+	if isNotionCLILoginPolicy(policy) {
+		return map[string]string{"token": result.AccessToken}
+	}
+	return map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
 }
 
 func connectorSetupAAD(ownerID, installationID string) string {
@@ -863,6 +881,9 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 }
 
 func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "notion" {
+		return fmt.Errorf("%w: Notion login is reserved for the platform publication", domain.ErrInvalid)
+	}
 	if pkg.CLI != nil && (pkg.CLI.AuthenticationDriver == "feishu" || pkg.CLI.AuthenticationDriver == "dingtalk") {
 		return fmt.Errorf("%w: interactive authentication drivers are reserved for Conformance-backed platform publications", domain.ErrInvalid)
 	}

@@ -2,7 +2,7 @@
 name: notion
 display_name: Notion
 description: Read and manage Notion pages or query data sources through the reviewed ntn CLI capabilities.
-version: 0.23.13
+version: 0.23.14
 author: Agent Workspace
 ---
 
@@ -12,9 +12,9 @@ Use this Skill for a User's Notion pages, title search, and data source queries.
 
 ## Authorization
 
-Install the Connector Package and connect a Notion personal access token as provided credentials JSON: `{"token":"<personal-access-token>"}`. The User creates the token in Notion and gives it the **Notion API** capability. Leave the platform `scopes` list empty: this PAT capability is a Notion token property, not a platform OAuth scope. Store the token only through the platform's Authorization flow; never include it in a prompt, command argument, file, or package. Use one Authorization per User and workspace. The platform's generic `connector_package` driver injects `CONNECTOR_CREDENTIALS_JSON`; the package bridge passes its token to `ntn` for one command process. Disconnect through the platform. This revision does not use `ntn login` or claim Notion OAuth.
+Install the Connector Package, then choose Connect in the platform. The platform starts the pinned `ntn login --no-browser` flow. Open the Notion authorization page, compare the verification code displayed by the platform with the code in Notion, and approve access to the desired workspace. The platform polls the CLI login session and stores the resulting workspace token as a User-private Authorization. Never ask the User to paste a token in chat or an Agent command. The platform injects the selected Authorization for one command process; the package bridge passes its token to `ntn` through `NOTION_API_TOKEN`. Disconnect through the platform. This browser login requires full workspace membership.
 
-Notion PATs act with the creator's page permissions. Guests and restricted workspace members cannot create PATs. This revision does not expose Workers, unrestricted `ntn api`, file uploads, or data source schema changes.
+The Notion login token acts with the User's workspace permissions. Guests and restricted workspace members cannot use `ntn login`. This revision does not expose Workers, unrestricted `ntn api`, file uploads, or data source schema changes.
 
 ## Read workflow
 
