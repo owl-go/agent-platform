@@ -19,7 +19,10 @@ func (repository *Repository) ListCLIReverificationTargets(ctx context.Context, 
 				ORDER BY definition.id LIMIT 1), '') AS definition_id,
 			revision.runtime_policy->>'cli_bundle_object_key' AS bundle_object_key,
 			revision.runtime_policy->>'cli_bundle_sha256' AS bundle_sha256,
-			revision.runtime_policy->'cli'->>'executable' AS executable
+			revision.runtime_policy->'cli'->>'executable' AS executable,
+			COALESCE((revision.runtime_policy->'cli'->'resource_limits'->>'cpu_millis')::integer, 0) AS cpu_millis,
+			COALESCE((revision.runtime_policy->'cli'->'resource_limits'->>'memory_mib')::integer, 0) AS memory_mib,
+			COALESCE((revision.runtime_policy->'cli'->'resource_limits'->>'child_processes')::integer, 0) AS child_processes
 		FROM connector_installations installation
 		JOIN connector_revisions revision ON revision.id = installation.active_revision_id
 		WHERE installation.state = 'active' AND revision.mode = 'cli'

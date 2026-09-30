@@ -27,7 +27,7 @@ func TestActiveConnectorBundleRequiresCandidateRuntimeConformance(t *testing.T) 
 	}
 	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{
 		PackageSource: "feishu", Version: "1.0.93", Mode: domain.ConnectorModeCLI,
-		PackageSHA256: strings.Repeat("a", 64), RuntimePolicy: []byte(`{"auth_mode":"oauth","cli_bundle_object_key":"cli-connectors/verified/bundle.tgz","cli_bundle_sha256":"` + bundleSHA + `","cli":{"executable":"lark-cli"}}`),
+		PackageSHA256: strings.Repeat("a", 64), RuntimePolicy: []byte(`{"auth_mode":"oauth","cli_bundle_object_key":"cli-connectors/verified/bundle.tgz","cli_bundle_sha256":"` + bundleSHA + `","cli":{"executable":"lark-cli","resource_limits":{"cpu_millis":500,"memory_mib":256,"child_processes":16}}}`),
 		ObjectKey: "connectors/feishu/package.zip",
 	})
 	if err != nil {
@@ -37,7 +37,7 @@ func TestActiveConnectorBundleRequiresCandidateRuntimeConformance(t *testing.T) 
 		t.Fatal(err)
 	}
 	targets, err := repository.ListCLIReverificationTargets(ctx, newDigest)
-	if err != nil || len(targets) != 1 || targets[0].DefinitionID != definitionID || targets[0].BundleSHA256 != bundleSHA || targets[0].Executable != "lark-cli" {
+	if err != nil || len(targets) != 1 || targets[0].DefinitionID != definitionID || targets[0].BundleSHA256 != bundleSHA || targets[0].Executable != "lark-cli" || targets[0].CPUMillis != 500 || targets[0].MemoryMiB != 256 || targets[0].ChildProcesses != 16 {
 		t.Fatalf("missing exact candidate target: %#v, %v", targets, err)
 	}
 	if err := repository.RecordCLIReverification(ctx, definitionID, bundleSHA, newDigest); err != nil {

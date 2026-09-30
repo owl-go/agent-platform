@@ -53,6 +53,7 @@ delete env.NOTION_API_BASE_URL;
 delete env.NOTION_API_DOCS_BASE_URL;
 delete env.NOTION_ENV;
 delete env.NOTION_WORKSPACE_ID;
+env.NOTION_API_VERSION = "2026-03-11";
 env.NOTION_HOME = "/tmp/notion-connector";
 env.XDG_CACHE_HOME = "/tmp/notion-connector/cache";
 if (!publicHelp) {
