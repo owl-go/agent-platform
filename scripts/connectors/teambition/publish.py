@@ -66,20 +66,32 @@ def api(base, token, method, path, body=None):
     headers = {'Authorization': 'Bearer ' + token}
     if body is not None:
         headers['Content-Type'] = 'application/json'
-    with request.urlopen(request.Request(base + path, data=data, headers=headers, method=method), timeout=120) as response:
-        return json.load(response)
+    try:
+        with request.urlopen(request.Request(base + path, data=data, headers=headers, method=method), timeout=120) as response:
+            return json.load(response)
+    except error.HTTPError as exc:
+        try:
+            reason = json.loads(exc.read(4096)).get('reason', '')
+        except Exception:
+            reason = ''
+        raise RuntimeError(f'platform API {method} {path} returned HTTP {exc.code} ({reason})') from None
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--api-base', help='trusted platform API origin; deployment-host container origin avoids public upload hairpin')
     parser.add_argument('--config', type=Path, required=True, help='platform env file on the authorized deployment host')
     parser.add_argument('--package', type=Path, required=True)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--evidence-directory', type=Path, required=True)
     args = parser.parse_args()
     config = read_config(args.config)
+    print('Authenticate deployment administrator', flush=True)
     token = administrator_token(config)
-    base = config['VITE_OIDC_AUTHORITY'].split('/identity/realms/')[0]
+    base = args.api_base or config['VITE_OIDC_AUTHORITY'].split('/identity/realms/')[0]
+    parsed_base = parse.urlparse(base)
+    if parsed_base.scheme not in ['http', 'https'] or not parsed_base.netloc or parsed_base.path or parsed_base.query or parsed_base.fragment or parsed_base.username:
+        raise RuntimeError('API base must be the trusted platform origin')
     package = args.package.read_bytes()
     with zipfile.ZipFile(args.package) as archive:
         meta = json.loads(archive.read('connector-meta.json'))
@@ -95,6 +107,7 @@ def main():
     def record(name, value):
         (args.evidence_directory / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
 
+    print('Inspect existing publication and Conformance source', flush=True)
     listing = api(base, token, 'GET', '/api/v1/admin/connectors/publications')
     items = [item for item in listing.get('items', []) if item['revision']['source'] == 'teambition']
     current = next((item['publication'] for item in items if item.get('publication')), None)
@@ -103,10 +116,12 @@ def main():
     name = 'Teambition package build ' + meta['version'] + ' ' + bundle_sha[:12]
     definition = next((item for item in definitions if item['name'] == name and not item.get('managed_installation')), None)
     if definition is None:
+        print('Upload reviewed source ZIP', flush=True)
         definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli', {'definition': {
             'name': name, 'icon': 'terminal', 'description': 'Reviewed Teambition package Conformance staging source',
             'installation_type': 'upload', 'archive': base64.b64encode(args.source.read_bytes()).decode(),
         }})
+    print('Source state:', definition['state'], flush=True)
     if definition['state'] == 'draft':
         definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli/' + parse.quote(definition['id']) + '/publish',
                          {'expected_version': definition['version']})
