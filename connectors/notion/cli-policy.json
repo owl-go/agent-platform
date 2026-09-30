@@ -1,0 +1,26 @@
+{
+  "executable": "ntn",
+  "bundle_path": "node_modules/.bin/ntn",
+  "authentication_driver": "connector_package",
+  "commands": {
+    "init": {"argv": ["--version"], "timeout_seconds": 10},
+    "auth": {"argv": ["api", "v1/users/me"], "timeout_seconds": 30},
+    "status": {"argv": ["api", "v1/users/me"], "timeout_seconds": 30},
+    "unAuth": {"argv": ["--version"], "timeout_seconds": 10}
+  },
+  "status_match": {"json_path": "$.object", "equals": "user"},
+  "capabilities": [
+    {"id": "page-read", "argv_prefix": ["pages", "get"], "risk": "low", "identities": ["user"], "egress_hosts": ["api.notion.com"], "timeout_seconds": 90},
+    {"id": "page-create", "argv_prefix": ["pages", "create"], "risk": "high", "identities": ["user"], "egress_hosts": ["api.notion.com"], "timeout_seconds": 90},
+    {"id": "page-edit", "argv_prefix": ["pages", "edit"], "risk": "high", "identities": ["user"], "egress_hosts": ["api.notion.com"], "timeout_seconds": 90},
+    {"id": "page-trash", "argv_prefix": ["pages", "trash"], "risk": "high", "identities": ["user"], "egress_hosts": ["api.notion.com"], "timeout_seconds": 60},
+    {"id": "data-source-query", "argv_prefix": ["datasources", "query"], "risk": "low", "identities": ["user"], "egress_hosts": ["api.notion.com"], "timeout_seconds": 90},
+    {"id": "data-source-resolve", "argv_prefix": ["datasources", "resolve"], "risk": "low", "identities": ["user"], "egress_hosts": ["api.notion.com"], "timeout_seconds": 60},
+    {"id": "search-by-title", "argv_prefix": ["api", "v1/search"], "risk": "low", "identities": ["user"], "egress_hosts": ["api.notion.com", "developers.notion.com"], "timeout_seconds": 60},
+    {"id": "identity", "argv_prefix": ["api", "v1/users/me"], "risk": "low", "identities": ["user"], "egress_hosts": ["api.notion.com", "developers.notion.com"], "timeout_seconds": 30}
+  ],
+  "auth_url_domains": [],
+  "egress_hosts": ["api.notion.com", "developers.notion.com"],
+  "timeout_seconds": 90,
+  "resource_limits": {"cpu_millis": 1000, "memory_mib": 512, "child_processes": 16}
+}
