@@ -590,6 +590,27 @@ func TestBuildInstructionDescribesOnlyReviewedCLIConnectorForms(t *testing.T) {
 	}
 }
 
+func TestBuildInstructionRequiresTargetForHighRiskCLICommand(t *testing.T) {
+	capabilities, err := json.Marshal([]cliconnector.Capability{
+		{ID: "page-read", ArgvPrefix: []string{"pages", "get"}, Risk: cliconnector.RiskLow, Identities: []cliconnector.Identity{cliconnector.IdentityUser}},
+		{ID: "page-create", ArgvPrefix: []string{"pages", "create"}, Risk: cliconnector.RiskHigh, Identities: []cliconnector.Identity{cliconnector.IdentityUser}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Instruction: "Create a test page", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "notion-1", Name: "Notion", PackageObjectKey: "packages/notion", Capabilities: capabilities}}}}
+	instruction := buildInstruction(job, nil)
+	for _, want := range []string{
+		"--capability page-read --identity user [--target <target>] -- pages get",
+		"--capability page-create --identity user --target <target> -- pages create",
+		"High-risk commands require a non-empty --target before the -- separator",
+	} {
+		if !strings.Contains(instruction, want) {
+			t.Fatalf("missing reviewed command guidance %q", want)
+		}
+	}
+}
+
 func TestManagedWeComLargeCatalogUsesCompactSkillInstruction(t *testing.T) {
 	capabilities := make([]cliconnector.Capability, 90)
 	for i := range capabilities {

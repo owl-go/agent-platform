@@ -1857,13 +1857,17 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 				continue
 			}
 			for _, capability := range capabilities {
+				targetOption := "[--target <target>]"
+				if capability.Risk == cliconnector.RiskHigh {
+					targetOption = "--target <target>"
+				}
 				for _, identity := range capability.Identities {
-					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, identity, strings.Join(capability.ArgvPrefix, " ")))
+					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s %s -- %s", connector.Name, connector.ID, capability.ID, identity, targetOption, strings.Join(capability.ArgvPrefix, " ")))
 				}
 			}
 		}
 		if len(commands) > 0 {
-			sections = append(sections, "Available isolated CLI Connectors. For a Connector with a SKILL.md listed below, read it before the first command. Use the reviewed forms below, copying identity literally and appending operation arguments after the shown prefix. The Skill explains usage, while the broker enforces the command policy:\n"+strings.Join(commands, "\n"))
+			sections = append(sections, "Available isolated CLI Connectors. For a Connector with a SKILL.md listed below, read it before the first command. Use the reviewed forms below, copying identity literally and appending operation arguments after the shown prefix. High-risk commands require a non-empty --target before the -- separator: identify the intended parent, page, recipient, or other affected resource in display-safe text. The broker opens a one-use User confirmation; do not replace it with a chat question or claim confirmation is unavailable when the command is missing its target. If the broker reports invalid_request, correct the command before retrying. The Skill explains usage, while the broker enforces the command policy:\n"+strings.Join(commands, "\n"))
 		}
 	}
 	if len(attachments) > 0 {

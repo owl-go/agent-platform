@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -245,6 +246,100 @@ func TestSessionCommandApprovalEntersUserActionWait(t *testing.T) {
 	if state != "generating" || progress != "using_tool" {
 		t.Fatalf("resumed message state=%q progress=%q", state, progress)
 	}
+}
+
+func TestSessionBrokerWaitsForTargetBoundCommandApproval(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	owner, session := uuid.NewString(), uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO sessions(id,owner_user_id) VALUES(?,?)", session, owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec("INSERT INTO session_messages(session_id,role,content,state,progress_stage) VALUES(?,'assistant','','generating','using_tool')", session).Error; err != nil {
+		t.Fatal(err)
+	}
+	var messageID int64
+	if err := db.Raw("SELECT id FROM session_messages WHERE session_id=?", session).Scan(&messageID).Error; err != nil {
+		t.Fatal(err)
+	}
+	definition := cliconnector.Definition{
+		ID: "notion-1", Name: "Notion", Executable: "ntn", AuthenticationDriver: "none", State: cliconnector.StateAvailable,
+		BundleSHA256: strings.Repeat("a", 64), RuntimeDigests: []string{"sha256:" + strings.Repeat("b", 64)},
+		Capabilities: []cliconnector.Capability{{ID: "page-create", ArgvPrefix: []string{"pages", "create"}, Risk: cliconnector.RiskHigh, Identities: []cliconnector.Identity{cliconnector.IdentityUser}, EgressHosts: []string{"api.notion.com"}, Timeout: time.Minute}},
+	}
+	process := &approvalRecordingProcess{}
+	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
+		Definitions: []cliconnector.Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: cliconnector.Wrapper{Process: process},
+		Approval: repository, ApprovalContext: cliconnector.ApprovalContext{OwnerID: owner, ExecutionKind: "session", ExecutionID: fmt.Sprint(messageID), StageID: fmt.Sprintf("session:%d:stage:1", messageID)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := cliconnector.BrokerCommand{ConnectorID: definition.ID, Capability: "page-create", Identity: cliconnector.IdentityUser, Arguments: []string{"pages", "create", "--parent", "page:test-parent", "--content", "Test"}}
+	if response := broker.Handle(context.Background(), command); response.ErrorCode != "invalid_request" {
+		t.Fatalf("missing target response=%#v", response)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	command.Target = "Test parent / test page"
+	result := make(chan cliconnector.BrokerResponse, 1)
+	go func() { result <- broker.Handle(ctx, command) }()
+	var approval domain.CommandApproval
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		approvals, err := repository.ListCommandApprovals(context.Background(), owner, time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(approvals) == 1 {
+			approval = approvals[0]
+			break
+		}
+		select {
+		case response := <-result:
+			t.Fatalf("command stopped before approval appeared: %#v", response)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("command approval did not become visible")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	var state string
+	if err := db.Raw("SELECT state FROM session_messages WHERE id=?", messageID).Scan(&state).Error; err != nil {
+		t.Fatal(err)
+	}
+	if approval.Target != command.Target || approval.Operation != command.Capability || state != "waiting_for_user" || process.starts.Load() != 0 {
+		t.Fatalf("approval=%#v message_state=%q process_starts=%d", approval, state, process.starts.Load())
+	}
+	if _, err := repository.DecideCommandApproval(context.Background(), owner, approval.ID, domain.ApprovalApproved, domain.IdentityUser, approval.Version, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case response := <-result:
+		if response.ErrorCode != "" || response.ExitCode != 0 || process.starts.Load() != 1 {
+			t.Fatalf("approved response=%#v process_starts=%d", response, process.starts.Load())
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("approved command did not resume")
+	}
+	var approvalState string
+	if err := db.Raw("SELECT state FROM cli_command_approvals WHERE id=?", approval.ID).Scan(&approvalState).Error; err != nil {
+		t.Fatal(err)
+	}
+	if approvalState != "consumed" {
+		t.Fatalf("approval state=%q", approvalState)
+	}
+}
+
+type approvalRecordingProcess struct{ starts atomic.Int32 }
+
+func (process *approvalRecordingProcess) Run(context.Context, cliconnector.ProcessRequest) (cliconnector.Result, error) {
+	process.starts.Add(1)
+	return cliconnector.Result{}, nil
 }
 
 func TestWorkflowRuntimeEventsPersistWhileApprovalIsPending(t *testing.T) {

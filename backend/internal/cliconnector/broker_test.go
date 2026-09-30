@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -40,6 +41,27 @@ func TestBrokerRequiresUserActionBeforeHighRiskProcessStart(t *testing.T) {
 	response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: "connector-1", Capability: "identity", Identity: IdentityUser, Target: "chat-1", Arguments: []string{"auth", "status"}})
 	if response.ErrorCode != "user_action_required" || process.starts != 0 {
 		t.Fatalf("response=%#v starts=%d", response, process.starts)
+	}
+}
+
+func TestBrokerRejectsMissingHighRiskTargetBeforeApproval(t *testing.T) {
+	for _, target := range []string{"", "   "} {
+		t.Run(fmt.Sprintf("target=%q", target), func(t *testing.T) {
+			process := &recordingProcess{}
+			definition := brokerDefinition(RiskHigh)
+			coordinator := &recordingApprovalCoordinator{awaitErr: errors.New("invalid CLI command approval request")}
+			broker, err := NewBroker(BrokerConfig{
+				Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: process},
+				Approval: coordinator, ApprovalContext: ApprovalContext{OwnerID: "owner-1", ExecutionKind: "session", ExecutionID: "42", StageID: "session:42:stage:1"},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: definition.ID, Capability: "identity", Identity: IdentityUser, Target: target, Arguments: []string{"auth", "status"}})
+			if response.ErrorCode != "invalid_request" || !strings.Contains(response.ErrorMessage, "--target") || coordinator.request.Nonce != "" || process.starts != 0 {
+				t.Fatalf("response=%#v approval_requested=%t starts=%d", response, coordinator.request.Nonce != "", process.starts)
+			}
+		})
 	}
 }
 
