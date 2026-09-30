@@ -2,6 +2,7 @@
 "use strict";
 
 const { spawn } = require("node:child_process");
+const { realpathSync } = require("node:fs");
 const path = require("node:path");
 
 const args = process.argv.slice(2);
@@ -75,7 +76,7 @@ if (platform !== "linux-arm64" && platform !== "linux-x64") {
   console.error("Notion connector requires Linux arm64 or x64");
   process.exit(2);
 }
-const binary = path.join(__dirname, "..", "ntn", "dist", `ntn-${platform}`, "ntn");
+const binary = path.join(path.dirname(realpathSync(__filename)), "..", "ntn", "dist", `ntn-${platform}`, "ntn");
 const child = spawn(binary, args, { env, stdio: "inherit" });
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => child.kill(signal));
