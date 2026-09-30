@@ -13,7 +13,8 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-VERSION = '0.3.3'
+CLI_VERSION = '0.3.3'
+VERSION = '0.3.4'
 NPM_INTEGRITY = 'S5+aHcBI5alBIPPUSzAJafQDws50hfyv+ns1MiUEZW611ibpOjxGK0+q/eTBPvE15vYUAzsQP/vLStz25Rt5VQ=='
 SKILL_SHA256 = '3a0cd868f8fa4eb6cc56bf1be659438db2e19e1f74299e608ed0c7a77a226afc'
 ASSETS = {
@@ -74,7 +75,7 @@ def binaries(npm):
 
 def source_zip(native, reviewed):
     metadata = {
-        'name': '@agent-platform/teambition-connector', 'version': VERSION,
+        'name': '@agent-platform/teambition-connector', 'version': CLI_VERSION,
         'bin': {'teambition': 'launcher.cjs'},
         'agentWorkspace': {
             'executable': 'teambition', 'authenticationDriver': 'connector_package',
@@ -125,8 +126,12 @@ def build(npm, skill, image, runtime_version):
         'skills/teambition/SKILL.md': (ROOT / 'SKILL.md').read_bytes(),
         'skills/teambition/capabilities.json': json_bytes(reviewed),
         'cli-bundle.tgz': immutable,
-        'icon.svg': b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#1b9aee"/><text x="64" y="80" text-anchor="middle" font-family="sans-serif" font-size="48" fill="white">TB</text></svg>',
+
     }
+    icon = (ROOT / 'teambition.png').read_bytes()
+    if sha256(icon) != '941a5a0aa5c3609ead813267836a717d369c1e48321fd69eae1d985df4674908':
+        raise ValueError('Teambition icon checksum differs')
+    files['icon.svg'] = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><image width="128" height="128" href="data:image/png;base64,' + base64.b64encode(icon).decode() + '"/></svg>').encode()
     with zipfile.ZipFile(io.BytesIO(skill)) as archive:
         expected = {'teambition/SKILL.md', 'teambition/references/tql.md', 'teambition/references/project-tql.md'}
         if set(archive.namelist()) != expected:

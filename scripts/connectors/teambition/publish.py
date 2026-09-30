@@ -77,6 +77,31 @@ def api(base, token, method, path, body=None):
         raise RuntimeError(f'platform API {method} {path} returned HTTP {exc.code} ({reason})') from None
 
 
+def has_verified_revision(items, bundle_sha, digest):
+    return any(item['revision'].get('bundle_sha256') == bundle_sha and
+               digest in item['revision'].get('runtime_digests', []) and
+               item['revision'].get('conformance_available') for item in items)
+
+
+def cleanup_staging_definitions(base, token):
+    definitions = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
+    health = {item['definition_id']: item for item in
+              api(base, token, 'GET', '/api/v1/admin/connectors/cli-health').get('items', [])}
+    for definition in definitions:
+        if definition.get('managed_installation') or not definition['name'].startswith('Teambition package build '):
+            continue
+        if definition.get('npm_package') != '@agent-platform/teambition-connector':
+            raise RuntimeError('staging source package identity changed; cleanup stopped')
+        usage = health.get(definition['id'])
+        if usage is None or any(usage.get(key, 0) for key in ['enablement_count', 'active_authorization_count']):
+            raise RuntimeError('staging Definition has user usage; cleanup stopped')
+        api(base, token, 'DELETE', '/api/v1/admin/connectors/cli/' + parse.quote(definition['id']) +
+            '?expected_version=' + str(definition['version']))
+    remaining = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
+    if any(item['name'].startswith('Teambition package build ') for item in remaining):
+        raise RuntimeError('staging Definition remains in administrator catalog')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--api-base', help='trusted platform API origin; deployment-host container origin avoids public upload hairpin')
@@ -111,35 +136,32 @@ def main():
     listing = api(base, token, 'GET', '/api/v1/admin/connectors/publications')
     items = [item for item in listing.get('items', []) if item['revision']['source'] == 'teambition']
     current = next((item['publication'] for item in items if item.get('publication')), None)
-    # The Worker owns the build and records only actual successful Conformance.
-    definitions = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
-    name = 'Teambition package build ' + meta['version'] + ' ' + bundle_sha[:12]
-    definition = next((item for item in definitions if item['name'] == name and not item.get('managed_installation')), None)
-    if definition is None:
-        print('Upload reviewed source ZIP', flush=True)
-        definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli', {'definition': {
-            'name': name, 'icon': 'terminal', 'description': 'Reviewed Teambition package Conformance staging source',
-            'installation_type': 'upload', 'archive': base64.b64encode(args.source.read_bytes()).decode(),
-        }})
-    print('Source state:', definition['state'], flush=True)
-    if definition['state'] == 'draft':
-        definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli/' + parse.quote(definition['id']) + '/publish',
-                         {'expected_version': definition['version']})
-    deadline = time.monotonic() + 240
-    while definition['state'] in ['building', 'testing', 'publishing', 'queued']:
-        if time.monotonic() >= deadline:
-            raise RuntimeError('platform CLI build is still running; rerun to resume without duplicating')
-        time.sleep(3)
+    if not has_verified_revision(items, bundle_sha, digest):
+        # The Worker owns the build and records only actual successful Conformance.
         definitions = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
-        definition = next(item for item in definitions if item['id'] == definition['id'])
-    if definition.get('bundle_sha256') != bundle_sha or digest not in definition.get('conformance_runtime_digests', []):
-        raise RuntimeError('platform build failed or exact bundle/Runtime Conformance differs')
-    record('build-response.json', definition)
-    print(json.dumps({'platform_conformance': 'passed', 'bundle_sha256': bundle_sha, 'runtime_digest': digest}), flush=True)
-    # Preserve Conformance, but hide the staging definition from the user catalog.
-    if definition['state'] == 'available':
-        definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli/' + parse.quote(definition['id']) + '/disable',
-                         {'expected_version': definition['version']})
+        name = 'Teambition package build ' + meta['version'] + ' ' + bundle_sha[:12]
+        definition = next((item for item in definitions if item['name'] == name and not item.get('managed_installation')), None)
+        if definition is None:
+            print('Upload reviewed source ZIP', flush=True)
+            definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli', {'definition': {
+                'name': name, 'icon': 'terminal', 'description': 'Reviewed Teambition package Conformance staging source',
+                'installation_type': 'upload', 'archive': base64.b64encode(args.source.read_bytes()).decode(),
+            }})
+        print('Source state:', definition['state'], flush=True)
+        if definition['state'] == 'draft':
+            definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli/' + parse.quote(definition['id']) + '/publish',
+                             {'expected_version': definition['version']})
+        deadline = time.monotonic() + 240
+        while definition['state'] in ['building', 'testing', 'publishing', 'queued']:
+            if time.monotonic() >= deadline:
+                raise RuntimeError('platform CLI build is still running; rerun to resume without duplicating')
+            time.sleep(3)
+            definitions = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
+            definition = next(item for item in definitions if item['id'] == definition['id'])
+        if definition.get('bundle_sha256') != bundle_sha or digest not in definition.get('conformance_runtime_digests', []):
+            raise RuntimeError('platform build failed or exact bundle/Runtime Conformance differs')
+        record('build-response.json', definition)
+        print(json.dumps({'platform_conformance': 'passed', 'bundle_sha256': bundle_sha, 'runtime_digest': digest}), flush=True)
     target = next((item['revision'] for item in items if item['revision'].get('bundle_sha256') == bundle_sha and
                    item['revision']['package_version'] == meta['version']), None)
     if target is None:
@@ -153,6 +175,7 @@ def main():
     if current['active_revision_id'] != target['id'] or current['state'] != 'available':
         raise RuntimeError('publication did not activate expected revision')
     record('publication-response.json', current)
+    cleanup_staging_definitions(base, token)
     health = api(base, token, 'GET', '/api/v1/admin/connectors/publication-health')
     record('publication-health.json', [item for item in health.get('items', []) if item['source'] == 'teambition'])
     print(json.dumps({'source': 'teambition', 'revision_id': target['id'], 'state': current['state'],
