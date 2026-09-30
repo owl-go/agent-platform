@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { validateInvocation } from './policy.mjs';
+import { invocationRejectionReason, validateInvocation } from './policy.mjs';
 
 const command = (prefix, input) => [...prefix.split(' '), '--json', JSON.stringify(input)];
 
@@ -48,6 +48,8 @@ test('file arguments stay inside the current workspace, including through symlin
     assert.equal(validateInvocation(command('sheet import', { file_name: 'private.txt', file_path: outside }), workspace), null);
     assert.equal(validateInvocation(command('sheet import', { file_name: 'shortcut', file_path: join(workspace, 'shortcut') }), workspace), null);
     assert.equal(validateInvocation(command('mail send', { attachments: [{ file_path: outside }] }), workspace), null);
+    assert.match(invocationRejectionReason(command('smartpage import', { name: 'test', file_path: join(workspace, 'missing.md') }), workspace), /does not exist/);
+    assert.match(invocationRejectionReason(command('smartpage import', { name: 'test', file_path: join(workspace, 'shortcut') }), workspace), /invalid arguments/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

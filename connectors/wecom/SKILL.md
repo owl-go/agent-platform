@@ -2,13 +2,13 @@
 name: wecom
 display_name: 企业微信
 description: 使用 Agent Workspace 的企业微信连接器处理消息、邮件、文档、在线表格、智能表格、智能文档、待办、日程、会议、微盘与通讯录。
-version: 1.4.1
+version: 1.4.2
 author: Agent Workspace
 ---
 
 # 企业微信连接器
 
-本修订使用固定的 `@wecom/cli@1.3.4`，通过企业微信 API 模式智能机器人取得单次命令令牌。User 在 Connector Installation 的授权界面提供 `bot_id` 和 `secret`；平台加密保存并仅在执行时注入。连接器修订版本为 1.4.1，CLI 版本仍为 1.3.4。
+本修订使用固定的 `@wecom/cli@1.3.4`，通过企业微信 API 模式智能机器人取得单次命令令牌。User 在 Connector Installation 的授权界面提供 `bot_id` 和 `secret`；平台加密保存并仅在执行时注入。连接器修订版本为 1.4.2，CLI 版本仍为 1.3.4。
 
 ## 调用流程
 
@@ -35,6 +35,6 @@ author: Agent Workspace
 | 成员姓名、拼音或别名搜索 | [通讯录](references/upstream/skills/wecomcli-contact/SKILL.md) | `contact users search` |
 | 媒体上传、下载或内容提取 | [媒体](references/upstream/skills/wecomcli-media/SKILL.md) | `media ...`；消息媒体需先取得对应 `media_id` |
 
-文件上传、导入和邮件附件的 `file_path` 必须指向本次 `/workspace` 中真实文件；连接器拒绝其他路径。下载文件保存到 `/workspace/.wecom-downloads/` 的独立目录。图片、文件、语音和视频消息使用上游的 `media upload` 返回的真实 `media_id`，再由 `message aibot send` 发送；Markdown 正文上限 20480 UTF-8 字节。文件若不在本次工作区，先由当前任务的文件处理流程取得，不能臆造路径。
+文件上传、导入和邮件附件的 `file_path` 必须指向本次 `/workspace` 中真实文件；连接器拒绝其他路径。创建待导入文件时，先创建父目录并写入文件，再单独检查它确实存在且非空，最后执行 `agent-cli`；不要把写文件与导入合成一条命令。一次 Session 回复结束后，下一次回复需重新取得文件，不能沿用上次的 `/workspace` 路径。下载文件保存到 `/workspace/.wecom-downloads/` 的独立目录。图片、文件、语音和视频消息使用上游的 `media upload` 返回的真实 `media_id`，再由 `message aibot send` 发送；Markdown 正文上限 20480 UTF-8 字节。文件若不在本次工作区，先由当前任务的文件处理流程取得，不能臆造路径。
 
 上游服务目录和 schema 由企业微信在线下发，因此目录中的命令是否对某个企业实际可用，还取决于其机器人权限、企业审批和服务端状态。包内的[命令参考](references/upstream/docs/cli-reference.md)说明通用参数与错误格式；某次操作失败时据错误区分授权、权限、参数和上游未下发。
