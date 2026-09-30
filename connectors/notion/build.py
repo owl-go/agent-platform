@@ -48,6 +48,11 @@ def build_source(upstream, policy):
         "agentWorkspace": {
             "executable": "ntn",
             "authenticationDriver": "connector_package",
+            "resourceLimits": {
+                "cpuMillis": policy["resource_limits"]["cpu_millis"],
+                "memoryMiB": policy["resource_limits"]["memory_mib"],
+                "childProcesses": policy["resource_limits"]["child_processes"],
+            },
             "supportedArchitectures": ["linux-amd64", "linux-arm64"],
             "capabilities": [
                 {

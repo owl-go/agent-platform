@@ -23,6 +23,15 @@ const taskMessage: ConversationMessage = {
 };
 
 describe("TaskWorkspacePanel", () => {
+  it("shows failed Connector calls even when the response completed", () => {
+    const wrapper = mount(TaskWorkspacePanel, {
+      props: { message: { ...taskMessage, state: "completed", evidence: [{ id: "notion-call", kind: "connector", source_id: "notion", source_name: "Notion", state: "failed", action: "identity", stage_position: 1 }] }, loadAttachment: vi.fn(async () => new Blob()) },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    });
+    expect(wrapper.get(".task-workspace-result").text()).toContain("已完成，有调用失败");
+    expect(wrapper.get(".task-workspace-result").text()).not.toContain("成功");
+    wrapper.unmount();
+  });
   it("lets the user confirm a pending plan from the task panel", async () => {
     const wrapper = mount(TaskWorkspacePanel, {
       props: {

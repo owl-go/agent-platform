@@ -17,7 +17,7 @@ const consumedCredits = computed(() => {
 });
 
 function stateLabel(state: string) {
-  if (state === "completed" || state === "succeeded") return t("common.success");
+  if (state === "completed" || state === "succeeded") return props.message.evidence?.some((item) => item.state === "failed") ? t("taskWorkspace.completedWithFailures") : t("common.success");
   if (state === "failed") return t("common.failed");
   if (state === "cancelled") return t("common.cancelled");
   if (state === "queued") return t("common.queued");

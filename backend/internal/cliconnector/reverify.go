@@ -13,6 +13,9 @@ type ReverificationTarget struct {
 	BundleObjectKey string
 	BundleSHA256    string
 	Executable      string
+	CPUMillis       int `gorm:"column:cpu_millis"`
+	MemoryMiB       int `gorm:"column:memory_mib"`
+	ChildProcesses  int `gorm:"column:child_processes"`
 }
 
 type ReverificationRepository interface {
@@ -44,7 +47,7 @@ func ReverifyCLIBundles(ctx context.Context, repository ReverificationRepository
 		if err != nil {
 			return verified, fmt.Errorf("read immutable CLI bundle: %w", err)
 		}
-		if err := suite.Test(ctx, bundle, digest, Definition{Executable: target.Executable}); err != nil {
+		if err := suite.Test(ctx, bundle, digest, Definition{Executable: target.Executable, CPUMillis: target.CPUMillis, MemoryMiB: target.MemoryMiB, ChildProcesses: target.ChildProcesses}); err != nil {
 			return verified, fmt.Errorf("CLI bundle Conformance failed: %w", err)
 		}
 		if err := repository.RecordCLIReverification(ctx, target.DefinitionID, target.BundleSHA256, digest); err != nil {

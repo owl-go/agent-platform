@@ -2,7 +2,7 @@
 name: notion
 display_name: Notion
 description: Read and manage Notion pages or query data sources through the reviewed ntn CLI capabilities.
-version: 0.23.14
+version: 0.23.15
 author: Agent Workspace
 ---
 
@@ -19,7 +19,7 @@ The Notion login token acts with the User's workspace permissions. Guests and re
 ## Read workflow
 
 1. For a known page, use `ntn pages get <page-id> --json` when structure or truncation information matters; otherwise `ntn pages get <page-id>` returns Markdown.
-2. To search titles, use `ntn api v1/search query=<title>`. Only `query`, `page_size`, and `start_cursor` inputs are allowed on this route. Search is limited to content accessible to the token.
+2. To search titles, use `ntn api v1/search query=<title> page_size:=5`. Supply `page_size` as a JSON number with `:=`; `page_size=5` is a string and is rejected. Only `query`, `page_size`, and `start_cursor` inputs are allowed on this route. Search is limited to content accessible to the token.
 3. For a database with multiple data sources, use `ntn datasources resolve <database-id> --json`, then `ntn datasources query <data-source-id> --json`. Use `--limit` and `--start-cursor` for pagination. The query accepts an optional JSON `--filter` according to Notion's data source schema.
 4. `ntn api v1/users/me` checks the token identity. It does not list all workspace users.
 

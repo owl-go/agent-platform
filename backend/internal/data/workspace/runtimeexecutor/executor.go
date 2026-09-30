@@ -847,7 +847,6 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	}
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
 	requiresApproval := false
-	containerLimits := sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 256 << 20}
 	for _, snapshot := range job.Snapshot.CLIConnectors {
 		verified, err := executor.cliConnectorRuntimeVerified(ctx, snapshot, runtimeDigest)
 		if err != nil {
@@ -871,15 +870,6 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 			Capabilities: capabilities, VersionNumber: snapshot.Version, CPUMillis: snapshot.CPUMillis, MemoryMiB: snapshot.MemoryMiB, ChildProcesses: snapshot.ChildProcesses,
 			RevisionID: snapshot.RevisionID, AuthorizationID: snapshot.AuthorizationID, PackageSHA256: snapshot.PackageSHA256,
 		})
-		if snapshot.CPUMillis > 0 && float64(snapshot.CPUMillis)/1000 < containerLimits.CPUs {
-			containerLimits.CPUs = float64(snapshot.CPUMillis) / 1000
-		}
-		if snapshot.MemoryMiB > 0 && int64(snapshot.MemoryMiB)*1024*1024 < containerLimits.MemoryBytes {
-			containerLimits.MemoryBytes = int64(snapshot.MemoryMiB) * 1024 * 1024
-		}
-		if snapshot.ChildProcesses > 0 && int64(snapshot.ChildProcesses) < containerLimits.PIDs {
-			containerLimits.PIDs = int64(snapshot.ChildProcesses)
-		}
 		for _, capability := range capabilities {
 			requiresApproval = requiresApproval || capability.Risk == cliconnector.RiskHigh
 		}
@@ -891,7 +881,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		Image: runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
 		BundleDirectory: bundleDirectory, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, EgressNetwork: executor.config.Sandbox.EgressNetwork,
-		Limits: containerLimits,
+		Limits: cliconnector.ExecutionLimits(definitions...),
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID, Egress: executor.cliEgress,
 	})
 	if err != nil {
