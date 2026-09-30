@@ -33,6 +33,25 @@ function validWorkspacePaths(value, workspace, depth = 0) {
   });
 }
 
+function missingWorkspaceFile(value, workspace, depth = 0) {
+  if (depth > 32) return false;
+  if (Array.isArray(value)) return value.some((item) => missingWorkspaceFile(item, workspace, depth + 1));
+  if (value === null || typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, item]) => {
+    if (key === 'file_path') {
+      if (typeof item !== 'string' || !item.startsWith(workspace + '/') || resolve(item) !== item) return false;
+      try {
+        realpathSync(workspace);
+        realpathSync(item);
+        return false;
+      } catch (error) {
+        return error?.code === 'ENOENT';
+      }
+    }
+    return missingWorkspaceFile(item, workspace, depth + 1);
+  });
+}
+
 export function validateInvocation(args, workspace = '/workspace') {
   const policy = policies.find(({ command }) => command.split(' ').every((part, index) => args[index] === part));
   if (!policy) return null;
@@ -55,4 +74,21 @@ export function validateInvocation(args, workspace = '/workspace') {
     : prefix === 'message aibot send' ? messageValid(input)
     : true;
   return valid && validWorkspacePaths(input, workspace) ? { policy, input } : null;
+}
+
+export function invocationRejectionReason(args, workspace = '/workspace') {
+  if (validateInvocation(args, workspace)) return null;
+  const policy = policies.find(({ command }) => command.split(' ').every((part, index) => args[index] === part));
+  if (!policy) return 'The command is outside the reviewed policy.';
+  const prefixLength = policy.command.split(' ').length;
+  if (args.length === prefixLength + 2 && args[prefixLength] === '--json') {
+    try {
+      if (missingWorkspaceFile(JSON.parse(args[prefixLength + 1]), workspace)) {
+        return 'Input file_path does not exist in the current /workspace. Create the file before calling this command.';
+      }
+    } catch {
+      // Invalid JSON is covered by the generic policy error.
+    }
+  }
+  return 'The command is outside the reviewed policy or has invalid arguments.';
 }

@@ -15,7 +15,7 @@ import zipfile
 
 
 VERSION = "1.3.4"  # Reviewed upstream CLI release.
-PACKAGE_VERSION = "1.4.1"  # Connector policy revision; independent of the CLI.
+PACKAGE_VERSION = "1.4.2"  # Connector policy revision; independent of the CLI.
 # runsc needs room for its sandbox processes before Node and the CLI can start.
 RESOURCE_LIMITS = {"cpu_millis": 1000, "memory_mib": 512, "timeout_seconds": 900, "concurrency": 1, "child_processes": 128}
 NPM_INTEGRITY = "sha512-vz47EsT/BKkHBONVt94xhZtUWhvMR4uF9Y4TTNUwF7PnLETqyFyrNNHwG3aTLmhMNC/ecqRWUUqvNgP90nreaQ=="

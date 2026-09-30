@@ -5,7 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { redact } from './redact.mjs';
-import { validateInvocation } from './policy.mjs';
+import { invocationRejectionReason, validateInvocation } from './policy.mjs';
 
 const args = process.argv.slice(2);
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -19,11 +19,11 @@ const binary = join(directory, '..', '@wecom', platformPackage, 'bin', 'wecom-cl
 if (args.length === 1 && args[0] === '--help') {
   const check = spawnSync(binary, ['--version'], { encoding: 'utf8', timeout: 10000 });
   if (check.status !== 0 || !check.stdout?.includes('1.3.4')) process.exit(1);
-  process.stdout.write('wecom-workspace 1.4.0 (@wecom/cli 1.3.4): reviewed commands are declared in cli.json\n');
+  process.stdout.write('wecom-workspace 1.4.2 (@wecom/cli 1.3.4): reviewed commands are declared in cli.json\n');
   process.exit(0);
 }
 if (args.length === 1 && args[0] === '--version') {
-  process.stdout.write('wecom-workspace 1.4.0 (@wecom/cli 1.3.4)\n');
+  process.stdout.write('wecom-workspace 1.4.2 (@wecom/cli 1.3.4)\n');
   process.exit(0);
 }
 
@@ -49,8 +49,12 @@ if (args[0] === 'platform' && (args[1] === 'authorize' || args[1] === 'revoke') 
 }
 
 const invocation = validateInvocation(args);
-if (!invocation || !botID || !secret) {
-  process.stderr.write('The command is outside the reviewed policy or requires an active Connector Authorization.\n');
+if (!invocation) {
+  process.stderr.write(invocationRejectionReason(args) + '\n');
+  process.exit(1);
+}
+if (!botID || !secret) {
+  process.stderr.write('An active Connector Authorization is required.\n');
   process.exit(1);
 }
 const prefix = invocation.policy.command;
