@@ -47,6 +47,23 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
+  it("lets a disabled Notion installation be enabled before authorization", async () => {
+    const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "disabled" as const, authorized: false, version: 2, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const installPublishedConnector = vi.fn(async () => ({ ...installation, state: "active" as const }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, state: installPublishedConnector.mock.calls.length ? "active" as const : "disabled" as const }]), listConnectorAuthorizations: vi.fn(async () => []), installPublishedConnector } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      const actions = () => wrapper.findAll(".published-connector-card .extension-card-actions button").map((button) => button.text());
+      expect(actions()).toContain("启用");
+      await wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "启用")!.trigger("click");
+      await flushPromises();
+      expect(installPublishedConnector).toHaveBeenCalledWith("notion");
+      expect(actions()).toContain("继续完成授权");
+    } finally { wrapper.unmount(); }
+  });
+
   it("connects a published WeCom package with provided Bot credentials", async () => {
     let authorized = false;
     const installation = { id: "installation-1", source: "wecom", active_revision_id: "revision-1", state: "active" as const, authorized: false, version: 1, package_version: "1.3.4", name: "企业微信", description: "", authentication_driver: "connector_package", upgrade_available: false };
