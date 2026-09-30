@@ -26,6 +26,8 @@ The execution plane returns `{ok,data,request_id,warnings}` on success and `{ok:
 
 Runtime command guidance marks `--target` as mandatory for every high-risk CLI capability. The target is display-safe text identifying the affected resource and is bound into the one-use command digest. A missing or whitespace-only target returns `invalid_request` with corrected command guidance before credential resolution or Approval creation; it must not be reported as an unavailable confirmation service. Low-risk calls may omit the target. Supplying it never bypasses User confirmation.
 
+2026-09-30 confirmation verification: release `platform-20260930T122932Z` from `main_temp` commit `6570775` passed complete deployment gates. A live model-driven Notion Session produced a target-bound pending `page-create` Approval and entered `waiting_for_user`. The diagnostic Approval was rejected, never consumed, and its temporary Session removed. A separate PostgreSQL-backed broker test verified approval consumption and exactly one fake process start. The live check establishes confirmation creation, not a completed Notion write; details are retained in `connectors/notion/README.md`.
+
 ## Migration
 
 Migration `000042_connector_packages.sql` creates package, revision, installation, authorization, and audit projections without deleting existing MCP/CLI tables. Migration `000043_connector_package_backfill.sql` maps existing tested MCP servers and enabled CLI definitions to synthetic revisions marked `legacy_projection`; these rows preserve identity and audit continuity but are excluded from the managed runtime catalog. New writes use the unified seam; old snapshot columns remain readable until all historical consumers are migrated.
