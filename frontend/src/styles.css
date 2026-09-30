@@ -1122,9 +1122,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
   .composer-toolbar-actions { justify-self: end; }
   .task-panel-reopen.el-button { margin-left: 8px; }
 }
-.execution-plan-card { margin: 12px 0; padding: 16px; border: 1px solid var(--aw-n4); border-radius: 14px; background: var(--aw-n1); display: grid; gap: 14px; }
+.execution-plan-card { min-width: 0; margin: 12px 0; padding: 16px; border: 1px solid var(--aw-n4); border-radius: 14px; background: var(--aw-n1); display: grid; gap: 14px; }
 .execution-plan-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.execution-plan-card > header div { display: grid; gap: 4px; }
+.execution-plan-card > header div { min-width: 0; display: grid; gap: 4px; }
+.execution-plan-card > header strong { overflow-wrap: anywhere; }
 .execution-plan-card > header small, .execution-plan-card > header span, .execution-plan-card small { color: var(--aw-n7); }
 .execution-plan-card > header span { white-space: nowrap; padding: 3px 8px; border-radius: 999px; background: var(--aw-n3); font-size: 12px; }
 .execution-plan-steps { margin: 0; padding: 0; display: grid; gap: 8px; list-style: none; }
@@ -1148,7 +1149,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .task-workspace-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .task-workspace-section { display: grid; gap: 10px; padding: 16px; border-bottom: 1px solid var(--aw-n3); }
 .task-workspace-section h3 { margin: 0; color: var(--aw-n10); font-size: 12px; font-weight: 600; }
-.task-workspace-objective { margin: 0; color: var(--aw-n8); font-size: 13px; line-height: 1.65; }
+.task-workspace-objective { margin: 0; color: var(--aw-n8); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
 .task-workspace-steps { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
 .task-workspace-steps li { display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 8px; align-items: start; }
 .task-workspace-steps li > span { width: 7px; height: 7px; margin-top: 6px; border: 1px solid var(--aw-n6); border-radius: 50%; }
