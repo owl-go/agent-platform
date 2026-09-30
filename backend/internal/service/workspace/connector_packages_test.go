@@ -152,6 +152,18 @@ func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
 	}
 }
 
+func TestNotionConnectorResponsesUseProductNameForExistingRevision(t *testing.T) {
+	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "notion", Version: "0.23.13", Type: connectorpackage.TypeCLI, Name: "Notion CLI", Description: "Read pages with the pinned Notion CLI", AuthMode: "cli"}}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	if got := connectorRevisionResponse(revision); got.Name != "Notion" || got.Description != "Read and manage Notion pages and query data sources" {
+		t.Fatalf("Notion catalog display = %q, %q", got.Name, got.Description)
+	}
+	installation := connectorInstallationDetailsResponse(domain.ConnectorInstallation{PackageSource: "notion"}, revision, false)
+	if installation.Name != "Notion" || installation.Description != "Read and manage Notion pages and query data sources" {
+		t.Fatalf("Notion installation display = %q, %q", installation.Name, installation.Description)
+	}
+}
+
 func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	t.Helper()
 	for _, entry := range reader.File {

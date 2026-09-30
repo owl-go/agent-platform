@@ -35,7 +35,7 @@ describe("ExtensionManager", () => {
     try {
       await flushPromises();
       expect(wrapper.get(".published-connector-card").text()).toContain("需要设置");
-      const setup = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "继续完成授权");
+      const setup = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接");
       expect(setup).toBeDefined();
       await setup!.trigger("click");
       await new DOMWrapper(document.body).get('[data-testid="notion-connector-token"]').setValue("secret-token");
@@ -47,7 +47,7 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
-  it("lets a disabled Notion installation be enabled before authorization", async () => {
+  it("offers a direct connect action for a disabled Notion installation", async () => {
     const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "disabled" as const, authorized: false, version: 2, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
     const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
     const installPublishedConnector = vi.fn(async () => ({ ...installation, state: "active" as const }));
@@ -56,11 +56,13 @@ describe("ExtensionManager", () => {
     try {
       await flushPromises();
       const actions = () => wrapper.findAll(".published-connector-card .extension-card-actions button").map((button) => button.text());
-      expect(actions()).toContain("启用");
-      await wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "启用")!.trigger("click");
+      expect(actions()).toContain("连接");
+      const connect = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接")!;
+      expect(connect.find(".lucide-plus-icon").exists()).toBe(true);
+      await connect.trigger("click");
       await flushPromises();
       expect(installPublishedConnector).toHaveBeenCalledWith("notion");
-      expect(actions()).toContain("继续完成授权");
+      expect(document.body.querySelector('[data-testid="notion-connector-token"]')).not.toBeNull();
     } finally { wrapper.unmount(); }
   });
 

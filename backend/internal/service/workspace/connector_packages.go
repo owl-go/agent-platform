@@ -1116,7 +1116,7 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 	if name == "" {
 		name = item.PackageSource
 	}
-	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: name, Description: policy.Metadata.Description, Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
+	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: connectorpackage.DisplayName(item.PackageSource, name), Description: connectorpackage.DisplayDescription(item.PackageSource, policy.Metadata.Description), Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
 	if policy.CLI != nil {
 		response.AuthenticationDriver = policy.CLI.AuthenticationDriver
 		if len(policy.CLI.ActivationScopes) > 0 {
@@ -1154,7 +1154,8 @@ func connectorInstallationDetailsResponse(item domain.ConnectorInstallation, rev
 	if base.Name == "" {
 		base.Name = item.PackageSource
 	}
-	base.Description = policy.Metadata.Description
+	base.Name = connectorpackage.DisplayName(item.PackageSource, base.Name)
+	base.Description = connectorpackage.DisplayDescription(item.PackageSource, policy.Metadata.Description)
 	base.AuthenticationDriver = policy.AuthMode
 	if policy.CLI != nil && policy.CLI.AuthenticationDriver != "" {
 		base.AuthenticationDriver = policy.CLI.AuthenticationDriver
