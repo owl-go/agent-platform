@@ -286,13 +286,14 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
-  it.each([false, true])("opens Teambition browser OAuth and upgrades old installations first (old: %s)", async (old) => {
-    const installation = { id: "teambition-installation", source: "teambition", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
-    const scopes = ["user:read", "project:read", "task:read", "task:write"];
-    const publication = { source: "teambition", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "teambition", package_version: "0.3.5", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+  it.each([["teambition", false], ["teambition", true], ["camscanner", false], ["camscanner", true]] as const)("opens reviewed browser authorization and upgrades old installations first (source: %s, old: %s)", async (source, old) => {
+    const installation = { id: "teambition-installation", source, active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const scopes = source === "camscanner" ? [] : ["user:read", "project:read", "task:read", "task:write"];
+    const actionURL = source === "camscanner" ? "https://www.camscanner.com/agent-auth?from=callback" : "https://account.teambition.com/oauth2/mcp/authorize?state=sealed&code_challenge=challenge";
+    const publication = { source, active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source, package_version: "0.3.5", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
     const upgraded = { ...installation, package_version: "0.3.5", upgrade_available: false, version: 2 };
     const upgrade = vi.fn(async () => upgraded);
-    const begin = vi.fn(async () => ({ id: "flow-tb", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://account.teambition.com/oauth2/mcp/authorize?state=sealed&code_challenge=challenge" }));
+    const begin = vi.fn(async () => ({ id: "flow-tb", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: actionURL }));
     const replace = vi.fn();
     vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
@@ -304,11 +305,11 @@ describe("ExtensionManager", () => {
       expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
       if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
       expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
-      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://account.teambition.com/oauth2/mcp/authorize"));
+      expect(replace).toHaveBeenCalledWith(actionURL);
       expect(api.connectConnector).not.toHaveBeenCalled();
       expect(api.beginConnectorSetup).not.toHaveBeenCalled();
       expect(document.querySelector('input[name="user_token"]')).toBeNull();
-      expect(wrapper.find('a[href^="https://account.teambition.com/"]').exists()).toBe(true);
+      expect(wrapper.findAll("a").some(a => a.attributes("href")?.startsWith(actionURL.split("?")[0]!))).toBe(true);
     } finally { wrapper.unmount(); }
   });
 

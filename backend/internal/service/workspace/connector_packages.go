@@ -438,6 +438,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
+	nativeDomestic := ""
 	refreshToken := ""
 	appID := ""
 	switch current.CredentialFormat {
@@ -452,9 +453,15 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		var credentials struct {
 			RefreshToken string `json:"refresh_token"`
 			ClientID     string `json:"client_id"`
+			UserID       string `json:"user_id"`
+			IsDomestic   string `json:"is_domestic"`
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
+			if isCamScannerCLILoginPolicy(policy) {
+				appID = credentials.UserID
+				nativeDomestic = credentials.IsDomestic
+			}
 			if isBrowserOAuthPolicy(policy) || policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
 				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
 				appID = credentials.ClientID
@@ -470,7 +477,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 			refreshToken = string(plaintext)
 		}
 	}
-	if refreshToken == "" && isBrowserOAuthPolicy(policy) && len(current.RefreshCredentialCiphertext) > 0 {
+	if refreshToken == "" && (isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy)) && len(current.RefreshCredentialCiphertext) > 0 {
 		plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
 		if decryptErr != nil {
 			return nil, publicError(decryptErr)
@@ -505,6 +512,9 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if result.RefreshToken == "" {
 		result.RefreshToken = refreshToken
 	}
+	if isCamScannerCLILoginPolicy(policy) {
+		result.IsDomestic = nativeDomestic
+	}
 	refreshedCredentials, err := json.Marshal(connectorAuthorizationCredentialFields(policy, result))
 	if err != nil {
 		return nil, publicError(err)
@@ -515,7 +525,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isBrowserOAuthPolicy(policy) {
+	if isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy) {
 		current.RefreshCredentialAAD = aad + ":refresh"
 		current.RefreshCredentialCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), current.RefreshCredentialAAD)
 		if err != nil {
@@ -806,6 +816,13 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		}
 		return nil, publicError(err)
 	}
+	if isCamScannerCLILoginPolicy(policy) {
+		// Polling may return the same upstream grant more than once. Only one owner
+		// request may consume this flow and persist a grant.
+		if err := repository.ConsumeConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext); err != nil {
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
+	}
 	credentials, err := json.Marshal(connectorAuthorizationCredentialFields(policy, result))
 	if err != nil {
 		return nil, publicError(err)
@@ -826,7 +843,7 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	}
 	var refreshCiphertext []byte
 	refreshAAD := ""
-	if isBrowserOAuthPolicy(policy) && result.RefreshToken != "" {
+	if (isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy)) && result.RefreshToken != "" {
 		refreshAAD = aad + ":refresh"
 		refreshCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), refreshAAD)
 		if err != nil {
@@ -878,7 +895,7 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 		return "interactive"
 	}
 	if policy.CLI != nil {
-		if isNotionCLILoginPolicy(policy) || isBrowserOAuthPolicy(policy) {
+		if isNotionCLILoginPolicy(policy) || isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy) {
 			return "interactive"
 		}
 		switch policy.CLI.AuthenticationDriver {
@@ -898,6 +915,10 @@ func isTeambitionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "teambition" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
 
+func isCamScannerCLILoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "camscanner" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
+}
+
 func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "notion" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
@@ -909,6 +930,9 @@ func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, resu
 
 	if isKlingMCPLoginPolicy(policy) {
 		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID}
+	}
+	if isCamScannerCLILoginPolicy(policy) {
+		return map[string]string{"access_token": result.AccessToken, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339), "user_id": result.ExternalID, "is_domestic": result.IsDomestic}
 	}
 	if isNotionCLILoginPolicy(policy) {
 		return map[string]string{"token": result.AccessToken}
