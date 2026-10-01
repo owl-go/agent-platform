@@ -8,7 +8,11 @@
 
 包内只开放 `capabilities.json` 的 17 项策略：官方文档/Skill 明确出现的项目、任务查询，文件链接查询，任务创建/移动，只读文档检索、工具目录/Schema 及帮助。任务创建/移动是高风险操作，包括其叶子 `--help`，需平台具体 target 和一次性批准。状态更新、评论、成员管理及其他动态操作尚未进入本修订；获取相应账号的最新工具目录并审阅后再发布新修订。
 
-上游 OAuth + PKCE 适用于本地 CLI。平台目前没有 Teambition 交互式 OAuth driver；本修订使用内置 `connector_package` 的加密托管凭证入口，只接受 JSON 的 `user_token` 字段（填写该账号真实兼容 UserToken）。单次进程桥接到官方 `TEAMBITION_MCP_TOKEN`，CLI 的临时 HOME 与缓存执行后删除。Token 不放进参数、包或 Skill。平台安装与连接由各 User 独立完成；本构建和发布流程不替 User 授权。
+版本 0.3.5 使用官方浏览器 OAuth + PKCE：点击「连接」跳转 `account.teambition.com/oauth2/mcp/authorize`，平台以动态注册的 Client ID 和 S256 challenge 绑定 HTTPS 回调。state 加密绑定 User 和单次 Flow；收到 code 后，由原 User 的授权轮询原子领取并交换，不允许回调重放或并发重复交换。OAuth 凭证由平台加密保存，refresh token 单独保存，不交给 Runtime。无需手工申请或填写 UserToken。
+
+上游原版 CLI 使用 OS keyring 保存本地 OAuth，远程 Linux Runtime 无此钥匙串。本包保留原版 CLI 的发现与命令解析，通过单次进程的 127.0.0.1 HTTP 适配器连接固定 HTTPS MCP：CLI 只持有随机本地路由 nonce，适配器校验 nonce 后替换为短期 OAuth Bearer。路由 nonce 不发给 Teambition；只转发受控 MCP headers，拒绝任意路径／方法，不跟随重定向。临时 HOME、连接及子进程执行后清理。旧 `user_token` 仅保留为历史授权的执行兼容，不是新连接入口。
+
+平台安装与连接由各 User 独立完成；发布流程不替 User 完成第三方账号授权。浏览器入口和模拟服务协议测试不能替代真实账号项目查询。
 
 包内 `platform status` 仅验证凭证格式，返回 `configured` 与 `verification: credential_shape_only`，不验证 Token 有效性或业务权限。上游 `--help` 会请求动态 MCP 目录，所以 wrapper 的总览帮助是本修订离线策略列表；Conformance 还应检查实际 native `--version`。版本 0.3.4 使用 [Teambition 官网 favicon](https://www.teambition.com/favicon.ico) 的 128px PNG，SHA-256 为 `941a5a0aa5c3609ead813267836a717d369c1e48321fd69eae1d985df4674908`；包内 SVG 嵌入同一 PNG，平台 `DisplayIcon` 将该品牌图标投影为前端支持的 PNG Data URL。
 
@@ -25,9 +29,9 @@ python3 scripts/connectors/teambition/build.py \
   --skill-zip /tmp/teambition-skills.zip \
   --runtime-image <registry/repository@sha256:digest> \
   --runtime-version <exact-node-version> \
-  --output <absolute-output-directory>/teambition-0.3.4.zip
+  --output <absolute-output-directory>/teambition-0.3.5.zip
 go -C backend run ./cmd/connector-package-validate <absolute-package-path>
-node --test scripts/connectors/teambition/launcher.test.cjs
+node --test scripts/connectors/teambition/*.test.cjs
 python3 -m unittest discover -s scripts/connectors/teambition -p 'test_*.py'
 go -C backend test ./internal/connectorpackage/... ./internal/cliconnector/...
 ```
@@ -48,7 +52,7 @@ python3 publish.py \
 
 脚本用部署管理员的 OIDC + PKCE 登录，不输出登录材料。在部署主机上传大包时可传 `--api-base <已核实的本机容器 API origin>`，避免公网回流占满普通 API 的请求期限；默认使用公网平台 origin。API 地址必须属于本次授权的平台，鉴权和服务端校验照常执行。通过现有管理员 CLI upload/publish API 让 Worker 执行 ZIP 构建和 Linux + runsc Conformance，校验返回的 exact bundle SHA-256 与当前 Runtime Digest，通过 Stage/Publish API 发布 managed Publication，确认没有用户使用后以 Delete API 软删除临时 legacy Definition，保留原有 Conformance 行与历史证据。停用仍会在管理员目录显示，不能代替清理。再次运行或仅更新包内展示资产时复用已有 exact bundle/Runtime 验证，不重新创建 Definition；失败保持平台状态，不写入伪造的通过记录或直接修改数据库。`source.zip` 与外层包不一致时在 Stage 之前拒绝。
 
-发布证据只包含非敏感的 build、stage、publication 和 health 响应。Conformance 通过仅证明这个 bundle 在这个 Runtime 可启动；真实 Teambition 账号授权、项目查询、任务写入、业务权限和动态帮助仍需实际账号验证。其他 Runtime Digest、私有部署和交互式 OAuth 均不由本修订宣称已验证。
+发布证据只包含非敏感的 build、stage、publication 和 health 响应。Conformance 通过仅证明这个 bundle 在这个 Runtime 可启动；真实 Teambition 账号授权、项目查询、任务写入、业务权限和动态帮助仍需实际账号验证。其他 Runtime Digest、私有部署以及未完成的真实第三方账号授权不由本修订宣称已验证。
 
 ## 已执行的发布证据（2026-09-30）
 

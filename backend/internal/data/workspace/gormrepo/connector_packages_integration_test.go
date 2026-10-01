@@ -147,6 +147,15 @@ func TestConnectorPublicationAndMultipleAuthorizationSelection(t *testing.T) {
 	if err != nil || refreshed.Version != first.Version+1 || string(refreshed.CredentialCiphertext) != "cipher-a-refreshed" || refreshed.ExternalDisplayName != "Account A" {
 		t.Fatalf("refreshed authorization = %#v, %v", refreshed, err)
 	}
+	// Providers may return opaque grants without an external account identifier.
+	// Refresh remains bound to owner, installation, authorization and version.
+	refreshed.ExternalIdentityID = ""
+	refreshed.RefreshCredentialCiphertext = []byte("platform-only-refresh")
+	refreshed.RefreshCredentialAAD = "refresh-aad"
+	opaque, err := repository.RefreshConnectorAuthorization(ctx, refreshed, refreshed.Version, domain.ConnectorAuditRecord{OwnerID: owner, InstallationID: installation.ID, Operation: "refresh_authorization", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil || string(opaque.RefreshCredentialCiphertext) != "platform-only-refresh" || opaque.RefreshCredentialAAD != "refresh-aad" {
+		t.Fatalf("opaque grant refresh lost platform-only material: %v", err)
+	}
 	if _, err := repository.RefreshConnectorAuthorization(ctx, first, first.Version, domain.ConnectorAuditRecord{OwnerID: owner, InstallationID: installation.ID, Operation: "refresh_authorization", Outcome: "succeeded", CreatedAt: time.Now().UTC()}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("stale authorization refresh must conflict: %v", err)
 	}
@@ -197,11 +206,49 @@ func TestConnectorInstallationFeishuSetupAndAuthorizationFlows(t *testing.T) {
 	if err != nil || len(read.Scopes) != 1 || read.Scopes[0] != "im:message" {
 		t.Fatalf("authorization flow = %#v, %v", read, err)
 	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, uuid.NewString(), flow.ID, []byte("device"), []byte("code"), flow.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("cross-owner callback update: %v", err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("device"), []byte("code"), flow.ActionURL); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("device"), []byte("replay"), flow.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("stale callback update: %v", err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, uuid.NewString(), flow.ID, []byte("code")); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("cross-owner exchange: %v", err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("code")); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("code")); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("duplicate exchange: %v", err)
+	}
 	if err := repository.DeleteConnectorAuthorizationFlow(ctx, owner, flow.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := repository.GetConnectorAuthorizationFlow(ctx, owner, flow.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("deleted flow error = %v", err)
+	}
+	first, err := repository.BeginConnectorAuthorizationFlow(ctx, domain.ConnectorAuthorizationAttempt{OwnerID: owner, InstallationID: installation.ID, Identity: "user", ActionURL: "https://account.teambition.com/oauth2/mcp/authorize", ExpiresAt: expires, DeviceCodeCiphertext: []byte("first")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := repository.BeginConnectorAuthorizationFlow(ctx, domain.ConnectorAuthorizationAttempt{OwnerID: owner, InstallationID: installation.ID, Identity: "user", ActionURL: "https://account.teambition.com/oauth2/mcp/authorize", ExpiresAt: expires, DeviceCodeCiphertext: []byte("second")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, first.ID, []byte("first"), []byte("code"), first.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("superseded callback: %v", err)
+	}
+	if err := db.Model(&connectorAuthorizationFlowRecord{}).Where("id = ?", second.ID).Update("expires_at", time.Now().Add(-time.Minute)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, second.ID, []byte("second"), []byte("code"), second.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("expired callback: %v", err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, owner, second.ID, []byte("second")); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("expired exchange: %v", err)
 	}
 }
 

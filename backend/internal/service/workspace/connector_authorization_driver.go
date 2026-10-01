@@ -11,6 +11,7 @@ import (
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
+	"agent-platform/backend/internal/teambitioncli"
 )
 
 var (
@@ -35,6 +36,33 @@ type connectorAuthorizationGrant struct {
 }
 
 type dingtalkConnectorAuthorizationDriver struct{ client *dingtalkcli.Client }
+
+type teambitionConnectorAuthorizationDriver struct{ client *teambitioncli.Client }
+
+func (d teambitionConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d teambitionConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d teambitionConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, teambitioncli.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, teambitioncli.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return teambitionGrant(v), e
+}
+func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return teambitionGrant(v), e
+}
+func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
 
@@ -181,6 +209,13 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil
+	}
+	if isTeambitionCLILoginPolicy(policy) {
+		redirect, err := service.teambitionCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return teambitionConnectorAuthorizationDriver{client: teambitioncli.NewClient(redirect)}, nil
 	}
 	if isNotionCLILoginPolicy(policy) {
 		return notionConnectorAuthorizationDriver{login: notioncli.NewLogin()}, nil

@@ -150,3 +150,34 @@ func (repository *Repository) DeleteConnectorAuthorizationFlow(ctx context.Conte
 func connectorProviderApplicationDomain(row connectorProviderApplicationRecord) domain.ConnectorProviderApplication {
 	return domain.ConnectorProviderApplication{OwnerID: row.OwnerID, InstallationID: row.InstallationID, AppIDCiphertext: append([]byte(nil), row.ProviderApplicationIDCiphertext...), AppSecretCiphertext: append([]byte(nil), row.ProviderApplicationSecretCiphertext...), ProviderName: row.ProviderName, DeveloperConsoleURL: row.DeveloperConsoleURL}
 }
+
+// UpdateConnectorAuthorizationFlow binds the callback to the current, unexpired
+// owner-scoped challenge; replayed or superseded callbacks fail the compare-and-swap.
+func (repository *Repository) UpdateConnectorAuthorizationFlow(ctx context.Context, ownerID, flowID string, previous, next []byte, actionURL string) error {
+	if ownerID == "" || flowID == "" || len(previous) == 0 || len(next) == 0 || actionURL == "" {
+		return domain.ErrInvalid
+	}
+	result := repository.db.WithContext(ctx).Model(&connectorAuthorizationFlowRecord{}).Where("id = ? AND owner_user_id = ? AND expires_at > now() AND device_code_ciphertext = ?", flowID, ownerID, previous).Updates(map[string]any{"device_code_ciphertext": next, "action_url": actionURL, "updated_at": gorm.Expr("now()")})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrConflict
+	}
+	return nil
+}
+
+// ConsumeConnectorAuthorizationFlow atomically claims a single-use OAuth code.
+func (repository *Repository) ConsumeConnectorAuthorizationFlow(ctx context.Context, ownerID, flowID string, expected []byte) error {
+	if ownerID == "" || flowID == "" || len(expected) == 0 {
+		return domain.ErrInvalid
+	}
+	result := repository.db.WithContext(ctx).Where("id = ? AND owner_user_id = ? AND device_code_ciphertext = ? AND expires_at > now()", flowID, ownerID, expected).Delete(&connectorAuthorizationFlowRecord{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrConflict
+	}
+	return nil
+}
