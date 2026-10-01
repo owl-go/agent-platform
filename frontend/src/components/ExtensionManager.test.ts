@@ -353,6 +353,9 @@ describe("ExtensionManager", () => {
     expect(skillGroups[1]!.text()).toContain("我的技能");
     expect(skillGroups[1]!.text()).toContain(mySkill.name);
     expect(skillGroups[1]!.text()).toContain("安装包校验通过");
+    for (const group of skillGroups) {
+      expect(group.find(".skill-card-copy small").exists()).toBe(false);
+    }
 
     await wrapper.setProps({ mineOnly: true });
     await flushPromises();
@@ -466,19 +469,24 @@ describe("ExtensionManager", () => {
     wrapper.unmount();
   });
 
-  it("shows the uploaded Skill description from its document", async () => {
+  it.each([
+    ["zh-CN", "创建、读取并检查 PDF 文档。"],
+    ["en", "Process PDFs."],
+  ])("shows the Skill description without redundant execution or revision metadata in %s", async (language, description) => {
     const saved: Skill = { id: "skill-1", name: "PDF", source: "upload", sha256: "a".repeat(64), ...timestamps };
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => [saved]),
       getSkillDocument: vi.fn(async () => ({ skill: saved, content: "---\nname: pdf\ndisplay_name: PDF 文档处理\ndescription: Process PDFs.\ndescription_zh: 创建、读取并检查 PDF 文档。\n---\n# PDF" })),
     } as unknown as PlatformApi;
-    const wrapper = mountManager(api, false, "zh-CN", true);
+    const wrapper = mountManager(api, false, language, true);
     await flushPromises();
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
 
-    expect(wrapper.text()).toContain("创建、读取并检查 PDF 文档。");
+    expect(wrapper.text()).toContain(description);
     expect(wrapper.text()).toContain("PDF 文档处理");
+    expect(wrapper.get(".skill-card-copy").find("small").exists()).toBe(false);
+    expect(wrapper.find(".resource-trust-meta [data-kind='status']").exists()).toBe(true);
     wrapper.unmount();
   });
 
