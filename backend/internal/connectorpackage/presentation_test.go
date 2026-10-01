@@ -76,3 +76,21 @@ func TestKlingDisplayIconIsOfficialPNG(t *testing.T) {
 		t.Fatalf("invalid Kling icon: %v", err)
 	}
 }
+
+func TestPixsoDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
+	value := DisplayIcon("pixso")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("Pixso must project its official brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := png.DecodeConfig(bytes.NewReader(body)); err != nil {
+		t.Fatal(err)
+	}
+}

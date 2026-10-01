@@ -665,6 +665,9 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	allowedScopes := map[string]struct{}{}
+	if isPixsoMCPPolicy(policy) {
+		allowedScopes["mcp:connect"] = struct{}{}
+	}
 	if isLinearMCPPolicy(policy) {
 		allowedScopes["read"] = struct{}{}
 		allowedScopes["write"] = struct{}{}
@@ -871,7 +874,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
-	if isLinearMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
+	if isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
 		return "interactive"
 	}
 	if policy.CLI != nil {
@@ -900,7 +903,7 @@ func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 }
 
 func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
-	if isLinearMCPPolicy(policy) {
+	if isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) {
 		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
 	}
 
@@ -1241,6 +1244,9 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 			}
 		}
 	}
+	if isPixsoMCPPolicy(policy) {
+		response.RequiredScopes = []string{"mcp:connect"}
+	}
 	if isLinearMCPPolicy(policy) {
 		response.RequiredScopes = []string{"read", "write"}
 	}
@@ -1328,4 +1334,8 @@ func connectorAuthorizationFlowResponse(item domain.ConnectorAuthorizationAttemp
 
 func isLinearMCPPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "linear" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://mcp.linear.app/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "mcp.linear.app" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
+func isPixsoMCPPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "pixso" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://pixso.net/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "pixso.net" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
