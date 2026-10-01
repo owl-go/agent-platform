@@ -9,6 +9,7 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/linearmcp"
 	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
@@ -61,6 +62,33 @@ func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id,
 	return teambitionGrant(v), e
 }
 func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type linearConnectorAuthorizationDriver struct{ client *linearmcp.Client }
+
+func (d linearConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d linearConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d linearConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, linearmcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, linearmcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return linearGrant(v), e
+}
+func (d linearConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return linearGrant(v), e
+}
+func linearGrant(v linearmcp.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
 }
 
@@ -206,6 +234,13 @@ func translateFeishuAuthorizationError(err error) error {
 func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolicy, repository connectorPackageRepository) (interactiveConnectorAuthorizationDriver, error) {
 	if err := validateInteractiveConnectorDriver(policy); err != nil {
 		return nil, err
+	}
+	if isLinearMCPPolicy(policy) {
+		redirect, err := service.linearCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return linearConnectorAuthorizationDriver{client: linearmcp.NewClient(redirect)}, nil
 	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil

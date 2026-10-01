@@ -63,7 +63,7 @@ func TestOnlyExactTeambitionGETCallbackBypassesBearerAuthentication(t *testing.T
 	for _, test := range []struct {
 		method, path string
 		status       int
-	}{{"GET", teambitionOAuthCallbackPath, 204}, {"POST", teambitionOAuthCallbackPath, 401}, {"GET", teambitionOAuthCallbackPath + "/other", 401}, {"GET", "/api/v1/connectors/teambition/authorizations", 401}} {
+	}{{"GET", linearOAuthCallbackPath, 204}, {"POST", linearOAuthCallbackPath, 401}, {"GET", linearOAuthCallbackPath + "/other", 401}, {"GET", "/api/v1/connectors/linear/authorizations", 401}, {"GET", teambitionOAuthCallbackPath, 204}, {"POST", teambitionOAuthCallbackPath, 401}, {"GET", teambitionOAuthCallbackPath + "/other", 401}, {"GET", "/api/v1/connectors/teambition/authorizations", 401}} {
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, httptest.NewRequest(test.method, test.path, nil))
 		if recorder.Code != test.status {
