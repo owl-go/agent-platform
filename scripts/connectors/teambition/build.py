@@ -160,7 +160,7 @@ def build(npm, skill, image, runtime_version):
         'commands': {key: {'argv': ['platform', action]} for key, action in
                      [('init', 'init'), ('auth', 'auth'), ('status', 'status'), ('unAuth', 'unauth')]},
         'status_match': {'json_path': '$.configured', 'equals': True},
-        'capabilities': reviewed, 'egress_hosts': HOSTS, 'timeout_seconds': 120,
+        'capabilities': reviewed, 'auth_url_domains': ['account.teambition.com'], 'egress_hosts': HOSTS, 'timeout_seconds': 120,
         'resource_limits': {'cpu_millis': 1000, 'memory_mib': 512, 'timeout_seconds': 180,
                             'concurrency': 1, 'child_processes': 64},
     })
