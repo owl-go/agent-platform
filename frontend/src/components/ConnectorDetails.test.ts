@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, expect, it } from "vitest";
-import type { CLIConnectorDefinition } from "../api/client";
+import type { CLIConnectorDefinition, ConnectorInstallation, ConnectorPublication } from "../api/client";
 import { createAppI18n } from "../i18n";
 import ConnectorDetails from "./ConnectorDetails.vue";
 
@@ -18,4 +18,31 @@ it("shows a CLI Connector summary and offers editing when allowed", async () => 
   edit.click();
   await flushPromises();
   expect(wrapper.emitted("edit-cli")?.[0]).toEqual([cli]);
+});
+
+it("uses installed revision guidance, emits the chosen draft, and preserves plain text", async () => {
+  const installation = { id: "installation-1", source: "example", state: "active", authorized: true, name: "Example", description: "Read example data", mode: "mcp", examples_zh: ["查询示例数据 <script>alert(1)</script>"], examples_en: ["Query example data"] } as ConnectorInstallation;
+  const publication = { state: "available", revision: { name: "Example v2", examples_zh: ["仅新版支持的操作"] } } as ConnectorPublication;
+  const wrapper = mount(ConnectorDetails, { attachTo: document.body, props: { installation, publication }, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] } });
+  await flushPromises();
+  const prompt = document.body.querySelector<HTMLButtonElement>(".connector-usage-prompt")!;
+  expect(prompt.textContent).toContain(installation.examples_zh![0]);
+  expect(document.body.textContent).not.toContain("仅新版支持的操作");
+  expect(document.body.querySelector(".connector-usage script")).toBeNull();
+  prompt.click(); await flushPromises();
+  expect(wrapper.emitted("use")?.[0]).toEqual([installation.examples_zh![0]]);
+  wrapper.unmount();
+});
+
+it("falls back to the supplied locale and disables unavailable publication launches", async () => {
+  const publication = { state: "available", revision: { name: "Example", description: "Description", conformance_available: true, examples_zh: ["查询数据"] } } as ConnectorPublication;
+  const wrapper = mount(ConnectorDetails, { attachTo: document.body, props: { publication }, global: { plugins: [createAppI18n({ getItem: () => "en" }, "en")] } });
+  await flushPromises();
+  expect(document.body.textContent).toContain("Try these prompts");
+  expect(document.body.textContent).toContain("查询数据");
+  const connect = [...document.body.querySelectorAll("button")].find(button => button.textContent?.trim() === "Connect")!;
+  connect.click(); expect(wrapper.emitted("connect")).toHaveLength(1);
+  await wrapper.setProps({ publication: { ...publication, state: "disabled" } });
+  expect(document.body.querySelector<HTMLButtonElement>(".connector-usage-prompt")!.disabled).toBe(true);
+  wrapper.unmount();
 });

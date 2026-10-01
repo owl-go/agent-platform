@@ -6,6 +6,8 @@ The package validator is the single boundary shared by ZIP upload and guided cre
 
 The outer Connector Package ZIP still rejects symbolic links. Its nested immutable CLI bundle may contain only relative symlinks that resolve within the bundle, matching the CLI bundle extractor; absolute and escaping links fail validation. This permits the verified npm `.bin` links used by `@larksuite/cli` without weakening the outer package or Runtime mount boundary.
 
+Catalog Revision and Installation responses expose `examples_zh` and `examples_en` from their exact metadata. Installation details also expose their mode and display icon so private packages can launch the correct Conversation Selection kind. Examples are display data and only enter an unsent Conversation Draft after the User chooses one.
+
 `connector-meta.json` owns the globally unique lower-case `source`, semantic `version`, package `type`, user-facing name and description, examples, platform compatibility, and `auth_mode`. `mcp.json` declares one remote HTTPS or local fixed-runtime server. `cli.json` declares the managed runtime, executable, structured lifecycle argv arrays, status matching, authorization-domain allowlist, reviewed capabilities, and optional resource limits. A CLI package may carry `cli-bundle.tgz`; its executable path, expanded tar contents, mode bits, and SHA-256 are verified before object storage. No manifest accepts a shell command string.
 
 ## Lifecycle

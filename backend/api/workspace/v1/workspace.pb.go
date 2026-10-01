@@ -16959,6 +16959,8 @@ type ConnectorRevision struct {
 	RuntimeDigests       []string               `protobuf:"bytes,11,rep,name=runtime_digests,json=runtimeDigests,proto3" json:"runtime_digests,omitempty"`
 	ConformanceAvailable bool                   `protobuf:"varint,12,opt,name=conformance_available,json=conformanceAvailable,proto3" json:"conformance_available,omitempty"`
 	RequiredScopes       []string               `protobuf:"bytes,13,rep,name=required_scopes,json=requiredScopes,proto3" json:"required_scopes,omitempty"`
+	ExamplesZh           []string               `protobuf:"bytes,14,rep,name=examples_zh,json=examplesZh,proto3" json:"examples_zh,omitempty"`
+	ExamplesEn           []string               `protobuf:"bytes,15,rep,name=examples_en,json=examplesEn,proto3" json:"examples_en,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -17080,6 +17082,20 @@ func (x *ConnectorRevision) GetConformanceAvailable() bool {
 func (x *ConnectorRevision) GetRequiredScopes() []string {
 	if x != nil {
 		return x.RequiredScopes
+	}
+	return nil
+}
+
+func (x *ConnectorRevision) GetExamplesZh() []string {
+	if x != nil {
+		return x.ExamplesZh
+	}
+	return nil
+}
+
+func (x *ConnectorRevision) GetExamplesEn() []string {
+	if x != nil {
+		return x.ExamplesEn
 	}
 	return nil
 }
@@ -17342,6 +17358,10 @@ type ConnectorInstallation struct {
 	AuthenticationDriver    string                 `protobuf:"bytes,10,opt,name=authentication_driver,json=authenticationDriver,proto3" json:"authentication_driver,omitempty"`
 	SelectedAuthorizationId *string                `protobuf:"bytes,11,opt,name=selected_authorization_id,json=selectedAuthorizationId,proto3,oneof" json:"selected_authorization_id,omitempty"`
 	UpgradeAvailable        bool                   `protobuf:"varint,12,opt,name=upgrade_available,json=upgradeAvailable,proto3" json:"upgrade_available,omitempty"`
+	ExamplesZh              []string               `protobuf:"bytes,13,rep,name=examples_zh,json=examplesZh,proto3" json:"examples_zh,omitempty"`
+	ExamplesEn              []string               `protobuf:"bytes,14,rep,name=examples_en,json=examplesEn,proto3" json:"examples_en,omitempty"`
+	Mode                    string                 `protobuf:"bytes,15,opt,name=mode,proto3" json:"mode,omitempty"`
+	Icon                    string                 `protobuf:"bytes,16,opt,name=icon,proto3" json:"icon,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -17458,6 +17478,34 @@ func (x *ConnectorInstallation) GetUpgradeAvailable() bool {
 		return x.UpgradeAvailable
 	}
 	return false
+}
+
+func (x *ConnectorInstallation) GetExamplesZh() []string {
+	if x != nil {
+		return x.ExamplesZh
+	}
+	return nil
+}
+
+func (x *ConnectorInstallation) GetExamplesEn() []string {
+	if x != nil {
+		return x.ExamplesEn
+	}
+	return nil
+}
+
+func (x *ConnectorInstallation) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *ConnectorInstallation) GetIcon() string {
+	if x != nil {
+		return x.Icon
+	}
+	return ""
 }
 
 type ConnectorAuthorization struct {
@@ -23296,7 +23344,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\renabled_count\x18\x05 \x01(\x03R\fenabledCount\x123\n" +
 	"\x16waiting_for_user_count\x18\x06 \x01(\x03R\x13waitingForUserCount\x12<\n" +
 	"\x1aactive_authorization_count\x18\a \x01(\x03R\x18activeAuthorizationCount\x12B\n" +
-	"\x1dattention_authorization_count\x18\b \x01(\x03R\x1battentionAuthorizationCount\"\xd2\x03\n" +
+	"\x1dattention_authorization_count\x18\b \x01(\x03R\x1battentionAuthorizationCount\"\x94\x04\n" +
 	"\x11ConnectorRevision\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12'\n" +
@@ -23311,7 +23359,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	" \x01(\tH\x00R\fbundleSha256\x88\x01\x01\x12'\n" +
 	"\x0fruntime_digests\x18\v \x03(\tR\x0eruntimeDigests\x123\n" +
 	"\x15conformance_available\x18\f \x01(\bR\x14conformanceAvailable\x12'\n" +
-	"\x0frequired_scopes\x18\r \x03(\tR\x0erequiredScopesB\x10\n" +
+	"\x0frequired_scopes\x18\r \x03(\tR\x0erequiredScopes\x12\x1f\n" +
+	"\vexamples_zh\x18\x0e \x03(\tR\n" +
+	"examplesZh\x12\x1f\n" +
+	"\vexamples_en\x18\x0f \x03(\tR\n" +
+	"examplesEnB\x10\n" +
 	"\x0e_bundle_sha256\"\xc9\x01\n" +
 	"\x14ConnectorPublication\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12,\n" +
@@ -23335,7 +23387,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x19active_installation_count\x18\t \x01(\x03R\x17activeInstallationCount\x12<\n" +
 	"\x1aactive_authorization_count\x18\n" +
 	" \x01(\x03R\x18activeAuthorizationCountB\x10\n" +
-	"\x0e_bundle_sha256\"\xdd\x03\n" +
+	"\x0e_bundle_sha256\"\xc7\x04\n" +
 	"\x15ConnectorInstallation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x12,\n" +
@@ -23351,7 +23403,13 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\x15authentication_driver\x18\n" +
 	" \x01(\tR\x14authenticationDriver\x12?\n" +
 	"\x19selected_authorization_id\x18\v \x01(\tH\x00R\x17selectedAuthorizationId\x88\x01\x01\x12+\n" +
-	"\x11upgrade_available\x18\f \x01(\bR\x10upgradeAvailableB\x1c\n" +
+	"\x11upgrade_available\x18\f \x01(\bR\x10upgradeAvailable\x12\x1f\n" +
+	"\vexamples_zh\x18\r \x03(\tR\n" +
+	"examplesZh\x12\x1f\n" +
+	"\vexamples_en\x18\x0e \x03(\tR\n" +
+	"examplesEn\x12\x12\n" +
+	"\x04mode\x18\x0f \x01(\tR\x04mode\x12\x12\n" +
+	"\x04icon\x18\x10 \x01(\tR\x04iconB\x1c\n" +
 	"\x1a_selected_authorization_id\"\x8d\x03\n" +
 	"\x16ConnectorAuthorization\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +

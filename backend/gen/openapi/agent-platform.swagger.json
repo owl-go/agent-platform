@@ -6707,6 +6707,24 @@
         },
         "upgrade_available": {
           "type": "boolean"
+        },
+        "examples_zh": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "examples_en": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mode": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
         }
       }
     },
@@ -6826,6 +6844,18 @@
           "type": "boolean"
         },
         "required_scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "examples_zh": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "examples_en": {
           "type": "array",
           "items": {
             "type": "string"

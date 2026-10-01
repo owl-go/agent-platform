@@ -537,3 +537,6 @@ export function formatDuration(milliseconds: number, locale: SupportedLocale): s
     ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
+
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorExamples: "试试这样用", connectorDraftHint: "点击指引，在新会话中选中此连接器并填入输入框，确认后再发送。", connectorStarter: "使用{name}，帮我完成……", connectConnector: "连接" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorExamples: "Try these prompts", connectorDraftHint: "Choose a prompt to select this connector in a new conversation and fill the composer. Send when ready.", connectorStarter: "Use {name} to help me with…", connectConnector: "Connect" });

@@ -42,9 +42,9 @@ async function mountPage(sessionMessages: SessionMessage[] = messages, stream?: 
   return mountPageWithAPI(apiStub(sessionMessages, stream));
 }
 
-async function mountPageWithAPI(api: PlatformApi) {
+async function mountPageWithAPI(api: PlatformApi, path = "/sessions") {
   const router = createAppRouter(createMemoryHistory());
-  await router.push("/sessions");
+  await router.push(path);
   await router.isReady();
   const wrapper = mount(SessionsPage, {
     global: {
@@ -55,6 +55,7 @@ async function mountPageWithAPI(api: PlatformApi) {
   await flushPromises();
   return wrapper;
 }
+
 
 describe("SessionsPage conversation layout", () => {
   beforeEach(() => {
@@ -73,6 +74,21 @@ describe("SessionsPage conversation layout", () => {
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
   });
+
+it("passes connector guidance into a new Session composer without posting a message", async () => {
+  const api = apiStub([]);
+  const created = { ...session, id: "new-session" };
+  api.createSession = vi.fn(async () => created);
+  api.getAttachmentDownload = vi.fn(async () => new Blob());
+  api.listMCPServers = vi.fn(async () => [{ id: "mcp-1", name: "Example", tested: true, test_pending: false, arguments: [], environment: [], transport: "streamable_http" as const, ...{ created_at: session.created_at, updated_at: session.updated_at, version: 1 } }]);
+  api.sendSessionMessage = vi.fn();
+  const wrapper = await mountPageWithAPI(api, "/sessions?new=launch&connector_kind=mcp&connector_id=mcp-1&draft=查询示例数据");
+  expect(api.createSession).toHaveBeenCalled();
+  expect(wrapper.get(".composer-editor").text()).toBe("查询示例数据");
+  expect(api.resolveConversationSelection).toHaveBeenCalledWith({ session_id: created.id }, expect.objectContaining({ mcp_server_ids: ["mcp-1"] }));
+  expect(api.sendSessionMessage).not.toHaveBeenCalled();
+  wrapper.unmount();
+});
 
   it("blocks a new task when an inherited execution pair is no longer verified", async () => {
     const api = apiStub([]);

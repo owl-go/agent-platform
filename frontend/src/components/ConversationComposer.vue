@@ -3,7 +3,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { ArrowUp, Check, ChevronLeft, ChevronRight, FilePlus2, FileText, Folder, Link, Plus, Search, Sparkles, Square, UserRound, Users, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConnectorAuthorizationFlow, type ConnectorInstallation, type ConnectorSetup, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
+import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConnectorAuthorizationFlow, type ConnectorLaunch, type ConnectorInstallation, type ConnectorSetup, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
@@ -12,7 +12,7 @@ import { clearSessionApproval, placeSessionApproval } from "../commandApprovalPl
 
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
+const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; initialConnector?: ConnectorLaunch; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
 const emit = defineEmits<{ stop: []; launchConsumed: []; selectionChanged: [selection: ConversationSelection] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -635,6 +635,14 @@ async function initialize() {
       else if (skill) { await chooseSkill(skill); if (!error.value) emit("launchConsumed"); }
       else error.value = t("composer.selectionFailed");
     }
+    if (props.initialConnector) {
+      const requested = props.initialConnector;
+      const row = connectorRows.value.find((item) => item.kind === requested.kind && item.id === requested.id);
+      if (!row?.available) error.value = t("composer.selectionFailed");
+      else if (!connectorEnabled(row.key)) await chooseConnector(row);
+      if (row && !error.value) emit("launchConsumed");
+      if (row?.kind === "cli" && !connectorEnabled(row.key)) menu.value = "connectors";
+    }
     await refreshRequestedCLIAuthorization(); persist();
   } catch { error.value = t("composer.selectionFailed"); }
   finally { loading.value = false; }
@@ -648,6 +656,7 @@ onMounted(async () => {
   else if (props.initialPrompt) parts.value = [{ kind: "text", text: props.initialPrompt }];
   await nextTick(); renderEditor();
   await initialize();
+  if (props.initialPrompt) { await nextTick(); editor.value?.focus(); }
 });
 watch(selection, (value) => { if (value) emit("selectionChanged", value); });
 watch(() => props.authorizationRequest, () => void refreshRequestedCLIAuthorization(), { deep: true });
