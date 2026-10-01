@@ -46,3 +46,21 @@ it("falls back to the supplied locale and disables unavailable publication launc
   expect(document.body.querySelector<HTMLButtonElement>(".connector-usage-prompt")!.disabled).toBe(true);
   wrapper.unmount();
 });
+
+it("uses a centered dialog with install-independent disconnect/uninstall actions and locks operations while busy", async () => {
+  const installation = { id: "installation", source: "modao", state: "active", authorized: true, name: "墨刀", description: "Design", mode: "cli" } as ConnectorInstallation;
+  const wrapper = mount(ConnectorDetails, { attachTo: document.body, props: { installation, canConnect: true, canDisconnect: true, canUninstall: true }, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] } });
+  await flushPromises();
+  expect(document.querySelector(".connector-details.el-dialog")).not.toBeNull();
+  expect(document.querySelector(".connector-details.el-drawer")).toBeNull();
+  const footer = () => [...document.querySelectorAll<HTMLButtonElement>(".connector-details .el-dialog__footer button")];
+  expect(footer().map(button => button.textContent?.trim())).toEqual(["卸载", "断开"]);
+  footer()[1]!.click(); expect(wrapper.emitted("disconnect")).toHaveLength(1);
+  footer()[0]!.click(); expect(wrapper.emitted("uninstall")).toHaveLength(1);
+  await wrapper.setProps({ installation: { ...installation, authorized: false } });
+  expect(footer().map(button => button.textContent?.trim())).toEqual(["卸载", "连接"]);
+  await wrapper.setProps({ busy: true });
+  expect(footer().every(button => button.disabled)).toBe(true);
+  expect(document.querySelector<HTMLButtonElement>(".connector-usage-prompt")!.disabled).toBe(true);
+  wrapper.unmount();
+});

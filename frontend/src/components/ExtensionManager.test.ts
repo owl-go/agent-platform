@@ -20,10 +20,22 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
     attachTo: document.body,
     props: { selectable: true, mineOnly, mcpServerIds: [], skillIds: [], cliConnectorDefinitionIds: [] },
     global: {
+      stubs: { ElDialog: { props: ["modelValue"], template: '<div v-if="modelValue" role="dialog"><slot /><div class="el-dialog__footer"><slot name="footer" /></div></div>' } },
       plugins: [createAppI18n({ getItem: () => language }, language), ...(router ? [router] : [])],
       provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth },
     },
   });
+}
+
+async function openDetails(wrapper: ReturnType<typeof mountManager>, selector = ".connector-catalog-card") {
+  await wrapper.get(selector).trigger("click");
+  await flushPromises();
+  return wrapper.get(".connector-details");
+}
+async function connectPublished(wrapper: ReturnType<typeof mountManager>) {
+  const details = await openDetails(wrapper, ".published-connector-card");
+  await details.findAll("button").find(button => button.text() === "连接")!.trigger("click");
+  await flushPromises();
 }
 
 it("opens published guidance and installs before launching the exact unsent connector draft", async () => {
@@ -54,13 +66,14 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api);
     try {
       await flushPromises();
-      expect(wrapper.get(".published-connector-card").text()).toContain("需要设置");
-      const setup = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接");
+      expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
+      const details = await openDetails(wrapper);
+      const setup = details.findAll("button").find((button) => button.text() === "连接");
       expect(setup).toBeDefined();
       await setup!.trigger("click");
       await flushPromises();
       expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
-      expect(wrapper.get(".published-connector-card").text()).toContain("ABC-123");
+      expect(wrapper.get(".connector-details").text()).toContain("ABC-123");
       expect(wrapper.find('a[href="https://app.notion.com/workers/cli-login?verificationCode=ABC-123"]').exists()).toBe(true);
       expect(document.body.querySelector('[data-testid="notion-connector-token"]')).toBeNull();
     } finally { wrapper.unmount(); }
@@ -75,10 +88,11 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api);
     try {
       await flushPromises();
-      const actions = () => wrapper.findAll(".published-connector-card .extension-card-actions button").map((button) => button.text());
+      const details = await openDetails(wrapper);
+      const actions = () => details.findAll(".connector-detail-actions button").map((button) => button.text());
       expect(actions()).toContain("连接");
-      const connect = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接")!;
-      expect(connect.find(".lucide-plus-icon").exists()).toBe(true);
+      const connect = details.findAll(".connector-detail-actions button").find((button) => button.text() === "连接")!;
+      expect(connect.attributes("disabled")).toBeUndefined();
       await connect.trigger("click");
       await flushPromises();
       expect(installPublishedConnector).toHaveBeenCalledWith("notion");
@@ -97,7 +111,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api);
     try {
       await flushPromises();
-      await wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接")!.trigger("click");
+      await connectPublished(wrapper);
       await flushPromises();
       expect(upgradeConnectorInstallation).toHaveBeenCalledWith(installation.id, installation.version);
       expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
@@ -113,7 +127,8 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
-    const connect = wrapper.findAll(".published-connector-card button").find((item) => item.text() === "连接");
+    const details = await openDetails(wrapper);
+    const connect = details.findAll("button").find((item) => item.text() === "连接");
     expect(connect).toBeDefined();
     await connect!.trigger("click");
     await flushPromises();
@@ -124,7 +139,7 @@ describe("ExtensionManager", () => {
     await flushPromises();
     expect(connectConnector).toHaveBeenCalledWith(installation.id, "user", [], JSON.stringify({ bot_id: "bot-123", secret: "secret-456" }));
     expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(false);
-    expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+    expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
     wrapper.unmount();
   });
   function modaoFixture(old = false) {
@@ -139,7 +154,7 @@ describe("ExtensionManager", () => {
   }
   async function openModao(wrapper: ReturnType<typeof mountManager>) {
     await flushPromises();
-    await wrapper.findAll(".published-connector-card button").find(item => item.text() === "连接")!.trigger("click");
+    await connectPublished(wrapper);
     await flushPromises();
     return new DOMWrapper(document.body).get(".provided-connector-form");
   }
@@ -169,7 +184,7 @@ describe("ExtensionManager", () => {
       expect(fixture.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
       if (old) expect(fixture.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(fixture.connectConnector.mock.invocationCallOrder[0]!);
       expect(document.querySelector(".provided-connector-form")).toBeNull();
-      expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+      expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
     } finally { wrapper.unmount(); }
   });
   it.each(["", "token with-space", "x".repeat(32769)])("rejects invalid Modao tokens locally", async token => {
@@ -212,7 +227,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api);
     try {
       await flushPromises();
-      await wrapper.findAll(".published-connector-card button").find(item => item.text() === "连接")!.trigger("click");
+      await connectPublished(wrapper);
       await flushPromises();
       expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
       if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
@@ -233,10 +248,10 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow, beginConnectorSetup } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
-    expect(wrapper.find(".published-connector-card .connector-card-heading .connector-card-icon").exists()).toBe(true);
-    expect(wrapper.find(".published-connector-card .connector-card-header > .extension-card-actions").exists()).toBe(true);
-    expect(wrapper.find(".published-connector-card > .connector-card-icon").exists()).toBe(false);
-    await wrapper.get(".published-connector-card .extension-card-actions button").trigger("click");
+    expect(wrapper.find(".published-connector-card > .connector-card-icon").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card .extension-card-actions").exists()).toBe(false);
+    expect(wrapper.find(".published-connector-card .connector-installed-mark").exists()).toBe(true);
+    await connectPublished(wrapper);
     await flushPromises();
     expect(beginConnectorSetup).not.toHaveBeenCalled();
     expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
@@ -252,7 +267,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow: vi.fn(async () => ({ id: "flow-1", installation_id: installation.id, identity: "user", scopes: [], state: "waiting_for_user", action_url: "https://login.dingtalk.com/verify" })), completeConnectorAuthorizationFlow } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
-    await wrapper.get(".published-connector-card .extension-card-actions button").trigger("click");
+    await connectPublished(wrapper);
     await flushPromises();
     await vi.advanceTimersByTimeAsync(12000);
     await flushPromises();
@@ -281,7 +296,10 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await openDetails(wrapper);
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
       expect(flow.open).toHaveBeenCalledWith("about:blank", "_blank");
       expect(flow.open.mock.invocationCallOrder[0]).toBeLessThan(flow.enableCLIConnector.mock.invocationCallOrder[0]!);
@@ -305,7 +323,10 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await openDetails(wrapper);
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
       expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledExactlyOnceWith(flow.enabled.id, "user", []);
       expect(flow.completeCLIConnectorEnablement).not.toHaveBeenCalled();
@@ -321,6 +342,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
+      await openDetails(wrapper);
       expect(flow.open).not.toHaveBeenCalled();
       await wrapper.get('a[href="https://open.feishu.cn/page/cli"]').trigger("click");
       expect(flow.popup.location.href).toBe(flow.waiting.action_url);
@@ -338,7 +360,9 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
       await vi.advanceTimersByTimeAsync(18000);
       expect(flow.completeCLIConnectorEnablement).toHaveBeenCalledTimes(1);
@@ -355,7 +379,9 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
       expect(flow.popup.close).toHaveBeenCalled();
       expect(document.body.querySelector('[role="alert"]')).not.toBeNull();
@@ -370,6 +396,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
+      await openDetails(wrapper);
       const button = wrapper.findAll("button").find((item) => item.text() === "授权飞书账号")!;
       await button.trigger("click");
       await button.trigger("click");
@@ -388,7 +415,10 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await openDetails(wrapper);
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
       flow.popup.closed = true;
       await vi.advanceTimersByTimeAsync(6000);
@@ -405,21 +435,25 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await openDetails(wrapper);
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
-      expect(wrapper.text()).toContain("已启用");
+      expect(wrapper.get(".connector-details").text()).toContain("已连接");
       expect(flow.open).not.toHaveBeenCalled();
       expect(flow.beginCLIConnectorAuthorization).not.toHaveBeenCalled();
     } finally { wrapper.unmount(); }
   });
 
-  it("deactivates an enabled CLI Connector from its catalog card", async () => {
+  it("deactivates an enabled CLI Connector from its detail modal", async () => {
     const flow = setupCLIFlow("enabled");
     vi.mocked(flow.api.listCLIConnectorEnablements).mockResolvedValue([flow.enabled as Awaited<ReturnType<PlatformApi["enableCLIConnector"]>>]);
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      await wrapper.get('button[aria-label="取消激活"]').trigger("click");
+      await openDetails(wrapper);
+      await wrapper.findAll(".connector-detail-actions button").find(button => button.text() === "卸载")!.trigger("click");
       await flushPromises();
       expect(flow.api.disableCLIConnector).toHaveBeenCalledWith(flow.enabled.definition_id, flow.enabled.version);
       expect(wrapper.emitted("update:cliConnectorDefinitionIds")?.at(-1)).toEqual([[]]);
@@ -427,7 +461,7 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
-  it("keeps the activation plus visible when a saved Feishu application has no account authorization", async () => {
+  it("offers connection in details when a saved Feishu application has no account authorization", async () => {
     const flow = setupCLIFlow("enabled");
     const definition = (await flow.api.listCLIConnectorDefinitions())[0];
     vi.mocked(flow.api.listCLIConnectorDefinitions).mockResolvedValue([{ ...definition, capabilities: [{ identities: ["user"], scopes: ["im:message"] }] } as CLIConnectorDefinition]);
@@ -435,10 +469,13 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api);
     try {
       await flushPromises();
-      expect(wrapper.get(".connector-catalog-card").text()).toContain("需要设置");
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      await openDetails(wrapper);
+      expect(wrapper.get(".connector-details").text()).toContain("需要设置");
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
-      expect(flow.enableCLIConnector).toHaveBeenCalledWith("cli-1");
+      expect(flow.enableCLIConnector).not.toHaveBeenCalled();
       expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", ["im:message"]);
       expect(flow.popup.location.href).toBe("https://accounts.feishu.cn/authorize");
     } finally { wrapper.unmount(); }
@@ -451,9 +488,12 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(flow.api, true);
     try {
       await flushPromises();
-      expect(wrapper.find('button[aria-label="编辑"]').exists()).toBe(true);
+      await openDetails(wrapper);
+      expect(wrapper.findAll(".connector-detail-actions button").some(button => button.text() === "编辑")).toBe(true);
       expect(wrapper.find('button[aria-label="启用"]').exists()).toBe(true);
-      await wrapper.get('button[aria-label="启用"]').trigger("click");
+      const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
       await flushPromises();
       expect(flow.enableCLIConnector).toHaveBeenCalledWith("cli-1");
       expect(flow.beginCLIConnectorAuthorization).toHaveBeenCalledWith("enable-1", "user", []);
@@ -480,6 +520,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(createPlatformApi(() => "test-token"));
     try {
       await flushPromises();
+      await openDetails(wrapper);
       await wrapper.findAll("button").find((button) => button.text() === "授权飞书账号")!.trigger("click");
       await flushPromises();
       expect(authorizationBodies).toEqual([{ identity: "user", scopes }]);
@@ -496,6 +537,7 @@ describe("ExtensionManager", () => {
     const wrapper = mountManager(api, false, language);
     try {
       await flushPromises();
+      await openDetails(wrapper);
       await wrapper.findAll("button").find((button) => button.text() === label)!.trigger("click");
       await flushPromises();
       const notice = document.body.querySelector('[role="alert"]')?.textContent;
@@ -520,7 +562,9 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []), enableCLIConnector: vi.fn().mockRejectedValue(cause) } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
-    await wrapper.get('button[aria-label="启用"]').trigger("click");
+    const activate = wrapper.find('button[aria-label="启用"]');
+      if (activate.exists()) await activate.trigger("click");
+      else await wrapper.get('.connector-detail-actions button.el-button--primary').trigger("click");
     await flushPromises();
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(message);
     expect(document.body.textContent).not.toContain("request_failed");
@@ -537,16 +581,14 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     const connectorGroups = wrapper.findAll(".catalog-group");
-    expect(connectorGroups).toHaveLength(2);
-    expect(connectorGroups[0]!.text()).toContain("平台连接器");
+    expect(connectorGroups).toHaveLength(1);
+    expect(connectorGroups[0]!.text()).toContain("其他");
     expect(connectorGroups[0]!.text()).toContain(platformMCP.name);
-    expect(connectorGroups[0]!.text()).toContain("平台发布");
-    expect(connectorGroups[0]!.text()).toContain("连接测试通过");
-    expect(connectorGroups[0]!.find('button[aria-label="编辑"]').exists()).toBe(false);
-    expect(connectorGroups[1]!.text()).toContain("我的连接器");
-    expect(connectorGroups[1]!.text()).toContain(myMCP.name);
-    expect(connectorGroups[1]!.text()).toContain("仅我可见");
-
+    expect(connectorGroups[0]!.text()).toContain(myMCP.name);
+    const details = await openDetails(wrapper, `.connector-catalog-card[aria-label="${platformMCP.name}"]`);
+    expect(details.text()).toContain("平台发布");
+    expect(details.text()).toContain("连接测试通过");
+    expect(details.find('button[aria-label="删除"]').exists()).toBe(false);
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
     const skillGroups = wrapper.findAll(".catalog-group");
     expect(skillGroups).toHaveLength(2);
@@ -571,7 +613,7 @@ describe("ExtensionManager", () => {
     await flushPromises();
     const mineConnectorGroups = wrapper.findAll(".catalog-group");
     expect(mineConnectorGroups).toHaveLength(1);
-    expect(mineConnectorGroups[0]!.text()).toContain("我的连接器");
+    expect(mineConnectorGroups[0]!.text()).toContain("其他");
     expect(mineConnectorGroups[0]!.text()).toContain(myMCP.name);
     wrapper.unmount();
   });
@@ -723,6 +765,7 @@ describe("ExtensionManager", () => {
     await user.findAll(".resource-list article button").at(-1)!.trigger("click");
     await flushPromises();
     expect(enableCLIConnector).toHaveBeenCalledWith(definition.id);
+    await openDetails(user);
     expect(user.text()).toContain("继续完成授权");
     user.unmount();
 
@@ -750,14 +793,15 @@ describe("ExtensionManager", () => {
     user.unmount();
     const admin = mountManager(api, true);
     await flushPromises();
-    await admin.get('.connector-catalog-card button[aria-label="删除"]').trigger("click");
+    await openDetails(admin);
+    await new DOMWrapper(document.body).get('.connector-details button[aria-label="删除"]').trigger("click");
     const dialog = admin.findAllComponents(ConfirmDialog).find((entry) => entry.props("open"))!;
     expect(dialog.props("message")).toContain("所有用户");
     expect(deleteCLIConnectorDefinition).not.toHaveBeenCalled();
     dialog.vm.$emit("cancel");
     await flushPromises();
     expect(deleteCLIConnectorDefinition).not.toHaveBeenCalled();
-    await admin.get('.connector-catalog-card button[aria-label="删除"]').trigger("click");
+    await new DOMWrapper(document.body).get('.connector-details button[aria-label="删除"]').trigger("click");
     dialog.vm.$emit("confirm");
     await flushPromises();
     expect(admin.emitted("error")).toHaveLength(1);
@@ -781,9 +825,9 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     expect(wrapper.findAll(".connector-catalog-grid > .connector-catalog-card")).toHaveLength(2);
-    expect(wrapper.findAll(".connector-card-heading .connector-card-icon")).toHaveLength(2);
-    expect(wrapper.findAll(".connector-card-header > .extension-card-actions")).toHaveLength(2);
-    expect(wrapper.find(".connector-catalog-card > .connector-card-icon").exists()).toBe(false);
+    expect(wrapper.findAll(".connector-summary-card > .connector-card-icon")).toHaveLength(2);
+    expect(wrapper.find(".connector-summary-card .extension-card-actions").exists()).toBe(false);
+    expect(wrapper.find(".connector-summary-card .resource-trust-meta").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("第三方 CLI");
     wrapper.unmount();
   });
@@ -823,6 +867,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [waiting]), completeCLIConnectorEnablement } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    await openDetails(wrapper);
     await vi.advanceTimersByTimeAsync(6000);
     expect(wrapper.findAll('[data-testid="resource-status-error"]')).toHaveLength(1);
     expect(wrapper.get('a[href="https://example.test/setup"]').text()).toBe("继续完成授权");
@@ -936,11 +981,12 @@ describe("ExtensionManager", () => {
     } as unknown as PlatformApi;
     const wrapper = mountManager(api, true);
     await flushPromises();
+    await openDetails(wrapper);
     expect(wrapper.text()).not.toContain("个用户已启用");
     expect(wrapper.text()).not.toContain("个有效授权");
     expect(listCLIConnectorHealth).not.toHaveBeenCalled();
 
-    await wrapper.get('button[aria-label="编辑"]').trigger("click");
+    await wrapper.findAll(".connector-detail-actions button").find(button => button.text() === "编辑")!.trigger("click");
     const form = new DOMWrapper(document.body.querySelector<HTMLFormElement>(".modal-card")!);
     expect((form.get('input[placeholder="@scope/package@1.2.3"]').element as HTMLInputElement).value).toBe("example-cli@1.0.0");
     await form.get('input[placeholder="@scope/package@1.2.3"]').setValue("example-cli@1.0.1");
@@ -957,6 +1003,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => []) } as unknown as PlatformApi;
     const wrapper = mountManager(api, true);
     await flushPromises();
+    await openDetails(wrapper);
 
     await wrapper.get(".connector-catalog-card").trigger("click");
     await flushPromises();
@@ -988,6 +1035,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [{ id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 }]), createGitSkill } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    await openDetails(wrapper);
     await wrapper.setProps({ cliConnectorDefinitionIds: [definition.id] });
 
     expect(wrapper.text()).toContain("建议为当前专家选择技能“Calendar Skill”");
@@ -1007,6 +1055,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [waiting]), completeCLIConnectorEnablement } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    await openDetails(wrapper);
 
     await vi.advanceTimersByTimeAsync(6000);
     await flushPromises();
@@ -1030,6 +1079,7 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [enablement]), listCLIConnectorAuthorizations, beginCLIConnectorAuthorization, completeCLIConnectorAuthorization } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    await openDetails(wrapper);
 
     await wrapper.findAll("button").find((button) => button.text().includes("授权飞书账号"))!.trigger("click");
     await flushPromises();
@@ -1052,10 +1102,57 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => [definition]), listCLIConnectorEnablements: vi.fn(async () => [enablement]), listCLIConnectorAuthorizations: vi.fn(async () => [authorization]), beginCLIConnectorAuthorization } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    await openDetails(wrapper);
 
     await wrapper.findAll("button").find((button) => button.text() === "扩展飞书权限")!.trigger("click");
     await flushPromises();
     expect(beginCLIConnectorAuthorization).toHaveBeenCalledWith(enablement.id, "user", ["im:chat:read"]);
     wrapper.unmount();
   });
+});
+
+it("groups real connector sources, filters installed/search, and installs without opening a modal", async () => {
+  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "modao", "custom"];
+  const publications = sources.map(source => ({ source, state: "available", revision: { name: source, description: `Description ${source}`, mode: "cli", conformance_available: true } }));
+  const installations: Array<{ id: string; source: string; name: string; state: string; authorized: boolean; version: number }> = [{ id: "notion-id", source: "notion", name: "notion", state: "active", authorized: false, version: 1 }];
+  const install = vi.fn(async (source: string) => { installations.push({ id: `${source}-id`, source, name: source, state: "active", authorized: false, version: 1 }); });
+  const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => publications), listConnectorInstallations: vi.fn(async () => [...installations]), listConnectorAuthorizations: vi.fn(async () => []), installPublishedConnector: install } as unknown as PlatformApi;
+  const wrapper = mountManager(api);
+  await flushPromises();
+  expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["沟通协作", "知识文档", "项目管理", "设计创作", "其他"]);
+  const card = (name: string) => wrapper.get(`.connector-summary-card[aria-label="${name}"]`);
+  expect(card("notion").find(".connector-installed-mark").exists()).toBe(true);
+  expect(card("notion").text()).not.toContain("需要设置");
+  expect(card("feishu").text()).toBe("feishuDescription feishu");
+  await card("feishu").get('button[aria-label="安装"]').trigger("click"); await flushPromises();
+  expect(install).toHaveBeenCalledWith("feishu");
+  expect(card("feishu").find(".connector-installed-mark").exists()).toBe(true);
+  expect(wrapper.find(".connector-details").exists()).toBe(false);
+  await wrapper.get(".connector-view-tabs").findAll("button")[1]!.trigger("click");
+  expect(wrapper.findAll(".connector-summary-card")).toHaveLength(2);
+  await wrapper.setProps({ catalogQuery: "notion" });
+  expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["知识文档"]);
+  expect(wrapper.findAll(".connector-summary-card")).toHaveLength(1);
+  wrapper.unmount();
+});
+
+it("disconnects every connector grant but preserves installation, then uninstalls the current version", async () => {
+  let installed = true; let authorized = true; let version = 3;
+  const installation = () => ({ id: "modao-id", source: "modao", name: "墨刀", description: "Design", state: "active", mode: "cli", authentication_driver: "connector_package", authorized, version });
+  const publication = { source: "modao", state: "available", revision: { name: "墨刀", mode: "cli", conformance_available: true } };
+  const disconnect = vi.fn(async (_id: string) => { authorized = false; version = 4; });
+  const uninstall = vi.fn(async () => { installed = false; });
+  const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => installed ? [installation()] : []), listConnectorAuthorizations: vi.fn(async () => authorized ? [{ id: "grant-1", state: "active" }, { id: "grant-2", state: "expired" }] : []), disconnectPublishedConnectorAuthorization: disconnect, uninstallConnector: uninstall } as unknown as PlatformApi;
+  const wrapper = mountManager(api); await flushPromises();
+  const details = await openDetails(wrapper);
+  await details.findAll(".connector-detail-actions button").find(button => button.text() === "断开")!.trigger("click"); await flushPromises();
+  expect(disconnect.mock.calls.map(call => call[0])).toEqual(["grant-1", "grant-2"]);
+  expect(uninstall).not.toHaveBeenCalled();
+  expect(wrapper.find(".connector-summary-card .connector-installed-mark").exists()).toBe(true);
+  expect(wrapper.get(".connector-details .connector-detail-actions").text()).toContain("连接");
+  await details.findAll(".connector-detail-actions button").find(button => button.text() === "卸载")!.trigger("click"); await flushPromises();
+  expect(uninstall).toHaveBeenCalledWith("modao-id", 4);
+  expect(wrapper.find(".connector-summary-card .connector-installed-mark").exists()).toBe(false);
+  expect(wrapper.find('.connector-summary-card button[aria-label="安装"]').exists()).toBe(true);
+  wrapper.unmount();
 });

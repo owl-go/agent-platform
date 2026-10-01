@@ -1229,3 +1229,31 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .connector-usage-prompt:hover:not(:disabled) { background: var(--aw-n3); }
 .connector-usage-prompt:focus-visible { outline: 2px solid var(--aw-primary); outline-offset: 2px; }
 .connector-usage-prompt:disabled { cursor: not-allowed; opacity: .5; }
+
+/* Connector discovery: concise category cards with management in a centered dialog. */
+.connector-catalog-toolbar { justify-content: space-between; }
+.connector-view-tabs { margin: 0; }
+.resource-list.connector-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.resource-list .connector-summary-card { display: flex; flex-direction: row; align-items: center; gap: var(--aw-space-4); min-height: 0; padding: var(--aw-space-5); border: 1px solid var(--aw-n4); border-radius: var(--aw-radius-overlay); box-shadow: none; background: var(--aw-n0); transition: border-color var(--aw-motion-fast), background var(--aw-motion-fast); }
+.connector-summary-card:hover { border-color: var(--aw-n5); background: var(--aw-n1); }
+.connector-summary-card > .connector-card-icon { flex: 0 0 auto; }
+.connector-summary-copy { flex: 1; min-width: 0; }
+.connector-summary-copy strong { display: block; color: var(--aw-n10); font-weight: 600; }
+.connector-summary-copy p { margin: var(--aw-space-1) 0 0; color: var(--aw-n7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connector-installed-mark { color: var(--aw-success); flex: 0 0 auto; }
+.resource-list .connector-summary-card > .connector-install-button { flex: 0 0 auto; border: 1px solid var(--aw-n4); background: var(--aw-n0); padding: var(--aw-space-2); border-radius: var(--aw-radius-input); }
+.connector-details.el-dialog { border-radius: var(--aw-radius-overlay); box-shadow: var(--aw-shadow-overlay); padding: var(--aw-space-6); }
+.connector-details .el-dialog__body { max-height: 65vh; overflow-y: auto; padding-right: var(--aw-space-2); }
+.connector-details .el-dialog__footer { padding-top: var(--aw-space-4); margin-top: var(--aw-space-4); border-top: 1px solid var(--aw-n4); }
+.connector-details .catalog-detail-intro { margin-bottom: var(--aw-space-4); }
+.connector-details .catalog-detail-intro p { margin-bottom: 0; }
+.connector-detail-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--aw-space-2); }
+.connector-detail-actions .el-button + .el-button { margin-left: 0; }
+.connector-supplementary-details { display: grid; gap: var(--aw-space-2); color: var(--aw-n7); }
+.connector-supplementary-details .extension-card-actions { justify-content: flex-start; }
+@media (max-width: 640px) {
+  .resource-list.connector-catalog-grid { grid-template-columns: minmax(0, 1fr); }
+  .resource-list .connector-summary-card { padding: var(--aw-space-4); gap: var(--aw-space-3); }
+  .connector-details { padding: var(--aw-space-4); }
+  .connector-details .el-dialog__body { max-height: 60vh; }
+}
