@@ -61,3 +61,12 @@ python3 publish.py \
 实际通过：Node launcher 三项边界测试、Python 构建器三项测试、目标 Go 包测试、`make test`、`make build`、最终 ZIP 的 `connectorpackage.Parse`、生产 Worker Linux + runsc Conformance，以及 native `--version`、无凭证状态、未放行命令拒绝检查。功能分支和 `main_temp` 均已执行测试与构建；同一输入再次构建的包逐字节一致。未执行真实 Teambition 账号业务 API、其他 Runtime Digest、私有部署、完整模型 Runtime Production Conformance；未改 Web 或 Runtime 镜像，对应构建门禁不适用。
 
 0.3.4 修复验收：公共 catalog 只有一个 Teambition Publication；管理员 legacy catalog 没有临时构建条目。原 Definition 已软删除，Conformance 行仍在。再次运行发布脚本返回同一修订，未新增 Definition。Playwright 检查「全部状态」下的实际卡片，只有一个「钉钉项目」，品牌 PNG 加载成功（128×128），显示版本 0.3.4。六项 Python 测试、目标 Go 测试和功能分支／main_temp 的 `make test`、`make build` 均通过。图标 API 镜像从 main_temp `1e120f7` 构建并通过容器健康检查；未改变 Runtime 镜像。非敏感响应与卡片截图保存在忽略目录 `outputs/teambition/evidence-0.3.4`。
+
+
+## 浏览器 OAuth 修复验收（2026-10-01）
+
+版本 0.3.5 已发布为 available，Revision `1c4535f5-421b-4021-b37f-8a47a0761552`，规范化包 SHA-256 `2e59ed92430d83c5eb524384fdd1d80903bde637b5e490a664c99fe2274c1ad3`，bundle SHA-256 `72a297caf2bdd303db7a4cbad2c1a22f3fdfcfba266278069b6d25636eff7d12`。生产 Worker 对本 bundle × Runtime `sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b` 完成 Linux + runsc Conformance；同一镜像中五项 OAuth 传输测试全部通过，包括原版 Linux CLI 经模拟 OAuth upstream 发现工具。发布重跑返回同一 Revision，没有新建临时 Definition。
+
+实际通过：Go 目标包与全仓测试／构建，真实 PostgreSQL Repository 集成测试，395 项前端测试及 typecheck／生产构建，9 项本地 Node 测试（含原版 macOS CLI），6 项 Python 测试和最终 ZIP Parse。API、Worker 与 Web 从集成后的 `main_temp` `2eb7758` 发布并通过健康检查，Runtime 镜像未变。未携带 JWT 的伪造 callback 得到 400；邻接路径和其他方法仍要求平台认证。
+
+线上 Playwright 以原有 0.3.4 Installation 点击连接，实际先升级至 0.3.5，再动态注册并打开 `https://account.teambition.com/login`，页面显示「使用钉钉扫码授权」。目录只有一个钉钉项目卡片，128px 品牌 PNG 加载成功，没有 UserToken 输入框。非敏感响应、卡片截图和 Linux 测试记录在忽略目录 `outputs/teambition/evidence-0.3.5`。浏览器入口已验证；第三方账号仍待用户扫码，未宣称真实账号授权、业务查询／写入或完整模型 Runtime Production Conformance 已通过。
