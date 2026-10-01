@@ -15,4 +15,4 @@ Validation performed:
 
 Regression coverage includes Notion/Teambition browser authorization, DingTalk device authorization, WeCom/Modao credentials, Feishu setup and scope recovery, account disconnect retaining installation, versioned uninstall, exact installed-revision guidance, unsent Session routing, and returning to Market from the old personal Connector URL.
 
-This change has not been deployed. Browser checks used local fixtures and are not evidence of real external-account authorization or production Runtime Conformance. No backend or Runtime behavior was changed.
+These local checks preceded deployment; the later release is recorded in [the deployment evidence](2026-10-01-connector-catalog-layout-deployment.md). Browser checks used local fixtures and are not evidence of real external-account authorization or production Runtime Conformance. No backend or Runtime behavior was changed.
