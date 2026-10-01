@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useZIndex } from "element-plus";
 import ToastMessage from "./ToastMessage.vue";
-import { ChevronDown, Pencil, Plus, PowerOff, RefreshCw, Trash2 } from "@lucide/vue";
+import { Check, ChevronDown, Pencil, Plus, Trash2 } from "@lucide/vue";
 import CatalogDetails from "./CatalogDetails.vue";
 import { ApiError, platformApiKey, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type CLIConnectorEnablement, type CLIRecommendedSkill, type ConnectorAuthorization, type ConnectorAuthorizationFlow, type ConnectorInstallation, type ConnectorPublication, type ConnectorSetup, type EnvironmentVariable, type MCPServer, type ResourceDeletionImpact, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -87,6 +87,8 @@ const connectorAuthorizations = ref<Record<string, ConnectorAuthorization[]>>({}
 const connectorBusy = ref<string[]>([]);
 const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
+const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string }>();
+const providedConnectionBusy = ref(false);
 const connectorFlowWindows = new Map<string, Window | null>();
 const reportedAuthorizationFlowErrors = new Set<string>();
 const cliEnablements = ref<CLIConnectorEnablement[]>([]);
@@ -100,6 +102,7 @@ const cliEnableBusy = ref<string[]>([]);
 const cliAuthorizationBusy = ref<string[]>([]);
 const cliSetupWindows = new Map<string, Window | null>();
 let cliCompletionBusy = false;
+let publishedCompletionBusy = false;
 let disposed = false;
 const showCLI = ref(false);
 const showConnectorKind = ref(false);
@@ -109,6 +112,68 @@ const editingMCP = ref<MCPServer>();
 const showMCP = ref(false);
 const detailMCP = ref<MCPServer>();
 const detailCLI = ref<CLIConnectorDefinition>();
+const detailPackageSource = ref<string>();
+const launchingConnector = ref(false);
+const connectorView = ref<"market" | "installed">(props.mineOnly ? "installed" : "market");
+const detailPackage = computed(() => connectorCatalogItems.value.find((entry) => detailPackageSource.value
+  ? (entry.publication?.source || entry.installation?.source) === detailPackageSource.value
+  : Boolean(entry.installation && entry.installation.id === (detailCLI.value?.id || detailMCP.value?.id))));
+function closeConnectorDetails() { detailMCP.value = undefined; detailCLI.value = undefined; detailPackageSource.value = undefined; }
+function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetails(); detailPackageSource.value = entry.publication?.source || entry.installation?.source; }
+async function connectFromDetails() {
+  const entry = detailPackage.value;
+  if (entry?.installation) {
+    if (["notion", "teambition"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
+    else if (["wecom", "modao"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
+  } else if (entry?.publication) await installPublication(entry.publication);
+  else if (detailCLI.value) {
+    const item = detailCLI.value;
+    if (enablementFor(item.id)?.state === "waiting_for_user") resumeCLISetup(item);
+    else if (enablementFor(item.id)?.state === "enabled") await authorizeCLIAccount(item);
+    else await enableCLI(item);
+  }
+  else if (detailMCP.value) await testMCP(detailMCP.value);
+}
+const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+async function disconnectFromDetails() {
+  const installation = detailPackage.value?.installation;
+  if (installation) await runConnectorOperation(installation.source, async () => {
+    for (const authorization of connectorAuthorizations.value[installation.id] ?? []) {
+      if (authorization.state === "active" || authorization.state === "expired") await api.disconnectPublishedConnectorAuthorization(authorization.id);
+    }
+  });
+  else if (detailCLI.value) {
+    launchingConnector.value = true;
+    try { for (const authorization of authorizationsFor(detailCLI.value.id)) if (authorization.state === "active") await disconnectCLIAccount(authorization); }
+    finally { launchingConnector.value = false; }
+  }
+}
+async function uninstallFromDetails() {
+  const installation = detailPackage.value?.installation;
+  if (installation) await uninstallInstallation(installation);
+  else if (detailCLI.value) await deactivateCLI(detailCLI.value);
+}
+async function useConnectorPrompt(prompt: string) {
+  if (launchingConnector.value) return;
+  launchingConnector.value = true;
+  try {
+    const entry = detailPackage.value;
+    let installation = entry?.installation;
+    if ((!installation || installation.state === "disabled") && entry?.publication) {
+      await installPublication(entry.publication);
+      installation = connectorInstallations.value.find((item) => item.source === entry.publication!.source);
+      if (!installation) return;
+    }
+    const kind = installation?.mode || entry?.publication?.revision.mode || (detailCLI.value ? "cli" : "mcp");
+    const id = installation?.id || detailCLI.value?.id || detailMCP.value?.id;
+    if (!id) return;
+    closeConnectorDetails();
+    await router.push({ path: "/sessions", query: { new: crypto.randomUUID(), connector_kind: kind, connector_id: id, draft: prompt } });
+  } finally { launchingConnector.value = false; }
+}
 const mcpForm = ref<MCPDraft>(emptyMCPDraft());
 const editingSkill = ref<Skill>();
 const showSkill = ref(false);
@@ -117,6 +182,7 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
+let browserReturnRefreshUntil = 0;
 const connectorCatalogItems = computed(() => {
   const bySource = new Map<string, ConnectorCatalogEntry>(connectorPublications.value.map((publication) => [publication.source, { publication, installation: connectorInstallations.value.find((item) => item.source === publication.source) }]));
   for (const installation of connectorInstallations.value) if (!bySource.has(installation.source)) bySource.set(installation.source, { publication: undefined, installation });
@@ -130,12 +196,21 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
   const available = entry.publication?.state === "available" && entry.publication.revision.conformance_available;
   return (!props.availableOnly || available) && matchesCatalog(entry.publication?.revision.name, entry.publication?.revision.description, entry.installation?.name, entry.installation?.description, entry.publication?.source, entry.installation?.source);
 }));
-const connectorSections = computed(() => (props.mineOnly
-  ? [{ key: "mine", title: t("resources.myConnectors"), mcp: visibleMCP.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[], packages: visibleConnectorCatalogItems.value.filter((item) => Boolean(item.installation)) }]
-  : [
-      { key: "platform", title: t("resources.platformConnectors"), mcp: visibleMCP.value.filter((item) => item.platform), cli: visibleCLI.value.filter((item) => !item.managed_installation), packages: visibleConnectorCatalogItems.value.filter((item) => !item.installation) },
-      { key: "mine", title: t("resources.myConnectors"), mcp: visibleMCP.value.filter((item) => !item.platform), cli: [] as CLIConnectorDefinition[], packages: visibleConnectorCatalogItems.value.filter((item) => Boolean(item.installation)) },
-    ]).filter((section) => section.mcp.length || section.cli.length || section.packages.length));
+// Categories describe existing connector sources; unknown and private connectors stay discoverable.
+function connectorCategory(source: string) {
+  if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
+  if (source === "notion") return "documents";
+  if (source === "teambition") return "projects";
+  if (source === "modao") return "design";
+  return "other";
+}
+const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
+const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "other"].map(key => ({
+  key, title: t(`resources.connectorCategory.${key}`),
+  mcp: visibleMCP.value.filter(item => !item.managed_installation && connectorCategory("") === key && (!props.mineOnly || !props.selectable || !item.platform)),
+  cli: visibleCLI.value.filter(item => !item.managed_installation && connectorCategory(item.npm_package) === key && (!installedOnly.value || cliInstalled(item))),
+  packages: visibleConnectorCatalogItems.value.filter(entry => connectorCategory(entry.publication?.source || entry.installation?.source || "") === key && (!installedOnly.value || Boolean(entry.installation))),
+})).filter(section => section.mcp.length || section.cli.length || section.packages.length));
 const skillSections = computed(() => {
   const visible = skills.value.filter((item) => matchesCatalog(skillDisplayName(item), skillDescription(item), item.git_url, item.source));
   return (props.mineOnly
@@ -147,8 +222,9 @@ const skillSections = computed(() => {
 });
 
 onMounted(() => {
-  void refresh();
+  void completeBrowserReturn();
   poll = window.setInterval(() => {
+    if (Date.now() < browserReturnRefreshUntil) void refresh();
     if (mcp.value.some((item) => item.test_pending)) void refreshMCP();
     if (cliDefinitions.value.some((item) => item.state === "building" || item.state === "testing")) void refreshCLI();
     if (cliEnablements.value.some((item) => item.state === "waiting_for_user") && Date.now() - lastCLICompletionPoll >= 5000) {
@@ -166,6 +242,21 @@ onBeforeUnmount(() => {
   for (const popup of connectorFlowWindows.values()) closeBlankCLIWindow(popup);
   cliSetupWindows.clear();
 });
+
+async function completeBrowserReturn() {
+  await refresh();
+  const flowID = router?.currentRoute.value.query.teambition_auth;
+  if (typeof flowID !== "string" || !/^[0-9a-f-]{36}$/i.test(flowID)) return;
+  try { await api.completeConnectorAuthorizationFlow(flowID); }
+  catch (cause) { if (!(cause instanceof ApiError && cause.kind === "not_found")) reportError(cause); }
+  // Another tab may already be exchanging this single-use code. Read the saved
+  // installation briefly so both the returning browser and its opener converge.
+  browserReturnRefreshUntil = Date.now() + 15000;
+  await refresh();
+  const query = { ...router.currentRoute.value.query };
+  delete query.teambition_auth;
+  await router.replace({ query });
+}
 
 function emptyMCPDraft(): MCPDraft { return { name: "", icon: "terminal", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
@@ -196,6 +287,7 @@ function connectorNeedsScopeRecovery(item: ConnectorInstallation, publication?: 
   return !selected || required.some((scope) => !selected.scopes.includes(scope));
 }
 async function runConnectorOperation(source: string, action: () => Promise<unknown>) {
+  if (connectorOperationBusy(source)) return;
   connectorBusy.value = [...connectorBusy.value, source];
   try { await action(); await refresh(); }
   catch (cause) { reportError(cause); }
@@ -203,11 +295,61 @@ async function runConnectorOperation(source: string, action: () => Promise<unkno
 }
 function installPublication(item: ConnectorPublication) { return runConnectorOperation(item.source, () => api.installPublishedConnector(item.source)); }
 function upgradeInstallation(item: ConnectorInstallation) { return runConnectorOperation(item.source, () => api.upgradeConnectorInstallation(item.id, item.version)); }
-function disableInstallation(item: ConnectorInstallation) { return runConnectorOperation(item.source, () => api.disableConnectorInstallation(item.id, item.version)); }
 function uninstallInstallation(item: ConnectorInstallation) { return runConnectorOperation(item.source, () => api.uninstallConnector(item.id, item.version)); }
 function selectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.selectConnectorAuthorization(item.id, authorization.id, item.version)); }
 function refreshAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.refreshConnectorAuthorization(item.id, authorization.id, authorization.version)); }
 function disconnectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.disconnectPublishedConnectorAuthorization(authorization.id)); }
+function openProvidedConnection(installation: ConnectorInstallation) {
+  providedConnection.value = { installation, botID: "", secret: "" };
+}
+function closeProvidedConnection() {
+  if (providedConnectionBusy.value) return;
+  providedConnection.value = undefined;
+}
+async function saveProvidedConnection() {
+  const form = providedConnection.value;
+  if (!form || providedConnectionBusy.value) return;
+  const modao = form.installation.source === "modao";
+  const invalidKey = modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const botID = form.botID.trim();
+  if (modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+    reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
+    return;
+  }
+  providedConnectionBusy.value = true;
+  try {
+    const credentials = modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    let installation = form.installation;
+    if (modao && installation.upgrade_available) {
+      installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
+      form.installation = installation;
+    }
+    await api.connectConnector(installation.id, "user", [], JSON.stringify(credentials));
+    providedConnection.value = undefined;
+    await refresh();
+  } catch (cause) { reportError(cause, invalidKey); }
+  finally { providedConnectionBusy.value = false; }
+}
+async function startBrowserConnection(installation: ConnectorInstallation, publication?: ConnectorPublication) {
+  if (connectorOperationBusy(installation.source) || installation.state === "disabled" && !publication) return;
+  const popup = window.open("about:blank", "_blank");
+  connectorFlowWindows.set(installation.id, popup);
+  connectorBusy.value = [...connectorBusy.value, installation.source];
+  try {
+    let active = installation;
+    if (installation.state === "disabled") active = await api.installPublishedConnector(publication!.source);
+    else if (installation.upgrade_available && publication) active = await api.upgradeConnectorInstallation(installation.id, installation.version);
+    if (active !== installation) await refresh();
+    if (!active.authorized || connectorNeedsScopeRecovery(active, publication)) await beginPublishedConnectorAuthorization(active, publication, popup);
+    else { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); }
+  } catch (cause) { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); reportError(cause, "connectorAuthorizationInvalidInput"); }
+  finally { connectorBusy.value = connectorBusy.value.filter((source) => source !== installation.source); }
+}
+function notionVerificationCode(actionURL?: string) {
+  if (!actionURL) return "";
+  try { return new URL(actionURL).searchParams.get("verificationCode") ?? ""; }
+  catch { return ""; }
+}
 async function setupPublishedConnector(item: ConnectorInstallation, publication?: ConnectorPublication) {
   const popup = window.open("about:blank", "_blank");
   connectorFlowWindows.set(item.id, popup);
@@ -231,36 +373,49 @@ async function beginPublishedConnectorAuthorization(item: ConnectorInstallation,
   if (flow.state === "waiting_for_user" && flow.action_url) popup?.location.replace(flow.action_url);
 }
 async function completePublishedConnectorFlows() {
+  if (publishedCompletionBusy) return;
+  publishedCompletionBusy = true;
   lastCLICompletionPoll = Date.now();
-  for (const [installationID, setup] of Object.entries(connectorSetups.value)) {
-    if (setup.state !== "waiting_for_user") continue;
-    try {
-      const completed = await api.completeConnectorSetup(setup.id);
-      connectorSetups.value = { ...connectorSetups.value, [installationID]: completed };
-      if (completed.state === "completed") {
-        const installation = connectorInstallations.value.find((item) => item.id === installationID);
-        if (installation) await beginPublishedConnectorAuthorization(installation, connectorPublications.value.find((item) => item.source === installation.source), connectorFlowWindows.get(installationID));
-      }
-    } catch (cause) { reportError(cause); }
-  }
-  for (const [installationID, flow] of Object.entries(connectorAuthorizationFlows.value)) {
-    if (flow.state !== "waiting_for_user") continue;
-    try {
-      const completed = await api.completeConnectorAuthorizationFlow(flow.id);
-      reportedAuthorizationFlowErrors.delete(flow.id);
-      connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
-      if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
-    } catch (cause) {
-      if (cause instanceof ApiError && ["dingtalk_cli_access_disabled", "dingtalk_cli_enterprise_denied", "dingtalk_cli_user_denied", "dingtalk_cli_channel_required", "dingtalk_cli_auth_expired", "dingtalk_identity_mismatch", "dingtalk_authorization_failed"].includes(cause.code)) {
-        const remaining = { ...connectorAuthorizationFlows.value };
-        delete remaining[installationID];
-        connectorAuthorizationFlows.value = remaining;
-        closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null);
-        connectorFlowWindows.delete(installationID);
-      }
-      if (!reportedAuthorizationFlowErrors.has(flow.id)) { reportedAuthorizationFlowErrors.add(flow.id); reportError(cause); }
+  try {
+    for (const [installationID, setup] of Object.entries(connectorSetups.value)) {
+      if (setup.state !== "waiting_for_user") continue;
+      try {
+        const completed = await api.completeConnectorSetup(setup.id);
+        connectorSetups.value = { ...connectorSetups.value, [installationID]: completed };
+        if (completed.state === "completed") {
+          const installation = connectorInstallations.value.find((item) => item.id === installationID);
+          if (installation) await beginPublishedConnectorAuthorization(installation, connectorPublications.value.find((item) => item.source === installation.source), connectorFlowWindows.get(installationID));
+        }
+      } catch (cause) { reportError(cause); }
     }
-  }
+    for (const [installationID, flow] of Object.entries(connectorAuthorizationFlows.value)) {
+      if (flow.state !== "waiting_for_user") continue;
+      try {
+        const completed = await api.completeConnectorAuthorizationFlow(flow.id);
+        reportedAuthorizationFlowErrors.delete(flow.id);
+        connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
+        if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
+      } catch (cause) {
+        if (connectorInstallations.value.find(item => item.id === installationID)?.source === "teambition" && cause instanceof ApiError && cause.kind === "not_found") {
+          await refresh();
+          if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
+            connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };
+          } else if (flow.expires_at && Date.parse(flow.expires_at) <= Date.now()) {
+            connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "invalid" } };
+          }
+          continue;
+        }
+        if (cause instanceof ApiError && ["dingtalk_cli_access_disabled", "dingtalk_cli_enterprise_denied", "dingtalk_cli_user_denied", "dingtalk_cli_channel_required", "dingtalk_cli_auth_expired", "dingtalk_identity_mismatch", "dingtalk_authorization_failed"].includes(cause.code)) {
+          const remaining = { ...connectorAuthorizationFlows.value };
+          delete remaining[installationID];
+          connectorAuthorizationFlows.value = remaining;
+          closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null);
+          connectorFlowWindows.delete(installationID);
+        }
+        if (!reportedAuthorizationFlowErrors.has(flow.id)) { reportedAuthorizationFlowErrors.add(flow.id); reportError(cause); }
+      }
+    }
+  } finally { publishedCompletionBusy = false; }
 }
 async function refreshSkillDocuments() {
   let failed = false;
@@ -332,9 +487,9 @@ function navigateCLIWindow(popup: Window | null, url?: string) {
 function closeBlankCLIWindow(popup: Window | null) {
   try { if (popup && !popup.closed && popup.location.href === "about:blank") popup.close(); } catch { /* Keep external pages open. */ }
 }
-function resumeCLISetup(item: CLIConnectorDefinition, event: MouseEvent) {
+function resumeCLISetup(item: CLIConnectorDefinition, event?: MouseEvent) {
   const popup = openCLIWindow();
-  if (popup) event.preventDefault();
+  if (popup) event?.preventDefault();
   cliSetupWindows.set(item.id, popup);
   navigateCLIWindow(popup, enablementFor(item.id)?.action_url);
 }
@@ -356,6 +511,7 @@ async function removeCLI() {
     cliEnablements.value = cliEnablements.value.filter((entry) => entry.definition_id !== item.id);
     emit("update:cliConnectorDefinitionIds", props.cliConnectorDefinitionIds.filter((id) => id !== item.id));
     deletingCLI.value = undefined;
+    if (detailCLI.value?.id === item.id) closeConnectorDetails();
   } catch (cause) { reportError(cause); }
   finally { cliDeleteBusy.value = false; }
 }
@@ -377,6 +533,7 @@ async function completePendingCLIEnablements() {
   finally { cliCompletionBusy = false; }
 }
 function enablementFor(id: string) { return cliEnablements.value.find((item) => item.definition_id === id); }
+function cliInstalled(item: CLIConnectorDefinition) { return ["enabled", "waiting_for_user"].includes(enablementFor(item.id)?.state ?? ""); }
 function authorizationsFor(definitionID: string) {
   const enablement = enablementFor(definitionID);
   return enablement ? cliAuthorizations.value[enablement.id] ?? [] : [];
@@ -517,8 +674,8 @@ function openMCP(item: MCPServer) {
   mcpForm.value = { name: item.name, icon: item.icon || "terminal", transport: item.transport, url: item.url ?? "", runner: item.runner ?? "npx", package: item.package ?? "", package_version: item.package_version ?? "", argumentsText: item.arguments.join("\n"), environment: item.environment.filter((entry) => entry.name !== "MCP_BEARER_TOKEN").map((entry) => ({ ...entry, value: "" })), bearerToken: "" };
   showMCP.value = true;
 }
-function showMCPDetails(item: MCPServer) { detailCLI.value = undefined; detailMCP.value = item; }
-function showCLIDetails(item: CLIConnectorDefinition) { detailMCP.value = undefined; detailCLI.value = item; }
+function showMCPDetails(item: MCPServer) { closeConnectorDetails(); detailMCP.value = item; }
+function showCLIDetails(item: CLIConnectorDefinition) { closeConnectorDetails(); detailCLI.value = item; }
 function editMCPFromDetails(item: MCPServer) { detailMCP.value = undefined; openMCP(item); }
 function editCLIFromDetails(item: CLIConnectorDefinition) { detailCLI.value = undefined; openCLI(item); }
 function addMCPEnvironment() { mcpForm.value.environment.push({ name: "", value: "", secret: false, configured: false }); }
@@ -593,6 +750,7 @@ async function confirmRemove() {
     if (target.kind === "mcp") await removeMCP(target.item);
     else await removeSkill(target.item);
     pendingDelete.value = undefined;
+    if (target.kind === "mcp" && detailMCP.value?.id === target.item.id) closeConnectorDetails();
   } catch (cause) { reportError(cause); }
   finally { deleteBusy.value = false; }
 }
@@ -614,73 +772,30 @@ async function fileToBase64(file: File): Promise<string> {
     <el-alert v-if="statusErrors.length" :title="t('resources.statusUpdateFailed')" type="warning" :closable="false" data-testid="resource-status-error" />
     <nav v-if="showTabs" class="subtabs resource-tabs" :aria-label="t('resources.title')"><div class="resource-tabs-items"><el-button text :class="{ active: activeTab === 'skills' }" @click="selectTab('skills')">{{ t("resources.skills") }}</el-button><el-button text :class="{ active: activeTab === 'mcp' }" @click="selectTab('mcp')">{{ t("resources.connectors") }}</el-button></div><div class="resource-tabs-actions"><slot name="tab-actions" /></div></nav>
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
-      <div class="resource-toolbar extension-catalog-toolbar"><slot name="catalog-actions" /><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
+      <div class="resource-toolbar extension-catalog-toolbar connector-catalog-toolbar">
+        <nav v-if="!mineOnly || !selectable" class="subtabs connector-view-tabs" :aria-label="t('resources.connectors')"><el-button text :class="{ active: connectorView === 'market' }" :aria-pressed="connectorView === 'market'" @click="connectorView = 'market'">{{ t('resources.connectorMarket') }}</el-button><el-button text :class="{ active: connectorView === 'installed' }" :aria-pressed="connectorView === 'installed'" @click="connectorView = 'installed'">{{ t('resources.installed') }}</el-button></nav><slot name="catalog-actions" /><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
       <div class="catalog-groups">
       <section v-for="section in connectorSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid connector-catalog-grid">
-        <article v-for="entry in section.packages" :key="`package:${entry.publication?.source || entry.installation?.source}`" class="el-card extension-catalog-card connector-catalog-card published-connector-card">
-          <ConnectorIcon class="connector-card-icon" :icon="entry.publication?.revision.icon || 'plug'" :size="42" />
-          <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ entry.publication?.revision.name || entry.installation?.name || entry.installation?.source }}</strong><el-tag v-if="entry.installation" :type="entry.installation.authorized ? 'success' : 'warning'" size="small">{{ entry.installation.authorized ? t('resources.connected') : t('resources.setupRequired') }}</el-tag><el-tag v-else size="small">{{ t('resources.availableToInstall') }}</el-tag></div>
-            <p>{{ entry.publication?.revision.description || entry.installation?.description }}</p>
-            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
-            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
-            <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
-            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <a v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
-            <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions">
-              <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
-            </div>
-          </div>
-          <div class="extension-card-actions">
-            <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
-            <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
-            <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
-            <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
-            <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
-          </div>
+        <article v-for="entry in section.packages" :key="`package:${entry.publication?.source || entry.installation?.source}`" class="el-card catalog-activatable connector-catalog-card connector-summary-card published-connector-card" role="button" tabindex="0" :aria-label="entry.installation?.name || entry.publication?.revision.name" @click="showPackageDetails(entry)" @keydown.enter.self="showPackageDetails(entry)" @keydown.space.self.prevent="showPackageDetails(entry)">
+          <ConnectorIcon class="connector-card-icon" :icon="entry.installation?.icon || entry.publication?.revision.icon || 'plug'" :size="48" />
+          <div class="connector-summary-copy"><strong>{{ entry.installation?.name || entry.publication?.revision.name }}</strong><p>{{ entry.installation?.description || entry.publication?.revision.description }}</p></div>
+          <Check v-if="entry.installation" class="connector-installed-mark" :size="22" :aria-label="t('resources.installed')" role="img" />
+          <el-button v-else-if="entry.publication" class="connector-install-button" :aria-label="t('resources.install')" :loading="connectorOperationBusy(entry.publication.source)" :disabled="entry.publication.state !== 'available' || !entry.publication.revision.conformance_available" @click.stop="installPublication(entry.publication)"><Plus :size="20" /></el-button>
         </article>
-        <article v-for="item in section.mcp" :key="`mcp:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showMCPDetails(item)" @keydown.enter.self="showMCPDetails(item)" @keydown.space.self.prevent="showMCPDetails(item)">
-          <ConnectorIcon class="connector-card-icon" :icon="item.icon" :size="42" />
-          <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag :type="item.tested ? 'success' : 'warning'" size="small">{{ item.test_pending ? t("settings.testPending") : item.tested ? t("settings.tested") : t("settings.testRequired") }}</el-tag></div>
-            <p>{{ item.url || `${item.runner} ${item.package}@${item.package_version}` }}<template v-if="item.test_error"> · {{ item.test_error }}</template></p>
-            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="item.tested ? t('resources.connectionTested') : item.test_pending ? t('resources.verificationPending') : t('resources.unverified')" :status-tone="item.tested ? 'success' : 'warning'" :detail="t('resources.isolatedRuntime')" />
-          </div>
-          <div class="extension-card-actions" @click.stop>
-            <label v-if="selectable" class="extension-choice" :title="item.tested ? '' : t('experts.testRequired')"><el-checkbox :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
-            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.retry')" :title="t('common.retry')" :loading="item.test_pending" @click="testMCP(item)"><RefreshCw /></el-button>
-            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openMCP(item)"><Pencil /></el-button>
-            <el-button v-if="(!item.platform && !item.managed_installation) || canManageCLI" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'mcp', item })"><Trash2 /></el-button>
-          </div>
+        <article v-for="item in section.mcp" :key="`mcp:${item.id}`" class="el-card catalog-activatable connector-catalog-card connector-summary-card" role="button" tabindex="0" :aria-label="item.name" @click="showMCPDetails(item)" @keydown.enter.self="showMCPDetails(item)" @keydown.space.self.prevent="showMCPDetails(item)">
+          <ConnectorIcon class="connector-card-icon" :icon="item.icon" :size="48" />
+          <div class="connector-summary-copy"><strong>{{ item.name }}</strong><p>{{ t('resources.mcpDetailDescription') }}</p></div>
+          <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :aria-label="item.name" :model-value="mcpServerIds.includes(item.id)" :disabled="!item.tested" @change="toggleMCP(item, Boolean($event))" /></label>
+          <Check v-else class="connector-installed-mark" :size="22" :aria-label="t('resources.installed')" role="img" />
         </article>
-        <article v-for="item in section.cli" :key="`cli:${item.id}`" class="el-card catalog-activatable extension-catalog-card connector-catalog-card" role="button" tabindex="0" :aria-label="item.name" @click="showCLIDetails(item)" @keydown.enter.self="showCLIDetails(item)" @keydown.space.self.prevent="showCLIDetails(item)">
-          <ConnectorIcon class="connector-card-icon" :icon="item.icon || 'terminal'" :size="42" />
-          <div class="extension-card-copy">
-            <div class="extension-card-title"><strong>{{ item.name }}</strong><el-tag size="small">{{ t(`resources.state.${item.state}`) }}</el-tag><el-tag v-if="item.managed_installation ? item.managed_authorized : enablementFor(item.id)?.state === 'enabled' && !cliNeedsActivation(item)" type="success" size="small">{{ t('common.enabled') }}</el-tag><el-tag v-else-if="!item.managed_installation && enablementFor(item.id)?.state === 'enabled'" type="warning" size="small">{{ t('resources.setupRequired') }}</el-tag></div>
-            <p>{{ cliDescription(item) }}<template v-if="item.failure_reason"> · {{ item.failure_reason }}</template></p>
-            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="t('resources.allCanEnable')" :status="item.state === 'available' ? t('resources.runtimeVerified') : t(`resources.state.${item.state}`)" :status-tone="item.state === 'available' ? 'success' : item.state === 'failed' ? 'danger' : 'warning'" :detail="item.conformance_runtime_digests?.length ? t('resources.runtimeDigestCount', { count: item.conformance_runtime_digests.length }) : t('resources.noRuntimeEvidence')" />
-            <small>{{ item.managed_installation ? `package · ${item.npm_package}@${item.npm_version}` : item.installation_type === 'upload' ? t('resources.zipUpload') : `npm · ${item.npm_package}@${item.npm_version}` }}</small>
-            <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
-            <section v-if="item.recommended_skills?.length" class="recommended-skill-offers" @click.stop><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
-            <div v-if="!item.managed_installation" class="connector-account-actions" @click.stop>
-              <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer" @click="resumeCLISetup(item, $event)">{{ t('resources.continueSetup') }}</a>
-              <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
-                <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
-                <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id"><span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span><el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button></template>
-                <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
-                <el-button v-else-if="!hasActiveCLIAuthorization(item) || needsCLIReauthorization(item)" :loading="cliAuthorizationBusy.includes(item.id)" @click="authorizeCLIAccount(item)">{{ t(hasActiveCLIAuthorization(item) ? 'resources.expandAuthorization' : 'resources.authorizeAccount') }}</el-button>
-              </template>
-            </div>
-          </div>
-          <div class="extension-card-actions" @click.stop>
-            <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="item.managed_installation ? !item.managed_authorized : enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
-            <el-button v-if="!item.managed_installation && item.state === 'available' && cliNeedsActivation(item)" circle type="primary" :aria-label="t('resources.enable')" :title="t('resources.enable')" :loading="cliEnableBusy.includes(item.id)" @click="enableCLI(item)"><Plus /></el-button>
-            <el-button v-if="!item.managed_installation && ['enabled', 'waiting_for_user'].includes(enablementFor(item.id)?.state ?? '')" circle :aria-label="t('resources.deactivate')" :title="t('resources.deactivate')" :loading="cliEnableBusy.includes(item.id)" @click="deactivateCLI(item)"><PowerOff /></el-button>
-            <el-button v-if="canManageCLI && !item.managed_installation && item.mutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openCLI(item)"><Pencil /></el-button>
-            <el-button v-if="canManageCLI && !item.managed_installation && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
-            <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>
-          </div>
+        <article v-for="item in section.cli" :key="`cli:${item.id}`" class="el-card catalog-activatable connector-catalog-card connector-summary-card" role="button" tabindex="0" :aria-label="item.name" @click="showCLIDetails(item)" @keydown.enter.self="showCLIDetails(item)" @keydown.space.self.prevent="showCLIDetails(item)">
+          <ConnectorIcon class="connector-card-icon" :icon="item.icon || 'terminal'" :size="48" />
+          <div class="connector-summary-copy"><strong>{{ item.name }}</strong><p>{{ cliDescription(item) }}</p></div>
+          <label v-if="selectable && cliInstalled(item)" class="extension-choice" @click.stop><el-checkbox :aria-label="item.name" :model-value="cliConnectorDefinitionIds.includes(item.id)" :disabled="enablementFor(item.id)?.state !== 'enabled'" @change="toggleCLI(item, Boolean($event))" /></label>
+          <Check v-else-if="cliInstalled(item)" class="connector-installed-mark" :size="22" :aria-label="t('resources.installed')" role="img" />
+          <el-button v-else class="connector-install-button" :aria-label="t('resources.enable')" :disabled="item.state !== 'available'" :loading="cliEnableBusy.includes(item.id)" @click.stop="enableCLI(item)"><Plus :size="20" /></el-button>
         </article>
         <div v-if="!section.packages.length && !section.mcp.length && !section.cli.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
       </div>
@@ -695,13 +810,19 @@ async function fileToBase64(file: File): Promise<string> {
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid skill-catalog-grid">
         <article v-for="item in section.items" :key="item.id" class="el-card catalog-activatable extension-catalog-card skill-catalog-card" role="button" tabindex="0" :aria-label="skillDisplayName(item)" @click="openSkillDetails(item)" @keydown.enter.self="openSkillDetails(item)" @keydown.space.self.prevent="openSkillDetails(item)">
-          <ProfileIcon class="connector-card-icon" :icon="item.icon || 'sparkles'" />
-          <div class="extension-card-copy skill-card-copy"><strong>{{ skillDisplayName(item) }}</strong><p>{{ skillDescription(item) }}</p><ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" /><small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small></div>
-          <div class="extension-card-actions">
-            <label v-if="selectable" class="extension-choice" @click.stop><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
-            <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click.stop="useSkill(item)"><Plus /></el-button>
-            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click.stop="openSkill(item)"><Pencil /></el-button>
-            <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click.stop="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+          <div class="extension-card-copy skill-card-copy">
+            <div class="skill-card-header">
+              <div class="skill-card-heading"><ProfileIcon :icon="item.icon || 'sparkles'" /><strong>{{ skillDisplayName(item) }}</strong></div>
+              <div class="extension-card-actions" @click.stop>
+                <label v-if="selectable" class="extension-choice"><el-checkbox :model-value="skillIds.includes(item.id)" @change="toggleSkill(item, Boolean($event))" /></label>
+                <el-button class="catalog-launch" circle type="primary" :aria-label="t('composer.useSkill')" :title="t('composer.useSkill')" @click="useSkill(item)"><Plus /></el-button>
+                <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle :aria-label="t('common.edit')" :title="t('common.edit')" @click="openSkill(item)"><Pencil /></el-button>
+                <el-button v-if="(!item.platform || canManageCLI) && !item.immutable" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="requestDelete({ kind: 'skill', item })"><Trash2 /></el-button>
+              </div>
+            </div>
+            <p>{{ skillDescription(item) }}</p>
+            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" />
+            <small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small>
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
@@ -711,10 +832,59 @@ async function fileToBase64(file: File): Promise<string> {
       </div>
     </div>
   </div>
-  <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && ((!detailMCP.platform && !detailMCP.managed_installation) || canManageCLI) || detailCLI && canManageCLI && !detailCLI.managed_installation && detailCLI.mutable)" @close="detailMCP = undefined; detailCLI = undefined" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails" />
+  <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :installation="detailPackage?.installation" :publication="detailPackage?.publication" :can-connect="detailCanConnect" :can-uninstall="Boolean(detailPackage?.installation || detailCLI && cliInstalled(detailCLI))" :can-disconnect="Boolean(detailPackage?.installation && detailPackage.installation.authorized || detailCLI && hasActiveCLIAuthorization(detailCLI))" :connected-state="detailCLI ? enablementFor(detailCLI.id)?.state === 'enabled' && (detailCLI.authentication_driver === 'none' || hasActiveCLIAuthorization(detailCLI) && !cliNeedsActivation(detailCLI)) : undefined" :busy="detailBusy" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && ((!detailMCP.platform && !detailMCP.managed_installation) || canManageCLI) || detailCLI && canManageCLI && !detailCLI.managed_installation && detailCLI.mutable)" @close="closeConnectorDetails" @use="useConnectorPrompt" @connect="connectFromDetails" @disconnect="disconnectFromDetails" @uninstall="uninstallFromDetails" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails">
+    <template #details>
+      <div v-if="detailPackage" class="connector-supplementary-details"><template v-for="entry in [detailPackage]" :key="entry.installation?.id || entry.publication?.source">
+            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
+            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
+            <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a @click.stop :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
+            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <span v-if="entry.installation.source === 'notion' && notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url)">{{ t('resources.notionVerifyCode', { code: notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url) }) }}</span> <a @click.stop v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
+            <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions" @click.stop>
+              <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
+            </div>
+
+      <el-button v-if="entry.installation?.upgrade_available" :disabled="detailBusy" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
+      <el-button v-if="entry.installation?.authorized && connectorNeedsScopeRecovery(entry.installation, entry.publication)" :disabled="detailBusy" @click="connectFromDetails">{{ t('resources.expandAuthorization') }}</el-button>
+      </template></div>
+      <div v-if="detailCLI" class="connector-supplementary-details"><template v-for="item in [detailCLI]" :key="item.id">
+            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="t('resources.allCanEnable')" :status="item.state === 'available' ? t('resources.runtimeVerified') : t(`resources.state.${item.state}`)" :status-tone="item.state === 'available' ? 'success' : item.state === 'failed' ? 'danger' : 'warning'" :detail="item.conformance_runtime_digests?.length ? t('resources.runtimeDigestCount', { count: item.conformance_runtime_digests.length }) : t('resources.noRuntimeEvidence')" />
+            <small>{{ item.managed_installation ? `package · ${item.npm_package}@${item.npm_version}` : item.installation_type === 'upload' ? t('resources.zipUpload') : `npm · ${item.npm_package}@${item.npm_version}` }}</small>
+            <small v-if="enablementFor(item.id)?.provider_name">{{ enablementFor(item.id)?.provider_name }}</small>
+            <section v-if="item.recommended_skills?.length" class="recommended-skill-offers" @click.stop><span v-for="skill in item.recommended_skills" :key="`${skill.git_url}#${skill.git_ref}`" :class="{ warning: selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) }"><small>{{ selectable && cliConnectorDefinitionIds.includes(item.id) && !selectedRecommendedSkill(skill) ? t('resources.recommendedSkillWarning', { name: skill.name }) : t('resources.recommendedSkillOffer', { name: skill.name }) }}</small><el-button v-if="!selectedRecommendedSkill(skill)" size="small" @click="acceptRecommendedSkill(skill)">{{ installedRecommendedSkill(skill) ? t('resources.selectSkill') : t('resources.installSkill') }}</el-button></span></section>
+            <div v-if="!item.managed_installation" class="connector-account-actions" @click.stop>
+              <a v-if="enablementFor(item.id)?.state === 'waiting_for_user'" :href="enablementFor(item.id)?.action_url" target="_blank" rel="noreferrer" @click="resumeCLISetup(item, $event)">{{ t('resources.continueSetup') }}</a>
+              <template v-else-if="enablementFor(item.id)?.state === 'enabled'">
+                <a v-if="enablementFor(item.id)?.developer_console_url" :href="enablementFor(item.id)?.developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a>
+                <template v-for="authorization in authorizationsFor(item.id)" :key="authorization.id"><span v-if="authorization.state === 'active'">{{ t('resources.authorizedAccount', { name: authorization.external_display_name }) }}</span><el-button v-if="authorization.state === 'active'" text type="danger" @click="disconnectCLIAccount(authorization)">{{ t('resources.disconnectAccount') }}</el-button></template>
+                <template v-if="cliAuthorizationFlow?.enablement_id === enablementFor(item.id)?.id && cliAuthorizationFlow?.state === 'waiting_for_user'"><a :href="cliAuthorizationFlow?.action_url" target="_blank" rel="noreferrer">{{ t('resources.authorizeNow') }}</a><small>{{ t('resources.authorizationPending') }}</small></template>
+                <el-button v-else-if="item.authentication_driver !== 'none' && (!hasActiveCLIAuthorization(item) || needsCLIReauthorization(item))" :loading="cliAuthorizationBusy.includes(item.id)" @click="authorizeCLIAccount(item)">{{ t(hasActiveCLIAuthorization(item) ? 'resources.expandAuthorization' : 'resources.authorizeAccount') }}</el-button>
+              </template>
+            </div>
+              <div class="extension-card-actions" @click.stop>
+                <el-button v-if="canManageCLI && !item.managed_installation && item.state === 'available'" type="danger" plain @click="disableCLI(item)">{{ t('resources.disable') }}</el-button>
+                <el-button v-if="canManageCLI && !item.managed_installation" circle type="danger" plain :aria-label="t('common.delete')" :title="t('common.delete')" @click="deletingCLI = item"><Trash2 /></el-button>
+              </div>
+      </template></div>
+      <template v-if="detailMCP"><ResourceTrustMeta :source="detailMCP.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="detailMCP.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="detailMCP.tested ? t('resources.connectionTested') : t('resources.unverified')" :status-tone="detailMCP.tested ? 'success' : 'warning'" /><el-button v-if="(!detailMCP.platform && !detailMCP.managed_installation) || canManageCLI" type="danger" plain :aria-label="t('common.delete')" @click="requestDelete({ kind: 'mcp', item: detailMCP })">{{ t('common.delete') }}</el-button></template>
+    </template>
+  </ConnectorDetails>
   <CatalogDetails :skill="detailSkill" @close="detailSkill = undefined" @edit-skill="openSkill" />
   <Teleport to="body">
     <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />
+    <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
+      <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
+        <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
+        <template v-if="providedConnection.installation.source === 'modao'">
+          <label>{{ t('resources.modaoToken') }}<input v-model="providedConnection.secret" name="modao_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
+          <a href="https://modao.cc/feature/ai-mcp.html" target="_blank" rel="noopener noreferrer">{{ t('resources.modaoTokenHelp') }}</a>
+        </template>
+        <template v-else>
+          <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
+          <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
+        </template>
+        <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
+      </form>
+    </div>
     <div v-if="showConnectorKind" class="modal-layer" @click.self="showConnectorKind = false"><section class="modal-card connector-kind-dialog el-card"><h2>{{ t('resources.chooseConnectorType') }}</h2><p class="muted">{{ t('resources.chooseConnectorTypeHint') }}</p><div class="connector-kind-options"><button type="button" data-testid="connector-kind-conversation" @click="createConnectorSession"><strong>{{ t('resources.createConnectorInConversation') }}</strong><span>{{ t('resources.createConnectorInConversationHint') }}</span></button><button type="button" data-testid="connector-kind-mcp" @click="chooseConnectorKind('mcp')"><strong>{{ t('resources.mcpConnector') }}</strong><span>{{ t('resources.mcpConnectorHint') }}</span></button><button type="button" data-testid="connector-kind-package" @click="chooseConnectorKind('package')"><strong>{{ t('resources.connectorPackageUpload') }}</strong><span>{{ t('resources.connectorPackageUploadHint') }}</span></button><button type="button" data-testid="connector-kind-cli" :disabled="!canManageCLI" @click="chooseConnectorKind('cli')"><strong>{{ t('resources.cliConnector') }}</strong><span>{{ canManageCLI ? t('resources.cliConnectorHint') : t('resources.administratorOnly') }}</span></button></div><div class="modal-actions"><el-button @click="showConnectorKind = false">{{ t('common.cancel') }}</el-button></div></section></div>
     <input ref="connectorPackageInput" type="file" accept=".zip,application/zip" hidden @change="uploadConnectorPackage">
     <div v-if="showMCP" class="modal-layer" @click.self="showMCP = false"><form class="modal-card el-card" @submit.prevent="saveMCP"><h2>{{ editingMCP ? t("common.edit") : t("common.new") }} MCP</h2><div class="form-field"><span>{{ t("resources.icon") }}</span><IconPicker v-model="mcpForm.icon" fallback="terminal" /></div><label>{{ t("common.name") }}<input v-model="mcpForm.name" required></label><label>{{ t("settings.transport") }}<select v-model="mcpForm.transport"><option value="streamable_http">Streamable HTTP</option><option value="stdio">stdio</option></select></label><template v-if="mcpForm.transport === 'streamable_http'"><label>URL<input v-model="mcpForm.url" type="url" required></label><label>{{ t("settings.bearerToken") }}<input v-model="mcpForm.bearerToken" type="password" :placeholder="editingMCP ? t('settings.keepSecret') : t('settings.optional')"></label></template><template v-else><label>Runner<select v-model="mcpForm.runner"><option value="npx">npx</option><option value="uvx">uvx</option></select></label><label>Package<input v-model="mcpForm.package" required></label><label>{{ t("settings.fixedVersion") }}<input v-model="mcpForm.package_version" required placeholder="1.2.3"></label><label>{{ t("settings.arguments") }}<textarea v-model="mcpForm.argumentsText" rows="4" :placeholder="t('settings.onePerLine')"></textarea></label></template><div><div v-for="(variable, index) in mcpForm.environment" :key="index" class="inline-fields"><input v-model="variable.name" placeholder="VARIABLE_NAME"><input v-model="variable.value" :type="variable.secret ? 'password' : 'text'" :placeholder="variable.configured && variable.secret ? t('settings.keepSecret') : t('settings.value')"><label><input v-model="variable.secret" type="checkbox"> Secret</label><el-button text type="danger" @click="removeMCPEnvironment(index)">×</el-button></div><el-button @click="addMCPEnvironment">＋ {{ t("settings.environment") }}</el-button></div><div class="modal-actions"><el-button @click="showMCP = false">{{ t("common.cancel") }}</el-button><el-button native-type="submit" type="primary">{{ t("common.save") }}</el-button></div></form></div>

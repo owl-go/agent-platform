@@ -120,6 +120,7 @@ func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
 		want   string
 	}{
 		{"Feishu device flow", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, "interactive"},
+		{"Notion CLI browser login", connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "notion", Version: "0.23.13"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "interactive"},
 		{"reviewed CLI credentials", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "provided"},
 		{"reviewed MCP credentials", connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, "provided"},
 		{"no authorization", connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, "none"},
@@ -130,6 +131,14 @@ func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
 				t.Fatalf("mode = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestNotionBrowserLoginStoresRuntimeTokenWithoutRefreshMetadata(t *testing.T) {
+	policy := connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "notion"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}
+	fields := connectorAuthorizationCredentialFields(policy, connectorAuthorizationGrant{AccessToken: "ntn_secret-value"})
+	if len(fields) != 1 || fields["token"] != "ntn_secret-value" {
+		t.Fatalf("Notion runtime credential fields = %v", fields)
 	}
 }
 
@@ -152,6 +161,18 @@ func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
 	}
 }
 
+func TestNotionConnectorResponsesUseProductNameForExistingRevision(t *testing.T) {
+	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "notion", Version: "0.23.13", Type: connectorpackage.TypeCLI, Name: "Notion CLI", Description: "Read pages with the pinned Notion CLI", AuthMode: "cli"}}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	if got := connectorRevisionResponse(revision); got.Name != "Notion" || got.Description != "Read and manage Notion pages and query data sources" {
+		t.Fatalf("Notion catalog display = %q, %q", got.Name, got.Description)
+	}
+	installation := connectorInstallationDetailsResponse(domain.ConnectorInstallation{PackageSource: "notion"}, revision, false)
+	if installation.Name != "Notion" || installation.Description != "Read and manage Notion pages and query data sources" {
+		t.Fatalf("Notion installation display = %q, %q", installation.Name, installation.Description)
+	}
+}
+
 func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	t.Helper()
 	for _, entry := range reader.File {
@@ -168,4 +189,17 @@ func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	}
 	t.Fatalf("missing %s", name)
 	return nil
+}
+
+func TestConnectorDetailsExposeExamplesFromExactRevision(t *testing.T) {
+	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "example", Version: "1.0.0", Type: connectorpackage.TypeMCP, Name: "Example", ExamplesZH: []string{"查询示例数据"}, ExamplesEN: []string{"Query example data"}}, SHA256: strings.Repeat("a", 64)}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	publication := connectorRevisionResponse(revision)
+	installation := connectorInstallationDetailsResponse(domain.ConnectorInstallation{ID: "installation-1", PackageSource: "example"}, revision, true)
+	if len(publication.ExamplesZh) != 1 || publication.ExamplesZh[0] != "查询示例数据" || len(publication.ExamplesEn) != 1 || publication.ExamplesEn[0] != "Query example data" {
+		t.Fatalf("publication examples = %#v / %#v", publication.ExamplesZh, publication.ExamplesEn)
+	}
+	if len(installation.ExamplesZh) != 1 || installation.ExamplesZh[0] != publication.ExamplesZh[0] || len(installation.ExamplesEn) != 1 || installation.ExamplesEn[0] != publication.ExamplesEn[0] || installation.Mode != "mcp" {
+		t.Fatalf("installation details = %#v", installation)
+	}
 }

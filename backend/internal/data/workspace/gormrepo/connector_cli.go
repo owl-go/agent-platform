@@ -144,6 +144,7 @@ func (repository *Repository) ListConnectorPackageCLIDefinitions(ctx context.Con
 		if name == "" {
 			name = installation.PackageSource
 		}
+		name = connectorpackage.DisplayName(installation.PackageSource, name)
 		items = append(items, cliconnector.Definition{ID: installation.ID, Name: name, Icon: connectorpackage.DisplayIcon(installation.PackageSource), Package: installation.PackageSource, Version: revision.Version, Executable: policy.CLI.Executable, AuthenticationDriver: authenticationDriver, State: state, FailureReason: failureReason, BundleObjectKey: policy.BundleObjectKey, BundleSHA256: policy.BundleSHA256, RuntimeDigests: []string{policy.CLI.Runtime.Digest}, Capabilities: parsed, VersionNumber: installation.Version, ManagedInstallation: true, InstallationAuthorized: authorized, CPUMillis: policy.CLI.Limits.CPU, MemoryMiB: policy.CLI.Limits.MemoryMiB, ChildProcesses: policy.CLI.Limits.ChildProcesses})
 	}
 	return items, nil

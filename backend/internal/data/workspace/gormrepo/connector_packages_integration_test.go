@@ -12,6 +12,58 @@ import (
 	"github.com/google/uuid"
 )
 
+func TestConnectorInstallationCanBeReinstalledAfterUninstall(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "notion", Version: "0.23.13", Mode: domain.ConnectorModeCLI, PackageSHA256: strings.Repeat("a", 64), RuntimePolicy: []byte(`{"auth_mode":"cli"}`), ObjectKey: "connectors/notion/package.zip"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	install := func() (domain.ConnectorInstallation, error) {
+		return repository.InstallConnectorWithAudit(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "notion", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive}, domain.ConnectorAuditRecord{OwnerID: owner, RevisionID: revision.ID, Operation: "install_published", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	}
+	first, err := install()
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorization, err := repository.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: first.ID, IdentityRef: "user", CredentialCiphertext: []byte("encrypted-test-token"), CredentialAAD: "test-aad", CredentialFormat: "json"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := repository.ListConnectorInstallations(ctx, owner)
+	if err != nil || len(current) != 1 || current[0].AuthorizationID != authorization.ID {
+		t.Fatalf("authorized installation = %#v, %v", current, err)
+	}
+	uninstalled, err := repository.SetConnectorInstallationStateWithAudit(ctx, owner, first.ID, domain.ConnectorInstallationUninstalled, current[0].Version, domain.ConnectorAuditRecord{OwnerID: owner, InstallationID: first.ID, Operation: "uninstall", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil || uninstalled.State != domain.ConnectorInstallationUninstalled {
+		t.Fatalf("uninstall = %#v, %v", uninstalled, err)
+	}
+	reinstalled, err := install()
+	if err != nil {
+		t.Fatalf("reinstall after uninstall: %v", err)
+	}
+	if reinstalled.ID != first.ID || reinstalled.State != domain.ConnectorInstallationActive || reinstalled.Version != uninstalled.Version+1 || reinstalled.AuthorizationID != "" {
+		t.Fatalf("reinstalled installation = %#v", reinstalled)
+	}
+	installations, err := repository.ListConnectorInstallations(ctx, owner)
+	if err != nil || len(installations) != 1 || installations[0].Authorized {
+		t.Fatalf("reinstalled catalog entry = %#v, %v", installations, err)
+	}
+	var stored connectorAuthorizationRecord
+	if err := db.Where("id = ?", authorization.ID).Take(&stored).Error; err != nil || stored.State != string(domain.ConnectorAuthorizationDisconnected) || len(stored.CredentialCiphertext) != 0 {
+		t.Fatalf("previous authorization was reused: state=%q credential_length=%d error=%v", stored.State, len(stored.CredentialCiphertext), err)
+	}
+	var installAudits int64
+	if err := db.Table("connector_package_audit_records").Where("installation_id = ? AND operation = ?", first.ID, "install_published").Count(&installAudits).Error; err != nil || installAudits != 2 {
+		t.Fatalf("reinstall audit count = %d, %v", installAudits, err)
+	}
+}
+
 func TestConnectorPublicationAndMultipleAuthorizationSelection(t *testing.T) {
 	db := conversationTestDatabase(t)
 	repository := New(db, nil)
@@ -95,6 +147,15 @@ func TestConnectorPublicationAndMultipleAuthorizationSelection(t *testing.T) {
 	if err != nil || refreshed.Version != first.Version+1 || string(refreshed.CredentialCiphertext) != "cipher-a-refreshed" || refreshed.ExternalDisplayName != "Account A" {
 		t.Fatalf("refreshed authorization = %#v, %v", refreshed, err)
 	}
+	// Providers may return opaque grants without an external account identifier.
+	// Refresh remains bound to owner, installation, authorization and version.
+	refreshed.ExternalIdentityID = ""
+	refreshed.RefreshCredentialCiphertext = []byte("platform-only-refresh")
+	refreshed.RefreshCredentialAAD = "refresh-aad"
+	opaque, err := repository.RefreshConnectorAuthorization(ctx, refreshed, refreshed.Version, domain.ConnectorAuditRecord{OwnerID: owner, InstallationID: installation.ID, Operation: "refresh_authorization", Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	if err != nil || string(opaque.RefreshCredentialCiphertext) != "platform-only-refresh" || opaque.RefreshCredentialAAD != "refresh-aad" {
+		t.Fatalf("opaque grant refresh lost platform-only material: %v", err)
+	}
 	if _, err := repository.RefreshConnectorAuthorization(ctx, first, first.Version, domain.ConnectorAuditRecord{OwnerID: owner, InstallationID: installation.ID, Operation: "refresh_authorization", Outcome: "succeeded", CreatedAt: time.Now().UTC()}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("stale authorization refresh must conflict: %v", err)
 	}
@@ -145,11 +206,49 @@ func TestConnectorInstallationFeishuSetupAndAuthorizationFlows(t *testing.T) {
 	if err != nil || len(read.Scopes) != 1 || read.Scopes[0] != "im:message" {
 		t.Fatalf("authorization flow = %#v, %v", read, err)
 	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, uuid.NewString(), flow.ID, []byte("device"), []byte("code"), flow.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("cross-owner callback update: %v", err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("device"), []byte("code"), flow.ActionURL); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("device"), []byte("replay"), flow.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("stale callback update: %v", err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, uuid.NewString(), flow.ID, []byte("code")); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("cross-owner exchange: %v", err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("code")); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, owner, flow.ID, []byte("code")); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("duplicate exchange: %v", err)
+	}
 	if err := repository.DeleteConnectorAuthorizationFlow(ctx, owner, flow.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := repository.GetConnectorAuthorizationFlow(ctx, owner, flow.ID); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("deleted flow error = %v", err)
+	}
+	first, err := repository.BeginConnectorAuthorizationFlow(ctx, domain.ConnectorAuthorizationAttempt{OwnerID: owner, InstallationID: installation.ID, Identity: "user", ActionURL: "https://account.teambition.com/oauth2/mcp/authorize", ExpiresAt: expires, DeviceCodeCiphertext: []byte("first")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := repository.BeginConnectorAuthorizationFlow(ctx, domain.ConnectorAuthorizationAttempt{OwnerID: owner, InstallationID: installation.ID, Identity: "user", ActionURL: "https://account.teambition.com/oauth2/mcp/authorize", ExpiresAt: expires, DeviceCodeCiphertext: []byte("second")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, first.ID, []byte("first"), []byte("code"), first.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("superseded callback: %v", err)
+	}
+	if err := db.Model(&connectorAuthorizationFlowRecord{}).Where("id = ?", second.ID).Update("expires_at", time.Now().Add(-time.Minute)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpdateConnectorAuthorizationFlow(ctx, owner, second.ID, []byte("second"), []byte("code"), second.ActionURL); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("expired callback: %v", err)
+	}
+	if err := repository.ConsumeConnectorAuthorizationFlow(ctx, owner, second.ID, []byte("second")); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("expired exchange: %v", err)
 	}
 }
 

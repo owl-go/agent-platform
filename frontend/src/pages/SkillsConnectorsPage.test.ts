@@ -9,6 +9,20 @@ import SkillsConnectorsPage from "./SkillsConnectorsPage.vue";
 afterEach(() => { document.body.innerHTML = ""; });
 
 describe("SkillsConnectorsPage", () => {
+  it("completes a Teambition browser callback without relying on its original tab", async () => {
+    const flowID = "11111111-1111-4111-8111-111111111111";
+    const complete = vi.fn(async () => ({ id: flowID, installation_id: "installation", identity: "user", scopes: [], state: "completed" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => []), listConnectorInstallations: vi.fn(async () => []), completeConnectorAuthorizationFlow: complete } as unknown as PlatformApi;
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });
+    await router.push(`/resources?tab=connectors&teambition_auth=${flowID}`);
+    const wrapper = mount(SkillsConnectorsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    expect(complete).toHaveBeenCalledWith(flowID);
+    expect(router.currentRoute.value.query.teambition_auth).toBeUndefined();
+    expect(api.listConnectorInstallations).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
   it("toggles the personal resource filter from the page header", async () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []) } as unknown as PlatformApi;
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });
@@ -40,12 +54,12 @@ describe("SkillsConnectorsPage", () => {
 
     const frame = wrapper.get(".resource-catalog-frame");
     expect(frame.find(".resource-child-actions").exists()).toBe(false);
-    expect(frame.get(".extension-catalog-toolbar").text()).toContain("我的连接器");
+    expect(frame.get(".extension-catalog-toolbar").text()).toContain("已安装");
     expect(frame.get(".extension-catalog-toolbar").text()).toContain("新建连接器");
     expect(frame.find(".connector-package-panel").exists()).toBe(false);
     expect(frame.findAll(".published-connector-card")).toHaveLength(1);
     expect(frame.get(".published-connector-card").text()).toContain("飞书");
-    expect(frame.get(".published-connector-card").text()).toContain("可安装");
+    expect(frame.find('.published-connector-card button[aria-label="安装"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -63,4 +77,19 @@ describe("SkillsConnectorsPage", () => {
     expect(document.body.querySelector('[role="alert"]')?.textContent).toContain(errorTitle);
     wrapper.unmount();
   });
+});
+
+
+it("lets the old personal connector URL return to the market", async () => {
+  const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [{ source: "feishu", state: "available", revision: { name: "飞书", conformance_available: true } }]), listConnectorInstallations: vi.fn(async () => []) } as unknown as PlatformApi;
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });
+  await router.push("/resources?tab=connectors&scope=mine");
+  const wrapper = mount(SkillsConnectorsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+  await flushPromises();
+  expect(wrapper.find(".published-connector-card").exists()).toBe(false);
+  const tabs = wrapper.get(".connector-view-tabs").findAll("button");
+  expect(tabs[1]!.attributes("aria-pressed")).toBe("true");
+  await tabs[0]!.trigger("click");
+  expect(wrapper.get(".published-connector-card").text()).toContain("飞书");
+  wrapper.unmount();
 });

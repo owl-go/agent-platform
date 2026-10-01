@@ -24,6 +24,28 @@ func TestBuildExecutionPlanConditionalRules(t *testing.T) {
 	}
 }
 
+func TestAutomaticSafetyPlansDoNotWaitForManualConfirmation(t *testing.T) {
+	now := time.Date(2026, 9, 29, 8, 0, 0, 0, time.UTC)
+	stage := ExecutionStageSnapshot{Position: 1}
+	for _, test := range []struct {
+		name    string
+		context ExecutionPlanContext
+	}{
+		{name: "session with multiple stages", context: ExecutionPlanContext{Objective: "Review and summarize", Stages: []ExecutionStageSnapshot{stage, {Position: 2}}}},
+		{name: "workflow", context: ExecutionPlanContext{Objective: "Update workspace", Stages: []ExecutionStageSnapshot{stage}, Workflow: true}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := BuildExecutionPlan(test.context, now)
+			if err != nil || plan == nil {
+				t.Fatalf("build automatic Plan = %#v, %v", plan, err)
+			}
+			if plan.State != "approved" || plan.DecidedAt != nil {
+				t.Fatalf("automatic Plan needs manual confirmation: %#v", plan)
+			}
+		})
+	}
+}
+
 func TestBuildExecutionPlanDeduplicatesResourcesAndMarksSideEffects(t *testing.T) {
 	connector := CLIConnectorSnapshot{ID: "crm", Name: "CRM", Capabilities: json.RawMessage(`[{"risk":"high"}]`)}
 	stages := []ExecutionStageSnapshot{
@@ -34,7 +56,58 @@ func TestBuildExecutionPlanDeduplicatesResourcesAndMarksSideEffects(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if plan == nil || len(plan.Resources) != 1 || len(plan.SideEffects) != 1 || plan.AllowsDirectAnswer() {
+	if plan == nil || len(plan.Resources) != 1 || len(plan.SideEffects) != 1 || plan.AllowsDirectAnswer() || plan.Generator != "platform_rules" || plan.GenerationCreditHundredths != 0 {
 		t.Fatalf("unexpected side-effect Plan: %#v", plan)
+	}
+}
+
+func TestCompleteModelGenerationPreservesExecutionStepKinds(t *testing.T) {
+	plan, err := BuildExecutionPlan(ExecutionPlanContext{
+		Objective: "分析项目代码", Preference: PlanPreferenceAlways,
+		Stages: []ExecutionStageSnapshot{{Position: 1}},
+	}, time.Now())
+	if err != nil || plan == nil {
+		t.Fatalf("build Plan: %#v, %v", plan, err)
+	}
+	kinds := []string{plan.Steps[0].Kind, plan.Steps[1].Kind, plan.Steps[2].Kind}
+	if err := plan.CompleteModelGeneration([]string{
+		"确认代码分析范围和入口", "梳理目录并追踪核心调用链", "汇总鉴权风险与改进建议",
+	}, 37, false); err != nil {
+		t.Fatal(err)
+	}
+	if plan.Generator != "model" || plan.GenerationCreditHundredths != 37 || plan.Version != 2 {
+		t.Fatalf("unexpected model Plan metadata: %#v", plan)
+	}
+	for index, step := range plan.Steps {
+		if step.Kind != kinds[index] || step.Label == "" || step.State != "pending" {
+			t.Fatalf("model altered execution step %d: %#v", index, step)
+		}
+	}
+}
+
+func TestCompleteModelGenerationRejectsIncompleteLabelsAndRecordsFailure(t *testing.T) {
+	plan, err := BuildExecutionPlan(ExecutionPlanContext{
+		Objective: "分析项目代码", Preference: PlanPreferenceAlways,
+		Stages: []ExecutionStageSnapshot{{Position: 1}},
+	}, time.Now())
+	if err != nil || plan == nil {
+		t.Fatalf("build Plan: %#v, %v", plan, err)
+	}
+	if err := plan.CompleteModelGeneration([]string{"only one"}, 0, false); err == nil {
+		t.Fatal("incomplete model Plan should be rejected")
+	}
+	if err := plan.CompleteModelGeneration([]string{"确认代码范围", "梳理核心调用", "梳理核心调用"}, 0, false); err == nil {
+		t.Fatal("duplicate model Plan labels should be rejected")
+	}
+	for _, step := range plan.Steps {
+		if step.Label != "" {
+			t.Fatalf("rejected model Plan changed a step: %#v", step)
+		}
+	}
+	if err := plan.CompleteModelGeneration(nil, 0, true); err != nil {
+		t.Fatal(err)
+	}
+	if plan.Generator != "model_failed" || plan.GenerationCreditHundredths != 0 {
+		t.Fatalf("failed generation was not visible: %#v", plan)
 	}
 }

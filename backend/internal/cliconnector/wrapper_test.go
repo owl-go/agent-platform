@@ -88,6 +88,9 @@ func TestDefinitionRejectsIncompleteOrUnsafeCapabilityPolicy(t *testing.T) {
 		name   string
 		mutate func(*Definition)
 	}{
+		{name: "negative CPU budget", mutate: func(value *Definition) { value.CPUMillis = -1 }},
+		{name: "oversized memory budget", mutate: func(value *Definition) { value.MemoryMiB = 65537 }},
+		{name: "oversized process budget", mutate: func(value *Definition) { value.ChildProcesses = 1025 }},
 		{name: "unknown risk", mutate: func(value *Definition) { value.Capabilities[0].Risk = "medium" }},
 		{name: "no identity", mutate: func(value *Definition) { value.Capabilities[0].Identities = nil }},
 		{name: "unknown identity", mutate: func(value *Definition) { value.Capabilities[0].Identities = []Identity{"administrator"} }},

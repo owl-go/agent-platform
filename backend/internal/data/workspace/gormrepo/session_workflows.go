@@ -58,7 +58,7 @@ func (repository *Repository) CreateWorkflowFromSession(ctx context.Context, own
 		if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
-		run, err := createRunOnTx(tx, ownerID, workflowID, "session_conversion", nil, nil, "always", true)
+		run, err := createRunOnTx(tx, ownerID, workflowID, "session_conversion", nil, nil, domain.PlanPreferenceAuto, true)
 		if err != nil {
 			return err
 		}

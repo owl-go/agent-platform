@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="企业微信连接器">
+  <rect width="64" height="64" rx="14" fill="#2BAD62"/>
+  <path fill="#fff" d="M14 18h36v25H32l-10 8v-8h-8z"/>
+  <circle cx="24" cy="30" r="3" fill="#2BAD62"/>
+  <circle cx="32" cy="30" r="3" fill="#2BAD62"/>
+  <circle cx="40" cy="30" r="3" fill="#2BAD62"/>
+</svg>

@@ -1,0 +1,21 @@
+[
+  {"argv_prefix":["--version"],"risk":"low"},
+  {"argv_prefix":["--help"],"risk":"low"},
+  {"argv_prefix":["tools","list"],"risk":"low"},
+  {"argv_prefix":["tools","describe"],"risk":"low"},
+  {"argv_prefix":["tools","call","teambition.docs.search"],"risk":"low"},
+  {"argv_prefix":["tools","call","teambition.docs.get"],"risk":"low"},
+  {"argv_prefix":["user","me"],"risk":"low"},
+  {"argv_prefix":["project","query"],"risk":"low"},
+  {"argv_prefix":["project","task-query"],"risk":"low"},
+  {"argv_prefix":["project","file-detail-query"],"risk":"low"},
+  {"argv_prefix":["task","query"],"risk":"low"},
+  {"argv_prefix":["task","activity"],"risk":"low"},
+  {"argv_prefix":["task","comment"],"risk":"high"},
+  {"argv_prefix":["task","create"],"risk":"high"},
+  {"argv_prefix":["task","move"],"risk":"high"},
+  {"argv_prefix":["project","--help"],"risk":"low"},
+  {"argv_prefix":["task","--help"],"risk":"low"},
+  {"argv_prefix":["member","--help"],"risk":"low"},
+  {"argv_prefix":["dingtalk","--help"],"risk":"low"}
+]

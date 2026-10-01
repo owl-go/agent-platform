@@ -847,7 +847,6 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	}
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
 	requiresApproval := false
-	containerLimits := sandbox.Limits{CPUs: 1, MemoryBytes: 1 << 30, PIDs: 128, TempBytes: 256 << 20}
 	for _, snapshot := range job.Snapshot.CLIConnectors {
 		verified, err := executor.cliConnectorRuntimeVerified(ctx, snapshot, runtimeDigest)
 		if err != nil {
@@ -871,15 +870,6 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 			Capabilities: capabilities, VersionNumber: snapshot.Version, CPUMillis: snapshot.CPUMillis, MemoryMiB: snapshot.MemoryMiB, ChildProcesses: snapshot.ChildProcesses,
 			RevisionID: snapshot.RevisionID, AuthorizationID: snapshot.AuthorizationID, PackageSHA256: snapshot.PackageSHA256,
 		})
-		if snapshot.CPUMillis > 0 && float64(snapshot.CPUMillis)/1000 < containerLimits.CPUs {
-			containerLimits.CPUs = float64(snapshot.CPUMillis) / 1000
-		}
-		if snapshot.MemoryMiB > 0 && int64(snapshot.MemoryMiB)*1024*1024 < containerLimits.MemoryBytes {
-			containerLimits.MemoryBytes = int64(snapshot.MemoryMiB) * 1024 * 1024
-		}
-		if snapshot.ChildProcesses > 0 && int64(snapshot.ChildProcesses) < containerLimits.PIDs {
-			containerLimits.PIDs = int64(snapshot.ChildProcesses)
-		}
 		for _, capability := range capabilities {
 			requiresApproval = requiresApproval || capability.Risk == cliconnector.RiskHigh
 		}
@@ -891,7 +881,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		Image: runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
 		BundleDirectory: bundleDirectory, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, EgressNetwork: executor.config.Sandbox.EgressNetwork,
-		Limits: containerLimits,
+		Limits: cliconnector.ExecutionLimits(definitions...),
 		UID:    executor.config.Worker.SandboxUID, GID: executor.config.Worker.SandboxGID, Egress: executor.cliEgress,
 	})
 	if err != nil {
@@ -1862,18 +1852,22 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			if json.Unmarshal(connector.Capabilities, &capabilities) != nil {
 				continue
 			}
-			if connector.PackageObjectKey != "" && (connector.AuthenticationDriver == "feishu" || connector.AuthenticationDriver == "dingtalk") && len(capabilities) > 40 {
-				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity user [--target <target>] -- <reviewed-prefix> <arguments>. Do not assume a documented operation is unavailable without checking the catalog.", connector.Name, connector.ID, connector.ID))
+			if connector.PackageObjectKey != "" && (connector.AuthenticationDriver == "feishu" || connector.AuthenticationDriver == "dingtalk" || connector.Executable == "wecom-workspace") && len(capabilities) > 40 {
+				commands = append(commands, fmt.Sprintf("- %s: read /run/agent-credentials/connector-skills/%s/SKILL.md, then look up the exact operation in its capabilities.json before using agent-cli --connector %s --capability <reviewed-id> --identity <reviewed-identity> [--target <target>] -- <reviewed-prefix> <arguments>. Copy the identity from the catalog; do not assume a documented operation is unavailable without checking it.", connector.Name, connector.ID, connector.ID))
 				continue
 			}
 			for _, capability := range capabilities {
+				targetOption := "[--target <target>]"
+				if capability.Risk == cliconnector.RiskHigh {
+					targetOption = "--target <target>"
+				}
 				for _, identity := range capability.Identities {
-					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s [--target <target>] -- %s", connector.Name, connector.ID, capability.ID, identity, strings.Join(capability.ArgvPrefix, " ")))
+					commands = append(commands, fmt.Sprintf("- %s: agent-cli --connector %s --capability %s --identity %s %s -- %s", connector.Name, connector.ID, capability.ID, identity, targetOption, strings.Join(capability.ArgvPrefix, " ")))
 				}
 			}
 		}
 		if len(commands) > 0 {
-			sections = append(sections, "Available isolated CLI Connectors. For a Connector with a SKILL.md listed below, read it before the first command. Use the reviewed forms below, copying identity literally and appending operation arguments after the shown prefix. The Skill explains usage, while the broker enforces the command policy:\n"+strings.Join(commands, "\n"))
+			sections = append(sections, "Available isolated CLI Connectors. For a Connector with a SKILL.md listed below, read it before the first command. Use the reviewed forms below, copying identity literally and appending operation arguments after the shown prefix. High-risk commands require a non-empty --target before the -- separator: identify the intended parent, page, recipient, or other affected resource in display-safe text. The broker opens a one-use User confirmation; do not replace it with a chat question or claim confirmation is unavailable when the command is missing its target. If the broker reports invalid_request, correct the command before retrying. The Skill explains usage, while the broker enforces the command policy:\n"+strings.Join(commands, "\n"))
 		}
 	}
 	if len(attachments) > 0 {

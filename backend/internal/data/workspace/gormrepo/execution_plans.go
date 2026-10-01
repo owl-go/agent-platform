@@ -34,6 +34,72 @@ func decideExecutionPlan(plan *domain.ExecutionPlan, decision string, expectedVe
 	return plan.Validate()
 }
 
+func completePlanGeneration(encoded []byte, labels []string, creditHundredths int64, failed bool) ([]byte, error) {
+	var plan domain.ExecutionPlan
+	if err := json.Unmarshal(encoded, &plan); err != nil {
+		return nil, fmt.Errorf("decode Execution Plan: %w", err)
+	}
+	if plan.State != "pending" || plan.Generator != "platform_rules" || plan.Version != 1 {
+		return nil, domain.ErrConflict
+	}
+	if err := plan.CompleteModelGeneration(labels, creditHundredths, failed); err != nil {
+		return nil, err
+	}
+	return marshal(plan)
+}
+
+func (repository *Repository) CompleteSessionPlanGeneration(ctx context.Context, ownerID, sessionID string, messageID int64, labels []string, creditHundredths int64, failed bool) (domain.Message, error) {
+	var row messageRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Raw(`SELECT message.* FROM session_messages message
+			JOIN sessions session ON session.id = message.session_id
+			WHERE session.owner_user_id = ? AND message.session_id = ? AND message.id = ?
+			  AND message.role = 'assistant' AND message.state = 'waiting_for_user'
+			FOR UPDATE OF message`, ownerID, sessionID, messageID).Scan(&row).Error; err != nil {
+			return err
+		}
+		if row.ID == 0 || len(row.ExecutionPlan) == 0 {
+			return domain.ErrNotFound
+		}
+		encoded, err := completePlanGeneration(row.ExecutionPlan, labels, creditHundredths, failed)
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&messageRecord{}).Where("id = ?", row.ID).Update("execution_plan", encoded).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", row.ID).Take(&row).Error
+	})
+	if err != nil {
+		return domain.Message{}, fmt.Errorf("complete Session Plan generation: %w", err)
+	}
+	return messageDomain(row), nil
+}
+
+func (repository *Repository) CompleteRunPlanGeneration(ctx context.Context, ownerID, workflowID, runID string, labels []string, creditHundredths int64, failed bool) (domain.Run, error) {
+	var row runRecord
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("owner_user_id = ? AND workflow_id = ? AND id = ? AND state = 'waiting_for_user'", ownerID, workflowID, runID).Take(&row).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if len(row.ExecutionPlan) == 0 {
+			return domain.ErrNotFound
+		}
+		encoded, err := completePlanGeneration(row.ExecutionPlan, labels, creditHundredths, failed)
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&runRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"execution_plan": encoded, "version": gorm.Expr("version + 1")}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", row.ID).Take(&row).Error
+	})
+	if err != nil {
+		return domain.Run{}, fmt.Errorf("complete Run Plan generation: %w", err)
+	}
+	return runDomain(row), nil
+}
+
 func (repository *Repository) DecideSessionExecutionPlan(ctx context.Context, ownerID, sessionID string, messageID int64, decision string, expectedVersion int64) (domain.Message, error) {
 	var row messageRecord
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

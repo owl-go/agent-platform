@@ -1,11 +1,14 @@
 import { ref } from "vue";
 
-export const embeddedSessionApprovalID = ref<string>();
+export interface CommandApprovalPlacement { executionKind: "session" | "run"; executionID: string }
 
-export function placeSessionApproval(executionID?: string) {
-  embeddedSessionApprovalID.value = executionID;
+export const embeddedCommandApproval = ref<CommandApprovalPlacement>();
+
+export function placeCommandApproval(executionKind: CommandApprovalPlacement["executionKind"], executionID: string) {
+  embeddedCommandApproval.value = { executionKind, executionID };
 }
 
-export function clearSessionApproval(executionID?: string) {
-  if (!executionID || embeddedSessionApprovalID.value === executionID) embeddedSessionApprovalID.value = undefined;
+export function clearCommandApproval(executionKind: CommandApprovalPlacement["executionKind"], executionID: string) {
+  const current = embeddedCommandApproval.value;
+  if (current?.executionKind === executionKind && current.executionID === executionID) embeddedCommandApproval.value = undefined;
 }

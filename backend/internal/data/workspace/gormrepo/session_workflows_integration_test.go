@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -43,7 +44,7 @@ func TestSessionWorkflowConversionIsAtomicAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.Workflow.ID != firstID || created.Run.State != "waiting_for_user" || created.Link.ValidationRunID != created.Run.ID || created.Replayed {
+	if created.Workflow.ID != firstID || created.Run.State != "queued" || created.Run.ExecutionPlan == nil || created.Run.ExecutionPlan.State != "approved" || created.Link.ValidationRunID != created.Run.ID || created.Replayed {
 		t.Fatalf("creation = %#v", created)
 	}
 	var persisted struct {
@@ -66,6 +67,26 @@ func TestSessionWorkflowConversionIsAtomicAndIdempotent(t *testing.T) {
 	if !replayed.Replayed || replayed.Workflow.ID != firstID || replayed.Run.ID != created.Run.ID {
 		t.Fatalf("replay = %#v", replayed)
 	}
+	connectorSession := uuid.NewString()
+	exec(`INSERT INTO sessions(id,owner_user_id,title) VALUES(?,?,'Feishu session')`, connectorSession, owner)
+	exec(`INSERT INTO session_messages(session_id,role,content,state) VALUES(?,'user','Send a message','completed')`, connectorSession)
+	connectorStage := stage
+	connectorStage.Skills = nil
+	connectorStage.CLIConnectors = []domain.CLIConnectorSnapshot{{
+		ID: uuid.NewString(), Name: "飞书", Executable: "lark-cli", AuthenticationDriver: "feishu",
+		BundleObjectKey: "cli-connectors/feishu/bundle.tgz", BundleSHA256: "bundle-digest",
+		RuntimeDigests: []string{"sha256:runtime"},
+	}}
+	connectorSnapshot, _ := json.Marshal(domain.ResponseSnapshot{SchemaVersion: 2, Stages: []domain.ExecutionStageSnapshot{connectorStage}})
+	exec(`INSERT INTO session_messages(session_id,role,content,state,response_snapshot) VALUES(?,'assistant','Message delivered','completed',?::jsonb)`, connectorSession, string(connectorSnapshot))
+	var connectorMessageID int64
+	if err := db.Raw("SELECT max(id) FROM session_messages WHERE session_id = ?", connectorSession).Scan(&connectorMessageID).Error; err != nil {
+		t.Fatal(err)
+	}
+	feishuRequest := strings.Repeat("中", 35)
+	if _, err := repository.CreateWorkflowFromSession(ctx, owner, uuid.NewString(), connectorSession, connectorMessageID, feishuRequest, feishuRequest); err != nil {
+		t.Fatalf("completed response using a CLI Connector could not become a Workflow: %v", err)
+	}
 
 	badSession := uuid.NewString()
 	exec(`INSERT INTO sessions(id,owner_user_id,title) VALUES(?,?,'Bad response')`, badSession, owner)
@@ -81,7 +102,7 @@ func TestSessionWorkflowConversionIsAtomicAndIdempotent(t *testing.T) {
 	if err := db.Table("workflows").Where("owner_user_id = ?", owner).Count(&workflowCount).Error; err != nil {
 		t.Fatal(err)
 	}
-	if workflowCount != 1 {
-		t.Fatalf("workflow count = %d, want only the valid conversion", workflowCount)
+	if workflowCount != 2 {
+		t.Fatalf("workflow count = %d, want only the two valid conversions", workflowCount)
 	}
 }

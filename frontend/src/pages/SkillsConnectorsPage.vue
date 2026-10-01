@@ -24,8 +24,8 @@ function toggleMine() {
   <section class="page-surface resource-catalog">
     <div class="resource-catalog-frame">
       <ExtensionManager :initial-tab="initialTab" :mine-only="mineOnly" :show-tabs="props.showTabs" :catalog-query="props.catalogQuery" :available-only="props.availableOnly" @tab-change="router.replace({ query: $event === 'skills' ? {} : { tab: 'connectors' } })">
-        <template #tab-actions><el-button v-if="props.showTabs" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></template>
-        <template #catalog-actions><el-button v-if="!props.showTabs" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></template>
+        <template #tab-actions><el-button v-if="props.showTabs && initialTab !== 'mcp'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></template>
+        <template #catalog-actions><el-button v-if="!props.showTabs && initialTab !== 'mcp'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ mineLabel }}</el-button></template>
       </ExtensionManager>
     </div>
   </section>

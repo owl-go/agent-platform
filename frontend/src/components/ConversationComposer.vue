@@ -3,16 +3,16 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } fr
 import { ArrowUp, Check, ChevronLeft, ChevronRight, FilePlus2, FileText, Folder, Link, Plus, Search, Sparkles, Square, UserRound, Users, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConnectorAuthorizationFlow, type ConnectorInstallation, type ConnectorSetup, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
+import { platformApiKey, type Attachment, type CLIConnectorAuthorization, type CLIConnectorAuthorizationFlow, type CLIConnectorDefinition, type CLIConnectorEnablement, type ConnectorAuthorizationFlow, type ConnectorLaunch, type ConnectorInstallation, type ConnectorSetup, type ConversationFile, type ConversationInput, type ConversationScope, type ConversationSelection, type Expert, type ExpertTeam, type MCPServer, type SelectionInput, type Skill } from "../api/client";
 import { authContextKey } from "../auth/session";
 import { conversationDraftKey, draftText, loadConversationDraft, saveConversationDraft, type DraftPart, type ComposerSubmission } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
 import ConnectorIcon from "./ConnectorIcon.vue";
-import { clearSessionApproval, placeSessionApproval } from "../commandApprovalPlacement";
+import { clearCommandApproval, placeCommandApproval } from "../commandApprovalPlacement";
 
 import ProfileIcon from "./ProfileIcon.vue";
 
-const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: number; submit: (message: ComposerSubmission) => Promise<void> }>();
+const props = defineProps<{ scope: ConversationScope; disabled?: boolean; sendDisabled?: boolean; active?: boolean; stopping?: boolean; initialSkillId?: string; initialPrompt?: string; initialConnector?: ConnectorLaunch; authorizationRequest?: CLIAuthorizationRequest; approvalExecutionId?: string | number; submit: (message: ComposerSubmission) => Promise<void> }>();
 const emit = defineEmits<{ stop: []; launchConsumed: []; selectionChanged: [selection: ConversationSelection] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -44,6 +44,7 @@ const pendingCLIActivation = ref<{ definition: CLIConnectorDefinition; popup: Wi
 const pendingManagedActivation = ref<{ definition: CLIConnectorDefinition; popup: Window | null; selectAfter: boolean; scopes?: string[]; recovery?: boolean; setup?: ConnectorSetup; flow?: ConnectorAuthorizationFlow; completed?: boolean; failed?: boolean }>();
 const owner = computed(() => auth?.session.state.value.kind === "authenticated" ? auth.session.state.value.currentUser.id : "");
 const storageKey = computed(() => owner.value ? conversationDraftKey(owner.value, props.scope) : "");
+const approvalExecutionKind = computed(() => props.scope.session_id ? "session" as const : "run" as const);
 const editorLocked = computed(() => props.disabled || sending.value || loading.value);
 const locked = computed(() => editorLocked.value || updating.value);
 const canSend = computed(() => !locked.value && !props.sendDisabled && !props.active && !!selection.value && Boolean(draftText(parts.value) || pending.value.length || uploaded.value.length));
@@ -231,7 +232,14 @@ async function beginRequestedManagedAuthorization() {
   pending.flow = undefined;
   managedCompletionBusy.value = true;
   try {
-    if (pending.definition.authentication_driver === "dingtalk") {
+    const installation = managedInstallation(pending.definition.id);
+    if (installation?.source === "teambition" && installation.upgrade_available) {
+      await api.upgradeConnectorInstallation(installation.id, installation.version);
+      await refreshManagedInstallations();
+      pending.definition = cli.value.find(item => item.id === installation.id) ?? pending.definition;
+      pending.scopes = cliActivationScopes(pending.definition);
+    }
+    if (pending.definition.authentication_driver === "dingtalk" || managedInstallation(pending.definition.id)?.source === "teambition") {
       await beginManagedAuthorization();
       return;
     }
@@ -263,17 +271,30 @@ async function completeManagedActivation() {
       if (pending.flow.state === "invalid") { pending.failed = true; return; }
     }
     if (pending.flow?.state === "completed") await finishManagedActivation(pending);
-  } catch { scheduleManagedActivationPoll(); }
+  } catch {
+    if (managedInstallation(pending.definition.id)?.source === "teambition") {
+      try {
+        await refreshManagedInstallations();
+        if (managedInstallation(pending.definition.id)?.authorized) { await finishManagedActivation(pending); return; }
+      } catch { /* A transient catalog failure uses the existing poll. */ }
+      if (pending.flow?.expires_at && Date.parse(pending.flow.expires_at) <= Date.now()) { pending.failed = true; return; }
+    }
+    scheduleManagedActivationPoll();
+  }
   finally { managedCompletionBusy.value = false; }
 }
 async function setManagedActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter: boolean) {
   if (cliActivationBusy.value.includes(definition.id)) return;
   cliActivationBusy.value.push(definition.id); error.value = "";
-  const popup = active && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk") ? openCLIWindow() : null;
+  const popup = active && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk" || managedInstallation(definition.id)?.source === "teambition") ? openCLIWindow() : null;
   try {
     await refreshManagedInstallations();
     let installation = managedInstallation(definition.id);
     if (!installation) throw new Error("Connector installation is unavailable");
+    if (active && definition.authentication_driver === "connector_package" && installation.source !== "teambition" && !installation.authorized) {
+      await router.push("/resources?tab=connectors");
+      return;
+    }
     if (!active) {
       if (connectorEnabled(`cli:${definition.id}`)) await toggleConnector("cli", definition.id);
       await api.disableConnectorInstallation(installation.id, installation.version);
@@ -286,6 +307,11 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
       installation = await api.installPublishedConnector(installation.source);
       await refreshManagedInstallations();
     }
+    if (installation.source === "teambition" && installation.upgrade_available) {
+      installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
+      await refreshManagedInstallations();
+      definition = cli.value.find((item) => item.id === installation!.id) ?? definition;
+    }
     if (!installation.authorized) {
       const authorizations = await api.listConnectorAuthorizations(installation.id);
       const selected = authorizations.find((item) => item.selected && (item.state === "active" || item.state === "expired"));
@@ -297,13 +323,22 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
         } catch { /* An unrefreshable grant continues through account authorization. */ }
       }
     }
+    if (installation.authorized && installation.source === "teambition") {
+      const scopes = cliActivationScopes(definition);
+      const authorizations = await api.listConnectorAuthorizations(installation.id);
+      if (!authorizations.some(item => item.selected && item.state === "active" && scopes.every(scope => item.scopes.includes(scope)))) {
+        pendingManagedActivation.value = { definition, popup, selectAfter };
+        await beginManagedAuthorization();
+        return;
+      }
+    }
     if (installation.authorized) {
       closeBlankCLIWindow(popup);
       if (selectAfter) await selectActivatedCLI(installation.id);
       return;
     }
     pendingManagedActivation.value = { definition, popup, selectAfter };
-    if (definition.authentication_driver === "dingtalk") {
+    if (definition.authentication_driver === "dingtalk" || installation.source === "teambition") {
       await beginManagedAuthorization();
       return;
     }
@@ -327,6 +362,7 @@ function cliActivationScopes(definition: CLIConnectorDefinition) {
   return initial.length ? initial : cliUserScopes(definition);
 }
 function authorizationProvider(definition: CLIConnectorDefinition) {
+  if (managedInstallation(definition.id)?.source === "teambition") return "Teambition";
   return t(definition.authentication_driver === "dingtalk" ? "composer.providerDingtalk" : "composer.providerFeishu");
 }
 function replaceCLIEnablement(value: CLIConnectorEnablement) {
@@ -410,12 +446,10 @@ async function chooseConnector(item: (typeof connectorRows.value)[number]) {
   await toggleConnector(item.kind, item.id);
 }
 async function setVisibleConnectorActive(kind: "mcp" | "cli", id: string, active: boolean) {
-  if (kind === "mcp") {
-    if (connectorEnabled(`mcp:${id}`) !== active) await toggleConnector(kind, id);
-    return;
-  }
+  if (connectorEnabled(`${kind}:${id}`) === active) return;
+  if (kind === "mcp" || !active || cliActivationIsOn(id)) { await toggleConnector(kind, id); return; }
   const definition = cli.value.find((item) => item.id === id);
-  if (definition) await setCLIActivation(definition, active, active);
+  if (definition) await setCLIActivation(definition, true, true);
 }
 
 async function refreshRequestedCLIAuthorization() {
@@ -427,7 +461,7 @@ async function refreshRequestedCLIAuthorization() {
   }
   const definition = cli.value.find((item) => item.id === request.connectorID);
   const capability = definition?.capabilities?.find((item) => item.id === request.capabilityID && item.identities?.includes("user"));
-  if (definition?.managed_installation && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk") && (capability || !request.capabilityID)) {
+  if (definition?.managed_installation && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk" || managedInstallation(definition.id)?.source === "teambition") && (capability || !request.capabilityID)) {
     cliAuthorizationPrompt.value = undefined;
     const installation = managedInstallation(definition.id);
     if (installation?.state !== "active") return;
@@ -635,12 +669,20 @@ async function initialize() {
       else if (skill) { await chooseSkill(skill); if (!error.value) emit("launchConsumed"); }
       else error.value = t("composer.selectionFailed");
     }
+    if (props.initialConnector) {
+      const requested = props.initialConnector;
+      const row = connectorRows.value.find((item) => item.kind === requested.kind && item.id === requested.id);
+      if (!row?.available) error.value = t("composer.selectionFailed");
+      else if (!connectorEnabled(row.key)) await chooseConnector(row);
+      if (row && !error.value) emit("launchConsumed");
+      if (row?.kind === "cli" && !connectorEnabled(row.key)) menu.value = "connectors";
+    }
     await refreshRequestedCLIAuthorization(); persist();
   } catch { error.value = t("composer.selectionFailed"); }
   finally { loading.value = false; }
 }
 onMounted(async () => {
-  placeSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined);
+  if (props.approvalExecutionId) placeCommandApproval(approvalExecutionKind.value, String(props.approvalExecutionId));
   document.addEventListener("pointerdown", outside);
   document.addEventListener("visibilitychange", handleAuthorizationReturn);
   const saved = storageKey.value ? loadConversationDraft(storageKey.value) : undefined;
@@ -648,6 +690,7 @@ onMounted(async () => {
   else if (props.initialPrompt) parts.value = [{ kind: "text", text: props.initialPrompt }];
   await nextTick(); renderEditor();
   await initialize();
+  if (props.initialPrompt) { await nextTick(); editor.value?.focus(); }
 });
 watch(selection, (value) => { if (value) emit("selectionChanged", value); });
 watch(() => props.authorizationRequest, () => void refreshRequestedCLIAuthorization(), { deep: true });
@@ -656,14 +699,14 @@ watch(() => props.initialPrompt, async (value, previous) => {
   parts.value = [{ kind: "text", text: value }];
   await nextTick(); renderEditor(); persist(); editor.value?.focus();
 });
-watch(() => props.approvalExecutionId, (current, previous) => { if (previous) clearSessionApproval(String(previous)); placeSessionApproval(current ? String(current) : undefined); });
+watch(() => props.approvalExecutionId, (current, previous) => { if (previous) clearCommandApproval(approvalExecutionKind.value, String(previous)); if (current) placeCommandApproval(approvalExecutionKind.value, String(current)); });
 watch([parts, uploaded, pending, missingFiles, selection], persist, { deep: true });
-onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExecutionId ? String(props.approvalExecutionId) : undefined); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); if (cliActivationPoll) clearTimeout(cliActivationPoll); if (managedActivationPoll) clearTimeout(managedActivationPoll); closeBlankCLIWindow(pendingManagedActivation.value?.popup ?? null); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
+onBeforeUnmount(() => { disposed = true; if (props.approvalExecutionId) clearCommandApproval(approvalExecutionKind.value, String(props.approvalExecutionId)); if (cliAuthorizationPoll) clearTimeout(cliAuthorizationPoll); if (cliActivationPoll) clearTimeout(cliActivationPoll); if (managedActivationPoll) clearTimeout(managedActivationPoll); closeBlankCLIWindow(pendingManagedActivation.value?.popup ?? null); persist(); document.removeEventListener("pointerdown", outside); document.removeEventListener("visibilitychange", handleAuthorizationReturn); });
 </script>
 
 <template>
   <footer ref="root" class="composer resource-composer" :aria-busy="sending || updating || loading">
-    <div id="session-command-approval-slot" class="composer-approval-slot"></div>
+    <div id="command-approval-slot" class="composer-approval-slot"></div>
     <section v-if="pendingCLIActivation && cliEnablement(pendingCLIActivation.definition.id)?.state === 'waiting_for_user'" class="composer-authorization" role="status" aria-live="polite">
       <div><strong>{{ t('composer.activationRequired', { name: pendingCLIActivation.definition.name }) }}</strong><small>{{ t('composer.activationHint') }}</small></div>
       <a :href="cliEnablement(pendingCLIActivation.definition.id)?.action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.continueSetup') }}</a>
@@ -688,20 +731,24 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
     </div>
     <div ref="editor" class="composer-editor" role="textbox" aria-multiline="true" :aria-label="t('sessions.placeholder')" :data-placeholder="t('composer.placeholder')" :contenteditable="!editorLocked" @input="onInput" @keydown="keydown" @keyup="rememberCaret" @mouseup="rememberCaret" @paste="paste" @drop.prevent></div>
     <div class="composer-toolbar">
-      <el-button class="composer-plus" circle :disabled="locked" :aria-label="t('composer.add')" :aria-expanded="Boolean(menu)" @click="openMenu('main')"><Plus :size="21" /></el-button>
-      <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
-      <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
-        <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="item.name"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
-        <div class="connector-switch"><strong>{{ item.name }}</strong><el-switch :model-value="item.kind === 'cli' ? cliActivationIsOn(item.id) : connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
-        <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
-      </el-popover>
-      <span class="composer-spacer"></span>
-      <el-tooltip :content="t('composer.planFirstHint')" placement="top">
-        <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
-      </el-tooltip>
-      <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
-      <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
+      <div class="composer-toolbar-resources">
+        <el-button class="composer-plus" circle :disabled="locked" :aria-label="t('composer.add')" :aria-expanded="Boolean(menu)" @click="openMenu('main')"><Plus :size="21" /></el-button>
+        <el-button v-if="selection?.name" class="composer-specialist" text :disabled="locked" @click="openMenu('experts')"><ProfileIcon :icon="selection.icon" :background="selection.icon_background" :team="selection.member_count > 1" /><span>{{ selection.name }}</span></el-button>
+        <el-popover v-for="item in visibleConnectors" :key="item.key" trigger="click" :width="270" :disabled="locked">
+          <template #reference><el-button circle class="composer-connector" :class="{ 'is-off': !connectorEnabled(item.key) }" :aria-label="item.name" :title="`${item.name} · ${t(connectorEnabled(item.key) ? 'composer.connectorSelected' : 'composer.connectorNotSelected')}`"><ConnectorIcon :icon="item.icon" :size="22" /></el-button></template>
+          <div class="connector-switch"><span class="connector-switch-label"><strong>{{ item.name }}</strong><small>{{ t(connectorEnabled(item.key) ? 'composer.connectorSelected' : 'composer.connectorNotSelected') }}</small></span><el-switch :model-value="connectorEnabled(item.key)" :loading="item.kind === 'cli' && cliActivationBusy.includes(item.id)" :disabled="locked" :aria-label="item.name" @change="setVisibleConnectorActive(item.kind, item.id, Boolean($event))" /></div>
+          <el-button text @click="router.push('/resources?tab=connectors')">{{ t('composer.manageConnectors') }}<ChevronRight :size="15" /></el-button>
+        </el-popover>
+      </div>
+      <div class="composer-toolbar-actions">
+        <el-tooltip :content="t('composer.planFirstHint')" placement="top">
+          <el-button class="composer-plan-toggle" text :class="{ 'is-active': planFirst }" :disabled="locked" :aria-pressed="planFirst" :aria-description="t('composer.planFirstHint')" @click="planFirst = !planFirst">{{ t('composer.planFirst') }}</el-button>
+        </el-tooltip>
+        <el-button v-if="active" class="stop-generation" circle :loading="stopping" :aria-label="t('sessions.stopGeneration')" @click="emit('stop')"><template #icon><Square :size="17" /></template></el-button>
+        <el-button v-else type="primary" circle :loading="sending" :disabled="!canSend" :aria-label="t('composer.send')" @click="send"><template #icon><ArrowUp :size="19" /></template></el-button>
+      </div>
     </div>
+    <p v-if="planFirst" class="composer-plan-cost-note" role="status">{{ t('composer.planFirstHint') }}</p>
     <input ref="fileInput" class="composer-file-input" type="file" multiple :disabled="locked" @change="chooseLocal">
     <section v-if="menu" class="composer-menu" :aria-label="t('composer.add')">
       <template v-if="menu === 'main'">
@@ -719,7 +766,7 @@ onBeforeUnmount(() => { disposed = true; clearSessionApproval(props.approvalExec
             <small>{{ t('experts.teams') }}</small><button v-for="item in filteredTeams" :key="item.id" type="button" :disabled="locked || !item.available" @click="chooseExpert('team', item.id)"><Users /><span>{{ item.name }}<small>{{ item.introduction }}</small></span><Check v-if="selection?.expert_team_id === item.id" /></button>
           </template>
           <template v-if="menu === 'skills'"><button v-for="(item, index) in filteredSkills" :key="item.id" type="button" role="option" :aria-selected="highlighted === index" :class="{ highlighted: highlighted === index }" :disabled="locked" @click="chooseSkill(item)"><Sparkles /><span>{{ item.name }}</span><Check v-if="parts.some((part) => part.kind === 'skill' && part.id === item.id)" /></button><p v-if="!filteredSkills.length">{{ t('composer.empty') }}</p></template>
-          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t('composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
+          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t(item.definition.authentication_driver === 'connector_package' && managedInstallation(item.id)?.source !== 'teambition' && !managedInstallation(item.id)?.authorized ? 'composer.connectorCredentialsRequired' : 'composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
           <template v-if="menu === 'files'">
             <button type="button" @click="fileInput?.click()"><FilePlus2 />{{ t('composer.localFiles') }}</button>
             <button v-if="workspacePath" type="button" @click="loadFiles(workspacePath.split('/').slice(0, -1).join('/'))"><Folder />{{ t('composer.parentFolder') }}</button>

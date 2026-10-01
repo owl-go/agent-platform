@@ -59,7 +59,7 @@ export interface SessionWorkflowFile { source_key: string; kind: "attachment" | 
 export interface SessionWorkflowDraft { suggested_name: string; suggested_goal: string; specialist_name: string; resources: SessionWorkflowResource[]; files: SessionWorkflowFile[]; existing_link?: SessionWorkflowLink }
 export interface SessionWorkflowFileDecision { source_key: string; destination: "workspace" | "exclude" }
 export interface SessionWorkflowCreation { workflow: Workflow; validation_run: Run; link: SessionWorkflowLink; replayed: boolean }
-export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; origin?: SessionWorkflowLink }
+export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; origin?: SessionWorkflowLink; next_scheduled_at?: string; upcoming_schedule_times?: string[]; last_run_state?: Run["state"]; last_run_at?: string; last_run_id?: string; run_count_30d?: number; succeeded_run_count_30d?: number; needs_attention?: boolean }
 export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
@@ -105,12 +105,14 @@ export interface CLIRecommendedSkill { name: string; git_url: string; git_ref: s
 export interface CLIConnectorDefinitionInput { name: string; icon: string; description: string; installation_type: "npm" | "upload"; npm_package: string; npm_version: string; archive?: string; npm_integrity?: string; executable?: string; authentication_driver?: "none" | "feishu" | "dingtalk" | "connector_package"; capabilities?: CLICapability[]; supported_architectures?: Array<"linux-amd64" | "linux-arm64">; recommended_skills?: CLIRecommendedSkill[]; recommended_skill_ids?: string[] }
 export interface CLIConnectorDefinition extends CLIConnectorDefinitionInput { npm_integrity: string; executable: string; authentication_driver: "none" | "feishu" | "dingtalk" | "connector_package"; capabilities: CLICapability[]; supported_architectures: Array<"linux-amd64" | "linux-arm64">; recommended_skills: CLIRecommendedSkill[]; recommended_skill_ids: string[]; id: string; state: "draft" | "building" | "testing" | "available" | "failed" | "disabled"; failure_reason?: string; bundle_sha256?: string; mutable: boolean; version: number; conformance_runtime_digests: string[]; managed_installation?: boolean; managed_authorized?: boolean }
 export interface CLIConnectorHealth { definition_id: string; definition_name: string; definition_state: CLIConnectorDefinition["state"]; enablement_count: number; enabled_count: number; waiting_for_user_count: number; active_authorization_count: number; attention_authorization_count: number }
-export interface ConnectorRevision { id: string; source: string; package_version: string; mode: "mcp" | "cli"; sha256: string; name: string; description: string; icon: string; authentication_driver: string; bundle_sha256?: string; runtime_digests: string[]; conformance_available: boolean; required_scopes: string[] }
+export interface ConnectorExamples { examples_zh?: string[]; examples_en?: string[] }
+export interface ConnectorLaunch { kind: "mcp" | "cli"; id: string }
+export interface ConnectorRevision extends ConnectorExamples { id: string; source: string; package_version: string; mode: "mcp" | "cli"; sha256: string; name: string; description: string; icon: string; authentication_driver: string; bundle_sha256?: string; runtime_digests: string[]; conformance_available: boolean; required_scopes: string[] }
 export interface ConnectorPublication { source: string; active_revision_id: string; state: "available" | "disabled"; version: number; revision: ConnectorRevision }
 export interface ConnectorAuthorization { id: string; installation_id: string; identity_ref: string; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "expired" | "disconnected" | "revoked"; expires_at?: string; version: number; selected: boolean }
 export interface ConnectorSetup { id: string; installation_id: string; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; provider_name?: string; developer_console_url?: string }
 export interface ConnectorAuthorizationFlow { id: string; installation_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: ConnectorAuthorization }
-export interface ConnectorInstallation { id: string; source: string; active_revision_id: string; state: "pending" | "active" | "disabled" | "uninstalled"; authorized: boolean; version: number; package_version: string; name: string; description: string; authentication_driver: string; selected_authorization_id?: string; upgrade_available: boolean }
+export interface ConnectorInstallation extends ConnectorExamples { mode?: "mcp" | "cli"; icon?: string; id: string; source: string; active_revision_id: string; state: "pending" | "active" | "disabled" | "uninstalled"; authorized: boolean; version: number; package_version: string; name: string; description: string; authentication_driver: string; selected_authorization_id?: string; upgrade_available: boolean }
 export interface CLIConnectorEnablement { id: string; definition_id: string; state: "waiting_for_user" | "enabled" | "invalid" | "disabled"; action_url?: string; action_expires_at?: string; provider_name?: string; developer_console_url?: string; version: number }
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
@@ -197,9 +199,11 @@ export interface PlatformApi {
   createWorkflow(workflow: WorkflowInput, signal?: AbortSignal): Promise<Workflow>;
   getWorkflow(id: string, signal?: AbortSignal): Promise<Workflow>;
   updateWorkflow(id: string, workflow: WorkflowInput, version: number, signal?: AbortSignal): Promise<Workflow>;
+  previewWorkflowSchedule(schedule: Schedule, signal?: AbortSignal): Promise<string[]>;
   deleteWorkflow(id: string, signal?: AbortSignal): Promise<void>;
   generateWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at: string }>;
   getWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at?: string }>;
+  revokeWorkflowCredential(id: string, signal?: AbortSignal): Promise<void>;
   runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown>; plan_preference?: PlanPreference }, signal?: AbortSignal): Promise<Run>;
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
@@ -498,7 +502,10 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     retrySessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/retry`, json("POST", {}, signal)); },
     cancelSessionMessage(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/cancellation`, json("POST", {}, signal)); },
     decideSessionExecutionPlan(sessionID, messageID, decision, version, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/plan-decision`, json("POST", { decision, expected_version: version }, signal)); },
-    previewSessionWorkflowDraft(sessionID, messageID, signal) { return call(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow-draft`, { signal }); },
+    async previewSessionWorkflowDraft(sessionID, messageID, signal) {
+      const draft = await call<SessionWorkflowDraft>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow-draft`, { signal });
+      return { ...draft, resources: draft.resources ?? [], files: draft.files ?? [] };
+    },
     async createWorkflowFromSession(sessionID, messageID, input, signal) {
       const result = await call<SessionWorkflowCreation>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/messages/${messageID}/workflow`, json("POST", input, signal));
       return { ...result, validation_run: normalizeRun(result.validation_run) };
@@ -510,9 +517,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     createWorkflow(workflow, signal) { return call("/api/v1/workflows", json("POST", { workflow }, signal)); },
     getWorkflow(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}`, { signal }); },
     updateWorkflow(id, workflow, version, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}`, json("PATCH", { workflow, expected_version: version }, signal)); },
+    async previewWorkflowSchedule(schedule, signal) { return (await call<{ items?: string[] }>("/api/v1/workflows/schedule-preview", json("POST", { schedule }, signal))).items ?? []; },
     deleteWorkflow(id, signal) { return remove(`/api/v1/workflows/${encodeURIComponent(id)}`, signal); },
     generateWorkflowCredential(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, json("POST", {}, signal)); },
     getWorkflowCredential(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, { signal }); },
+    revokeWorkflowCredential(id, signal) { return remove(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, signal); },
     async runWorkflow(id, input, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, json("POST", input ?? {}, signal))); },
     async listRuns(id, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, { signal })).items ?? []).map(normalizeRun); },
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },

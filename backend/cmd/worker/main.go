@@ -13,19 +13,22 @@ import (
 	"agent-platform/backend/internal/conf"
 	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/platformconfig"
+	platformwiring "agent-platform/backend/internal/wiring/platform"
+	workspaceworker "agent-platform/backend/internal/wiring/workspaceworker"
 )
 
 func main() {
 	configPath := flag.String("config", platformconfig.DefaultPath, "path to the YAML platform configuration")
+	reverifyCLI := flag.Bool("reverify-cli-connectors", false, "verify active CLI bundles for the configured Runtime before release")
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if err := run(ctx, *configPath); err != nil {
+	if err := run(ctx, *configPath, *reverifyCLI); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(ctx context.Context, configPath string) error {
+func run(ctx context.Context, configPath string, reverifyCLI bool) error {
 	config, err := conf.Load(configPath)
 	if err != nil {
 		return err
@@ -34,12 +37,28 @@ func run(ctx context.Context, configPath string) error {
 		return err
 	}
 	startupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	db, err := gormdb.Open(startupCtx, databaseConfig(config.Database))
+	openDatabase := gormdb.Open
+	if reverifyCLI {
+		openDatabase = gormdb.OpenWithoutMigrations
+	}
+	db, err := openDatabase(startupCtx, databaseConfig(config.Database))
 	cancel()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
+	if reverifyCLI {
+		objects, err := platformwiring.NewObjectStore(config)
+		if err != nil {
+			return err
+		}
+		count, err := workspaceworker.ReverifyActiveCLIConnectors(ctx, config, db, objects)
+		if err != nil {
+			return err
+		}
+		log.Printf("verified %d active CLI Connector bundles for configured Runtime", count)
+		return nil
+	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
 		"service", "agent-platform-worker",

@@ -20,12 +20,13 @@ import (
 )
 
 type PackageDefinitionMetadata struct {
-	Name                   string
-	Version                string
-	Executable             string
-	AuthenticationDriver   string
-	Capabilities           []Capability
-	SupportedArchitectures []string
+	Name                                 string
+	Version                              string
+	Executable                           string
+	AuthenticationDriver                 string
+	Capabilities                         []Capability
+	SupportedArchitectures               []string
+	CPUMillis, MemoryMiB, ChildProcesses int
 }
 
 type packageManifest struct {
@@ -33,8 +34,13 @@ type packageManifest struct {
 	Version        string          `json:"version"`
 	Bin            json.RawMessage `json:"bin"`
 	AgentWorkspace struct {
-		Executable             string   `json:"executable"`
-		AuthenticationDriver   string   `json:"authenticationDriver"`
+		Executable           string `json:"executable"`
+		AuthenticationDriver string `json:"authenticationDriver"`
+		ResourceLimits       struct {
+			CPUMillis      int `json:"cpuMillis"`
+			MemoryMiB      int `json:"memoryMiB"`
+			ChildProcesses int `json:"childProcesses"`
+		} `json:"resourceLimits"`
 		SupportedArchitectures []string `json:"supportedArchitectures"`
 		Capabilities           []struct {
 			ID             string   `json:"id"`
@@ -55,6 +61,7 @@ func packageDefinitionMetadata(raw []byte) (PackageDefinitionMetadata, error) {
 	}
 	metadata := PackageDefinitionMetadata{
 		Name: manifest.Name, Version: manifest.Version,
+		CPUMillis: manifest.AgentWorkspace.ResourceLimits.CPUMillis, MemoryMiB: manifest.AgentWorkspace.ResourceLimits.MemoryMiB, ChildProcesses: manifest.AgentWorkspace.ResourceLimits.ChildProcesses,
 		Executable:             manifest.AgentWorkspace.Executable,
 		AuthenticationDriver:   manifest.AgentWorkspace.AuthenticationDriver,
 		SupportedArchitectures: append([]string(nil), manifest.AgentWorkspace.SupportedArchitectures...),

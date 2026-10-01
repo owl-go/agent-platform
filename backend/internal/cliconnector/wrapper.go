@@ -206,6 +206,9 @@ func (definition Definition) ValidateDraft() error {
 }
 
 func validateExecutionPolicy(definition Definition) error {
+	if definition.CPUMillis < 0 || definition.CPUMillis > 16000 || definition.MemoryMiB < 0 || definition.MemoryMiB > 65536 || definition.ChildProcesses < 0 || definition.ChildProcesses > 1024 {
+		return errors.New("CLI resource limits are outside the allowed range")
+	}
 	if definition.Executable == "" || strings.ContainsAny(definition.Executable, `/\\`) {
 		return errors.New("CLI executable must be selected from package bin metadata")
 	}

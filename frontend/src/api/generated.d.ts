@@ -1748,6 +1748,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/schedule-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_PreviewWorkflowSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}": {
         parameters: {
             query?: never;
@@ -1774,7 +1790,7 @@ export interface paths {
         get: operations["AgentWorkspaceService_GetWorkflowCredential"];
         put?: never;
         post: operations["AgentWorkspaceService_GenerateWorkflowCredential"];
-        delete?: never;
+        delete: operations["AgentWorkspaceService_RevokeWorkflowCredential"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2475,6 +2491,10 @@ export interface components {
             authentication_driver?: string;
             selected_authorization_id?: string;
             upgrade_available?: boolean;
+            examples_zh?: string[];
+            examples_en?: string[];
+            mode?: string;
+            icon?: string;
         };
         v1ConnectorPublication: {
             source?: string;
@@ -2517,6 +2537,8 @@ export interface components {
             runtime_digests?: string[];
             conformance_available?: boolean;
             required_scopes?: string[];
+            examples_zh?: string[];
+            examples_en?: string[];
         };
         v1ConnectorSetup: {
             id?: string;
@@ -3440,6 +3462,12 @@ export interface components {
             /** Format: date-time */
             updated_at?: string;
         };
+        v1PreviewWorkflowScheduleRequest: {
+            schedule?: components["schemas"]["v1Schedule"];
+        };
+        v1PreviewWorkflowScheduleResponse: {
+            items?: string[];
+        };
         v1PromptOptimizationCandidate: {
             provider_model_id?: string;
             display_name?: string;
@@ -3825,6 +3853,18 @@ export interface components {
             expert_team_id?: string;
             knowledge_base_ids?: string[];
             origin?: components["schemas"]["v1SessionWorkflowLink"];
+            /** Format: date-time */
+            next_scheduled_at?: string;
+            last_run_state?: string;
+            /** Format: date-time */
+            last_run_at?: string;
+            /** Format: int32 */
+            run_count_30d?: number;
+            /** Format: int32 */
+            succeeded_run_count_30d?: number;
+            needs_attention?: boolean;
+            last_run_id?: string;
+            upcoming_schedule_times?: string[];
         };
         v1WorkflowAccessToken: {
             jwt_token?: string;
@@ -8552,6 +8592,39 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_PreviewWorkflowSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1PreviewWorkflowScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1PreviewWorkflowScheduleResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_GetWorkflow: {
         parameters: {
             query?: never;
@@ -8702,6 +8775,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1WorkflowCredential"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RevokeWorkflowCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
                 };
             };
             /** @description An unexpected error response. */

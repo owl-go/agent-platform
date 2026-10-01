@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"agent-platform/backend/internal/icon"
 )
@@ -496,6 +497,53 @@ type Schedule struct {
 	Timezone  string
 }
 
+func (schedule Schedule) Next(after time.Time) *time.Time {
+	if !schedule.Enabled {
+		return nil
+	}
+	location, err := time.LoadLocation(schedule.Timezone)
+	if err != nil {
+		return nil
+	}
+	local := after.In(location)
+	var next time.Time
+	switch schedule.Frequency {
+	case "hourly":
+		next = time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), int(schedule.Minute), 0, 0, location)
+		if !next.After(local) {
+			next = next.Add(time.Hour)
+		}
+	case "daily":
+		next = time.Date(local.Year(), local.Month(), local.Day(), int(schedule.Hour), int(schedule.Minute), 0, 0, location)
+		if !next.After(local) {
+			next = next.AddDate(0, 0, 1)
+		}
+	case "weekly":
+		days := (int(schedule.Weekday) - int(local.Weekday()) + 7) % 7
+		next = time.Date(local.Year(), local.Month(), local.Day()+days, int(schedule.Hour), int(schedule.Minute), 0, 0, location)
+		if !next.After(local) {
+			next = next.AddDate(0, 0, 7)
+		}
+	default:
+		return nil
+	}
+	utc := next.UTC()
+	return &utc
+}
+
+func (schedule Schedule) Upcoming(after time.Time, count int) []time.Time {
+	items := make([]time.Time, 0, max(0, count))
+	for len(items) < count {
+		next := schedule.Next(after)
+		if next == nil {
+			break
+		}
+		items = append(items, *next)
+		after = next.Add(time.Second)
+	}
+	return items
+}
+
 func (schedule Schedule) Validate() error {
 	if !schedule.Enabled {
 		return nil
@@ -684,10 +732,10 @@ type WorkflowInput struct {
 }
 
 func (input WorkflowInput) Validate() error {
-	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
+	if nameLength := utf8.RuneCountInString(strings.TrimSpace(input.Name)); nameLength < 1 || nameLength > 100 {
 		return fmt.Errorf("%w: Workflow name must contain 1-100 characters", ErrInvalid)
 	}
-	if goal := strings.TrimSpace(input.Goal); len(goal) < 1 || len(goal) > 100_000 {
+	if goalLength := utf8.RuneCountInString(strings.TrimSpace(input.Goal)); goalLength < 1 || goalLength > 100_000 {
 		return fmt.Errorf("%w: Workflow goal must contain 1-100000 characters", ErrInvalid)
 	}
 	if input.ExpertID != nil && input.ExpertTeamID != nil {
@@ -731,8 +779,16 @@ type Workflow struct {
 	RuntimeEngine           *RuntimeEngine
 	Environment             []EnvironmentVariable
 	Schedule                *Schedule
+	NextScheduledAt         *time.Time
+	UpcomingScheduleTimes   []time.Time
 	GitSource               *GitSource
 	APICredentialConfigured bool
+	LastRunID               string
+	LastRunState            string
+	LastRunAt               *time.Time
+	RunCount30Days          int
+	SucceededRunCount30Days int
+	NeedsAttention          bool
 	WorkspacePath           string
 	DeletedAt               *time.Time
 	CreatedAt               time.Time

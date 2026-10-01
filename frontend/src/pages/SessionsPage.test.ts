@@ -2,12 +2,12 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot } from "../api/client";
+import { ApiError, platformApiKey, type Artifact, type Expert, type ModelProviderConnection, type PersonalSettings, type PlatformApi, type Session, type SessionMessage, type SessionMessageSnapshot, type SessionWorkflowCreation } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { conversationApiStub } from "../test/conversation";
 import { createAppRouter } from "../router";
 import ConversationComposer from "../components/ConversationComposer.vue";
-import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
+import { embeddedCommandApproval } from "../commandApprovalPlacement";
 import SessionsPage from "./SessionsPage.vue";
 
 const session: Session = {
@@ -42,9 +42,9 @@ async function mountPage(sessionMessages: SessionMessage[] = messages, stream?: 
   return mountPageWithAPI(apiStub(sessionMessages, stream));
 }
 
-async function mountPageWithAPI(api: PlatformApi) {
+async function mountPageWithAPI(api: PlatformApi, path = "/sessions") {
   const router = createAppRouter(createMemoryHistory());
-  await router.push("/sessions");
+  await router.push(path);
   await router.isReady();
   const wrapper = mount(SessionsPage, {
     global: {
@@ -55,6 +55,7 @@ async function mountPageWithAPI(api: PlatformApi) {
   await flushPromises();
   return wrapper;
 }
+
 
 describe("SessionsPage conversation layout", () => {
   beforeEach(() => {
@@ -67,12 +68,27 @@ describe("SessionsPage conversation layout", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
-    embeddedSessionApprovalID.value = undefined;
+    embeddedCommandApproval.value = undefined;
     delete (HTMLElement.prototype as { scrollTo?: unknown }).scrollTo;
     delete (URL as { createObjectURL?: unknown }).createObjectURL;
     delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
     vi.restoreAllMocks();
   });
+
+it("passes connector guidance into a new Session composer without posting a message", async () => {
+  const api = apiStub([]);
+  const created = { ...session, id: "new-session" };
+  api.createSession = vi.fn(async () => created);
+  api.getAttachmentDownload = vi.fn(async () => new Blob());
+  api.listMCPServers = vi.fn(async () => [{ id: "mcp-1", name: "Example", tested: true, test_pending: false, arguments: [], environment: [], transport: "streamable_http" as const, ...{ created_at: session.created_at, updated_at: session.updated_at, version: 1 } }]);
+  api.sendSessionMessage = vi.fn();
+  const wrapper = await mountPageWithAPI(api, "/sessions?new=launch&connector_kind=mcp&connector_id=mcp-1&draft=查询示例数据");
+  expect(api.createSession).toHaveBeenCalled();
+  expect(wrapper.get(".composer-editor").text()).toBe("查询示例数据");
+  expect(api.resolveConversationSelection).toHaveBeenCalledWith({ session_id: created.id }, expect.objectContaining({ mcp_server_ids: ["mcp-1"] }));
+  expect(api.sendSessionMessage).not.toHaveBeenCalled();
+  wrapper.unmount();
+});
 
   it("blocks a new task when an inherited execution pair is no longer verified", async () => {
     const api = apiStub([]);
@@ -101,7 +117,12 @@ describe("SessionsPage conversation layout", () => {
     ] as SessionMessage[];
     const api = apiStub(successful);
     api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "周报", suggested_goal: "生成本周周报", specialist_name: "默认执行配置", resources: [{ kind: "skill", id: "skill-1", name: "Report" }], files: [{ source_key: "attachment:attachment-1", kind: "attachment", name: "brief.pdf", size: 2048, available: true }] }));
-    api.createWorkflowFromSession = vi.fn<PlatformApi["createWorkflowFromSession"]>(() => new Promise(() => undefined));
+    api.createWorkflowFromSession = vi.fn<PlatformApi["createWorkflowFromSession"]>(async () => ({
+      workflow: { id: "workflow-1", name: "周报", goal: "生成本周周报", environment: [], api_credential_configured: false, deleted: false, created_at: session.created_at, updated_at: session.updated_at, version: 1 },
+      validation_run: { id: "run-1", conversation_id: "run-1", turn_number: 1, workflow_id: "workflow-1", workflow_name: "周报", trigger: "session_conversion", state: "waiting_for_user", queued_at: session.updated_at, elapsed_ms: 0 },
+      link: { session_id: session.id, message_id: 2, workflow_id: "workflow-1", workflow_name: "周报", validation_run_id: "run-1", created_at: session.updated_at },
+      replayed: false,
+    } satisfies SessionWorkflowCreation));
     const wrapper = await mountPageWithAPI(api);
 
     await wrapper.get(".message.assistant .message-actions button").trigger("click");
@@ -117,6 +138,21 @@ describe("SessionsPage conversation layout", () => {
       goal: "生成本周周报",
       files: [{ source_key: "attachment:attachment-1", destination: "workspace" }],
     });
+    await vi.waitFor(() => expect(wrapper.vm.$route.path).toBe("/workflows/workflow-1"));
+    expect(wrapper.vm.$route.query).toMatchObject({ open_run: "run-1", from_session: session.id });
+    wrapper.unmount();
+  });
+
+  it("opens Workflow save when the preview omits empty resources and files", async () => {
+    const api = apiStub([{ ...messages[0]! }, { ...messages[1]!, state: "completed" }]);
+    api.previewSessionWorkflowDraft = vi.fn<PlatformApi["previewSessionWorkflowDraft"]>(async () => ({ suggested_name: "布局验收", suggested_goal: "我的消息", specialist_name: "默认执行配置" } as Awaited<ReturnType<PlatformApi["previewSessionWorkflowDraft"]>>));
+    const wrapper = await mountPageWithAPI(api);
+
+    await wrapper.get(".message.assistant .message-actions button").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.get<HTMLInputElement>(".workflow-save-dialog input").element.value).toBe("布局验收");
+    expect(wrapper.get(".workflow-save-dialog").text()).toContain("本次未使用额外技能或连接器");
     wrapper.unmount();
   });
 
@@ -133,9 +169,16 @@ describe("SessionsPage conversation layout", () => {
     expect(wrapper.get(".task-workspace-panel").text()).toContain("生成发布报告");
     await wrapper.get(".task-workspace-panel > header button").trigger("click");
     expect(wrapper.find(".task-workspace-panel").exists()).toBe(false);
-    await wrapper.get(".message-task").trigger("click");
-    expect(wrapper.get(".task-workspace-panel").text()).toContain("检查变更");
+    expect(localStorage.getItem(`agent-workspace:task-panel:session:${session.id}`)).toBe("closed");
     wrapper.unmount();
+
+    const restored = await mountPage(taskMessages);
+    expect(restored.find(".task-workspace-panel").exists()).toBe(false);
+    const reopen = restored.get('.conversation-head button[aria-label="打开任务面板"]');
+    await reopen.trigger("click");
+    expect(restored.get(".task-workspace-panel").text()).toContain("检查变更");
+    expect(restored.find('.conversation-head button[aria-label="打开任务面板"]').exists()).toBe(false);
+    restored.unmount();
   });
 
   it("shows the Skills frozen for a historical user message", async () => {
@@ -626,10 +669,10 @@ describe("SessionsPage conversation layout", () => {
     const wrapper = await mountPage([messages[0]!, active]);
 
     expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(active.id);
-    expect(embeddedSessionApprovalID.value).toBe(String(active.id));
-    expect(wrapper.find("#session-command-approval-slot").exists()).toBe(true);
+    expect(embeddedCommandApproval.value).toEqual({ executionKind: "session", executionID: String(active.id) });
+    expect(wrapper.find("#command-approval-slot").exists()).toBe(true);
     wrapper.unmount();
-    expect(embeddedSessionApprovalID.value).toBeUndefined();
+    expect(embeddedCommandApproval.value).toBeUndefined();
   });
 
   it("does not present an old runtime activity as current after failure", async () => {
@@ -669,6 +712,98 @@ describe("SessionsPage conversation layout", () => {
 
     expect(wrapper.get(".expert-stage-list").text()).toContain("阶段检索结果");
     wrapper.unmount();
+  });
+
+  it("reconnects through a command approval wait and displays completion without a page refresh", async () => {
+    vi.useFakeTimers();
+    const pending: SessionMessage = { ...messages[1]!, state: "generating", content: "", progress_stage: "using_tool" };
+    const waiting: SessionMessage = { ...pending, state: "waiting_for_user" };
+    const completed: SessionMessage = { ...pending, state: "completed", content: "表格已填写", progress_stage: undefined };
+    const api = apiStub();
+    api.listSessionMessages = vi.fn()
+      .mockResolvedValueOnce([messages[0]!, pending])
+      .mockResolvedValueOnce([messages[0]!, waiting])
+      .mockResolvedValue([messages[0]!, completed]);
+    api.streamSessionMessage = vi.fn()
+      .mockImplementationOnce(async (_sessionID, _messageID, onSnapshot) => {
+        onSnapshot({ ...waiting });
+        throw new Error("connection lost during approval");
+      })
+      .mockImplementationOnce(async (_sessionID, _messageID, onSnapshot) => {
+        onSnapshot({ ...completed });
+      });
+
+    const wrapper = await mountPageWithAPI(api);
+    try {
+      expect(wrapper.get(".execution-status-bar").text()).toContain("等待用户操作");
+      await vi.advanceTimersByTimeAsync(750);
+      await flushPromises();
+
+      expect(api.streamSessionMessage).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(api.streamSessionMessage).mock.calls[1]?.[4]).toEqual({ reconnect: true });
+      await vi.advanceTimersByTimeAsync(200);
+      await flushPromises();
+      expect(wrapper.get(".message.assistant .message-content").text()).toContain("表格已填写");
+      expect(wrapper.find(".execution-status-bar").exists()).toBe(false);
+      expect(wrapper.find('button[aria-label="中止生成"]').exists()).toBe(false);
+    } finally { wrapper.unmount(); }
+  });
+
+  it("keeps polling after a closed stream while a command approval is pending", async () => {
+    vi.useFakeTimers();
+    const pending: SessionMessage = { ...messages[1]!, state: "generating", content: "" };
+    const waiting: SessionMessage = { ...pending, state: "waiting_for_user", progress_stage: "using_tool" };
+    const completed: SessionMessage = { ...pending, state: "completed", content: "表格已填写" };
+    const api = apiStub();
+    api.listSessionMessages = vi.fn()
+      .mockResolvedValueOnce([messages[0]!, pending])
+      .mockResolvedValueOnce([messages[0]!, waiting])
+      .mockResolvedValue([messages[0]!, completed]);
+    const wrapper = await mountPageWithAPI(api);
+    try {
+      expect(wrapper.get(".execution-status-bar").text()).toContain("等待用户操作");
+      await vi.advanceTimersByTimeAsync(900);
+      await flushPromises();
+
+      expect(api.listSessionMessages).toHaveBeenCalledTimes(3);
+      expect(wrapper.get(".message.assistant .message-content").text()).toContain("表格已填写");
+      expect(wrapper.find('button[aria-label="中止生成"]').exists()).toBe(false);
+    } finally { wrapper.unmount(); }
+  });
+
+  it("subscribes when opening a Session that is waiting for command approval", async () => {
+    const waiting: SessionMessage = { ...messages[1]!, state: "waiting_for_user", content: "", progress_stage: "using_tool" };
+    const api = apiStub([messages[0]!, waiting]);
+    api.streamSessionMessage = vi.fn((_sessionID, _messageID, _onSnapshot, signal) => new Promise<void>((resolve) => {
+      signal?.addEventListener("abort", () => resolve(), { once: true });
+    }));
+    const wrapper = await mountPageWithAPI(api);
+    try {
+      expect(api.streamSessionMessage).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(api.streamSessionMessage).mock.calls[0]?.slice(0, 2)).toEqual([session.id, waiting.id]);
+      expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBe(waiting.id);
+    } finally { wrapper.unmount(); }
+  });
+
+  it.each(["online", "visibilitychange"])("reconciles a waiting Session on browser %s", async (event) => {
+    const waiting: SessionMessage = { ...messages[1]!, state: "waiting_for_user", content: "", progress_stage: "using_tool" };
+    const completed: SessionMessage = { ...waiting, state: "completed", content: "表格已填写", progress_stage: undefined };
+    const api = apiStub();
+    api.listSessionMessages = vi.fn()
+      .mockResolvedValueOnce([messages[0]!, waiting])
+      .mockResolvedValue([messages[0]!, completed]);
+    api.streamSessionMessage = vi.fn((_sessionID, _messageID, _onSnapshot, signal) => new Promise<void>((resolve) => {
+      signal?.addEventListener("abort", () => resolve(), { once: true });
+    }));
+    const wrapper = await mountPageWithAPI(api);
+    try {
+      (event === "online" ? window : document).dispatchEvent(new Event(event));
+      await flushPromises();
+
+      expect(api.listSessionMessages).toHaveBeenCalledTimes(2);
+      expect(wrapper.get(".message.assistant .message-content").text()).toContain("表格已填写");
+      expect(wrapper.getComponent(ConversationComposer).props("approvalExecutionId")).toBeUndefined();
+    } finally { wrapper.unmount(); }
   });
 
   it("reconciles a completed message after the event stream closes without a terminal snapshot", async () => {

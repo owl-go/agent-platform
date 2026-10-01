@@ -26,7 +26,8 @@ const creditBalance = ref<CreditBalance>();
 const aiApplicationsUnread = ref(localStorage.getItem("ai-applications-unread") === "1");
 const aiApplicationsExpanded = ref(localStorage.getItem("ai-applications-expanded") !== "0");
 const initials = computed(() => (currentUser.value?.display_name || currentUser.value?.username || "U").split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join(""));
-type NavChild = { id: string; path: string };
+type ResourceCenterTab = "experts" | "skills" | "connectors" | "knowledge";
+type NavChild = { id: string; path: string; resourceTab?: ResourceCenterTab; routeNames?: string[] };
 type NavItem = { id: string; icon: typeof Picture; path: string; children?: NavChild[] };
 type NavGroup = { id: string; items: NavItem[] };
 const navGroups = [
@@ -49,7 +50,17 @@ const navGroups = [
   },
   {
     id: "resources",
-    items: [{ id: "resources", icon: Box, path: "/resources" }],
+    items: [{
+      id: "resources",
+      icon: Box,
+      path: "/resources",
+      children: [
+        { id: "resources-experts", path: "/resources", resourceTab: "experts", routeNames: ["expert-new", "expert-edit", "expert-team-new", "expert-team-edit"] },
+        { id: "resources-skills", path: "/resources?tab=skills", resourceTab: "skills", routeNames: ["skill-detail"] },
+        { id: "resources-connectors", path: "/resources?tab=connectors", resourceTab: "connectors" },
+        { id: "resources-knowledge", path: "/resources?tab=knowledge", resourceTab: "knowledge" },
+      ],
+    }],
   },
   {
     id: "system",
@@ -138,12 +149,31 @@ function isNavItemActive(item: NavItem) {
 }
 
 function isNavChildActive(child: NavChild) {
+  if (child.routeNames?.includes(String(route.name))) return true;
+  if (child.resourceTab) {
+    if (route.name === "resources") {
+      const tab = ["skills", "connectors", "knowledge"].includes(String(route.query.tab)) ? String(route.query.tab) : "experts";
+      return child.resourceTab === tab;
+    }
+    return false;
+  }
   return route.path === child.path || route.path.startsWith(`${child.path}/`);
 }
 
-function toggleAIApplications() {
-  aiApplicationsExpanded.value = !aiApplicationsExpanded.value;
-  localStorage.setItem("ai-applications-expanded", aiApplicationsExpanded.value ? "1" : "0");
+const resourcesExpanded = ref(localStorage.getItem("resources-expanded") !== "0");
+
+function isNavItemExpanded(item: NavItem) {
+  return item.id === "ai-applications" ? aiApplicationsExpanded.value : resourcesExpanded.value;
+}
+
+function toggleNavItem(item: NavItem) {
+  if (item.id === "ai-applications") {
+    aiApplicationsExpanded.value = !aiApplicationsExpanded.value;
+    localStorage.setItem("ai-applications-expanded", aiApplicationsExpanded.value ? "1" : "0");
+    return;
+  }
+  resourcesExpanded.value = !resourcesExpanded.value;
+  localStorage.setItem("resources-expanded", resourcesExpanded.value ? "1" : "0");
 }
 </script>
 
@@ -165,9 +195,9 @@ function toggleAIApplications() {
             <h2>{{ t(`nav.groups.${group.id}`) }}</h2>
             <template v-for="item in group.items" :key="item.id">
               <template v-if="item.children">
-                <button class="nav-parent" :class="{ 'router-link-active': isNavItemActive(item) }" type="button" :aria-current="isNavItemActive(item) ? 'page' : undefined" :aria-expanded="aiApplicationsExpanded" aria-controls="ai-applications-submenu" @click="toggleAIApplications"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon><span>{{ t(`nav.${item.id}`) }}</span><span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span><span class="nav-chevron" :class="{ expanded: aiApplicationsExpanded }" aria-hidden="true">⌄</span></button>
-                <div v-if="aiApplicationsExpanded" id="ai-applications-submenu" class="nav-submenu" :aria-label="t(`nav.${item.id}`)">
-                  <RouterLink v-for="child in item.children" :key="child.id" :to="child.path" :class="{ 'router-link-active': isNavChildActive(child) }" :aria-current="isNavChildActive(child) ? 'page' : undefined" @click="mobileOpen = false">{{ t(`nav.${child.id}`) }}</RouterLink>
+                <button class="nav-parent" :class="{ 'router-link-active': isNavItemActive(item) }" type="button" :data-nav-id="item.id" :aria-current="isNavItemActive(item) ? 'page' : undefined" :aria-expanded="isNavItemExpanded(item)" :aria-controls="`${item.id}-submenu`" @click="toggleNavItem(item)"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon><span>{{ t(`nav.${item.id}`) }}</span><span v-if="item.id === 'ai-applications' && aiApplicationsUnread" class="nav-unread" aria-label="Unread completion"></span><span class="nav-chevron" :class="{ expanded: isNavItemExpanded(item) }" aria-hidden="true">⌄</span></button>
+                <div v-if="isNavItemExpanded(item)" :id="`${item.id}-submenu`" class="nav-submenu" :aria-label="t(`nav.${item.id}`)">
+                  <RouterLink v-for="child in item.children" :key="child.id" :to="child.path" active-class="nav-route-active" exact-active-class="nav-route-exact-active" :class="{ 'router-link-active': isNavChildActive(child) }" :aria-current="isNavChildActive(child) ? 'page' : undefined" @click="mobileOpen = false">{{ t(`nav.${child.id}`) }}</RouterLink>
                 </div>
               </template>
               <RouterLink v-else :to="item.path" :class="{ 'router-link-active': isNavItemActive(item) }" :aria-current="isNavItemActive(item) ? 'page' : undefined" @click="mobileOpen = false"><el-icon class="nav-icon"><component :is="item.icon" /></el-icon>{{ t(`nav.${item.id}`) }}</RouterLink>
