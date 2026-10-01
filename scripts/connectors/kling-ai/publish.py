@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage a Kling MCP revision, activating only after real callback registration passes."""
+"""Stage or publish a Kling MCP revision with an explicit unverified OAuth release option."""
 import argparse
 import base64
 import hashlib
@@ -21,7 +21,11 @@ def main():
     parser.add_argument('--package', type=Path, required=True)
     parser.add_argument('--evidence-directory', type=Path, required=True)
     parser.add_argument('--activate', action='store_true')
+    parser.add_argument('--allow-unverified-oauth', action='store_true',
+                        help='publish catalog availability before upstream callback/account verification; requires --activate')
     args = parser.parse_args()
+    if args.allow_unverified_oauth and not args.activate:
+        parser.error('--allow-unverified-oauth requires --activate')
     config = platform.read_config(args.config)
     base = config['VITE_OIDC_AUTHORITY'].split('/identity/realms/')[0]
     archive = args.package.read_bytes()
@@ -45,18 +49,19 @@ def main():
         except error.HTTPError as exc:
             if exc.code != 400 or exc.headers.get('Cache-Control') != 'no-store' or exc.headers.get('Referrer-Policy') != 'no-referrer':
                 raise RuntimeError('Kling browser OAuth adapter is not deployed; activation stopped') from None
-        registration = {'client_name': 'agent_workspace_mcp', 'application_type': 'web', 'software_id': 'com.agentworkspace.kling-mcp',
-                        'redirect_uris': [redirect], 'grant_types': ['authorization_code', 'refresh_token'],
-                        'response_types': ['code'], 'token_endpoint_auth_method': 'none'}
-        opener = request.build_opener(NoRedirect())
-        try:
-            with opener.open(request.Request('https://klingai.com/auth/register', data=json.dumps(registration).encode(),
-                                             headers={'Content-Type': 'application/json', 'Accept': 'application/json'}), timeout=20) as response:
-                registered = json.load(response)
-        except error.HTTPError as exc:
-            raise RuntimeError(f'Kling rejected the actual platform callback (HTTP {exc.code}); activation stopped') from None
-        if registered.get('redirect_uris') != [redirect] or not registered.get('client_id') or registered.get('token_endpoint_auth_method') != 'none':
-            raise RuntimeError('Kling callback registration mismatch; activation stopped')
+        if not args.allow_unverified_oauth:
+            registration = {'client_name': 'agent_workspace_mcp', 'application_type': 'web', 'software_id': 'com.agentworkspace.kling-mcp',
+                            'redirect_uris': [redirect], 'grant_types': ['authorization_code', 'refresh_token'],
+                            'response_types': ['code'], 'token_endpoint_auth_method': 'none'}
+            opener = request.build_opener(NoRedirect())
+            try:
+                with opener.open(request.Request('https://klingai.com/auth/register', data=json.dumps(registration).encode(),
+                                                 headers={'Content-Type': 'application/json', 'Accept': 'application/json'}), timeout=20) as response:
+                    registered = json.load(response)
+            except error.HTTPError as exc:
+                raise RuntimeError(f'Kling rejected the actual platform callback (HTTP {exc.code}); activation stopped') from None
+            if registered.get('redirect_uris') != [redirect] or not registered.get('client_id') or registered.get('token_endpoint_auth_method') != 'none':
+                raise RuntimeError('Kling callback registration mismatch; activation stopped')
     token = platform.administrator_token(config)
     listing = platform.api(base, token, 'GET', '/api/v1/admin/connectors/publications').get('items', [])
     items = [item for item in listing if item['revision']['source'] == 'kling-ai']
@@ -78,7 +83,8 @@ def main():
             raise RuntimeError('User catalog or brand image verification failed')
         (args.evidence_directory / 'publication-response.json').write_text(json.dumps(current, indent=2) + '\n')
     print(json.dumps({'source': 'kling-ai', 'revision_id': target['id'], 'sha256': sha,
-                      'state': 'available' if args.activate else 'staged', 'account_verification': 'not_run'}))
+                      'state': 'available' if args.activate else 'staged', 'account_verification': 'not_run',
+                      'callback_registration': 'unverified' if args.allow_unverified_oauth else ('passed' if args.activate else 'not_run')}))
 
 
 class NoRedirect(request.HTTPRedirectHandler):

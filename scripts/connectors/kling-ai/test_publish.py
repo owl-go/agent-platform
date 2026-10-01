@@ -23,7 +23,10 @@ class PublishTest(unittest.TestCase):
     def test_activation_checks_callback_and_verifies_real_catalog_route(self):
         self.exercise(True)
 
-    def exercise(self, activate):
+    def test_explicit_unverified_release_still_checks_deployed_callback_and_catalog(self):
+        self.exercise(True, allow_unverified=True)
+
+    def exercise(self, activate, allow_unverified=False):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             package = directory / 'package.zip'
@@ -52,10 +55,12 @@ class PublishTest(unittest.TestCase):
             argv = ['publish.py', '--config', str(directory / 'config'), '--package', str(package), '--evidence-directory', str(directory / 'evidence')]
             if activate:
                 argv.append('--activate')
+            if allow_unverified:
+                argv.append('--allow-unverified-oauth')
             with patch('sys.argv', argv), patch.object(publisher.platform, 'read_config', return_value={'VITE_OIDC_AUTHORITY': 'https://workspace.test/identity/realms/workspace'}), patch.object(publisher.platform, 'administrator_token', return_value='fixture-token'), patch.object(publisher.platform, 'api', side_effect=api), patch.object(publisher.request, 'build_opener', return_value=opener), contextlib.redirect_stdout(io.StringIO()):
                 publisher.main()
             if activate:
-                self.assertEqual(opener.open.call_count, 2)
+                self.assertEqual(opener.open.call_count, 1 if allow_unverified else 2)
                 self.assertIn(('GET', '/api/v1/connectors/catalog'), calls)
             else:
                 opener.open.assert_not_called()

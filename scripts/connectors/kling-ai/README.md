@@ -22,14 +22,14 @@ Builder 真正执行当前仓库的 `connectorpackage.Parse`，再保存规范�
 
 运行凭证只包含 `MCP_BEARER_TOKEN` 和注册 Client ID；Refresh Token 单独加密保存，不物化到 Runtime。MCP Snapshot 使用该 Authorization 的实际 AAD，保留旧手填凭证的 AAD 兼容。Token 到期后运行拒绝启动；用户可以在设置中刷新或重新连接。断开清理平台授权，不取消已提交的生成任务。
 
-## 当前证据与发布阻塞
+## 当前证据与授权限制
 
 2026-10-01：官方指南、Resource metadata、Authorization Server metadata 与 MCP 401 challenge 已核实；普通 HTTPS 域名的动态注册返回 201，当前部署 `47-237-108-63.sslip.io` 的 HTTPS 回调注册返回 405 安全拦截，本机浏览器与 Linux 部署主机均复现。该上游限制不能用手填 Token 作为替代方案。
 
-本修订尚未完成真实可灵账号授权、授权后 tools/list、图片/视频生成或 Linux + runsc MCP 执行验证。目录发布须在可用正式 HTTPS 回调部署后继续；不能把上述协议发现、Fixture 或 ZIP Parse 作为真实账号成功证据。当前包将上传 Egress 限制在 `klingai.com`，上游签名上传到其他域名时应报告限制，需另行审查域名后更新修订。
+本修订尚未完成真实可灵账号授权、授权后 tools/list、图片/视频生成或 Linux + runsc MCP 执行验证。用户明确要求先发布目录。使用 `--activate --allow-unverified-oauth` 可以在授权未验证时先发布；仍检查平台回调适配已部署，并核对正式目录与图标。此选项不创建授权或允许未授权执行，不能把上述协议发现、Fixture 或 ZIP Parse 作为真实账号成功证据。当前包将上传 Egress 限制在 `klingai.com`，上游签名上传到其他域名时应报告限制，需另行审查域名后更新修订。
 
 本地验证：实际 ZIP Parse 与重复构建一致；`go test ./internal/klingmcp ./internal/service/workspace ./internal/connectorpackage ./internal/data/workspace/gormrepo ./internal/data/workspace/runtimeexecutor`、`make test`、`make build`、`make web-typecheck`、`make web-build` 已执行。全量 Go 测试中缺少真实服务配置的集成测试会 Skip，不能视为远端验收；MCP Snapshot 的真实 PostgreSQL 测试另在临时 PostgreSQL 17 中执行。
 
-平台暂存 Revision：`2c548c49-355a-4336-ab6a-786dc9559e1c`；规范化包 SHA-256：`6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7`。暂存未创建 Publication 或 Installation。前端全量 46 个文件、415 项测试通过。服务适配代码尚未部署，线上不得将此 Revision 激活为可使用连接器。
+平台暂存 Revision：`2c548c49-355a-4336-ab6a-786dc9559e1c`；规范化包 SHA-256：`6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7`。暂存未创建 Publication 或 Installation。前端全量 46 个文件、415 项测试通过。服务适配与目录发布须通过 `main_temp` 集成后部署；目录可见与账号连接成功分别记录。
 
-Publisher 的两个 Fixture 测试覆盖暂存幂等且无额外写入，以及激活前的回调检查和真实 User 目录路由。线上核对结果：Administrator 下 1 个暂存 Revision，User 正式目录 0 个条目，当前 User Installation 0 个；没有创建不可连接的正式条目。
+Publisher 的三个 Fixture 测试覆盖暂存幂等且无额外写入，以及激活前的回调检查和真实 User 目录路由。发布前核对结果：Administrator 下 1 个暂存 Revision，User 正式目录 0 个条目，当前 User Installation 0 个。显式未验证发布也保留平台回调检查和正式目录核对。
