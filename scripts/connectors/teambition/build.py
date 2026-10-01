@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 CLI_VERSION = '0.3.3'
-VERSION = '0.3.5'
+VERSION = '0.3.6'
 NPM_INTEGRITY = 'S5+aHcBI5alBIPPUSzAJafQDws50hfyv+ns1MiUEZW611ibpOjxGK0+q/eTBPvE15vYUAzsQP/vLStz25Rt5VQ=='
 SKILL_SHA256 = '3a0cd868f8fa4eb6cc56bf1be659438db2e19e1f74299e608ed0c7a77a226afc'
 ASSETS = {
