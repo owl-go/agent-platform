@@ -76,3 +76,7 @@ python3 publish.py \
 真实会话报告 `-32020: 缺少必需的 Mcp-Method 请求头`。0.3.5 的 OAuth 适配器丢弃了原版 CLI 发出的 `Mcp-Method` 与 `Mcp-Name`。0.3.6 将这两个 MCP2 路由头加入明确的转发白名单；Authorization 仍由平台短期 OAuth grant 替换，Host、Cookie 和无关头仍不转发。
 
 回归服务现在按实际服务端要求拒绝缺少 `Mcp-Method` 的请求，并验证它与 JSON-RPC method 一致、`Mcp-Name` 与 resource URI／tool name 一致。固定版本原版 CLI 的工具目录、资源读取和工具调用均经过此检查。修复前复现了截图的同一错误；修复后协议测试通过。原有 17 项命令策略、scopes、身份及 Runtime Digest 均不变，已授权 Installation 升级无需重新扫码。
+
+0.3.6 于 2026-10-01 从集成 `main_temp` `7d43ff7` 的 source ZIP 构建并发布，Revision `d35988c8-d7d4-4a0c-9f06-83c75a7cd731`，规范化包 SHA-256 `e19d105fc657597ce77fba24bb2c06ef02c535aea6e4552761df23fe9b982f6c`，bundle SHA-256 `498ded3b85ef22bbf063c01626a0def6d39fcdcf89a6bd3ae0620cfb226245fb`。生产 Worker 对同一 bundle × 原 Runtime Digest 完成 Linux + runsc Conformance；该镜像中的六项传输回归全部通过，含原版 Linux CLI。功能分支与 main_temp 的 `make test`、`make build`、10 项 Node 测试、6 项 Python 测试和最终 ZIP Parse 通过；目标 Go 包测试通过。重跑发布返回同一 Revision，目录只有一个正式卡片、有品牌 PNG、无 staging Definition。目标 Installation 已升级 0.3.6，保留原 selected Authorization，并刷新原会话选择。仅更新 CLI bundle，API、Worker、Web 和 Runtime 镜像没有变更；未运行 Web 门禁或完整模型 Runtime Production Conformance。非敏感发布证据位于忽略目录 `outputs/teambition/evidence-0.3.6`。
+
+真实账号验证：原所有者会话在刷新选择后执行 message 683，最终 Snapshot 的 bundle SHA-256 为上述 0.3.6 值，六项连接器证据均为 succeeded。实际 `user me` 返回 1 条，`project query --my` 返回 0 条，按当前账号负责且未完成条件查询第一页任务返回 0 条；task query 帮助先用于确认参数，未替代业务查询。未再出现 Mcp-Method 缺失错误，无写操作。此证据仅覆盖当前授权账号和上述只读查询，不宣称任务写入、其他账号或组织已验证；0 条是该次查询返回数量，不是平台错误。
