@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -92,13 +93,9 @@ func (executor *Executor) nativeMCPFiles(ctx context.Context, job application.Ex
 				redactValues = append(redactValues, []byte(value))
 			}
 		}
-		environment := make(map[string]string)
-		for _, variable := range configuration.Environment {
-			if variable.Secret {
-				environment[variable.Name] = secretValues[variable.Name]
-			} else {
-				environment[variable.Name] = variable.Value
-			}
+		environment, err := mcpEnvironment(configuration.Environment, secretValues)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("MCP Server %q: %w", server.Name, err)
 		}
 		if server.Transport == "streamable_http" {
 			if configuration.URL == nil {
@@ -163,6 +160,39 @@ func (executor *Executor) nativeMCPFiles(ctx context.Context, job application.Ex
 	files["runtime-home/.hermes/config.yaml"] = hermesConfig
 	files["extensions/openclaw.json"] = openClawConfig
 	return files, variables, redactValues, nil
+}
+
+var mcpVariableReference = regexp.MustCompile(`^\$\{([A-Za-z0-9][A-Za-z0-9._-]*)\}$`)
+
+// Package references resolve only against this Connector's decrypted grant.
+func mcpEnvironment(configuration []workspacedomain.EnvironmentVariable, secrets map[string]string) (map[string]string, error) {
+	environment := make(map[string]string, len(configuration))
+	for _, variable := range configuration {
+		name := ""
+		if variable.Secret {
+			name = variable.Name
+		} else if match := mcpVariableReference.FindStringSubmatch(variable.Value); match != nil {
+			name = match[1]
+		}
+		if name != "" {
+			value, ok := secrets[name]
+			if !ok || value == "" {
+				return nil, fmt.Errorf("MCP environment %q requires an authorized variable", variable.Name)
+			}
+			environment[variable.Name] = value
+		} else {
+			environment[variable.Name] = variable.Value
+		}
+	}
+	return environment, nil
+}
+
+func mcpSecretRedactions(secrets map[string]string) [][]byte {
+	values := make([][]byte, 0, len(secrets))
+	for _, value := range secrets {
+		values = append(values, []byte(value))
+	}
+	return values
 }
 
 func mcpPackageArguments(runner, packageName, version string, arguments []string) []string {
