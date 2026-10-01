@@ -201,7 +201,7 @@ function connectorCategory(source: string) {
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
   if (source === "teambition") return "projects";
-  if (["modao", "picset-ai"].includes(source)) return "design";
+  if (["modao", "picset-ai", "kling-ai"].includes(source)) return "design";
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
