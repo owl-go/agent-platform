@@ -13,6 +13,7 @@ import (
 	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/linearmcp"
 	"agent-platform/backend/internal/notioncli"
+	"agent-platform/backend/internal/pixsomcp"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
 )
@@ -97,9 +98,12 @@ func isKlingMCPLoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "kling-ai" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == klingmcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "klingai.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
 func isBrowserOAuthPolicy(policy connectorRevisionPolicy) bool {
-	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy)
+	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy)
 }
 func browserOAuthProfileFor(policy connectorRevisionPolicy) browserOAuthProfile {
+	if isPixsoMCPPolicy(policy) {
+		return pixsoBrowserOAuth
+	}
 	if isLinearMCPPolicy(policy) {
 		return linearBrowserOAuth
 	}
@@ -140,6 +144,33 @@ func (d linearConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, 
 	return linearGrant(v), e
 }
 func linearGrant(v linearmcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type pixsoConnectorAuthorizationDriver struct{ client *pixsomcp.Client }
+
+func (d pixsoConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d pixsoConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d pixsoConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, pixsomcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, pixsomcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return pixsoGrant(v), e
+}
+func (d pixsoConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return pixsoGrant(v), e
+}
+func pixsoGrant(v pixsomcp.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
 }
 
@@ -292,6 +323,13 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 			return nil, err
 		}
 		return linearConnectorAuthorizationDriver{client: linearmcp.NewClient(redirect)}, nil
+	}
+	if isPixsoMCPPolicy(policy) {
+		redirect, err := service.pixsoCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return pixsoConnectorAuthorizationDriver{client: pixsomcp.NewClient(redirect)}, nil
 	}
 	if isKlingMCPLoginPolicy(policy) {
 		redirect, err := service.klingCallbackURL()

@@ -17,6 +17,9 @@ var klingIcon []byte
 //go:embed icons/linear.png
 var linearIcon []byte
 
+//go:embed icons/pixso.png
+var pixsoIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
 // Connectors, including the official Teambition image. Other packages keep
 // the generic Connector icon.
@@ -27,6 +30,8 @@ func DisplayIcon(source string) string {
 
 	case "kling-ai":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(klingIcon)
+	case "pixso":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pixsoIcon)
 	case "linear":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(linearIcon)
 	case "teambition":

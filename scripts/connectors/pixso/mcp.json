@@ -1,0 +1,8 @@
+{
+  "transport": "streamable_http",
+  "url": "https://pixso.net/mcp",
+  "egress_hosts": [
+    "pixso.net"
+  ],
+  "timeout_seconds": 60
+}

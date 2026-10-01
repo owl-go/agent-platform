@@ -338,6 +338,32 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
+  it.each([false, true])("opens Pixso browser OAuth and upgrades old installations first (old: %s)", async (old) => {
+    const installation = { id: "pixso-installation", source: "pixso", active_revision_id: "revision-pixso", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.9.0" : "1.0.0", name: "Pixso", description: "", authentication_driver: "", upgrade_available: old };
+    const scopes = ["mcp:connect"];
+    const publication = { source: "pixso", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "pixso", package_version: "1.0.0", mode: "mcp", sha256: "a".repeat(64), name: "Pixso", description: "", icon: "plug", authentication_driver: "", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+    const upgraded = { ...installation, package_version: "1.0.0", upgrade_available: false, version: 2 };
+    const upgrade = vi.fn(async () => upgraded);
+    const begin = vi.fn(async () => ({ id: "flow-pixso", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://pixso.net/api/user/pixso/oauth2/authorize?state=sealed&code_challenge=challenge" }));
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      await connectPublished(wrapper);
+      await flushPromises();
+      expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
+      expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://pixso.net/api/user/pixso/oauth2/authorize"));
+      expect(api.connectConnector).not.toHaveBeenCalled();
+      expect(api.beginConnectorSetup).not.toHaveBeenCalled();
+      expect(document.querySelector('input[name="user_token"]')).toBeNull();
+      expect(wrapper.find('a[href^="https://pixso.net/"]').exists()).toBe(true);
+    } finally { wrapper.unmount(); }
+  });
+
   it("opens DingTalk device authorization from an installed package without Feishu application setup", async () => {
     const installation = { id: "installation-1", source: "dingtalk", active_revision_id: "revision-1", state: "active", authorized: false, version: 1, package_version: "1.0.62", name: "钉钉", description: "", authentication_driver: "dingtalk", upgrade_available: false };
     const publication = { source: "dingtalk", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "dingtalk", package_version: "1.0.62", mode: "cli", sha256: "a".repeat(64), name: "钉钉", description: "", icon: "plug", authentication_driver: "dingtalk", runtime_digests: [], conformance_available: true, required_scopes: [] } };

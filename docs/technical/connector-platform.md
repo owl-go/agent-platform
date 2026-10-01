@@ -121,3 +121,20 @@ The reviewed `linear` MCP package uses the canonical Streamable HTTP endpoint `h
 The default reviewed scopes are `read write`, matching the official endpoint; explicit `read` is accepted and unreviewed scopes are rejected. The platform retains the registration Client ID with the selected grant and stores refresh material separately from the Runtime credential JSON. Only `MCP_BEARER_TOKEN` becomes a Bearer Header or transient Runtime environment variable. MCP snapshots preserve the selected Authorization's encryption AAD, with a fallback for historical generic authorizations; expired grants fail before materialization. The existing per-runtime redaction and Egress boundaries apply. The package does not expose arbitrary OAuth endpoints or a manual-token completion path for the canonical Linear OAuth revision.
 
 Local protocol, callback, UI, and package-parser checks are distinct from real-account authorization, dynamic tool discovery, and Linux Runtime evidence. The companion Skill describes documented object families and requires current tool Schema discovery before invocation; it does not treat the documentation's capabilities as completed production validation. Package generation or a staged revision is not evidence of a published or installed catalog entry.
+
+Pixso's reviewed Remote MCP package uses `https://pixso.net/mcp` and only the
+`pixso.net` Egress host. Its built-in adapter registers a public OAuth client at
+`/api/user/pixso/oauth2/register`, requests `mcp:connect` with S256 PKCE at
+`/api/user/pixso/oauth2/authorize`, and exchanges/refreshes at
+`/api/user/pixso/oauth2/token`. The HTTPS platform callback is exactly
+`GET /api/v1/connectors/pixso/oauth/callback`; all lifecycle APIs retain platform
+account authentication. Pixso has not declared mandatory authorization-response
+`iss`, so the callback accepts omission and rejects an explicit different issuer.
+The existing encrypted owner/flow state, CAS update and single-consumption
+boundary bind the callback and code exchange. Custom headers, environment,
+transport, URL or Egress hosts cannot select this adapter. Access material maps to
+`MCP_BEARER_TOKEN`; refresh material remains separately encrypted in the platform.
+User refresh or reconnection is required after access expiry. Protocol fixtures
+and public endpoint/DCR checks do not establish real-account tools/list,
+business calls, or Linux Runtime Conformance; those evidence boundaries remain
+explicit in the Pixso package and publication record.
