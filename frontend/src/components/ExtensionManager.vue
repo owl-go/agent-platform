@@ -123,7 +123,7 @@ function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetail
 async function connectFromDetails() {
   const entry = detailPackage.value;
   if (entry?.installation) {
-    if (["notion", "teambition"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    if (["notion", "teambition", "camscanner"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
     else if (["wecom", "modao"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "camscanner", "wecom", "modao"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {

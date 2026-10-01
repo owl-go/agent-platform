@@ -8,11 +8,16 @@ import (
 //go:embed icons/teambition.png
 var teambitionIcon []byte
 
+//go:embed icons/camscanner.png
+var camscannerIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
 // Connectors, including the official Teambition image. Other packages keep
 // the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
+	case "camscanner":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(camscannerIcon)
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
 	case "feishu", "dingtalk", "notion", "modao":

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/camscannercli"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/notioncli"
@@ -31,6 +32,7 @@ type connectorAuthorizationGrant struct {
 	ExternalID, DisplayName     string
 	AccessToken, RefreshToken   string
 	ClientID                    string
+	IsDomestic                  string
 	Scopes                      []string
 	ExpiresAt, RefreshExpiresAt time.Time
 }
@@ -62,6 +64,36 @@ func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id,
 }
 func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type camscannerConnectorAuthorizationDriver struct{ client *camscannercli.Client }
+
+func (d camscannerConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d camscannerConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	if len(scopes) != 0 {
+		return connectorAuthorizationChallenge{}, fmt.Errorf("%w: CamScanner CLI login does not accept granular scopes", domain.ErrInvalid)
+	}
+	v, e := d.client.Begin(ctx)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, ExpiresAt: v.ExpiresAt}, e
+}
+func (d camscannerConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, camscannercli.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, camscannercli.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return camscannerGrant(v), e
+}
+func (d camscannerConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return camscannerGrant(v), e
+}
+func camscannerGrant(v camscannercli.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{ExternalID: v.UserID, DisplayName: v.UserID, AccessToken: v.Token, RefreshToken: v.Token, ExpiresAt: v.ExpiresAt, IsDomestic: v.IsDomestic}
 }
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
@@ -216,6 +248,9 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 			return nil, err
 		}
 		return teambitionConnectorAuthorizationDriver{client: teambitioncli.NewClient(redirect)}, nil
+	}
+	if isCamScannerCLILoginPolicy(policy) {
+		return camscannerConnectorAuthorizationDriver{client: camscannercli.NewClient()}, nil
 	}
 	if isNotionCLILoginPolicy(policy) {
 		return notionConnectorAuthorizationDriver{login: notioncli.NewLogin()}, nil
