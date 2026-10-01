@@ -10,6 +10,8 @@
   {"argv_prefix":["project","task-query"],"risk":"low"},
   {"argv_prefix":["project","file-detail-query"],"risk":"low"},
   {"argv_prefix":["task","query"],"risk":"low"},
+  {"argv_prefix":["task","activity"],"risk":"low"},
+  {"argv_prefix":["task","comment"],"risk":"high"},
   {"argv_prefix":["task","create"],"risk":"high"},
   {"argv_prefix":["task","move"],"risk":"high"},
   {"argv_prefix":["project","--help"],"risk":"low"},

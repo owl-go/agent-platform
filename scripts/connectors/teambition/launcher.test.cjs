@@ -28,6 +28,19 @@ test('reviewed reads, writes and document stdin remain distinct', () => {
   assert.equal(validateArguments(['tools', 'call', 'teambition.docs.get', '--arguments-file', '-', '--json']).risk, 'low');
 });
 
+test('task comment and activity are reviewed separately without enabling other task writes', () => {
+  assert.equal(validateArguments(['task', 'comment', '-t', 'fixture-task', '-c', 'fixture-comment']).risk, 'high');
+  assert.equal(validateArguments(['task', 'comment', '--help']).risk, 'high');
+  assert.equal(validateArguments(['task', 'activity', '-t', 'fixture-task', '--json']).risk, 'low');
+  assert.equal(validateArguments(['task', 'comment', '--task-id=fixture-task', '--content=fixture-comment']).risk, 'high');
+  for (const argv of [['task','comment','-t','fixture-task'], ['task','comment','-c','fixture-comment'], ['task','comment','-c','--help'], ['task','comment','-t','fixture-task','-c','   ']]) {
+    assert.throws(() => validateArguments(argv), /taskId and content/);
+  }
+  for (const argv of [['task', 'delete', '-t', 'fixture-task'], ['task', 'update'], ['tools', 'call', 'teambition.task.comment']]) {
+    assert.throws(() => validateArguments(argv));
+  }
+});
+
 test('OAuth credentials stay distinct from legacy tokens and expired grants fail before execution', () => {
  const value = { access_token: 'oauth-test-token', refresh_token: 'refresh-test', client_id: 'dcr_test', access_expires_at: new Date(Date.now()+60000).toISOString() };
  assert.deepEqual(credential({CONNECTOR_CREDENTIALS_JSON: JSON.stringify(value)}), {kind:'oauth',token:'oauth-test-token'});

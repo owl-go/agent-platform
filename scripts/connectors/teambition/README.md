@@ -6,9 +6,9 @@
 
 ## 包与授权
 
-包内只开放 `capabilities.json` 的 17 项策略：官方文档/Skill 明确出现的项目、任务查询，文件链接查询，任务创建/移动，只读文档检索、工具目录/Schema 及帮助。任务创建/移动是高风险操作，包括其叶子 `--help`，需平台具体 target 和一次性批准。状态更新、评论、成员管理及其他动态操作尚未进入本修订；获取相应账号的最新工具目录并审阅后再发布新修订。
+包内只开放 `capabilities.json` 的 19 项策略：官方文档/Skill 明确出现的项目、任务查询，文件链接查询，任务创建/移动、发表和读取任务评论，只读文档检索、工具目录/Schema 及帮助。任务创建/移动与发表评论是高风险操作，包括其叶子 `--help`，需平台具体 target 和一次性批准。状态更新、成员管理及其他动态操作尚未进入本修订；获取相应账号的最新工具目录并审阅后再发布新修订。
 
-版本 0.3.6 使用官方浏览器 OAuth + PKCE：点击「连接」跳转 `account.teambition.com/oauth2/mcp/authorize`，平台以动态注册的 Client ID 和 S256 challenge 绑定 HTTPS 回调。state 加密绑定 User 和单次 Flow；收到 code 后，由原 User 的授权轮询原子领取并交换，不允许回调重放或并发重复交换。OAuth 凭证由平台加密保存，refresh token 单独保存，不交给 Runtime。无需手工申请或填写 UserToken。
+版本 0.3.7 使用官方浏览器 OAuth + PKCE：点击「连接」跳转 `account.teambition.com/oauth2/mcp/authorize`，平台以动态注册的 Client ID 和 S256 challenge 绑定 HTTPS 回调。state 加密绑定 User 和单次 Flow；收到 code 后，由原 User 的授权轮询原子领取并交换，不允许回调重放或并发重复交换。OAuth 凭证由平台加密保存，refresh token 单独保存，不交给 Runtime。无需手工申请或填写 UserToken。
 
 上游原版 CLI 使用 OS keyring 保存本地 OAuth，远程 Linux Runtime 无此钥匙串。本包保留原版 CLI 的发现与命令解析，通过单次进程的 127.0.0.1 HTTP 适配器连接固定 HTTPS MCP：CLI 只持有随机本地路由 nonce，适配器校验 nonce 后替换为短期 OAuth Bearer。路由 nonce 不发给 Teambition；只转发受控 MCP headers，拒绝任意路径／方法，不跟随重定向。临时 HOME、连接及子进程执行后清理。旧 `user_token` 仅保留为历史授权的执行兼容，不是新连接入口。
 
@@ -29,7 +29,7 @@ python3 scripts/connectors/teambition/build.py \
   --skill-zip /tmp/teambition-skills.zip \
   --runtime-image <registry/repository@sha256:digest> \
   --runtime-version <exact-node-version> \
-  --output <absolute-output-directory>/teambition-0.3.6.zip
+  --output <absolute-output-directory>/teambition-0.3.7.zip
 go -C backend run ./cmd/connector-package-validate <absolute-package-path>
 node --test scripts/connectors/teambition/*.test.cjs
 python3 -m unittest discover -s scripts/connectors/teambition -p 'test_*.py'
@@ -80,3 +80,9 @@ python3 publish.py \
 0.3.6 于 2026-10-01 从集成 `main_temp` `7d43ff7` 的 source ZIP 构建并发布，Revision `d35988c8-d7d4-4a0c-9f06-83c75a7cd731`，规范化包 SHA-256 `e19d105fc657597ce77fba24bb2c06ef02c535aea6e4552761df23fe9b982f6c`，bundle SHA-256 `498ded3b85ef22bbf063c01626a0def6d39fcdcf89a6bd3ae0620cfb226245fb`。生产 Worker 对同一 bundle × 原 Runtime Digest 完成 Linux + runsc Conformance；该镜像中的六项传输回归全部通过，含原版 Linux CLI。功能分支与 main_temp 的 `make test`、`make build`、10 项 Node 测试、6 项 Python 测试和最终 ZIP Parse 通过；目标 Go 包测试通过。重跑发布返回同一 Revision，目录只有一个正式卡片、有品牌 PNG、无 staging Definition。目标 Installation 已升级 0.3.6，保留原 selected Authorization，并刷新原会话选择。仅更新 CLI bundle，API、Worker、Web 和 Runtime 镜像没有变更；未运行 Web 门禁或完整模型 Runtime Production Conformance。非敏感发布证据位于忽略目录 `outputs/teambition/evidence-0.3.6`。
 
 真实账号验证：原所有者会话在刷新选择后执行 message 683，最终 Snapshot 的 bundle SHA-256 为上述 0.3.6 值，六项连接器证据均为 succeeded。实际 `user me` 返回 1 条，`project query --my` 返回 0 条，按当前账号负责且未完成条件查询第一页任务返回 0 条；task query 帮助先用于确认参数，未替代业务查询。未再出现 Mcp-Method 缺失错误，无写操作。此证据仅覆盖当前授权账号和上述只读查询，不宣称任务写入、其他账号或组织已验证；0 条是该次查询返回数量，不是平台错误。
+
+## 任务评论能力（0.3.7）
+
+当前账号的官方服务端目录及文档版本 1.8.4 审阅确认 `teambition.task.comment` 对应 `task comment`（task:write、非幂等），`teambition.task.activity` 对应 `task activity`（task:read、只读）。0.3.6 缺少这两个命令的策略，导致评论在调用前被阻止；0.3.7 增加独立的高风险评论与低风险动态查询 capability，未扩展 OAuth scopes、身份或 Egress。官方评论对象只接受 taskId，不能以项目 ID 代替；本次未发现可确认的项目级评论命令。
+
+参数按官方 Schema／文档审阅：taskId 和正文必需；Markdown、@提及、已上传 fileTokens 仅使用明确授权且已解析的值。发表要求具体 target 与平台一次性批准，评论后通过 task activity 按返回 ID 核验；UNKNOWN_OUTCOME 时先查询，禁止自动重发。companion Skill、wrapper 白名单、manifest scope 映射和元数据共同更新。回归先复现 wrapper 拒绝评论命令，再验证新增评论高风险、动态低风险与拒绝原始写 Tool／未审阅删除更新。原版 CLI 的评论／动态 Remote Tool 协议载荷在隔离模拟服务验证，不把该模拟写入当作真实发表评论证据。

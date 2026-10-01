@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 CLI_VERSION = '0.3.3'
-VERSION = '0.3.6'
+VERSION = '0.3.7'
 NPM_INTEGRITY = 'S5+aHcBI5alBIPPUSzAJafQDws50hfyv+ns1MiUEZW611ibpOjxGK0+q/eTBPvE15vYUAzsQP/vLStz25Rt5VQ=='
 SKILL_SHA256 = '3a0cd868f8fa4eb6cc56bf1be659438db2e19e1f74299e608ed0c7a77a226afc'
 ASSETS = {
@@ -35,7 +35,7 @@ def json_bytes(value):
 def reviewed_scopes(prefix):
     if prefix[0] == 'user': return ['user:read']
     if prefix[0] == 'project': return ['project:read', 'task:read']
-    if prefix[0] == 'task': return ['task:write'] if prefix[1] in ['create', 'move'] else ['task:read']
+    if prefix[0] == 'task': return ['task:write'] if prefix[1] in ['create', 'move', 'comment'] else ['task:read']
     return []
 
 
@@ -148,7 +148,7 @@ def build(npm, skill, image, runtime_version):
             files['skills/teambition/reference/' + name.removeprefix('teambition/')] = archive.read(name)
     files['connector-meta.json'] = json_bytes({
         'source': 'teambition', 'version': VERSION, 'type': 'cli', 'name': '钉钉项目',
-        'description': 'Teambition 项目与任务查询、任务创建和移动；通过浏览器 OAuth + PKCE 授权连接。',
+        'description': 'Teambition 项目与任务查询、任务创建和移动、发表和读取任务评论；通过浏览器 OAuth + PKCE 授权连接。',
         'examples_zh': ['查询我参与的钉钉项目', '在指定项目创建任务'],
         'examples_en': ['List my Teambition projects', 'Create a task in a selected project'],
         'minPlatformVersion': '1.0.0', 'auth_mode': 'oauth',

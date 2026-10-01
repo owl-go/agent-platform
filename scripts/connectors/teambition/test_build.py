@@ -22,10 +22,18 @@ class TeambitionBuildTest(unittest.TestCase):
         policy = builder.capabilities()
         self.assertFalse(any(item['argv_prefix'] == ['tools', 'call'] for item in policy))
         for item in policy:
-            if item['argv_prefix'] in [['task', 'create'], ['task', 'move']]:
+            if item['argv_prefix'] in [['task', 'create'], ['task', 'move'], ['task', 'comment']]:
                 self.assertEqual(item['risk'], 'high')
+                self.assertEqual(item['scopes'], ['task:write'])
             self.assertEqual(item['identities'], ['user'])
             self.assertEqual(item['egress_hosts'], ['open.teambition.com'])
+
+    def test_comment_readback_has_read_scope_and_no_unsupported_task_writes(self):
+        policy = builder.capabilities()
+        activity = next(item for item in policy if item['argv_prefix'] == ['task', 'activity'])
+        self.assertEqual(activity['risk'], 'low')
+        self.assertEqual(activity['scopes'], ['task:read'])
+        self.assertFalse(any(item['argv_prefix'] in [['task', 'update'], ['task', 'delete']] for item in policy))
 
 
 if __name__ == '__main__':
