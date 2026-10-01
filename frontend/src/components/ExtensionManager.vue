@@ -87,7 +87,7 @@ const connectorAuthorizations = ref<Record<string, ConnectorAuthorization[]>>({}
 const connectorBusy = ref<string[]>([]);
 const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
-const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string }>();
+const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string; userToken: string }>();
 const providedConnectionBusy = ref(false);
 const connectorFlowWindows = new Map<string, Window | null>();
 const reportedAuthorizationFlowErrors = new Set<string>();
@@ -212,7 +212,7 @@ function selectAuthorization(item: ConnectorInstallation, authorization: Connect
 function refreshAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.refreshConnectorAuthorization(item.id, authorization.id, authorization.version)); }
 function disconnectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.disconnectPublishedConnectorAuthorization(authorization.id)); }
 function openProvidedConnection(installation: ConnectorInstallation) {
-  providedConnection.value = { installation, botID: "", secret: "" };
+  providedConnection.value = { installation, botID: "", secret: "", userToken: "" };
 }
 function closeProvidedConnection() {
   if (providedConnectionBusy.value) return;
@@ -221,18 +221,21 @@ function closeProvidedConnection() {
 async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
+  const teambition = form.installation.source === "teambition";
+  const invalidKey = teambition ? "teambitionTokenInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (!botID || !form.secret) {
-    reportError(new ApiError("validation", 422, "invalid_input"), "providedCredentialsInvalid");
+  const token = form.userToken;
+  if (teambition ? !token || token.length > 32768 || /[\s\x00-\x1f\x7f]/.test(token) : !botID || !form.secret) {
+    reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    // The runtime uses both user and bot capabilities; the Bot ID belongs in the encrypted credentials.
-    await api.connectConnector(form.installation.id, "user", [], JSON.stringify({ bot_id: botID, secret: form.secret }));
+    const credentials = teambition ? { user_token: token } : { bot_id: botID, secret: form.secret };
+    await api.connectConnector(form.installation.id, "user", [], JSON.stringify(credentials));
     providedConnection.value = undefined;
     await refresh();
-  } catch (cause) { reportError(cause, "providedCredentialsInvalid"); }
+  } catch (cause) { reportError(cause, invalidKey); }
   finally { providedConnectionBusy.value = false; }
 }
 async function startNotionConnection(installation: ConnectorInstallation, publication?: ConnectorPublication) {
@@ -679,7 +682,7 @@ async function fileToBase64(file: File): Promise<string> {
                 <el-button v-else-if="entry.installation?.source === 'notion' && entry.installation.authentication_driver === 'connector_package' && (entry.installation.state === 'disabled' && entry.publication || entry.installation.state === 'active' && !entry.installation.authorized)" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="startNotionConnection(entry.installation, entry.publication)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.state === 'disabled' && entry.publication" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="installPublication(entry.publication)">{{ t('resources.enable') }}</el-button>
                 <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
-                <el-button v-else-if="entry.installation?.source === 'wecom' && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)">{{ t('resources.connect') }}</el-button>
+                <el-button v-else-if="entry.installation && ['wecom', 'teambition'].includes(entry.installation.source) && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
                 <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
                 <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
@@ -779,10 +782,16 @@ async function fileToBase64(file: File): Promise<string> {
   <Teleport to="body">
     <ToastMessage v-if="operationError" :key="operationError.zIndex" kind="error" :title="t('experts.operationFailed')" :message="operationError.message" :close-label="t('common.close')" :duration="0" :z-index="operationError.zIndex" @dismiss="operationError = undefined" />
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
-      <form class="modal-card provided-connector-form el-card" @submit.prevent="saveProvidedConnection">
-        <h2>{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
-        <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
+      <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
+        <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
+        <template v-if="providedConnection.installation.source === 'teambition'">
+          <label>{{ t('resources.teambitionUserToken') }}<input v-model="providedConnection.userToken" name="user_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
+          <p class="muted">{{ t('resources.teambitionTokenHint') }} <a href="https://open.teambition.com/user-mcp" target="_blank" rel="noopener noreferrer">{{ t('resources.teambitionTokenApply') }}</a></p>
+        </template>
+        <template v-else>
+          <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
+          <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
+        </template>
         <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
       </form>
     </div>
