@@ -821,8 +821,7 @@ async function fileToBase64(file: File): Promise<string> {
               </div>
             </div>
             <p>{{ skillDescription(item) }}</p>
-            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" />
-            <small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small>
+            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" />
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
