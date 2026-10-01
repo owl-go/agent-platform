@@ -2,7 +2,7 @@
 name: modao
 display_name: 墨刀 CLI
 description: 用墨刀 AI 生成 HTML 原型、React 应用和 PRD，查询账号权益及任务结果，或将 HTML 导入墨刀个人空间。
-version: 0.1.0
+version: 0.1.1
 author: Agent Workspace
 ---
 

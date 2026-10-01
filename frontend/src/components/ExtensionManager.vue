@@ -238,16 +238,22 @@ function closeProvidedConnection() {
 async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
-  const invalidKey = "providedCredentialsInvalid";
+  const modao = form.installation.source === "modao";
+  const invalidKey = modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (!botID || !form.secret) {
+  if (modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = { bot_id: botID, secret: form.secret };
-    await api.connectConnector(form.installation.id, "user", [], JSON.stringify(credentials));
+    const credentials = modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    let installation = form.installation;
+    if (modao && installation.upgrade_available) {
+      installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
+      form.installation = installation;
+    }
+    await api.connectConnector(installation.id, "user", [], JSON.stringify(credentials));
     providedConnection.value = undefined;
     await refresh();
   } catch (cause) { reportError(cause, invalidKey); }
@@ -706,7 +712,7 @@ async function fileToBase64(file: File): Promise<string> {
                 <el-button v-else-if="entry.installation && ['notion', 'teambition'].includes(entry.installation.source) && entry.installation.authentication_driver === 'connector_package' && (entry.installation.state === 'disabled' && entry.publication || entry.installation.state === 'active' && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication)))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="startBrowserConnection(entry.installation, entry.publication)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.state === 'disabled' && entry.publication" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="installPublication(entry.publication)">{{ t('resources.enable') }}</el-button>
                 <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
-                <el-button v-else-if="entry.installation && entry.installation.source === 'wecom' && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
+                <el-button v-else-if="entry.installation && ['wecom', 'modao'].includes(entry.installation.source) && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
                 <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
                 <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
@@ -808,8 +814,14 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
-        <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
+        <template v-if="providedConnection.installation.source === 'modao'">
+          <label>{{ t('resources.modaoToken') }}<input v-model="providedConnection.secret" name="modao_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
+          <a href="https://modao.cc/feature/ai-mcp.html" target="_blank" rel="noopener noreferrer">{{ t('resources.modaoTokenHelp') }}</a>
+        </template>
+        <template v-else>
+          <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
+          <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
+        </template>
         <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
       </form>
     </div>

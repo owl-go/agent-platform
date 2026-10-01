@@ -18,8 +18,8 @@ IMAGE = "public.ecr.aws/docker/library/node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9
 
 class BuildTests(unittest.TestCase):
     def test_deterministic_real_bundle_and_frozen_risk_boundary(self):
-        data, bundle_sha = build.build(IMAGE, build.RUNTIME_VERSION)
-        self.assertEqual((data, bundle_sha), build.build(IMAGE, build.RUNTIME_VERSION))
+        data, bundle_sha, source = build.build(IMAGE, build.RUNTIME_VERSION)
+        self.assertEqual((data, bundle_sha, source), build.build(IMAGE, build.RUNTIME_VERSION))
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             self.assertEqual(set(archive.namelist()), {"connector-meta.json", "cli.json", "icon.svg", "cli-bundle.tgz", "skills/modao/SKILL.md", "skills/modao/capabilities.json"})
             for info in archive.infolist():
@@ -38,19 +38,31 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(bundle).hexdigest(), bundle_sha)
             with tarfile.open(fileobj=io.BytesIO(bundle), mode="r:gz") as tar:
                 members = tar.getmembers()
-                self.assertEqual(len(members), 1)
-                self.assertEqual(members[0].name, manifest["bundle_path"])
-                self.assertEqual(members[0].mode, 0o755)
-                self.assertEqual(hashlib.sha256(tar.extractfile(members[0]).read()).hexdigest(), build.SOURCE_SHA256)
+                executable = next(member for member in members if member.name == manifest["bundle_path"])
+                self.assertTrue(executable.issym())
+                self.assertEqual(executable.linkname, "../@agent-platform/modao-connector/modao.mjs")
+                script = next(member for member in members if member.name.endswith("/modao.mjs"))
+                self.assertEqual(script.mode, 0o755)
+                self.assertEqual(hashlib.sha256(tar.extractfile(script).read()).hexdigest(), build.SOURCE_SHA256)
+            with zipfile.ZipFile(io.BytesIO(source)) as uploaded:
+                package = json.loads(uploaded.read("package.json"))
+                policy = package["agentWorkspace"]["capabilities"]
+                self.assertEqual(package["name"], "@agent-platform/modao-connector")
+                self.assertEqual({value["id"]: value["risk"] for value in policy}, {value["id"]: value["risk"] for value in capabilities})
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "source.zip").write_bytes(source)
+                subprocess.run(["go", "-C", str(build.ROOT.parents[2] / "backend"), "run", "./cmd/cli-connector-bundle", str(root / "source.zip"), str(root / "bundle.tgz")], check=True, timeout=90)
+                self.assertEqual((root / "bundle.tgz").read_bytes(), bundle)
 
     def test_final_zip_passes_the_current_go_package_parser(self):
-        data, _ = build.build(IMAGE, build.RUNTIME_VERSION)
+        data, _, _ = build.build(IMAGE, build.RUNTIME_VERSION)
         repo = Path(__file__).resolve().parents[3]
         with tempfile.TemporaryDirectory() as directory:
             package = Path(directory) / "modao.zip"
             package.write_bytes(data)
             result = subprocess.run(["go", "-C", str(repo / "backend"), "run", "./cmd/connector-package-validate", str(package)], check=True, capture_output=True, text=True, timeout=90)
-            self.assertIn("source=modao version=0.1.0", result.stdout)
+            self.assertIn("source=modao version=" + build.VERSION, result.stdout)
             self.assertIn("skills=1 capabilities=10", result.stdout)
 
     def test_wrong_runtime_or_source_integrity_is_rejected(self):
@@ -65,11 +77,11 @@ class BuildTests(unittest.TestCase):
                 build.build(IMAGE, build.RUNTIME_VERSION)
 
     def test_packaged_executable_launches_and_reports_missing_auth(self):
-        data, _ = build.build(IMAGE, build.RUNTIME_VERSION)
+        data, _, _ = build.build(IMAGE, build.RUNTIME_VERSION)
         with tempfile.TemporaryDirectory() as directory, zipfile.ZipFile(io.BytesIO(data)) as archive:
             with tarfile.open(fileobj=io.BytesIO(archive.read("cli-bundle.tgz")), mode="r:gz") as tar:
                 path = Path(directory) / "modao"
-                path.write_bytes(tar.extractfile(tar.getmembers()[0]).read())
+                path.write_bytes(tar.extractfile(next(member for member in tar.getmembers() if member.name.endswith("/modao.mjs"))).read())
                 help_result = subprocess.run(["node", str(path), "--help"], capture_output=True, text=True, check=True, timeout=10)
                 self.assertTrue(json.loads(help_result.stdout)["ok"])
                 status = subprocess.run(["node", str(path), "status"], capture_output=True, text=True, check=True, timeout=10, env={"PATH": build.os.environ["PATH"]})

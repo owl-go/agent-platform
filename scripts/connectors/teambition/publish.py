@@ -83,14 +83,21 @@ def has_verified_revision(items, bundle_sha, digest):
                item['revision'].get('conformance_available') for item in items)
 
 
-def cleanup_staging_definitions(base, token):
+def build_identity(source):
+    if source not in ['teambition', 'modao']:
+        raise RuntimeError('unreviewed publication source')
+    return ('Teambition' if source == 'teambition' else 'Modao') + ' package build ', '@agent-platform/' + source + '-connector'
+
+
+def cleanup_staging_definitions(base, token, source='teambition'):
+    prefix, npm_package = build_identity(source)
     definitions = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
     health = {item['definition_id']: item for item in
               api(base, token, 'GET', '/api/v1/admin/connectors/cli-health').get('items', [])}
     for definition in definitions:
-        if definition.get('managed_installation') or not definition['name'].startswith('Teambition package build '):
+        if definition.get('managed_installation') or not definition['name'].startswith(prefix):
             continue
-        if definition.get('npm_package') != '@agent-platform/teambition-connector':
+        if definition.get('npm_package') != npm_package:
             raise RuntimeError('staging source package identity changed; cleanup stopped')
         usage = health.get(definition['id'])
         if usage is None or any(usage.get(key, 0) for key in ['enablement_count', 'active_authorization_count']):
@@ -98,12 +105,13 @@ def cleanup_staging_definitions(base, token):
         api(base, token, 'DELETE', '/api/v1/admin/connectors/cli/' + parse.quote(definition['id']) +
             '?expected_version=' + str(definition['version']))
     remaining = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
-    if any(item['name'].startswith('Teambition package build ') for item in remaining):
+    if any(item['name'].startswith(prefix) for item in remaining):
         raise RuntimeError('staging Definition remains in administrator catalog')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--connector-source', choices=['teambition', 'modao'], default='teambition')
     parser.add_argument('--api-base', help='trusted platform API origin; deployment-host container origin avoids public upload hairpin')
     parser.add_argument('--config', type=Path, required=True, help='platform env file on the authorized deployment host')
     parser.add_argument('--package', type=Path, required=True)
@@ -122,9 +130,10 @@ def main():
         meta = json.loads(archive.read('connector-meta.json'))
         cli = json.loads(archive.read('cli.json'))
         bundle_sha = hashlib.sha256(archive.read('cli-bundle.tgz')).hexdigest()
-    if meta['source'] != 'teambition' or cli['authentication_driver'] != 'connector_package':
+    if meta['source'] != args.connector_source or cli['authentication_driver'] != 'connector_package':
         raise RuntimeError('unexpected package identity')
     digest = cli['runtime']['digest']
+    prefix, npm_package = build_identity(args.connector_source)
     if not config['RUNTIME_IMAGE'].endswith('@' + digest):
         raise RuntimeError('package Runtime differs from current deployment')
     args.evidence_directory.mkdir(parents=True, exist_ok=True)
@@ -134,17 +143,17 @@ def main():
 
     print('Inspect existing publication and Conformance source', flush=True)
     listing = api(base, token, 'GET', '/api/v1/admin/connectors/publications')
-    items = [item for item in listing.get('items', []) if item['revision']['source'] == 'teambition']
+    items = [item for item in listing.get('items', []) if item['revision']['source'] == args.connector_source]
     current = next((item['publication'] for item in items if item.get('publication')), None)
     if not has_verified_revision(items, bundle_sha, digest):
         # The Worker owns the build and records only actual successful Conformance.
         definitions = api(base, token, 'GET', '/api/v1/connectors/cli').get('items', [])
-        name = 'Teambition package build ' + meta['version'] + ' ' + bundle_sha[:12]
+        name = prefix + meta['version'] + ' ' + bundle_sha[:12]
         definition = next((item for item in definitions if item['name'] == name and not item.get('managed_installation')), None)
         if definition is None:
             print('Upload reviewed source ZIP', flush=True)
             definition = api(base, token, 'POST', '/api/v1/admin/connectors/cli', {'definition': {
-                'name': name, 'icon': 'terminal', 'description': 'Reviewed Teambition package Conformance staging source',
+                'name': name, 'icon': 'terminal', 'description': 'Reviewed ' + args.connector_source + ' package Conformance staging source',
                 'installation_type': 'upload', 'archive': base64.b64encode(args.source.read_bytes()).decode(),
             }})
         print('Source state:', definition['state'], flush=True)
@@ -175,10 +184,10 @@ def main():
     if current['active_revision_id'] != target['id'] or current['state'] != 'available':
         raise RuntimeError('publication did not activate expected revision')
     record('publication-response.json', current)
-    cleanup_staging_definitions(base, token)
+    cleanup_staging_definitions(base, token, args.connector_source)
     health = api(base, token, 'GET', '/api/v1/admin/connectors/publication-health')
-    record('publication-health.json', [item for item in health.get('items', []) if item['source'] == 'teambition'])
-    print(json.dumps({'source': 'teambition', 'revision_id': target['id'], 'state': current['state'],
+    record('publication-health.json', [item for item in health.get('items', []) if item['source'] == args.connector_source])
+    print(json.dumps({'source': args.connector_source, 'revision_id': target['id'], 'state': current['state'],
                       'package_sha256': target['sha256'], 'bundle_sha256': bundle_sha,
                       'account_api_verification': 'not_run'}, ensure_ascii=False), flush=True)
 

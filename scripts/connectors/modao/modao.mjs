@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.1';
 export const ENDPOINT = 'https://modao.cc/agent-py/ai/mcp';
 export const OPERATIONS = Object.freeze({
   'account status': { tool: 'get_account_status', risk: 'low' },
