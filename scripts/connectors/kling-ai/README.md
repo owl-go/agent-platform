@@ -30,6 +30,6 @@ Builder 真正执行当前仓库的 `connectorpackage.Parse`，再保存规范�
 
 本地验证：实际 ZIP Parse 与重复构建一致；`go test ./internal/klingmcp ./internal/service/workspace ./internal/connectorpackage ./internal/data/workspace/gormrepo ./internal/data/workspace/runtimeexecutor`、`make test`、`make build`、`make web-typecheck`、`make web-build` 已执行。全量 Go 测试中缺少真实服务配置的集成测试会 Skip，不能视为远端验收；MCP Snapshot 的真实 PostgreSQL 测试另在临时 PostgreSQL 17 中执行。
 
-平台暂存 Revision：`2c548c49-355a-4336-ab6a-786dc9559e1c`；规范化包 SHA-256：`6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7`。暂存未创建 Publication 或 Installation。前端全量 46 个文件、415 项测试通过。服务适配与目录发布须通过 `main_temp` 集成后部署；目录可见与账号连接成功分别记录。
+平台暂存 Revision：`2c548c49-355a-4336-ab6a-786dc9559e1c`；规范化包 SHA-256：`6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7`。2026-10-01 已从 `main_temp` 集成提交 `932fc4c` 部署服务与前端，发布版本 `kling-ai-20261001T085200Z`，正式 Publication 为 available、version 1。Administrator 与 User 目录路由均只有一个可灵条目，使用该 Revision 和官方 PNG。当前 Administrator 作为 User 的 Installation 为 `8d765a2a-d938-418d-bdf6-425c4d706600`，未授权；发布不自动安装到其他 User。集成门禁通过后端全量测试/构建、46 个前端文件的 423 项测试、类型检查和生产构建，线上服务健康检查通过。
 
-Publisher 的三个 Fixture 测试覆盖暂存幂等且无额外写入，以及激活前的回调检查和真实 User 目录路由。发布前核对结果：Administrator 下 1 个暂存 Revision，User 正式目录 0 个条目，当前 User Installation 0 个。显式未验证发布也保留平台回调检查和正式目录核对。
+Publisher 的三个 Fixture 测试覆盖暂存幂等且无额外写入，以及激活前的回调检查和真实 User 目录路由。显式未验证发布保留平台回调检查（400、no-store、no-referrer）和正式目录核对。真实页面核对有品牌图标、需要设置状态和连接按钮；点击连接到达已部署授权适配，但上游拒绝注册，页面显示操作失败，没有创建授权。MCP 详情只显示安装包校验，不宣称 Runtime 已验证。非敏感目录与发布响应保存在忽略的 `outputs/connectors/kling-ai/`。
