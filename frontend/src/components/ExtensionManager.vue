@@ -125,7 +125,7 @@ async function connectFromDetails() {
   if (entry?.installation) {
     if (["notion", "teambition"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
-    else if (["wecom", "modao"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (["wecom", "modao", "picset-ai"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
   } else if (entry?.publication) await installPublication(entry.publication);
   else if (detailCLI.value) {
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao", "picset-ai"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -201,7 +201,7 @@ function connectorCategory(source: string) {
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
   if (source === "teambition") return "projects";
-  if (source === "modao") return "design";
+  if (["modao", "picset-ai"].includes(source)) return "design";
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
@@ -310,17 +310,18 @@ async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
   const modao = form.installation.source === "modao";
-  const invalidKey = modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const picset = form.installation.source === "picset-ai";
+  const invalidKey = picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+  if (picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    const credentials = picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
     let installation = form.installation;
-    if (modao && installation.upgrade_available) {
+    if ((modao || picset) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       form.installation = installation;
     }
@@ -873,7 +874,11 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <template v-if="providedConnection.installation.source === 'modao'">
+        <template v-if="providedConnection.installation.source === 'picset-ai'">
+          <label>{{ t('resources.picsetApiKey') }}<input v-model="providedConnection.secret" name="picset_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://picsetai.cn/developer-api" target="_blank" rel="noopener noreferrer">{{ t('resources.picsetApiKeyHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'modao'">
           <label>{{ t('resources.modaoToken') }}<input v-model="providedConnection.secret" name="modao_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
           <a href="https://modao.cc/feature/ai-mcp.html" target="_blank" rel="noopener noreferrer">{{ t('resources.modaoTokenHelp') }}</a>
         </template>
