@@ -8,7 +8,7 @@
 
 包内只开放 `capabilities.json` 的 17 项策略：官方文档/Skill 明确出现的项目、任务查询，文件链接查询，任务创建/移动，只读文档检索、工具目录/Schema 及帮助。任务创建/移动是高风险操作，包括其叶子 `--help`，需平台具体 target 和一次性批准。状态更新、评论、成员管理及其他动态操作尚未进入本修订；获取相应账号的最新工具目录并审阅后再发布新修订。
 
-版本 0.3.5 使用官方浏览器 OAuth + PKCE：点击「连接」跳转 `account.teambition.com/oauth2/mcp/authorize`，平台以动态注册的 Client ID 和 S256 challenge 绑定 HTTPS 回调。state 加密绑定 User 和单次 Flow；收到 code 后，由原 User 的授权轮询原子领取并交换，不允许回调重放或并发重复交换。OAuth 凭证由平台加密保存，refresh token 单独保存，不交给 Runtime。无需手工申请或填写 UserToken。
+版本 0.3.6 使用官方浏览器 OAuth + PKCE：点击「连接」跳转 `account.teambition.com/oauth2/mcp/authorize`，平台以动态注册的 Client ID 和 S256 challenge 绑定 HTTPS 回调。state 加密绑定 User 和单次 Flow；收到 code 后，由原 User 的授权轮询原子领取并交换，不允许回调重放或并发重复交换。OAuth 凭证由平台加密保存，refresh token 单独保存，不交给 Runtime。无需手工申请或填写 UserToken。
 
 上游原版 CLI 使用 OS keyring 保存本地 OAuth，远程 Linux Runtime 无此钥匙串。本包保留原版 CLI 的发现与命令解析，通过单次进程的 127.0.0.1 HTTP 适配器连接固定 HTTPS MCP：CLI 只持有随机本地路由 nonce，适配器校验 nonce 后替换为短期 OAuth Bearer。路由 nonce 不发给 Teambition；只转发受控 MCP headers，拒绝任意路径／方法，不跟随重定向。临时 HOME、连接及子进程执行后清理。旧 `user_token` 仅保留为历史授权的执行兼容，不是新连接入口。
 
@@ -29,7 +29,7 @@ python3 scripts/connectors/teambition/build.py \
   --skill-zip /tmp/teambition-skills.zip \
   --runtime-image <registry/repository@sha256:digest> \
   --runtime-version <exact-node-version> \
-  --output <absolute-output-directory>/teambition-0.3.5.zip
+  --output <absolute-output-directory>/teambition-0.3.6.zip
 go -C backend run ./cmd/connector-package-validate <absolute-package-path>
 node --test scripts/connectors/teambition/*.test.cjs
 python3 -m unittest discover -s scripts/connectors/teambition -p 'test_*.py'
@@ -70,3 +70,9 @@ python3 publish.py \
 实际通过：Go 目标包与全仓测试／构建，真实 PostgreSQL Repository 集成测试，395 项前端测试及 typecheck／生产构建，9 项本地 Node 测试（含原版 macOS CLI），6 项 Python 测试和最终 ZIP Parse。API、Worker 与 Web 从集成后的 `main_temp` `2eb7758` 发布并通过健康检查，Runtime 镜像未变。未携带 JWT 的伪造 callback 得到 400；邻接路径和其他方法仍要求平台认证。
 
 线上 Playwright 以原有 0.3.4 Installation 点击连接，实际先升级至 0.3.5，再动态注册并打开 `https://account.teambition.com/login`，页面显示「使用钉钉扫码授权」。目录只有一个钉钉项目卡片，128px 品牌 PNG 加载成功，没有 UserToken 输入框。非敏感响应、卡片截图和 Linux 测试记录在忽略目录 `outputs/teambition/evidence-0.3.5`。浏览器入口已验证；第三方账号仍待用户扫码，未宣称真实账号授权、业务查询／写入或完整模型 Runtime Production Conformance 已通过。
+
+## MCP2 请求头修复（0.3.6）
+
+真实会话报告 `-32020: 缺少必需的 Mcp-Method 请求头`。0.3.5 的 OAuth 适配器丢弃了原版 CLI 发出的 `Mcp-Method` 与 `Mcp-Name`。0.3.6 将这两个 MCP2 路由头加入明确的转发白名单；Authorization 仍由平台短期 OAuth grant 替换，Host、Cookie 和无关头仍不转发。
+
+回归服务现在按实际服务端要求拒绝缺少 `Mcp-Method` 的请求，并验证它与 JSON-RPC method 一致、`Mcp-Name` 与 resource URI／tool name 一致。固定版本原版 CLI 的工具目录、资源读取和工具调用均经过此检查。修复前复现了截图的同一错误；修复后协议测试通过。原有 17 项命令策略、scopes、身份及 Runtime Digest 均不变，已授权 Installation 升级无需重新扫码。

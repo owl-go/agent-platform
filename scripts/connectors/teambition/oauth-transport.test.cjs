@@ -45,6 +45,20 @@ test('wrong nonce, methods and paths never reach the OAuth upstream', async () =
     assert.equal(f.calls.length,0);
   } finally { await f.close(); }
 });
+test('MCP2 method and name survive OAuth replacement while unrelated headers remain blocked', async () => {
+  const f = await fixture((req,res) => { req.resume(); res.end('{}'); });
+  try {
+    for (const [method, name] of [['tools/list', undefined], ['resources/read', 'teambition://docs'], ['tools/call', 'teambition.docs.get']]) {
+      const headers = {authorization:'Bearer '+f.transport.routingToken, 'mcp-method':method, 'mcp-protocol-version':'2026-07-28', 'x-unreviewed-header':'blocked'};
+      if (name) headers['mcp-name'] = name;
+      assert.equal((await request(f.transport.origin, {headers})).status, 200);
+      const forwarded = f.calls.at(-1).headers;
+      assert.equal(forwarded['mcp-method'], method); assert.equal(forwarded['mcp-name'], name);
+      assert.equal(forwarded['mcp-protocol-version'], '2026-07-28');
+      assert.equal(forwarded['x-unreviewed-header'], undefined);
+    }
+  } finally { await f.close(); }
+});
 test('redirects and transport errors cannot expose tokens or move credentials to another origin', async () => {
   const f = await fixture((req,res)=>{res.writeHead(302,{location:'https://attacker.test','set-cookie':'secret'});res.end();});
   try {
@@ -64,21 +78,32 @@ test('closing transport cancels active requests and releases the listener', asyn
   await assert.rejects(request(f.transport.origin));
   await f.close();
 });
-test('pinned native CLI discovers tools through the OAuth adapter without a keyring', {skip: !process.env.TEAMBITION_TEST_NATIVE}, async () => {
+test('pinned native CLI discovers and calls tools through the OAuth adapter without a keyring', {skip: !process.env.TEAMBITION_TEST_NATIVE}, async () => {
+  const methods = [];
   const f=await fixture((req,res)=>{
     let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{
       const message=JSON.parse(body);res.setHeader('content-type','application/json');
+      if (!req.headers['mcp-method']) {
+        res.end(JSON.stringify({jsonrpc:'2.0',id:message.id,error:{code:-32020,message:'缺少必需的 Mcp-Method 请求头。'}}));return;
+      }
+      assert.equal(req.headers['mcp-method'], message.method);
+      methods.push(message.method);
+      if (message.method === 'resources/read') assert.equal(req.headers['mcp-name'], message.params.uri);
+      if (message.method === 'tools/call') assert.equal(req.headers['mcp-name'], message.params.name);
       if(message.method==='notifications/initialized'){res.writeHead(202).end();return;}
-      const result=message.method==='initialize'?{protocolVersion:'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'test-fixture',version:'1'}}:{tools:[]};
+      const result=message.method==='initialize'?{protocolVersion:'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'test-fixture',version:'1'}}:message.method==='tools/call'?{content:[{type:'text',text:'{"verified":true}'}],isError:false}:{tools:[]};
       res.end(JSON.stringify({jsonrpc:'2.0',id:message.id,result}));
     });
   });
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'teambition-protocol-test-'));
   try {
-    const child=spawn(process.env.TEAMBITION_TEST_NATIVE,['tools','list','--json'],{env:{PATH:process.env.PATH,HOME:home,TEAMBITION_MCP_HOST:f.transport.origin,TEAMBITION_MCP_TOKEN:f.transport.routingToken,TEAMBITION_LEGACY_TOKEN_TRUSTED_ORIGINS:f.transport.origin},stdio:['ignore','pipe','pipe']});
-    let output='';child.stdout.on('data',chunk=>output+=chunk);child.stderr.on('data',chunk=>output+=chunk);
-    const timeout=setTimeout(()=>child.kill('SIGKILL'),10000);
-    const code=await new Promise(resolve=>child.once('close',resolve));clearTimeout(timeout);
-    assert.equal(code,0,output);assert.ok(f.calls.length>=2);assert.ok(!output.includes('real-oauth-canary'));
+    for (const argv of [['tools','list','--json'], ['tools','call','teambition.docs.get','--arguments-json','{}','--json']]) {
+      const child=spawn(process.env.TEAMBITION_TEST_NATIVE,argv,{env:{PATH:process.env.PATH,HOME:home,TEAMBITION_MCP_HOST:f.transport.origin,TEAMBITION_MCP_TOKEN:f.transport.routingToken,TEAMBITION_LEGACY_TOKEN_TRUSTED_ORIGINS:f.transport.origin},stdio:['ignore','pipe','pipe']});
+      let output='';child.stdout.on('data',chunk=>output+=chunk);child.stderr.on('data',chunk=>output+=chunk);
+      const timeout=setTimeout(()=>child.kill('SIGKILL'),10000);
+      const code=await new Promise(resolve=>child.once('close',resolve));clearTimeout(timeout);
+      assert.equal(code,0,output);assert.ok(f.calls.length>=2);assert.ok(!output.includes('real-oauth-canary'));
+    }
+    assert.ok(methods.includes('tools/list')); assert.ok(methods.includes('resources/read')); assert.ok(methods.includes('tools/call'));
   } finally { await f.close(); fs.rmSync(home, {recursive: true, force: true}); }
 });

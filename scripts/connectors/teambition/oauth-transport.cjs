@@ -14,7 +14,8 @@ async function startOAuthTransport(accessToken, send = https.request) {
       outgoing.writeHead(403).end(); return;
     }
     const headers = { authorization: 'Bearer ' + accessToken };
-    for (const name of ['accept', 'content-type', 'mcp-session-id', 'mcp-protocol-version']) {
+    // MCP2 uses these routing headers for discovery, resources and tool calls.
+    for (const name of ['accept', 'content-type', 'mcp-session-id', 'mcp-protocol-version', 'mcp-method', 'mcp-name']) {
       if (incoming.headers[name]) headers[name] = incoming.headers[name];
     }
     const upstream = send({ hostname: 'open.teambition.com', port: 443, path: '/api/mcp/v2', method: incoming.method, headers }, (response) => {
