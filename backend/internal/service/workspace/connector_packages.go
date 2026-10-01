@@ -19,6 +19,7 @@ import (
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
+	"agent-platform/backend/internal/teambitioncli"
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -53,6 +54,8 @@ type connectorPackageRepository interface {
 	GetConnectorProviderApplication(context.Context, string, string) (domain.ConnectorProviderApplication, error)
 	CompleteConnectorSetup(context.Context, string, string, domain.ConnectorProviderApplication) (domain.ConnectorSetup, error)
 	BeginConnectorAuthorizationFlow(context.Context, domain.ConnectorAuthorizationAttempt) (domain.ConnectorAuthorizationAttempt, error)
+	UpdateConnectorAuthorizationFlow(context.Context, string, string, []byte, []byte, string) error
+	ConsumeConnectorAuthorizationFlow(context.Context, string, string, []byte) error
 	GetConnectorAuthorizationFlow(context.Context, string, string) (domain.ConnectorAuthorizationAttempt, error)
 	DeleteConnectorAuthorizationFlow(context.Context, string, string) error
 	RecordConnectorAudit(context.Context, domain.ConnectorAuditRecord) error
@@ -452,7 +455,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
-			if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
+			if policy.CLI != nil && (policy.CLI.AuthenticationDriver == "dingtalk" || isTeambitionCLILoginPolicy(policy)) {
 				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
 				appID = credentials.ClientID
 			}
@@ -466,6 +469,14 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 			}
 			refreshToken = string(plaintext)
 		}
+	}
+	if refreshToken == "" && isTeambitionCLILoginPolicy(policy) && len(current.RefreshCredentialCiphertext) > 0 {
+		plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
+		if decryptErr != nil {
+			return nil, publicError(decryptErr)
+		}
+		refreshToken = string(plaintext)
+		clear(plaintext)
 	}
 	if strings.TrimSpace(refreshToken) == "" {
 		return nil, publicError(fmt.Errorf("%w: this authorization must be completed again", domain.ErrConflict))
@@ -491,7 +502,10 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if len(result.Scopes) == 0 {
 		result.Scopes = append([]string(nil), current.Scopes...)
 	}
-	refreshedCredentials, err := json.Marshal(map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)})
+	if result.RefreshToken == "" {
+		result.RefreshToken = refreshToken
+	}
+	refreshedCredentials, err := json.Marshal(connectorAuthorizationCredentialFields(policy, result))
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -501,6 +515,16 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
+	if isTeambitionCLILoginPolicy(policy) {
+		current.RefreshCredentialAAD = aad + ":refresh"
+		current.RefreshCredentialCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), current.RefreshCredentialAAD)
+		if err != nil {
+			return nil, publicError(err)
+		}
+	} else {
+		current.RefreshCredentialCiphertext = nil
+		current.RefreshCredentialAAD = ""
+	}
 	current.ExternalIdentityID = result.ExternalID
 	current.ExternalDisplayName = result.DisplayName
 	current.Scopes = result.Scopes
@@ -509,7 +533,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	current.CredentialFormat = "json"
 	current.State = domain.ConnectorAuthorizationActive
 	expiry := result.ExpiresAt
-	if !result.RefreshExpiresAt.IsZero() {
+	if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
 		expiry = result.RefreshExpiresAt
 	}
 	current.ExpiresAt = &expiry
@@ -673,6 +697,13 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 	if err != nil {
 		return nil, publicError(err)
 	}
+	if isTeambitionCLILoginPolicy(policy) {
+		flow, err = service.sealTeambitionCallback(ctx, repository, flow)
+		if err != nil {
+			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+			return nil, publicError(err)
+		}
+	}
 	return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
 }
 
@@ -705,6 +736,20 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	if err != nil {
 		return nil, publicError(err)
 	}
+	defer clear(deviceCode)
+	if isTeambitionCLILoginPolicy(policy) {
+		var state teambitioncli.Pending
+		if json.Unmarshal(deviceCode, &state) != nil {
+			return nil, publicError(domain.ErrInvalid)
+		}
+		if state.Code != "" {
+			// Authorization codes are single-use. Claim this exact encrypted callback
+			// once before exchange; failures require a new browser authorization.
+			if err := repository.ConsumeConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext); err != nil {
+				return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+			}
+		}
+	}
 	result, err := driver.Poll(ctx, appID, appSecret, string(deviceCode))
 	if errors.Is(err, errConnectorAuthorizationPending) {
 		return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
@@ -714,6 +759,10 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
 	if err != nil {
+		if isTeambitionCLILoginPolicy(policy) {
+			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
 		if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
 			if errors.Is(err, dingtalkcli.ErrApprovalConsumed) {
 				// DingTalk authorization codes are single-use. A failed exchange or
@@ -756,12 +805,21 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	var expiry *time.Time
 	if !result.ExpiresAt.IsZero() {
 		value := result.ExpiresAt
-		if !result.RefreshExpiresAt.IsZero() {
+		if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
 			value = result.RefreshExpiresAt
 		}
 		expiry = &value
 	}
-	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", State: domain.ConnectorAuthorizationActive, ExpiresAt: expiry}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
+	var refreshCiphertext []byte
+	refreshAAD := ""
+	if isTeambitionCLILoginPolicy(policy) && result.RefreshToken != "" {
+		refreshAAD = aad + ":refresh"
+		refreshCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), refreshAAD)
+		if err != nil {
+			return nil, publicError(err)
+		}
+	}
+	authorization, err := repository.CreateConnectorAuthorizationWithAudit(ctx, domain.ConnectorAuthorization{OwnerID: principal.UserID, InstallationID: flow.InstallationID, IdentityRef: flow.Identity, ExternalIdentityID: result.ExternalID, ExternalDisplayName: result.DisplayName, Scopes: result.Scopes, CredentialCiphertext: ciphertext, CredentialAAD: aad, CredentialFormat: "json", RefreshCredentialCiphertext: refreshCiphertext, RefreshCredentialAAD: refreshAAD, State: domain.ConnectorAuthorizationActive, ExpiresAt: expiry}, domain.ConnectorAuditRecord{OwnerID: principal.UserID, InstallationID: flow.InstallationID, Operation: "authorize", IdentityRef: flow.Identity, Outcome: "succeeded", CreatedAt: time.Now().UTC()})
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -803,7 +861,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	if policy.CLI != nil {
-		if isNotionCLILoginPolicy(policy) {
+		if isNotionCLILoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) {
 			return "interactive"
 		}
 		switch policy.CLI.AuthenticationDriver {
@@ -819,6 +877,10 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	return "none"
 }
 
+func isTeambitionCLILoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "teambition" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
+}
+
 func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "notion" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
@@ -827,7 +889,11 @@ func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, resu
 	if isNotionCLILoginPolicy(policy) {
 		return map[string]string{"token": result.AccessToken}
 	}
-	return map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
+	fields := map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
+	if isTeambitionCLILoginPolicy(policy) {
+		delete(fields, "refresh_token")
+	}
+	return fields
 }
 
 func connectorSetupAAD(ownerID, installationID string) string {

@@ -583,7 +583,7 @@ func (repository *Repository) disconnectConnectorAuthorization(ctx context.Conte
 }
 
 func (repository *Repository) RefreshConnectorAuthorization(ctx context.Context, input domain.ConnectorAuthorization, expectedVersion int64, audit domain.ConnectorAuditRecord) (domain.ConnectorAuthorization, error) {
-	if input.ID == "" || input.OwnerID == "" || input.InstallationID == "" || input.IdentityRef == "" || input.ExternalIdentityID == "" || len(input.CredentialCiphertext) == 0 || input.CredentialAAD == "" || input.CredentialFormat != "json" || input.ExpiresAt == nil || !time.Now().UTC().Before(*input.ExpiresAt) || expectedVersion <= 0 {
+	if input.ID == "" || input.OwnerID == "" || input.InstallationID == "" || input.IdentityRef == "" || len(input.CredentialCiphertext) == 0 || input.CredentialAAD == "" || input.CredentialFormat != "json" || input.ExpiresAt == nil || !time.Now().UTC().Before(*input.ExpiresAt) || expectedVersion <= 0 {
 		return domain.ConnectorAuthorization{}, fmt.Errorf("%w: refreshed Connector authorization is incomplete", domain.ErrInvalid)
 	}
 	scopes, err := json.Marshal(input.Scopes)
@@ -608,7 +608,7 @@ func (repository *Repository) RefreshConnectorAuthorization(ctx context.Context,
 				"identity_ref": input.IdentityRef, "external_identity_id": input.ExternalIdentityID,
 				"external_display_name": input.ExternalDisplayName, "scopes": scopes,
 				"credential_ciphertext": input.CredentialCiphertext, "credential_aad": input.CredentialAAD,
-				"refresh_credential_ciphertext": nil, "refresh_credential_aad": "",
+				"refresh_credential_ciphertext": input.RefreshCredentialCiphertext, "refresh_credential_aad": input.RefreshCredentialAAD,
 				"credential_format": input.CredentialFormat, "state": string(domain.ConnectorAuthorizationActive),
 				"expires_at": input.ExpiresAt, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 			})

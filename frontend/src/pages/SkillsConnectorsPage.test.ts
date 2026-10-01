@@ -9,6 +9,20 @@ import SkillsConnectorsPage from "./SkillsConnectorsPage.vue";
 afterEach(() => { document.body.innerHTML = ""; });
 
 describe("SkillsConnectorsPage", () => {
+  it("completes a Teambition browser callback without relying on its original tab", async () => {
+    const flowID = "11111111-1111-4111-8111-111111111111";
+    const complete = vi.fn(async () => ({ id: flowID, installation_id: "installation", identity: "user", scopes: [], state: "completed" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => []), listConnectorInstallations: vi.fn(async () => []), completeConnectorAuthorizationFlow: complete } as unknown as PlatformApi;
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });
+    await router.push(`/resources?tab=connectors&teambition_auth=${flowID}`);
+    const wrapper = mount(SkillsConnectorsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    expect(complete).toHaveBeenCalledWith(flowID);
+    expect(router.currentRoute.value.query.teambition_auth).toBeUndefined();
+    expect(api.listConnectorInstallations).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
   it("toggles the personal resource filter from the page header", async () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []) } as unknown as PlatformApi;
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: "/resources", component: SkillsConnectorsPage }] });

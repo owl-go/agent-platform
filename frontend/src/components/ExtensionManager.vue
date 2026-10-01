@@ -87,7 +87,7 @@ const connectorAuthorizations = ref<Record<string, ConnectorAuthorization[]>>({}
 const connectorBusy = ref<string[]>([]);
 const connectorSetups = ref<Record<string, ConnectorSetup>>({});
 const connectorAuthorizationFlows = ref<Record<string, ConnectorAuthorizationFlow>>({});
-const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string; userToken: string }>();
+const providedConnection = ref<{ installation: ConnectorInstallation; botID: string; secret: string }>();
 const providedConnectionBusy = ref(false);
 const connectorFlowWindows = new Map<string, Window | null>();
 const reportedAuthorizationFlowErrors = new Set<string>();
@@ -120,6 +120,7 @@ const pendingDelete = ref<({ kind: "mcp"; item: MCPServer } | { kind: "skill"; i
 const deleteBusy = ref(false);
 let poll: number | undefined;
 let lastCLICompletionPoll = 0;
+let browserReturnRefreshUntil = 0;
 const connectorCatalogItems = computed(() => {
   const bySource = new Map<string, ConnectorCatalogEntry>(connectorPublications.value.map((publication) => [publication.source, { publication, installation: connectorInstallations.value.find((item) => item.source === publication.source) }]));
   for (const installation of connectorInstallations.value) if (!bySource.has(installation.source)) bySource.set(installation.source, { publication: undefined, installation });
@@ -150,8 +151,9 @@ const skillSections = computed(() => {
 });
 
 onMounted(() => {
-  void refresh();
+  void completeBrowserReturn();
   poll = window.setInterval(() => {
+    if (Date.now() < browserReturnRefreshUntil) void refresh();
     if (mcp.value.some((item) => item.test_pending)) void refreshMCP();
     if (cliDefinitions.value.some((item) => item.state === "building" || item.state === "testing")) void refreshCLI();
     if (cliEnablements.value.some((item) => item.state === "waiting_for_user") && Date.now() - lastCLICompletionPoll >= 5000) {
@@ -169,6 +171,21 @@ onBeforeUnmount(() => {
   for (const popup of connectorFlowWindows.values()) closeBlankCLIWindow(popup);
   cliSetupWindows.clear();
 });
+
+async function completeBrowserReturn() {
+  await refresh();
+  const flowID = router?.currentRoute.value.query.teambition_auth;
+  if (typeof flowID !== "string" || !/^[0-9a-f-]{36}$/i.test(flowID)) return;
+  try { await api.completeConnectorAuthorizationFlow(flowID); }
+  catch (cause) { if (!(cause instanceof ApiError && cause.kind === "not_found")) reportError(cause); }
+  // Another tab may already be exchanging this single-use code. Read the saved
+  // installation briefly so both the returning browser and its opener converge.
+  browserReturnRefreshUntil = Date.now() + 15000;
+  await refresh();
+  const query = { ...router.currentRoute.value.query };
+  delete query.teambition_auth;
+  await router.replace({ query });
+}
 
 function emptyMCPDraft(): MCPDraft { return { name: "", icon: "terminal", transport: "streamable_http", url: "", runner: "npx", package: "", package_version: "", argumentsText: "", environment: [], bearerToken: "" }; }
 function emptyCLIDraft(): CLIDraft { return { name: "", icon: "terminal", description: "", installation_type: "npm", npm_install: "", archive: "" }; }
@@ -212,7 +229,7 @@ function selectAuthorization(item: ConnectorInstallation, authorization: Connect
 function refreshAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.refreshConnectorAuthorization(item.id, authorization.id, authorization.version)); }
 function disconnectAuthorization(item: ConnectorInstallation, authorization: ConnectorAuthorization) { return runConnectorOperation(item.source, () => api.disconnectPublishedConnectorAuthorization(authorization.id)); }
 function openProvidedConnection(installation: ConnectorInstallation) {
-  providedConnection.value = { installation, botID: "", secret: "", userToken: "" };
+  providedConnection.value = { installation, botID: "", secret: "" };
 }
 function closeProvidedConnection() {
   if (providedConnectionBusy.value) return;
@@ -221,24 +238,22 @@ function closeProvidedConnection() {
 async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
-  const teambition = form.installation.source === "teambition";
-  const invalidKey = teambition ? "teambitionTokenInvalid" : "providedCredentialsInvalid";
+  const invalidKey = "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  const token = form.userToken;
-  if (teambition ? !token || token.length > 32768 || /[\s\x00-\x1f\x7f]/.test(token) : !botID || !form.secret) {
+  if (!botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = teambition ? { user_token: token } : { bot_id: botID, secret: form.secret };
+    const credentials = { bot_id: botID, secret: form.secret };
     await api.connectConnector(form.installation.id, "user", [], JSON.stringify(credentials));
     providedConnection.value = undefined;
     await refresh();
   } catch (cause) { reportError(cause, invalidKey); }
   finally { providedConnectionBusy.value = false; }
 }
-async function startNotionConnection(installation: ConnectorInstallation, publication?: ConnectorPublication) {
+async function startBrowserConnection(installation: ConnectorInstallation, publication?: ConnectorPublication) {
   if (connectorOperationBusy(installation.source) || installation.state === "disabled" && !publication) return;
   const popup = window.open("about:blank", "_blank");
   connectorFlowWindows.set(installation.id, popup);
@@ -248,7 +263,7 @@ async function startNotionConnection(installation: ConnectorInstallation, public
     if (installation.state === "disabled") active = await api.installPublishedConnector(publication!.source);
     else if (installation.upgrade_available && publication) active = await api.upgradeConnectorInstallation(installation.id, installation.version);
     if (active !== installation) await refresh();
-    if (!active.authorized) await beginPublishedConnectorAuthorization(active, publication, popup);
+    if (!active.authorized || connectorNeedsScopeRecovery(active, publication)) await beginPublishedConnectorAuthorization(active, publication, popup);
     else { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); }
   } catch (cause) { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); reportError(cause, "connectorAuthorizationInvalidInput"); }
   finally { connectorBusy.value = connectorBusy.value.filter((source) => source !== installation.source); }
@@ -304,6 +319,15 @@ async function completePublishedConnectorFlows() {
         connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
         if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
       } catch (cause) {
+        if (connectorInstallations.value.find(item => item.id === installationID)?.source === "teambition" && cause instanceof ApiError && cause.kind === "not_found") {
+          await refresh();
+          if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
+            connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };
+          } else if (flow.expires_at && Date.parse(flow.expires_at) <= Date.now()) {
+            connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "invalid" } };
+          }
+          continue;
+        }
         if (cause instanceof ApiError && ["dingtalk_cli_access_disabled", "dingtalk_cli_enterprise_denied", "dingtalk_cli_user_denied", "dingtalk_cli_channel_required", "dingtalk_cli_auth_expired", "dingtalk_identity_mismatch", "dingtalk_authorization_failed"].includes(cause.code)) {
           const remaining = { ...connectorAuthorizationFlows.value };
           delete remaining[installationID];
@@ -679,10 +703,10 @@ async function fileToBase64(file: File): Promise<string> {
               <div class="connector-card-heading"><ConnectorIcon class="connector-card-icon" :icon="entry.publication?.revision.icon || 'plug'" :size="36" /><div class="extension-card-title"><strong>{{ entry.publication?.revision.name || entry.installation?.name || entry.installation?.source }}</strong><el-tag v-if="entry.installation" :type="entry.installation.authorized ? 'success' : 'warning'" size="small">{{ entry.installation.authorized ? t('resources.connected') : t('resources.setupRequired') }}</el-tag><el-tag v-else size="small">{{ t('resources.availableToInstall') }}</el-tag></div></div>
               <div class="extension-card-actions">
                 <el-button v-if="!entry.installation && entry.publication" type="primary" :loading="connectorOperationBusy(entry.publication.source)" @click="installPublication(entry.publication)">{{ t('resources.install') }}</el-button>
-                <el-button v-else-if="entry.installation?.source === 'notion' && entry.installation.authentication_driver === 'connector_package' && (entry.installation.state === 'disabled' && entry.publication || entry.installation.state === 'active' && !entry.installation.authorized)" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="startNotionConnection(entry.installation, entry.publication)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
+                <el-button v-else-if="entry.installation && ['notion', 'teambition'].includes(entry.installation.source) && entry.installation.authentication_driver === 'connector_package' && (entry.installation.state === 'disabled' && entry.publication || entry.installation.state === 'active' && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication)))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="startBrowserConnection(entry.installation, entry.publication)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.state === 'disabled' && entry.publication" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="installPublication(entry.publication)">{{ t('resources.enable') }}</el-button>
                 <el-button v-else-if="entry.installation && (entry.installation.authentication_driver === 'feishu' || entry.installation.authentication_driver === 'dingtalk') && (!entry.installation.authorized || connectorNeedsScopeRecovery(entry.installation, entry.publication))" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="setupPublishedConnector(entry.installation, entry.publication)">{{ t(entry.installation.authorized ? 'resources.expandAuthorization' : 'resources.continueSetup') }}</el-button>
-                <el-button v-else-if="entry.installation && ['wecom', 'teambition'].includes(entry.installation.source) && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
+                <el-button v-else-if="entry.installation && entry.installation.source === 'wecom' && entry.installation.authentication_driver === 'connector_package' && entry.installation.state === 'active' && !entry.installation.authorized" type="primary" @click="openProvidedConnection(entry.installation)"><Plus :size="16" />{{ t('resources.connect') }}</el-button>
                 <el-button v-else-if="entry.installation?.upgrade_available" type="primary" :loading="connectorOperationBusy(entry.installation.source)" @click="upgradeInstallation(entry.installation)">{{ t('resources.upgrade') }}</el-button>
                 <el-button v-if="entry.installation?.state === 'active'" :loading="connectorOperationBusy(entry.installation.source)" @click="disableInstallation(entry.installation)">{{ t('resources.disable') }}</el-button>
                 <el-button v-if="entry.installation" type="danger" plain :loading="connectorOperationBusy(entry.installation.source)" @click="uninstallInstallation(entry.installation)">{{ t('resources.uninstall') }}</el-button>
@@ -784,14 +808,8 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <template v-if="providedConnection.installation.source === 'teambition'">
-          <label>{{ t('resources.teambitionUserToken') }}<input v-model="providedConnection.userToken" name="user_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
-          <p class="muted">{{ t('resources.teambitionTokenHint') }} <a href="https://open.teambition.com/user-mcp" target="_blank" rel="noopener noreferrer">{{ t('resources.teambitionTokenApply') }}</a></p>
-        </template>
-        <template v-else>
-          <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
-          <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
-        </template>
+        <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
+        <label>{{ t('resources.wecomSecret') }}<input v-model="providedConnection.secret" name="secret" type="password" autocomplete="new-password" maxlength="4096" required></label>
         <div class="modal-actions"><el-button :disabled="providedConnectionBusy" @click="closeProvidedConnection">{{ t('common.cancel') }}</el-button><el-button native-type="submit" type="primary" :loading="providedConnectionBusy">{{ t('resources.connect') }}</el-button></div>
       </form>
     </div>

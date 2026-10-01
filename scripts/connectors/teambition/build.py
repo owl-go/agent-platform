@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 CLI_VERSION = '0.3.3'
-VERSION = '0.3.4'
+VERSION = '0.3.5'
 NPM_INTEGRITY = 'S5+aHcBI5alBIPPUSzAJafQDws50hfyv+ns1MiUEZW611ibpOjxGK0+q/eTBPvE15vYUAzsQP/vLStz25Rt5VQ=='
 SKILL_SHA256 = '3a0cd868f8fa4eb6cc56bf1be659438db2e19e1f74299e608ed0c7a77a226afc'
 ASSETS = {
@@ -32,6 +32,13 @@ def json_bytes(value):
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode()
 
 
+def reviewed_scopes(prefix):
+    if prefix[0] == 'user': return ['user:read']
+    if prefix[0] == 'project': return ['project:read', 'task:read']
+    if prefix[0] == 'task': return ['task:write'] if prefix[1] in ['create', 'move'] else ['task:read']
+    return []
+
+
 def capabilities():
     reviewed = json.loads((ROOT / 'capabilities.json').read_text())
     prefixes = [tuple(item['argv_prefix']) for item in reviewed]
@@ -40,7 +47,7 @@ def capabilities():
     ):
         raise ValueError('duplicate or overlapping command policy')
     return [{**item, 'id': 'tb_' + sha256(' '.join(item['argv_prefix']).encode())[:16],
-             'identities': ['user'], 'scopes': [], 'egress_hosts': HOSTS,
+             'identities': ['user'], 'scopes': reviewed_scopes(item['argv_prefix']), 'egress_hosts': HOSTS,
              'timeout_seconds': 120} for item in reviewed]
 
 
@@ -89,6 +96,7 @@ def source_zip(native, reviewed):
     }
     files = {
         'launcher.cjs': ((ROOT / 'launcher.cjs').read_bytes(), 0o755),
+        'oauth-transport.cjs': ((ROOT / 'oauth-transport.cjs').read_bytes(), 0o644),
         'capabilities.json': (json_bytes(reviewed), 0o644),
         'package.json': (json_bytes(metadata), 0o644),
         **{f'teambition-linux-{arch}': (body, 0o755) for arch, body in native.items()},
@@ -140,10 +148,10 @@ def build(npm, skill, image, runtime_version):
             files['skills/teambition/reference/' + name.removeprefix('teambition/')] = archive.read(name)
     files['connector-meta.json'] = json_bytes({
         'source': 'teambition', 'version': VERSION, 'type': 'cli', 'name': '钉钉项目',
-        'description': 'Teambition 项目与任务查询、任务创建和移动；使用平台加密托管的 UserToken。',
+        'description': 'Teambition 项目与任务查询、任务创建和移动；通过浏览器 OAuth + PKCE 授权连接。',
         'examples_zh': ['查询我参与的钉钉项目', '在指定项目创建任务'],
         'examples_en': ['List my Teambition projects', 'Create a task in a selected project'],
-        'minPlatformVersion': '1.0.0', 'auth_mode': 'cli',
+        'minPlatformVersion': '1.0.0', 'auth_mode': 'oauth',
     })
     files['cli.json'] = json_bytes({
         'runtime': {'kind': 'node', 'version': runtime_version, 'digest': 'sha256:' + match.group(1)},
@@ -179,7 +187,7 @@ def main():
     args.output.with_suffix(".source.zip").write_bytes(source)
     print(json.dumps({'output': str(args.output), 'sha256': sha256(package),
                       'bundle_sha256': sha256(immutable), 'capabilities': len(capabilities()),
-                      'conformance': 'not_run', 'authorization': 'provided_user_token'}))
+                      'conformance': 'not_run', 'authorization': 'browser_oauth_pkce'}))
 
 
 if __name__ == '__main__':

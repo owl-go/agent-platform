@@ -319,3 +319,13 @@ func (coordinator *recordingApprovalCoordinator) Close(context.Context, string, 
 	coordinator.closed++
 	return nil
 }
+
+func TestBrokerRedactsJSONCredentialFieldsBeforeReturningOutput(t *testing.T) {
+	environment := map[string]string{"CONNECTOR_CREDENTIALS_JSON": `{"access_token":"oauth-canary","client_id":"registered-client","nested":{"secret":"nested-canary"}}`, "OTHER_SECRET": "oauth-canary-longer"}
+	for _, output := range []string{"OAuth rejected Bearer oauth-canary; nested-canary; oauth-canary-longer", environment["CONNECTOR_CREDENTIALS_JSON"]} {
+		safe := string(redactBytes([]byte(output), environment))
+		if strings.Contains(safe, "canary") || !strings.Contains(safe, "[REDACTED]") {
+			t.Fatal("individual credential value leaked from CLI output")
+		}
+	}
+}

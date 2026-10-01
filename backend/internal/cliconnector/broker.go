@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"agent-platform/backend/internal/credentials"
 )
 
 const (
@@ -247,12 +249,37 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) (respon
 }
 
 func redactBytes(value []byte, secrets map[string]string) []byte {
-	for _, secret := range secrets {
-		if secret != "" {
-			value = bytes.ReplaceAll(value, []byte(secret), []byte("[REDACTED]"))
+	var values [][]byte
+	for key, secret := range secrets {
+		if secret == "" {
+			continue
+		}
+		values = append(values, []byte(secret))
+		if key == "CONNECTOR_CREDENTIALS_JSON" {
+			var fields any
+			if json.Unmarshal([]byte(secret), &fields) == nil {
+				var visit func(any)
+				visit = func(item any) {
+					switch typed := item.(type) {
+					case string:
+						if typed != "" {
+							values = append(values, []byte(typed))
+						}
+					case map[string]any:
+						for _, child := range typed {
+							visit(child)
+						}
+					case []any:
+						for _, child := range typed {
+							visit(child)
+						}
+					}
+				}
+				visit(fields)
+			}
 		}
 	}
-	return value
+	return credentials.NewRedactor(values...).Bytes(value)
 }
 
 func randomApprovalNonce() (string, error) {

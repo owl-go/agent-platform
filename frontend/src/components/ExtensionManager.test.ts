@@ -106,50 +106,29 @@ describe("ExtensionManager", () => {
     expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
     wrapper.unmount();
   });
-  it("connects an installed Teambition package using its UserToken form", async () => {
-    let authorized = false;
-    const installation = { id: "teambition-installation", source: "teambition", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: "0.3.4", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: false };
-    const publication = { source: "teambition", active_revision_id: "revision-tb", state: "available" as const, version: 1, revision: { id: "revision-tb", source: "teambition", package_version: "0.3.4", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
-    const connectConnector = vi.fn(async () => { authorized = true; return { ...installation, authorized: true }; });
-    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: vi.fn() } as unknown as PlatformApi;
+  it.each([false, true])("opens Teambition browser OAuth and upgrades old installations first (old: %s)", async (old) => {
+    const installation = { id: "teambition-installation", source: "teambition", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const scopes = ["user:read", "project:read", "task:read", "task:write"];
+    const publication = { source: "teambition", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "teambition", package_version: "0.3.5", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+    const upgraded = { ...installation, package_version: "0.3.5", upgrade_available: false, version: 2 };
+    const upgrade = vi.fn(async () => upgraded);
+    const begin = vi.fn(async () => ({ id: "flow-tb", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://account.teambition.com/oauth2/mcp/authorize?state=sealed&code_challenge=challenge" }));
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     try {
       await flushPromises();
-      const connect = wrapper.findAll(".published-connector-card button").find((item) => item.text() === "连接");
-      expect(connect).toBeDefined();
-      await connect!.trigger("click");
+      await wrapper.findAll(".published-connector-card button").find(item => item.text() === "连接")!.trigger("click");
       await flushPromises();
-      let form = new DOMWrapper(document.body).get(".provided-connector-form");
-      await form.get('input[name="user_token"]').setValue("discarded-test-token");
-      await form.findAll("button").find((button) => button.text() === "取消")!.trigger("click");
-      await flushPromises();
-      expect(connectConnector).not.toHaveBeenCalled();
-      expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(false);
-      await connect!.trigger("click");
-      await flushPromises();
-      form = new DOMWrapper(document.body).get(".provided-connector-form");
-      expect((form.get('input[name="user_token"]').element as HTMLInputElement).value).toBe("");
-      expect(form.get('a').attributes('href')).toBe('https://open.teambition.com/user-mcp');
-      expect(form.get('input[name="user_token"]').attributes("type")).toBe("password");
-      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
-      await form.get('input[name="user_token"]').setValue("invalid token");
-      await form.trigger("submit");
-      await flushPromises();
-      expect(connectConnector).not.toHaveBeenCalled();
-      connectConnector.mockRejectedValueOnce(new ApiError("unavailable", 503, "service_unavailable"));
-      await form.get('input[name="user_token"]').setValue("opaque-test-token");
-      await form.trigger("submit");
-      await flushPromises();
-      expect(wrapper.get(".published-connector-card").text()).toContain("需要设置");
-      expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(true);
-      await form.trigger("submit");
-      await flushPromises();
-      expect(connectConnector).toHaveBeenCalledWith(installation.id, "user", [], JSON.stringify({ user_token: "opaque-test-token" }));
+      expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
+      expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://account.teambition.com/oauth2/mcp/authorize"));
+      expect(api.connectConnector).not.toHaveBeenCalled();
       expect(api.beginConnectorSetup).not.toHaveBeenCalled();
-      expect(api.beginConnectorAuthorizationFlow).not.toHaveBeenCalled();
-      expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(false);
-      expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
-      expect(wrapper.html()).not.toContain("opaque-test-token");
+      expect(document.querySelector('input[name="user_token"]')).toBeNull();
+      expect(wrapper.find('a[href^="https://account.teambition.com/"]').exists()).toBe(true);
     } finally { wrapper.unmount(); }
   });
 
