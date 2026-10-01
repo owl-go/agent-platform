@@ -43,8 +43,11 @@ describe("WorkflowsPage", () => {
     expect(listWorkflows).toHaveBeenCalledWith();
     expect(wrapper.text()).toContain("每周报告");
     expect(wrapper.get(".workflow-card h2").text()).toBe("每周报告");
-    expect(wrapper.get(".workflow-created-at").text()).toContain("2026");
-    expect(wrapper.text()).not.toContain("整理本周进展");
+    expect(wrapper.get(".workflow-card h2").attributes("title")).toBe("每周报告");
+    expect(wrapper.get(".workflow-goal").text()).toContain("整理本周进展");
+    expect(wrapper.get(".workflow-goal").attributes("title")).toBe("整理本周进展");
+    expect(wrapper.get(".workflow-card").text()).toContain("30 天成功率");
+    expect(wrapper.get(".workflow-card").text()).toContain("尚未运行");
     expect(wrapper.find(".workflow-card .workflow-more").exists()).toBe(true);
     expect(wrapper.find(".workflow-card").text()).not.toContain("打开工作流");
     expect(wrapper.text()).not.toContain("已删除记录");
@@ -80,7 +83,7 @@ describe("WorkflowsPage", () => {
     await flushPromises();
 
     expect(createWorkflow).toHaveBeenCalledWith({ name: "带资料的工作流", goal: "根据资料回答问题", environment: [], knowledge_base_ids: [] });
-    expect(runWorkflow).toHaveBeenCalledWith("workflow-1", { plan_preference: "always" });
+    expect(runWorkflow).toHaveBeenCalledWith("workflow-1", {});
     await vi.waitFor(() => expect(router.currentRoute.value.fullPath).toBe("/workflows/workflow-1?tab=history&open_run=run-validation"));
     wrapper.unmount();
   });
@@ -132,6 +135,42 @@ describe("WorkflowsPage", () => {
     await flushPromises();
 
     expect(push).toHaveBeenCalledWith("/workflows/workflow-1");
+    wrapper.unmount();
+  });
+
+  it("opens a newly created Run directly from the card", async () => {
+    const succeeded = { ...workflow, last_run_state: "succeeded" as const, last_run_id: "run-old", last_run_at: "2026-09-12T02:00:00Z", run_count_30d: 4, succeeded_run_count_30d: 3, needs_attention: false };
+    const runWorkflow = vi.fn(async () => ({ id: "run-new" }));
+    const api = { listWorkflows: vi.fn(async () => [succeeded]), runWorkflow } as unknown as PlatformApi;
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/workflows");
+    const wrapper = mount(WorkflowsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    expect(wrapper.get(".workflow-card").text()).toContain("75%");
+    await wrapper.get(".workflow-card footer button").trigger("click");
+    await flushPromises();
+
+    expect(runWorkflow).toHaveBeenCalledWith(workflow.id);
+    expect(router.currentRoute.value.fullPath).toBe("/workflows/workflow-1?tab=history&open_run=run-new");
+    wrapper.unmount();
+  });
+
+  it("opens the last Run instead of starting another when the Workflow needs attention", async () => {
+    const failed = { ...workflow, last_run_state: "failed" as const, last_run_id: "run-failed", last_run_at: "2026-09-12T02:00:00Z", run_count_30d: 1, succeeded_run_count_30d: 0, needs_attention: true };
+    const runWorkflow = vi.fn();
+    const api = { listWorkflows: vi.fn(async () => [failed]), runWorkflow } as unknown as PlatformApi;
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/workflows");
+    const wrapper = mount(WorkflowsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+
+    expect(wrapper.get(".workflow-card footer").text()).toContain("查看并恢复");
+    await wrapper.get(".workflow-card footer button").trigger("click");
+    await flushPromises();
+
+    expect(runWorkflow).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.fullPath).toBe("/workflows/workflow-1?tab=history&open_run=run-failed");
     wrapper.unmount();
   });
 });

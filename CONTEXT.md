@@ -163,7 +163,7 @@ A non-terminal execution state in which a Session response or Run is paused unti
 _Avoid_: queued execution, indefinite pause, automatic approval
 
 **Execution Plan**:
-The immutable, platform-generated objective, ordered Plan Steps, selected resource identities, bounded side-effect categories, and execution estimate shown before a qualifying Session response or manual Run begins. It is confirmed, skipped only for a direct answer with no external operation, or cancelled as one versioned decision; it does not replace a high-risk Connector command approval.
+The immutable, platform-generated objective, ordered Plan Steps, selected resource identities, bounded side-effect categories, and execution estimate shown for a qualifying Session response or manual Run. An explicitly requested Plan uses one separately metered Provider Model call to name task-specific steps and waits for a User decision; automatically required rule Plans use platform rules without that call and start without Plan confirmation. A requested Plan is confirmed, skipped only for a direct answer with no external operation, or cancelled as one versioned decision; no Plan replaces a high-risk Connector command approval.
 _Avoid_: model chain-of-thought, Workflow definition, command approval
 
 **Plan Step**:

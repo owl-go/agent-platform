@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
@@ -174,6 +175,19 @@ func (service *Service) SendSessionMessage(ctx context.Context, request *workspa
 		return nil, publicError(err)
 	}
 	accepted = true
+	if request.PlanPreference == workspacedomain.PlanPreferenceAlways && assistant.ExecutionPlan != nil {
+		var stages []workspacedomain.ExecutionStageSnapshot
+		if assistant.ResponseSnapshot != nil {
+			stages = assistant.ResponseSnapshot.Stages
+		}
+		labels, cost, generationErr := service.generatePlanLabels(ctx, owner, "session-plan-"+fmt.Sprint(assistant.ID), assistant.ExecutionPlan, stages)
+		completionCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		assistant, err = repository.CompleteSessionPlanGeneration(completionCtx, owner, request.SessionId, assistant.ID, labels, cost, generationErr != nil)
+		cancel()
+		if err != nil {
+			return nil, publicError(err)
+		}
+	}
 	service.productAnalytics().FirstTaskStarted(ctx, owner, request.SessionId, "session", len(attachments) > 0)
 	return &workspacev1.SendSessionMessageResponse{UserMessage: messageResponse(user), AssistantMessage: messageResponse(assistant)}, nil
 }

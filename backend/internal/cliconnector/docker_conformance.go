@@ -70,6 +70,7 @@ func (suite *DockerConformance) Test(ctx context.Context, bundle []byte, runtime
 	if err := os.Chown(root, suite.config.UID, suite.config.GID); err != nil {
 		return fmt.Errorf("set CLI Conformance bundle ownership: %w", err)
 	}
+	limits := ExecutionLimits(definition)
 	executable := "/opt/agent-connector/node_modules/.bin/" + definition.Executable
 	execution, cancel := context.WithTimeout(ctx, suite.config.Timeout)
 	defer cancel()
@@ -77,8 +78,8 @@ func (suite *DockerConformance) Test(ctx context.Context, bundle []byte, runtime
 		"run", "--rm", "--runtime", suite.config.Runtime,
 		"--user", fmt.Sprintf("%d:%d", suite.config.UID, suite.config.GID),
 		"--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-		"--network", "none", "--memory", strconv.FormatInt(512<<20, 10), "--cpus", "1", "--pids-limit", "128",
-		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864",
+		"--network", "none", "--memory", strconv.FormatInt(limits.MemoryBytes, 10), "--cpus", strconv.FormatFloat(limits.CPUs, 'f', -1, 64), "--pids-limit", strconv.FormatInt(limits.PIDs, 10),
+		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=" + strconv.FormatInt(limits.TempBytes, 10),
 		"--mount", "type=bind,src=" + root + ",dst=/opt/agent-connector,readonly=true",
 		"--entrypoint", executable,
 		"--label", "agent-platform.managed=true", "--label", "agent-platform.workload=cli-conformance",

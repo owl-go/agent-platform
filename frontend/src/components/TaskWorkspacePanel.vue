@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { FileText, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
@@ -6,11 +7,17 @@ import type { Artifact, Attachment, Evidence } from "../api/client";
 import type { ConversationMessage } from "../conversationThread";
 
 const props = defineProps<{ message: ConversationMessage; loadAttachment: (id: string) => Promise<Blob> }>();
-const emit = defineEmits<{ close: []; downloadArtifact: [artifact: Artifact]; openEvidence: [evidence: Evidence]; attachmentError: []; saveWorkflow: [messageID: string] }>();
+const emit = defineEmits<{ close: []; downloadArtifact: [artifact: Artifact]; openEvidence: [evidence: Evidence]; attachmentError: []; saveWorkflow: [messageID: string]; planDecision: [messageID: string, decision: "start" | "direct" | "cancel"]; editPlan: [messageID: string] }>();
 const { t, locale } = useI18n();
+const consumedCredits = computed(() => {
+  const raw: unknown = props.message.creditConsumption?.total_hundredths;
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  const amount = Number(raw);
+  return Number.isFinite(amount) && amount >= 0 ? (amount / 100).toFixed(2) : undefined;
+});
 
 function stateLabel(state: string) {
-  if (state === "completed" || state === "succeeded") return t("common.success");
+  if (state === "completed" || state === "succeeded") return props.message.evidence?.some((item) => item.state === "failed") ? t("taskWorkspace.completedWithFailures") : t("common.success");
   if (state === "failed") return t("common.failed");
   if (state === "cancelled") return t("common.cancelled");
   if (state === "queued") return t("common.queued");
@@ -46,8 +53,14 @@ async function downloadAttachment(item: Attachment) {
     <header><div><small>{{ t('taskWorkspace.eyebrow') }}</small><h2>{{ t('taskWorkspace.title') }}</h2></div><el-button text circle :aria-label="t('taskWorkspace.close')" @click="emit('close')"><X :size="18" /></el-button></header>
     <div class="task-workspace-scroll">
       <section v-if="message.executionPlan" class="task-workspace-section">
-        <h3>{{ t('taskWorkspace.plan') }}</h3><p class="task-workspace-objective">{{ message.executionPlan.objective }}</p>
-        <ol class="task-workspace-steps"><li v-for="step in message.executionPlan.steps" :key="step.id" :class="`is-${step.state}`"><span></span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepState(step.state) }}</small></div></li></ol>
+        <h3>{{ t('taskWorkspace.plan') }}</h3><p class="task-workspace-objective">{{ message.executionPlan.objective }}</p><p v-if="message.executionPlan.generator === 'model_failed'" class="muted" role="status">{{ t('sessions.executionPlan.modelFailedHint') }}</p>
+        <ol class="task-workspace-steps"><li v-for="step in message.executionPlan.steps ?? []" :key="step.id" :class="`is-${step.state}`"><span></span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepState(step.state) }}</small></div></li></ol>
+        <div v-if="message.executionPlan.state === 'pending'" class="task-workspace-plan-actions">
+          <el-button type="primary" @click="emit('planDecision', message.id, 'start')">{{ t('sessions.executionPlan.start') }}</el-button>
+          <el-button @click="emit('editPlan', message.id)">{{ t('sessions.executionPlan.edit') }}</el-button>
+          <el-button v-if="!message.executionPlan.side_effects?.length" @click="emit('planDecision', message.id, 'direct')">{{ t('sessions.executionPlan.direct') }}</el-button>
+          <el-button text @click="emit('planDecision', message.id, 'cancel')">{{ t('common.cancel') }}</el-button>
+        </div>
       </section>
       <section v-if="message.evidence?.length || message.activities?.length || message.stages?.length" class="task-workspace-section">
         <h3>{{ t('taskWorkspace.evidence') }}</h3>
@@ -60,7 +73,7 @@ async function downloadAttachment(item: Attachment) {
       </section>
       <section class="task-workspace-section task-workspace-result">
         <h3>{{ t('taskWorkspace.result') }}</h3>
-        <dl><div><dt>{{ t('taskWorkspace.state') }}</dt><dd>{{ stateLabel(message.state) }}</dd></div><div v-if="message.elapsedMs"><dt>{{ t('taskWorkspace.elapsed') }}</dt><dd>{{ formatDuration(message.elapsedMs, locale as SupportedLocale) }}</dd></div><div v-if="message.creditConsumption"><dt>{{ t('taskWorkspace.credits') }}</dt><dd>{{ (message.creditConsumption.total_hundredths / 100).toFixed(2) }}</dd></div></dl>
+        <dl><div><dt>{{ t('taskWorkspace.state') }}</dt><dd>{{ stateLabel(message.state) }}</dd></div><div v-if="message.elapsedMs"><dt>{{ t('taskWorkspace.elapsed') }}</dt><dd>{{ formatDuration(message.elapsedMs, locale as SupportedLocale) }}</dd></div><div v-if="consumedCredits !== undefined"><dt>{{ t('taskWorkspace.credits') }}</dt><dd>{{ consumedCredits }}</dd></div></dl>
         <el-button v-if="message.canSaveWorkflow || message.workflowLink" type="primary" plain @click="emit('saveWorkflow', message.id)">{{ message.workflowLink ? t('sessions.workflowSave.open') : t('sessions.workflowSave.action') }}</el-button>
       </section>
     </div>

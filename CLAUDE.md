@@ -5,7 +5,7 @@
 ## 开始工作
 
 1. 先读 `CONTEXT.md`，使用其中定义的领域术语；不要为同一概念创造近义词。
-   开始新的开发任务前，先按“分支、提交与推送”更新 `main` 并创建开发分支，再修改文件。
+   本会话第一次需要修改仓库前，先按“分支、提交与推送”更新 `main` 并创建本会话的开发分支；同一会话的后续改动继续复用该分支。
 2. 根据“文档路由”只读取与任务相关的产品或技术规格，再查看对应接口、实现和相邻测试。
 3. 先确认当前实现阶段和验收证据。规格中的目标能力不等于仓库已经实现或通过生产验证。
 4. 在既有 seam 内完成最小改动，并同步修改测试和作为行为依据的文档。
@@ -127,9 +127,10 @@ make web-build
 ## 分支、提交与推送
 
 - 集成与发布统一经过 `main_temp`：功能分支完成后先合并到 `main_temp`，完成适用的测试、构建和发布前检查，再从 `main_temp` 发布到线上环境；不得绕过 `main_temp` 直接从功能分支发布。
-- `main` 是保护分支。每个新开发任务都从最新 `origin/main` 创建开发分支，默认使用 `codex/<task-name>`；同一任务的后续工作继续使用已有开发分支。
-- 工作区干净且可切换到 `main` 时，依次执行 `git switch main`、`git pull --ff-only origin main`、`git switch -c codex/<task-name>`。拉取失败或本地 `main` 分叉时，先解决阻塞，再开始开发，不以过期基线创建分支。
-- 工作区有未提交改动或 `main` 被其他 worktree 占用时，保留原工作区，执行 `git fetch origin main` 后，通过 `git worktree add -b codex/<task-name> <new-worktree-path> origin/main` 在独立 worktree 开发。
+- `main` 是保护分支。每个新会话只在第一次需要修改仓库时，从最新 `origin/main` 创建一个开发分支，默认使用 `codex/<conversation-name>`。同一会话后续收到的新问题、补充需求、修复或文档改动都继续使用该分支和对应 worktree；不得因为用户发送了新消息或任务主题发生变化而另建分支。
+- 当前会话的开发分支在会话内持续复用。完成一轮改动只提交并推送，不自动删除、替换或为下一轮问题新建分支；只有用户明确要求独立隔离时才创建额外分支。
+- 新会话的工作区干净且可切换到 `main` 时，依次执行 `git switch main`、`git pull --ff-only origin main`、`git switch -c codex/<conversation-name>`。拉取失败或本地 `main` 分叉时，先解决阻塞，再开始开发，不以过期基线创建分支。
+- 新会话的工作区有未提交改动或 `main` 被其他 worktree 占用时，保留原工作区，执行 `git fetch origin main` 后，通过 `git worktree add -b codex/<conversation-name> <new-worktree-path> origin/main` 创建本会话的独立 worktree；同一会话后续继续复用它。
 - 完成用户要求的代码或文档改动并通过适用门禁后，自动创建 Git Commit 并推送当前开发分支；首次推送使用 `git push -u origin <branch>`，不等待用户再次提醒。`main` 的变更通过 Pull Request 合入，不直接向 `main` 提交或推送，也不绕过保护规则。
 - 提交前检查 `git status` 和 `git diff`，只暂存本任务及当前连续工作中已经验证的改动；排除用户的无关改动、临时目录、凭证和禁止提交的生成产物。
 - 使用准确概括改动的 Conventional Commit message，不修改或合并既有 Commit。

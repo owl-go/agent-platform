@@ -221,6 +221,13 @@ config_file=$4
 cd "$release_dir"
 test -s backend/go.mod
 test -s frontend/package.json
+candidate_env_file="${env_file}.candidate-${release_id}"
+candidate_config_file="${config_file}.candidate-${release_id}"
+test ! -e "$candidate_env_file" && test ! -L "$candidate_env_file"
+test ! -e "$candidate_config_file" && test ! -L "$candidate_config_file"
+cp -p "$env_file" "$candidate_env_file"
+cp -p "$config_file" "$candidate_config_file"
+trap 'rm -f -- "$candidate_env_file" "$candidate_config_file" "${candidate_env_file}.next" "${candidate_config_file}.next"' EXIT
 set -a
 . "$env_file"
 set +a
@@ -271,7 +278,7 @@ builder_digest=$(docker image inspect --format '{{range .RepoDigests}}{{println 
 test -n "$builder_digest"
 RUNTIME_IMAGE_REF="$runtime_digest" CLI_BUILDER_IMAGE_REF="$builder_digest" scripts/conformance/runtime-image-smoke.sh
 
-python3 - "$env_file" "$runtime_digest" <<'PY'
+python3 - "$candidate_env_file" "$runtime_digest" <<'PY'
 import os, pathlib, re, sys
 path = pathlib.Path(sys.argv[1])
 digest = sys.argv[2]
@@ -299,7 +306,7 @@ os.chmod(temporary, original.st_mode)
 os.replace(temporary, path)
 PY
 
-python3 - "$config_file" "$builder_digest" <<'PY'
+python3 - "$candidate_config_file" "$builder_digest" <<'PY'
 import os, pathlib, re, sys
 path = pathlib.Path(sys.argv[1])
 digest = sys.argv[2]
@@ -342,9 +349,17 @@ os.chown(temporary, original.st_uid, original.st_gid)
 os.chmod(temporary, original.st_mode)
 os.replace(temporary, path)
 PY
-compose_args=(--env-file "$env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
-PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" config --quiet
-PLATFORM_CONFIG_FILE="$config_file" docker compose "${compose_args[@]}" build api worker egress-controller
+set -a
+. "$candidate_env_file"
+set +a
+compose_args=(--env-file "$candidate_env_file" -f deploy/platform/compose.yaml -f deploy/platform/compose.execution.yaml -f deploy/platform/compose.https.yaml)
+PLATFORM_CONFIG_FILE="$candidate_config_file" docker compose "${compose_args[@]}" config --quiet
+PLATFORM_CONFIG_FILE="$candidate_config_file" docker compose "${compose_args[@]}" build api worker egress-controller
+echo 'Reverify installed CLI Connector bundles for the candidate Runtime'
+PLATFORM_CONFIG_FILE="$candidate_config_file" docker compose "${compose_args[@]}" run --rm --no-deps worker -config /etc/agent-platform/platform.yaml -reverify-cli-connectors
+mv -f -- "$candidate_env_file" "$env_file"
+mv -f -- "$candidate_config_file" "$config_file"
+trap - EXIT
 REMOTE_BUILD
 
 stage "Activate source, migrate, and replace services"

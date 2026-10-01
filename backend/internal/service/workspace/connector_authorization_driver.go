@@ -9,6 +9,7 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
 )
 
@@ -34,6 +35,37 @@ type connectorAuthorizationGrant struct {
 }
 
 type dingtalkConnectorAuthorizationDriver struct{ client *dingtalkcli.Client }
+
+type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
+
+func (driver notionConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+
+func (driver notionConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	if len(scopes) != 0 {
+		return connectorAuthorizationChallenge{}, fmt.Errorf("%w: Notion login does not accept platform scopes", domain.ErrInvalid)
+	}
+	challenge, err := driver.login.Begin(ctx)
+	return connectorAuthorizationChallenge{State: challenge.State, ActionURL: challenge.ActionURL, ExpiresAt: challenge.ExpiresAt}, err
+}
+
+func (driver notionConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	grant, err := driver.login.Poll(ctx, state)
+	switch {
+	case errors.Is(err, notioncli.ErrPending):
+		return connectorAuthorizationGrant{}, errConnectorAuthorizationPending
+	case errors.Is(err, notioncli.ErrExpired):
+		return connectorAuthorizationGrant{}, errConnectorAuthorizationExpired
+	case err != nil:
+		return connectorAuthorizationGrant{}, err
+	}
+	return connectorAuthorizationGrant{ExternalID: grant.WorkspaceID, DisplayName: grant.WorkspaceID, AccessToken: grant.Token}, nil
+}
+
+func (driver notionConnectorAuthorizationDriver) Refresh(context.Context, string, string, string) (connectorAuthorizationGrant, error) {
+	return connectorAuthorizationGrant{}, fmt.Errorf("%w: reconnect Notion to renew access", domain.ErrInvalid)
+}
 
 func (driver dingtalkConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
 	return "", "", nil
@@ -149,6 +181,9 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil
+	}
+	if isNotionCLILoginPolicy(policy) {
+		return notionConnectorAuthorizationDriver{login: notioncli.NewLogin()}, nil
 	}
 	if service.feishu == nil {
 		return nil, fmt.Errorf("%w: Feishu authorization adapter is unavailable", domain.ErrInvalid)

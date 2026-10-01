@@ -43,6 +43,19 @@ describe("ConversationThread", () => {
     wrapper.unmount();
   });
 
+  it("shows a stage status and model without exposing its Runtime Engine", () => {
+    const wrapper = mountThread([{
+      id: "assistant-running", role: "assistant", content: "", state: "running", timestamp: "2026-09-29T08:00:00Z",
+      stages: [{ ...stage, state: "running", final_text: undefined, elapsed_ms: 0 }],
+    }]);
+
+    const summary = wrapper.get(".expert-stage-list summary").text();
+    expect(summary).toContain("运行中");
+    expect(summary).toContain("Model");
+    expect(summary).not.toContain("Codex");
+    wrapper.unmount();
+  });
+
   it("does not render a failed stage twice when its error is the assistant error", () => {
     const error = "PI Agent stopped with error: OpenAI API error (502)";
     const wrapper = mountThread([{
@@ -185,6 +198,75 @@ describe("ConversationThread", () => {
     expect(wrapper.text()).not.toContain("直接回答，不执行外部操作");
     await wrapper.get(".execution-plan-card footer .el-button--primary").trigger("click");
     expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-plan", "start"]);
+    wrapper.unmount();
+  });
+
+  it("shows an automatic safety plan without a manual start action", () => {
+    const wrapper = mountThread([{
+      id: "assistant-auto", role: "assistant", content: "", state: "queued", timestamp: "2026-09-29T08:00:00Z",
+      executionPlan: {
+        id: "plan-auto", state: "approved", objective: "发送工作报告", created_at: "2026-09-29T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "", position: 1, state: "pending" }],
+        resources: [], side_effects: ["external_connector_operation"], reasons: ["external_side_effect"],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    }]);
+
+    expect(wrapper.get(".execution-plan-card header").text()).toContain("自动开始");
+    expect(wrapper.find(".execution-plan-card footer").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("已确认");
+    wrapper.unmount();
+  });
+
+  it("renders a plan when empty repeated fields are omitted by the API", async () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "解释设计", created_at: "2026-09-28T08:00:00Z", version: 1, generator: "platform_rules",
+        steps: [{ id: "step-1", kind: "execute_stage", position: 1, state: "pending" }],
+        estimated_model_calls: 1, estimated_credit_hundredths: 100,
+      } as NonNullable<ConversationMessage["executionPlan"]>,
+    }]);
+
+    expect(wrapper.get(".execution-plan-card").text()).toContain("解释设计");
+    expect(wrapper.get(".execution-plan-steps").text()).toContain("执行任务");
+    expect(wrapper.get(".execution-plan-card").text()).not.toContain("NaN");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("0.00 Credits");
+    await wrapper.get(".execution-plan-card footer .el-button--primary").trigger("click");
+    expect(wrapper.emitted("planDecision")?.[0]).toEqual(["assistant-plan", "start"]);
+    wrapper.unmount();
+  });
+
+  it("shows model-generated task labels and the charged Plan generation cost", () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "分析项目代码", created_at: "2026-09-28T08:00:00Z", version: 2, generator: "model",
+        steps: [
+          { id: "step-1", kind: "review_input", label: "确认代码分析范围和入口", position: 1, state: "pending" },
+          { id: "step-2", kind: "execute_stage", label: "梳理目录并追踪核心调用链", position: 2, state: "pending" },
+          { id: "step-3", kind: "deliver_result", label: "汇总鉴权风险与建议", position: 3, state: "pending" },
+        ],
+        resources: [], side_effects: [], reasons: ["user_requested"], estimated_model_calls: 1,
+        estimated_credit_hundredths: 100, generation_credit_hundredths: 37,
+      },
+    }]);
+    expect(wrapper.get(".execution-plan-steps").text()).toContain("梳理目录并追踪核心调用链");
+    expect(wrapper.get(".execution-plan-card").text()).toContain("模型生成 · 0.37 Credits");
+    wrapper.unmount();
+  });
+
+  it("marks a failed detailed Plan generation as a rule-based fallback", () => {
+    const wrapper = mountThread([{
+      id: "assistant-plan", role: "assistant", content: "", state: "waiting_for_user", timestamp: "2026-09-28T08:00:00Z",
+      executionPlan: {
+        id: "plan-1", state: "pending", objective: "分析项目代码", created_at: "2026-09-28T08:00:00Z", version: 2, generator: "model_failed",
+        steps: [{ id: "step-1", kind: "execute_stage", label: "", position: 1, state: "pending" }],
+        resources: [], side_effects: [], reasons: ["user_requested"], estimated_model_calls: 1,
+        estimated_credit_hundredths: 100, generation_credit_hundredths: 0,
+      },
+    }]);
+    expect(wrapper.get(".execution-plan-card [role='status']").text()).toContain("详细计划生成失败");
     wrapper.unmount();
   });
 

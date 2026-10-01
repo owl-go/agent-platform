@@ -228,16 +228,18 @@ describe("Agent Workspace API client", () => {
       const url = String(input);
       if (init?.method === "POST") return new Response(JSON.stringify({ workflow: { id: "workflow-1", name: "Report", goal: "Build report", environment: [], api_credential_configured: false, deleted: false, created_at: "2026-09-28T00:00:00Z", updated_at: "2026-09-28T00:00:00Z", version: 1 }, validation_run: { id: "run-1", conversation_id: "run-1", turn_number: 1, workflow_id: "workflow-1", workflow_name: "Report", trigger: "session_conversion", state: "waiting_for_user", queued_at: "2026-09-28T00:00:00Z" }, link: { session_id: "session-1", message_id: 2, workflow_id: "workflow-1", workflow_name: "Report", validation_run_id: "run-1", created_at: "2026-09-28T00:00:00Z" }, replayed: false }), { status: 200, headers: { "Content-Type": "application/json" } });
       if (url.endsWith("/workflow-links")) return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ suggested_name: "Report", suggested_goal: "Build report", specialist_name: "Default", resources: [], files: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ suggested_name: "Report", suggested_goal: "Build report", specialist_name: "Default" }), { status: 200, headers: { "Content-Type": "application/json" } });
     });
     vi.stubGlobal("fetch", fetchMock);
     const api = createPlatformApi(() => "token");
 
-    await api.previewSessionWorkflowDraft("session-1", 2);
+    const draft = await api.previewSessionWorkflowDraft("session-1", 2);
     const created = await api.createWorkflowFromSession("session-1", 2, { name: "Report", goal: "Build report", files: [] });
     await api.listSessionWorkflowLinks("session-1");
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/workflow-draft");
+    expect(draft.resources).toEqual([]);
+    expect(draft.files).toEqual([]);
     expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/v1/sessions/session-1/messages/2/workflow");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ name: "Report", goal: "Build report", files: [] });
     expect(created.validation_run.elapsed_ms).toBe(0);

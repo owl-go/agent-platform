@@ -1,5 +1,12 @@
 # syntax=docker/dockerfile:1
 
+FROM public.ecr.aws/docker/library/alpine:3.23 AS notion-auth
+ARG TARGETARCH
+ADD --checksum=sha256:3472ee9f5a181b742f9a700e6a3cabea8303d61e4ee6404128f20fca8ca7ec1b https://registry.npmjs.org/ntn/-/ntn-0.23.13.tgz /tmp/ntn.tgz
+RUN case "${TARGETARCH}" in amd64) platform=linux-x64 ;; arm64) platform=linux-arm64 ;; *) exit 1 ;; esac \
+    && tar -xzf /tmp/ntn.tgz -C /tmp "package/dist/ntn-${platform}/ntn" \
+    && install -m 0555 "/tmp/package/dist/ntn-${platform}/ntn" /ntn-auth
+
 FROM public.ecr.aws/docker/library/golang:1.25-bookworm AS build
 
 WORKDIR /src
@@ -19,6 +26,7 @@ RUN apk add --no-cache ca-certificates docker-cli git openssh-client tzdata \
     && addgroup -g 65532 -S agent \
     && adduser -u 65532 -S -D -H -G agent agent
 COPY --from=build --chown=65532:65532 /out/service /usr/local/bin/service
+COPY --from=notion-auth --chown=65532:65532 /ntn-auth /usr/local/bin/ntn-auth
 
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/service"]

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Archive, ArchiveRestore, Pencil, Trash2 } from "@lucide/vue";
+import { Archive, ArchiveRestore, PanelRightOpen, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ApiError, platformApiKey, type Artifact, type Evidence, type ExecutionActivity, type ModelProviderConnection, type PersonalSettings, type ResourceCreationAction, type RuntimeEngineStatus, type Session, type SessionMessage, type SessionMessageSnapshot, type SessionWorkflowDraft, type SessionWorkflowFileDecision, type SessionWorkflowLink } from "../api/client";
@@ -77,10 +77,13 @@ const filteredSessions = computed(() => {
   const query = sessionQuery.value.trim().toLocaleLowerCase();
   return query ? sessions.value.filter((item) => item.title.toLocaleLowerCase().includes(query)) : sessions.value;
 });
+function isActiveAssistant(message?: SessionMessage) {
+  return message?.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
+}
 const activeAssistant = computed(() => {
   for (let index = messages.value.length - 1; index >= 0; index--) {
     const message = messages.value[index];
-    if (message?.role === "assistant" && (message.state === "queued" || message.state === "generating" || message.state === "waiting_for_user")) return message;
+    if (isActiveAssistant(message)) return message;
   }
   return undefined;
 });
@@ -117,7 +120,7 @@ function authorizationProvider(message: SessionMessage) {
 }
 const conversationMessages = computed<ConversationMessage[]>(() => messages.value.map((message, index) => {
   const summaries = message.role === "assistant" ? activitySummaries(message) : [];
-  const pending = message.role === "assistant" && ["queued", "generating", "waiting_for_user"].includes(message.state);
+  const pending = isActiveAssistant(message);
   const identity = message.role === "assistant" ? responseIdentity(message) : undefined;
   const provider = authorizationProvider(message);
   const authorizationMessage = provider ? t("sessions.connectorAuthorizationWait", { provider }) : undefined;
@@ -255,7 +258,7 @@ async function open(item: Session) {
     messages.value = loadedMessages.map((message) => ({ ...message, attachments: message.attachments ?? [] }));
     workflowLinks.value = Object.fromEntries(links.map((link) => [link.message_id, link]));
     await nextTick(); scrollToLatest("auto");
-    const pending = [...messages.value].reverse().find((message) => message.role === "assistant" && (message.state === "queued" || message.state === "generating"));
+    const pending = [...messages.value].reverse().find(isActiveAssistant);
     if (pending) lastSessionActivityAt.value = Date.now();
     if (pending) void streamAssistant(item.id, pending.id, generation);
   } catch {
@@ -282,11 +285,11 @@ async function openWorkflowSave(messageID: string) {
       await router.push({ path: `/workflows/${draft.existing_link.workflow_id}`, query: { open_run: draft.existing_link.validation_run_id, from_session: draft.existing_link.session_id } });
       return;
     }
-    workflowDraft.value = draft;
+    workflowDraft.value = { ...draft, resources: draft.resources ?? [], files: draft.files ?? [] };
     workflowDraftMessageID.value = numericID;
     workflowDraftName.value = draft.suggested_name;
     workflowDraftGoal.value = draft.suggested_goal;
-    workflowFileDestinations.value = Object.fromEntries(draft.files.map((file) => [file.source_key, file.available ? "workspace" : "exclude"]));
+    workflowFileDestinations.value = Object.fromEntries((draft.files ?? []).map((file) => [file.source_key, file.available ? "workspace" : "exclude"]));
   } catch { error.value = t("sessions.workflowSave.loadFailed"); }
   finally { loadingWorkflowDraft.value = false; }
 }
@@ -342,7 +345,7 @@ async function send(message: ComposerSubmission) {
     if (selected.value?.id !== sessionID || generation !== pollGeneration) return;
     messages.value.push(pair.user_message, pair.assistant_message);
     lastSessionActivityAt.value = Date.now();
-    if (pair.assistant_message.state === "queued" || pair.assistant_message.state === "generating") void streamAssistant(sessionID, pair.assistant_message.id, generation);
+    if (isActiveAssistant(pair.assistant_message)) void streamAssistant(sessionID, pair.assistant_message.id, generation);
   } finally { sending.value = false; }
 }
 async function decideExecutionPlan(messageID: string, decision: "start" | "direct" | "cancel") {
@@ -354,7 +357,7 @@ async function decideExecutionPlan(messageID: string, decision: "start" | "direc
     const updated = await api.decideSessionExecutionPlan(selected.value.id, numericID, decision, current.execution_plan.version);
     const index = messages.value.findIndex((item) => item.id === numericID);
     if (index >= 0) messages.value[index] = updated;
-    if (updated.state === "queued" || updated.state === "generating") void streamAssistant(selected.value.id, updated.id, pollGeneration);
+    if (isActiveAssistant(updated)) void streamAssistant(selected.value.id, updated.id, pollGeneration);
   } catch { error.value = t("errors.conflict"); }
 }
 async function editExecutionPlan(messageID: string) {
@@ -411,7 +414,7 @@ async function pollAssistant(sessionID: string, messageID: number, generation: n
     if (generation !== pollGeneration || selected.value?.id !== sessionID) return;
     replaceSessionMessages(latest, messageID);
     const message = latest.find((item) => item.id === messageID);
-    if (message && (message.state === "queued" || message.state === "generating")) {
+    if (isActiveAssistant(message)) {
       pollTimer = setTimeout(() => void pollAssistant(sessionID, messageID, generation), 900);
     } else {
       if (cancellingMessageID.value === messageID) cancellingMessageID.value = undefined;
@@ -468,7 +471,7 @@ async function reconcileAssistant(sessionID: string, messageID: number, generati
     if (generation !== pollGeneration || selected.value?.id !== sessionID) return;
     replaceSessionMessages(latest, messageID);
     const message = latest.find((item) => item.id === messageID);
-    if (message?.state === "queued" || message?.state === "generating") {
+    if (isActiveAssistant(message)) {
       if (reconnect) scheduleAssistantReconnect(sessionID, messageID, generation);
       return;
     }
@@ -483,7 +486,7 @@ function resumeAssistantStream() {
   if (document.visibilityState === "hidden") return;
   const sessionID = selected.value?.id;
   const message = activeAssistant.value;
-  if (!sessionID || !message || (message.state !== "queued" && message.state !== "generating")) return;
+  if (!sessionID || !message || !isActiveAssistant(message)) return;
   responseController?.abort();
   void reconcileAssistant(sessionID, message.id, pollGeneration, true);
 }
@@ -739,14 +742,14 @@ onBeforeUnmount(() => { pollGeneration += 1; if (pollTimer) clearTimeout(pollTim
       <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
       <div v-if="setupRequired" class="notice setup-guide"><strong>{{ t('sessions.setupTitle') }}</strong><span>1. {{ t('sessions.setupModel') }}</span><span>2. {{ t('sessions.setupRuntime') }}</span><span>3. {{ t('sessions.setupStart') }}</span><el-button @click="router.push('/settings')">{{ t('nav.settings') }} →</el-button></div>
       <template v-if="selected">
-        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="specialistName">{{ specialistName }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div></header>
+        <header class="conversation-head"><div><h2>{{ selected.title }}</h2><p><template v-if="specialistName">{{ specialistName }} <span>·</span> </template>{{ selected.archived ? t('sessions.archived') : t('sessions.active') }}</p></div><el-button v-if="selectedTaskMessage && !taskPanelOpen" class="task-panel-reopen" text :aria-label="t('taskWorkspace.reopen')" @click="selectTask(selectedTaskMessage.id)"><PanelRightOpen :size="16" />{{ t('taskWorkspace.reopen') }}</el-button></header>
         <ExecutionStatusBar v-if="activeAssistant" :state="activeAssistant.state" :elapsed-ms="activeAssistant.elapsed_ms" :model="statusIdentity?.modelName" :credit-consumption="activeAssistant.credit_consumption" :current-activity="statusActivity" :last-activity-at="lastSessionActivityAt" :model-call-count="statusModelCalls" can-stop :stopping="cancellingMessageID === activeAssistant.id" @stop="cancelGeneration" />
         <div ref="messageStream" class="message-stream" :style="{ paddingBottom: `${composerClearance}px` }" @scroll.passive="updateScrollState">
           <el-skeleton v-if="loadingMessages" :rows="4" animated class="message-loading" :aria-label="t('common.loading')" />
           <div v-else-if="messages.length === 0" class="chat-welcome"><span class="welcome-orb">✦</span><h2>{{ selected.title }}</h2><p>{{ selected.assistant_welcome || t('sessions.welcome') }}</p></div>
-          <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @save-workflow="openWorkflowSave" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
+          <ConversationThread :messages="conversationMessages" :selected-task-id="selectedTaskID" :plan-actions-in-panel-id="taskPanelOpen ? selectedTaskMessage?.id : undefined" :load-attachment="api.getAttachmentDownload" @select-task="selectTask" @save-workflow="openWorkflowSave" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @retry="(id) => retry(messages.findIndex((message) => String(message.id) === id))" @resource-action="(id, decision) => decideResourceAction(id, decision)" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" @copy-error="error = t('errors.copy')" />
         </div>
-        <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @save-workflow="openWorkflowSave" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @attachment-error="error = t('errors.generic')" />
+        <TaskWorkspacePanel v-if="taskPanelOpen && selectedTaskMessage" :message="selectedTaskMessage" :load-attachment="api.getAttachmentDownload" @close="closeTaskPanel" @save-workflow="openWorkflowSave" @download-artifact="downloadSessionArtifact" @open-evidence="openEvidence" @plan-decision="decideExecutionPlan" @edit-plan="editExecutionPlan" @attachment-error="error = t('errors.generic')" />
         <div ref="composerLayer" class="composer-layer">
           <el-button v-if="showJumpToLatest" class="jump-to-latest" circle :aria-label="t('sessions.jumpToLatest')" @click="scrollToLatest()"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5.5 8 4.5 4.5L14.5 8" /></svg></el-button>
           <ConversationComposer :key="selected.id" :scope="{ session_id: selected.id }" :disabled="selected.archived" :send-disabled="setupRequired" :active="Boolean(activeAssistant)" :stopping="Boolean(activeAssistant) && cancellingMessageID === activeAssistant?.id" :initial-skill-id="launchSkill?.sessionID === selected.id ? launchSkill.skillID : undefined" :initial-prompt="launchPrompt?.sessionID === selected.id ? launchPrompt.text : undefined" :authorization-request="cliAuthorizationRequest" :approval-execution-id="activeAssistant?.id" :submit="send" @launch-consumed="launchSkill = undefined" @selection-changed="specialistName = $event.name" @stop="cancelGeneration" />

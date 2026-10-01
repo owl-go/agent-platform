@@ -21,10 +21,14 @@ func (store *recordingBundleStore) PutImmutable(_ context.Context, key string, _
 	return nil
 }
 
-type passingConformance struct{ tested []string }
+type passingConformance struct {
+	tested      []string
+	definitions []Definition
+}
 
-func (suite *passingConformance) Test(_ context.Context, _ []byte, runtimeDigest string, _ Definition) error {
+func (suite *passingConformance) Test(_ context.Context, _ []byte, runtimeDigest string, definition Definition) error {
 	suite.tested = append(suite.tested, runtimeDigest)
+	suite.definitions = append(suite.definitions, definition)
 	return nil
 }
 
@@ -48,12 +52,16 @@ func TestBuilderDerivesRuntimeContractFromPackageMetadata(t *testing.T) {
 	packageBytes := []byte("exact npm package")
 	sum := sha512.Sum512(packageBytes)
 	integrity := "sha512-" + base64.StdEncoding.EncodeToString(sum[:])
-	manifest := []byte(`{"name":"example-cli","version":"1.2.3","bin":{"example":"bin/cli.js"},"agentWorkspace":{"executable":"example","authenticationDriver":"none","supportedArchitectures":["linux-amd64"],"capabilities":[{"id":"read","argvPrefix":["read"],"risk":"low","identities":["user"],"egressHosts":["api.example.test"],"timeoutSeconds":60}]}}`)
-	builder := Builder{Packages: fakePackageBuilder{artifact: PackageArtifact{PackageBytes: packageBytes, BundleBytes: []byte("immutable bundle"), Integrity: integrity, Bins: map[string]string{"example": "bin/cli.js"}, Manifest: manifest}}, Store: &recordingBundleStore{}, Conformance: &passingConformance{}, RuntimeDigests: []string{"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+	manifest := []byte(`{"name":"example-cli","version":"1.2.3","bin":{"example":"bin/cli.js"},"agentWorkspace":{"executable":"example","authenticationDriver":"none","resourceLimits":{"cpuMillis":500,"memoryMiB":256,"childProcesses":16},"supportedArchitectures":["linux-amd64"],"capabilities":[{"id":"read","argvPrefix":["read"],"risk":"low","identities":["user"],"egressHosts":["api.example.test"],"timeoutSeconds":60}]}}`)
+	conformance := &passingConformance{}
+	builder := Builder{Packages: fakePackageBuilder{artifact: PackageArtifact{PackageBytes: packageBytes, BundleBytes: []byte("immutable bundle"), Integrity: integrity, Bins: map[string]string{"example": "bin/cli.js"}, Manifest: manifest}}, Store: &recordingBundleStore{}, Conformance: conformance, RuntimeDigests: []string{"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
 	definition := Definition{ID: "definition-1", Name: "Example", Icon: "terminal", Description: "Reads examples", InstallationType: "npm", Package: "example-cli", Version: "1.2.3", State: StateBuilding, VersionNumber: 1}
 	result, err := builder.Build(context.Background(), definition)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(conformance.definitions) != 1 || conformance.definitions[0].ChildProcesses != 16 || conformance.definitions[0].MemoryMiB != 256 || conformance.definitions[0].CPUMillis != 500 {
+		t.Fatalf("declared resource limits did not reach Conformance: %#v", conformance.definitions)
 	}
 	if result.Integrity != integrity || result.Executable != "example" || result.AuthenticationDriver != "none" || len(result.Capabilities) != 1 || len(result.SupportedArchitectures) != 1 {
 		t.Fatalf("result = %#v", result)

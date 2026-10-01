@@ -7,6 +7,7 @@ import { platformApiKey, type PlatformApi } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
+import ExpertsPage from "./ExpertsPage.vue";
 import ResourceCenterPage from "./ResourceCenterPage.vue";
 
 function api(): PlatformApi {
@@ -24,7 +25,7 @@ function api(): PlatformApi {
 const auth: AuthContext = { isCallback: false, session: { state: ref({ kind: "authenticated", currentUser: { id: "user-1", username: "user", email: "user@example.test", display_name: "User", administrator: false, settings_ready: true } }), accessToken: () => "token", initialize: vi.fn(async () => {}), signIn: vi.fn(async () => {}), signOut: vi.fn(async () => {}), dispose: vi.fn() } };
 
 describe("ResourceCenterPage", () => {
-  it("organizes all reusable resources into one availability-filtered library", async () => {
+  it("organizes all reusable resources into one searchable library", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/resources");
     await router.isReady();
@@ -36,12 +37,15 @@ describe("ResourceCenterPage", () => {
     });
     await flushPromises();
 
-    expect(wrapper.findAll(".resource-center-tabs .el-tabs__item").map((tab) => tab.text())).toEqual(["专家", "技能", "连接器", "知识库"]);
-    expect(wrapper.get(".resource-center-filter-hint").text()).toContain("不推荐未测试");
+    expect(wrapper.find(".resource-center-tabs").exists()).toBe(false);
+    expect(wrapper.find(".resource-center-toolbar .el-input").exists()).toBe(true);
+    expect(wrapper.find(".resource-center-toolbar .el-radio-group").exists()).toBe(false);
+    expect(wrapper.find(".resource-center-filter-hint").exists()).toBe(false);
+    expect(wrapper.getComponent(ExpertsPage).props("availableOnly")).toBe(false);
     expect(wrapper.find(".expert-catalog").exists()).toBe(true);
     expect(wrapper.find(".resource-tabs").exists()).toBe(false);
 
-    await wrapper.findAll(".resource-center-tabs .el-tabs__item")[1]!.trigger("click");
+    await router.push("/resources?tab=skills");
     await flushPromises();
 
     expect(router.currentRoute.value.query.tab).toBe("skills");
@@ -51,7 +55,7 @@ describe("ResourceCenterPage", () => {
     expect(wrapper.get(".extension-catalog-toolbar").text()).toContain("添加技能");
     expect(wrapper.find(".resource-tabs").exists()).toBe(false);
 
-    await wrapper.findAll(".resource-center-tabs .el-tabs__item")[3]!.trigger("click");
+    await router.push("/resources?tab=knowledge");
     await flushPromises();
     expect(router.currentRoute.value.query.tab).toBe("knowledge");
     expect(wrapper.get(".knowledge-card").text()).toContain("交付手册");

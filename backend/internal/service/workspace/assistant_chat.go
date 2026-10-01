@@ -108,23 +108,28 @@ func assistantScopeFallback(assistant aiappdomain.SmartAssistant) string {
 }
 
 func (service *Service) runAssistantModel(ctx context.Context, owner, turnID string, stage int, model aiappdomain.AssistantModel, messages []aiapp.ChatMessage, stream bool, onDelta func(string) error) (aiapp.ChatResult, error) {
+	result, _, err := service.runMeteredModel(ctx, owner, "assistant-turn-"+turnID, stage, model, messages, stream, onDelta)
+	return result, err
+}
+
+func (service *Service) runMeteredModel(ctx context.Context, owner, executionID string, stage int, model aiappdomain.AssistantModel, messages []aiapp.ChatMessage, stream bool, onDelta func(string) error) (aiapp.ChatResult, int64, error) {
 	settings, err := service.workspace.Repository().GetSettings(ctx, owner)
 	if err != nil {
-		return aiapp.ChatResult{}, err
+		return aiapp.ChatResult{}, 0, err
 	}
-	admission, err := service.credits.Admit(ctx, creditsapp.AdmissionRequest{UserID: owner, ExecutionID: "assistant-turn-" + turnID, StagePosition: stage, Timezone: settings.Timezone, ProviderType: model.ProviderType, Protocol: model.Protocol, ModelID: model.ModelID})
+	admission, err := service.credits.Admit(ctx, creditsapp.AdmissionRequest{UserID: owner, ExecutionID: executionID, StagePosition: stage, Timezone: settings.Timezone, ProviderType: model.ProviderType, Protocol: model.Protocol, ModelID: model.ModelID})
 	if err != nil {
-		return aiapp.ChatResult{}, err
+		return aiapp.ChatResult{}, 0, err
 	}
 	ciphertext, err := service.workspace.Repository().GetModelProviderAPIKey(ctx, model.CredentialOwnerID, model.ConnectionID)
 	if err != nil {
 		_ = service.credits.Abort(context.WithoutCancel(ctx), admission)
-		return aiapp.ChatResult{}, err
+		return aiapp.ChatResult{}, 0, err
 	}
 	key, err := service.box.Decrypt(ciphertext, "model-provider:"+model.CredentialOwnerID)
 	if err != nil {
 		_ = service.credits.Abort(context.WithoutCancel(ctx), admission)
-		return aiapp.ChatResult{}, err
+		return aiapp.ChatResult{}, 0, err
 	}
 	result, callErr := service.assistantChatModel.Generate(ctx, aiapp.ChatRequest{Endpoint: model.Endpoint, Protocol: model.Protocol, ModelID: model.ModelID, APIKey: key, Messages: messages, Stream: stream}, onDelta)
 	clear(key)
@@ -132,15 +137,15 @@ func (service *Service) runAssistantModel(ctx context.Context, owner, turnID str
 	defer cancel()
 	if callErr != nil && result.Text == "" {
 		if abortErr := service.credits.Abort(settlementCtx, admission); abortErr != nil {
-			return result, fmt.Errorf("Assistant model failed and Credit reservation could not be released: %w", abortErr)
+			return result, 0, fmt.Errorf("model failed and Credit reservation could not be released: %w", abortErr)
 		}
-		return result, callErr
+		return result, 0, callErr
 	}
-	_, settleErr := service.credits.Settle(settlementCtx, creditsapp.SettlementRequest{Admission: admission, Usage: creditsdomain.Usage{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Known: result.UsageKnown}})
+	consumption, settleErr := service.credits.Settle(settlementCtx, creditsapp.SettlementRequest{Admission: admission, Usage: creditsdomain.Usage{InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, Known: result.UsageKnown}})
 	if settleErr != nil {
-		return result, fmt.Errorf("settle Assistant model Credits: %w", settleErr)
+		return result, 0, fmt.Errorf("settle model Credits: %w", settleErr)
 	}
-	return result, callErr
+	return result, int64(consumption.Amount), callErr
 }
 
 func (service *Service) answerAssistantTurn(ctx context.Context, owner string, conversation aiappdomain.AssistantConversation, turn aiappdomain.AssistantTurn, requestedFAQID, auditSource string, emit func(string) error) (assistantAnswer, error) {

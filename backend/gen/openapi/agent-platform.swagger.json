@@ -4661,6 +4661,38 @@
         ]
       }
     },
+    "/api/v1/workflows/schedule-preview": {
+      "post": {
+        "operationId": "AgentWorkspaceService_PreviewWorkflowSchedule",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PreviewWorkflowScheduleResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1PreviewWorkflowScheduleRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}": {
       "get": {
         "operationId": "AgentWorkspaceService_GetWorkflow",
@@ -4763,6 +4795,34 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/v1WorkflowCredential"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "delete": {
+        "operationId": "AgentWorkspaceService_RevokeWorkflowCredential",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
             }
           },
           "default": {
@@ -9596,6 +9656,26 @@
         }
       }
     },
+    "v1PreviewWorkflowScheduleRequest": {
+      "type": "object",
+      "properties": {
+        "schedule": {
+          "$ref": "#/definitions/v1Schedule"
+        }
+      }
+    },
+    "v1PreviewWorkflowScheduleResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
     "v1PromptOptimizationCandidate": {
       "type": "object",
       "properties": {
@@ -10711,6 +10791,38 @@
         },
         "origin": {
           "$ref": "#/definitions/v1SessionWorkflowLink"
+        },
+        "next_scheduled_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_run_state": {
+          "type": "string"
+        },
+        "last_run_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "run_count_30d": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "succeeded_run_count_30d": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "needs_attention": {
+          "type": "boolean"
+        },
+        "last_run_id": {
+          "type": "string"
+        },
+        "upcoming_schedule_times": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       }
     },

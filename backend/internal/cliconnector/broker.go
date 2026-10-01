@@ -152,6 +152,9 @@ func (broker *Broker) Handle(ctx context.Context, command BrokerCommand) (respon
 			broker.observeInvocation(InvocationEvidence{ConnectorID: definition.ID, ConnectorName: definition.Name, Capability: capability.ID, Succeeded: response.ErrorCode == "" && response.ExitCode == 0})
 		}()
 	}
+	if capability.Risk == RiskHigh && strings.TrimSpace(command.Target) == "" {
+		return brokerFailure("invalid_request", "High-risk CLI command requires a non-empty --target before the -- separator for user confirmation")
+	}
 	request := Request{
 		CapabilityID: command.Capability, RuntimeDigest: broker.runtimeDigest,
 		BundleSHA256: definition.BundleSHA256, Target: command.Target,

@@ -15,8 +15,24 @@ func DisplayIcon(source string) string {
 	switch source {
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
-	case "feishu", "dingtalk":
+	case "feishu", "dingtalk", "notion":
 		return source
 	}
 	return "plug"
+}
+
+// DisplayName and DisplayDescription keep previously published Notion revisions
+// on the current product label without mutating their immutable package metadata.
+func DisplayName(source, declared string) string {
+	if source == "notion" {
+		return "Notion"
+	}
+	return declared
+}
+
+func DisplayDescription(source, declared string) string {
+	if source == "notion" {
+		return "Read and manage Notion pages and query data sources"
+	}
+	return declared
 }
