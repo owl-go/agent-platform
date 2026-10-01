@@ -39,3 +39,22 @@ func TestDisplayIconProjectsReviewedBrands(t *testing.T) {
 		t.Fatalf("unknown source icon = %q", got)
 	}
 }
+
+func TestKlingDisplayIconIsOfficialPNG(t *testing.T) {
+	value := DisplayIcon("kling-ai")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("missing brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := png.DecodeConfig(bytes.NewReader(body))
+	if err != nil || config.Width != 180 || config.Height != 180 {
+		t.Fatalf("invalid Kling icon: %v", err)
+	}
+}

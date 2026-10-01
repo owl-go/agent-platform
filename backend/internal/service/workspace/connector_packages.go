@@ -18,8 +18,8 @@ import (
 	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/objectstore"
-	"agent-platform/backend/internal/teambitioncli"
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -455,7 +455,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
-			if policy.CLI != nil && (policy.CLI.AuthenticationDriver == "dingtalk" || isTeambitionCLILoginPolicy(policy)) {
+			if isBrowserOAuthPolicy(policy) || policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
 				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
 				appID = credentials.ClientID
 			}
@@ -470,7 +470,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 			refreshToken = string(plaintext)
 		}
 	}
-	if refreshToken == "" && isTeambitionCLILoginPolicy(policy) && len(current.RefreshCredentialCiphertext) > 0 {
+	if refreshToken == "" && isBrowserOAuthPolicy(policy) && len(current.RefreshCredentialCiphertext) > 0 {
 		plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
 		if decryptErr != nil {
 			return nil, publicError(decryptErr)
@@ -515,7 +515,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isTeambitionCLILoginPolicy(policy) {
+	if isBrowserOAuthPolicy(policy) {
 		current.RefreshCredentialAAD = aad + ":refresh"
 		current.RefreshCredentialCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), current.RefreshCredentialAAD)
 		if err != nil {
@@ -533,7 +533,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	current.CredentialFormat = "json"
 	current.State = domain.ConnectorAuthorizationActive
 	expiry := result.ExpiresAt
-	if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
+	if !result.RefreshExpiresAt.IsZero() && !isBrowserOAuthPolicy(policy) {
 		expiry = result.RefreshExpiresAt
 	}
 	current.ExpiresAt = &expiry
@@ -665,6 +665,11 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	allowedScopes := map[string]struct{}{}
+	if isKlingMCPLoginPolicy(policy) {
+		for _, scope := range klingmcp.Scopes() {
+			allowedScopes[scope] = struct{}{}
+		}
+	}
 	if policy.CLI != nil {
 		for _, capability := range policy.CLI.Capabilities {
 			for _, identity := range capability.Identities {
@@ -697,8 +702,8 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isTeambitionCLILoginPolicy(policy) {
-		flow, err = service.sealTeambitionCallback(ctx, repository, flow)
+	if isBrowserOAuthPolicy(policy) {
+		flow, err = service.sealBrowserOAuthCallback(ctx, repository, flow, browserOAuthProfileFor(policy))
 		if err != nil {
 			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 			return nil, publicError(err)
@@ -737,8 +742,10 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return nil, publicError(err)
 	}
 	defer clear(deviceCode)
-	if isTeambitionCLILoginPolicy(policy) {
-		var state teambitioncli.Pending
+	if isBrowserOAuthPolicy(policy) {
+		var state struct {
+			Code string `json:"code"`
+		}
 		if json.Unmarshal(deviceCode, &state) != nil {
 			return nil, publicError(domain.ErrInvalid)
 		}
@@ -759,7 +766,7 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
 	if err != nil {
-		if isTeambitionCLILoginPolicy(policy) {
+		if isBrowserOAuthPolicy(policy) {
 			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 		}
@@ -805,14 +812,14 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	var expiry *time.Time
 	if !result.ExpiresAt.IsZero() {
 		value := result.ExpiresAt
-		if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
+		if !result.RefreshExpiresAt.IsZero() && !isBrowserOAuthPolicy(policy) {
 			value = result.RefreshExpiresAt
 		}
 		expiry = &value
 	}
 	var refreshCiphertext []byte
 	refreshAAD := ""
-	if isTeambitionCLILoginPolicy(policy) && result.RefreshToken != "" {
+	if isBrowserOAuthPolicy(policy) && result.RefreshToken != "" {
 		refreshAAD = aad + ":refresh"
 		refreshCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), refreshAAD)
 		if err != nil {
@@ -860,8 +867,11 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
+	if isKlingMCPLoginPolicy(policy) {
+		return "interactive"
+	}
 	if policy.CLI != nil {
-		if isNotionCLILoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) {
+		if isNotionCLILoginPolicy(policy) || isBrowserOAuthPolicy(policy) {
 			return "interactive"
 		}
 		switch policy.CLI.AuthenticationDriver {
@@ -886,11 +896,14 @@ func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 }
 
 func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
+	if isKlingMCPLoginPolicy(policy) {
+		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID}
+	}
 	if isNotionCLILoginPolicy(policy) {
 		return map[string]string{"token": result.AccessToken}
 	}
 	fields := map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
-	if isTeambitionCLILoginPolicy(policy) {
+	if isBrowserOAuthPolicy(policy) {
 		delete(fields, "refresh_token")
 	}
 	return fields
@@ -1219,6 +1232,9 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 				}
 			}
 		}
+	}
+	if isKlingMCPLoginPolicy(policy) {
+		response.RequiredScopes = klingmcp.Scopes()
 	}
 	if response.AuthenticationDriver == "" {
 		response.AuthenticationDriver = policy.AuthMode

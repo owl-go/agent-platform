@@ -111,7 +111,10 @@ func connectorMCPServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 			return domain.MCPServerSnapshot{}, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 		}
 		ciphertext = append([]byte(nil), authorization.CredentialCiphertext...)
-		secretAAD = "connector-authorization:" + ownerID
+		secretAAD = authorization.CredentialAAD
+		if secretAAD == "" {
+			secretAAD = "connector-authorization:" + ownerID
+		}
 	}
 	encoded, err := json.Marshal(map[string]any{"url": optionalConnectorString(configuration.URL), "runner": optionalConnectorString(configuration.Runner), "package": optionalConnectorString(configuration.Package), "package_version": optionalConnectorString(configuration.PackageVersion), "arguments": configuration.Arguments, "environment": configuration.Environment, "egress_hosts": configuration.EgressHosts, "timeout_seconds": configuration.TimeoutSeconds, "resource_limits": map[string]any{"cpu_millis": configuration.CPUMillis, "memory_mib": configuration.MemoryMiB, "child_processes": configuration.ChildProcesses}})
 	if err != nil {

@@ -8,11 +8,16 @@ import (
 //go:embed icons/teambition.png
 var teambitionIcon []byte
 
+//go:embed icons/kling-ai.png
+var klingIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
 // Connectors, including the official Teambition image. Other packages keep
 // the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
+	case "kling-ai":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(klingIcon)
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
 	case "feishu", "dingtalk", "notion", "modao":
