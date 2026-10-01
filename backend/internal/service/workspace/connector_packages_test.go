@@ -120,6 +120,7 @@ func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
 		want   string
 	}{
 		{"Feishu device flow", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "feishu"}}, "interactive"},
+		{"Notion CLI browser login", connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "notion", Version: "0.23.13"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "interactive"},
 		{"reviewed CLI credentials", connectorRevisionPolicy{CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}, "provided"},
 		{"reviewed MCP credentials", connectorRevisionPolicy{AuthMode: "oauth", MCP: &connectorpackage.MCPManifest{}}, "provided"},
 		{"no authorization", connectorRevisionPolicy{AuthMode: "none", MCP: &connectorpackage.MCPManifest{}}, "none"},
@@ -130,6 +131,14 @@ func TestConnectorAuthorizationModeUsesRevisionPolicy(t *testing.T) {
 				t.Fatalf("mode = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestNotionBrowserLoginStoresRuntimeTokenWithoutRefreshMetadata(t *testing.T) {
+	policy := connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "notion"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}
+	fields := connectorAuthorizationCredentialFields(policy, connectorAuthorizationGrant{AccessToken: "ntn_secret-value"})
+	if len(fields) != 1 || fields["token"] != "ntn_secret-value" {
+		t.Fatalf("Notion runtime credential fields = %v", fields)
 	}
 }
 
@@ -149,6 +158,18 @@ func TestConnectorRevisionResponseUsesActivationScopes(t *testing.T) {
 	response := connectorRevisionResponse(revision)
 	if len(response.RequiredScopes) != 1 || response.RequiredScopes[0] != "docx:document:create" {
 		t.Fatalf("activation scopes = %v", response.RequiredScopes)
+	}
+}
+
+func TestNotionConnectorResponsesUseProductNameForExistingRevision(t *testing.T) {
+	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "notion", Version: "0.23.13", Type: connectorpackage.TypeCLI, Name: "Notion CLI", Description: "Read pages with the pinned Notion CLI", AuthMode: "cli"}}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	if got := connectorRevisionResponse(revision); got.Name != "Notion" || got.Description != "Read and manage Notion pages and query data sources" {
+		t.Fatalf("Notion catalog display = %q, %q", got.Name, got.Description)
+	}
+	installation := connectorInstallationDetailsResponse(domain.ConnectorInstallation{PackageSource: "notion"}, revision, false)
+	if installation.Name != "Notion" || installation.Description != "Read and manage Notion pages and query data sources" {
+		t.Fatalf("Notion installation display = %q, %q", installation.Name, installation.Description)
 	}
 }
 

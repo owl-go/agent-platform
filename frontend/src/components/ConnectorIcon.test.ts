@@ -13,6 +13,8 @@ describe("ConnectorIcon", () => {
 
     const modao = mount(ConnectorIcon, { props: { icon: "modao" } });
     expect(modao.find("img").attributes("src")).toContain("modao.png");
+    const notion = mount(ConnectorIcon, { props: { icon: "notion" } });
+    expect(notion.find("img").attributes("src")).toContain("Notion%20connector");
 
     const preset = mount(ConnectorIcon, { props: { icon: "terminal" } });
     expect(preset.find("img").exists()).toBe(false);

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -40,6 +41,27 @@ func TestBrokerRequiresUserActionBeforeHighRiskProcessStart(t *testing.T) {
 	response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: "connector-1", Capability: "identity", Identity: IdentityUser, Target: "chat-1", Arguments: []string{"auth", "status"}})
 	if response.ErrorCode != "user_action_required" || process.starts != 0 {
 		t.Fatalf("response=%#v starts=%d", response, process.starts)
+	}
+}
+
+func TestBrokerRejectsMissingHighRiskTargetBeforeApproval(t *testing.T) {
+	for _, target := range []string{"", "   "} {
+		t.Run(fmt.Sprintf("target=%q", target), func(t *testing.T) {
+			process := &recordingProcess{}
+			definition := brokerDefinition(RiskHigh)
+			coordinator := &recordingApprovalCoordinator{awaitErr: errors.New("invalid CLI command approval request")}
+			broker, err := NewBroker(BrokerConfig{
+				Definitions: []Definition{definition}, RuntimeDigest: definition.RuntimeDigests[0], Wrapper: Wrapper{Process: process},
+				Approval: coordinator, ApprovalContext: ApprovalContext{OwnerID: "owner-1", ExecutionKind: "session", ExecutionID: "42", StageID: "session:42:stage:1"},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := broker.Handle(context.Background(), BrokerCommand{ConnectorID: definition.ID, Capability: "identity", Identity: IdentityUser, Target: target, Arguments: []string{"auth", "status"}})
+			if response.ErrorCode != "invalid_request" || !strings.Contains(response.ErrorMessage, "--target") || coordinator.request.Nonce != "" || process.starts != 0 {
+				t.Fatalf("response=%#v approval_requested=%t starts=%d", response, coordinator.request.Nonce != "", process.starts)
+			}
+		})
 	}
 }
 
@@ -296,4 +318,14 @@ func (coordinator *recordingApprovalCoordinator) Consume(_ context.Context, _ st
 func (coordinator *recordingApprovalCoordinator) Close(context.Context, string, string) error {
 	coordinator.closed++
 	return nil
+}
+
+func TestBrokerRedactsJSONCredentialFieldsBeforeReturningOutput(t *testing.T) {
+	environment := map[string]string{"CONNECTOR_CREDENTIALS_JSON": `{"access_token":"oauth-canary","client_id":"registered-client","nested":{"secret":"nested-canary"}}`, "OTHER_SECRET": "oauth-canary-longer"}
+	for _, output := range []string{"OAuth rejected Bearer oauth-canary; nested-canary; oauth-canary-longer", environment["CONNECTOR_CREDENTIALS_JSON"]} {
+		safe := string(redactBytes([]byte(output), environment))
+		if strings.Contains(safe, "canary") || !strings.Contains(safe, "[REDACTED]") {
+			t.Fatal("individual credential value leaked from CLI output")
+		}
+	}
 }

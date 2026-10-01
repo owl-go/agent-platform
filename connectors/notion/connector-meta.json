@@ -1,0 +1,11 @@
+{
+  "source": "notion",
+  "version": "0.23.15",
+  "type": "cli",
+  "name": "Notion",
+  "description": "Read and manage Notion pages and query data sources",
+  "examples_zh": ["读取 Notion 页面", "查询 Notion 数据源", "创建或编辑 Notion 页面"],
+  "examples_en": ["Read a Notion page", "Query a Notion data source", "Create or edit a Notion page"],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "cli"
+}

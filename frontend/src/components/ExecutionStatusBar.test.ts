@@ -48,4 +48,18 @@ describe("ExecutionStatusBar", () => {
     expect(wrapper.classes()).toContain("is-stale");
     expect(wrapper.text()).toContain("任务仍在运行 · 最后更新于");
   });
+
+  it("does not call a pending user decision a stale running task", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-28T06:00:20Z"));
+    const wrapper = mount(ExecutionStatusBar, {
+      props: { state: "waiting_for_user", lastActivityAt: Date.now() - 20_000 },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    });
+
+    expect(wrapper.text()).toContain("等待用户操作");
+    expect(wrapper.text()).not.toContain("任务仍在运行");
+    expect(wrapper.classes()).not.toContain("is-stale");
+    wrapper.unmount();
+  });
 });

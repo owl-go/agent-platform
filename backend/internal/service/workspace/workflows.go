@@ -88,6 +88,24 @@ func (service *Service) UpdateWorkflow(ctx context.Context, request *workspacev1
 	return workflowResponse(item), nil
 }
 
+func (service *Service) PreviewWorkflowSchedule(ctx context.Context, request *workspacev1.PreviewWorkflowScheduleRequest) (*workspacev1.PreviewWorkflowScheduleResponse, error) {
+	if _, err := service.owner(ctx); err != nil {
+		return nil, err
+	}
+	if request.Schedule == nil {
+		return nil, publicError(fmt.Errorf("%w: Schedule is required", workspacedomain.ErrInvalid))
+	}
+	schedule := workspacedomain.Schedule{Enabled: request.Schedule.Enabled, Frequency: request.Schedule.Frequency, Hour: request.Schedule.Hour, Minute: request.Schedule.Minute, Weekday: request.Schedule.Weekday, Timezone: request.Schedule.Timezone}
+	if err := schedule.Validate(); err != nil {
+		return nil, publicError(err)
+	}
+	response := &workspacev1.PreviewWorkflowScheduleResponse{}
+	for _, scheduledAt := range schedule.Upcoming(time.Now().UTC(), 3) {
+		response.Items = append(response.Items, timestamppb.New(scheduledAt))
+	}
+	return response, nil
+}
+
 func (service *Service) DeleteWorkflow(ctx context.Context, request *workspacev1.DeleteWorkflowRequest) (*workspacev1.DeleteResponse, error) {
 	owner, err := service.owner(ctx)
 	if err != nil {
@@ -152,6 +170,23 @@ func (service *Service) GetWorkflowCredential(ctx context.Context, request *work
 	return &workspacev1.WorkflowCredential{ApiKey: key, ApiSecret: string(secret)}, nil
 }
 
+func (service *Service) RevokeWorkflowCredential(ctx context.Context, request *workspacev1.RevokeWorkflowCredentialRequest) (*workspacev1.DeleteResponse, error) {
+	owner, err := service.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	repository, ok := service.workspace.Repository().(interface {
+		ClearWorkflowCredential(context.Context, string, string) error
+	})
+	if !ok {
+		return nil, publicError(fmt.Errorf("Workflow credential revocation is unavailable"))
+	}
+	if err := repository.ClearWorkflowCredential(ctx, owner, request.WorkflowId); err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+
 func workflowCredentialAAD(owner, workflowID string) string {
 	return "workflow-api-credential:" + owner + ":" + workflowID
 }
@@ -208,6 +243,9 @@ func (service *Service) RunWorkflow(ctx context.Context, request *workspacev1.Ru
 			return nil, publicError(portErr)
 		}
 		item, err = repository.CreatePlannedRun(ctx, owner, request.WorkflowId, trigger, request.TextInput, jsonInput, request.PlanPreference)
+		if err == nil {
+			item, err = service.completeRunPlanGeneration(ctx, repository, owner, request.WorkflowId, item, request.PlanPreference)
+		}
 	}
 	if err != nil {
 		return nil, publicError(err)
@@ -306,6 +344,10 @@ func (service *Service) ContinueRunConversation(ctx context.Context, request *wo
 		return nil, publicError(err)
 	}
 	accepted = true
+	item, err = service.completeRunPlanGeneration(ctx, repository, owner, request.WorkflowId, item, request.PlanPreference)
+	if err != nil {
+		return nil, publicError(err)
+	}
 	setResponseStatus(ctx, 202)
 	return runResponse(item), nil
 }
@@ -385,7 +427,16 @@ func (service *Service) workflowInput(input *workspacev1.WorkflowInput) (workspa
 }
 
 func workflowResponse(item workspacedomain.Workflow) *workspacev1.Workflow {
-	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, KnowledgeBaseIds: append([]string(nil), item.KnowledgeBaseIDs...), ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	response := &workspacev1.Workflow{Id: item.ID, Name: item.Name, Goal: item.Goal, ExpertId: item.ExpertID, ExpertTeamId: item.ExpertTeamID, KnowledgeBaseIds: append([]string(nil), item.KnowledgeBaseIDs...), ApiCredentialConfigured: item.APICredentialConfigured, Deleted: item.DeletedAt != nil, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, LastRunState: optionalString(item.LastRunState), RunCount_30D: int32(item.RunCount30Days), SucceededRunCount_30D: int32(item.SucceededRunCount30Days), NeedsAttention: item.NeedsAttention, LastRunId: optionalString(item.LastRunID)}
+	if item.NextScheduledAt != nil {
+		response.NextScheduledAt = timestamppb.New(*item.NextScheduledAt)
+	}
+	if item.LastRunAt != nil {
+		response.LastRunAt = timestamppb.New(*item.LastRunAt)
+	}
+	for _, scheduledAt := range item.UpcomingScheduleTimes {
+		response.UpcomingScheduleTimes = append(response.UpcomingScheduleTimes, timestamppb.New(scheduledAt))
+	}
 	if item.Origin != nil {
 		response.Origin = sessionWorkflowLinkResponse(*item.Origin)
 	}

@@ -65,28 +65,37 @@ describe("App navigation", () => {
     expect(wrapper.findAll(".nav-group h2").map((heading) => heading.text())).toEqual(["工作区", "资源中心", "系统"]);
     expect(wrapper.findAll(".nav-group").map((group) => group.findAll("a").map((link) => link.attributes("href")))).toEqual([
       ["/home", "/sessions", "/workflows", "/ai-apps/assistants", "/ai-apps/image-creation"],
-      ["/resources"],
+      ["/resources", "/resources?tab=skills", "/resources?tab=connectors", "/resources?tab=knowledge"],
       ["/settings"],
     ]);
-    expect(wrapper.get(".nav-parent").text()).toContain("AI 应用");
-    expect(wrapper.get(".nav-parent").attributes("aria-expanded")).toBe("true");
-    expect(wrapper.findAll(".nav-submenu a").map((link) => link.text())).toEqual(["智能助手", "图片创作"]);
+    const aiApplicationsNav = wrapper.get('[data-nav-id="ai-applications"]');
+    expect(aiApplicationsNav.text()).toContain("AI 应用");
+    expect(aiApplicationsNav.attributes("aria-expanded")).toBe("true");
+    expect(wrapper.findAll("#ai-applications-submenu a").map((link) => link.text())).toEqual(["智能助手", "图片创作"]);
     expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
     expect(wrapper.find(".ai-applications-tabs").exists()).toBe(false);
-    expect(wrapper.get('a[href="/resources"]').text()).toContain("资源库");
-    await wrapper.get(".nav-parent").trigger("click");
-    expect(wrapper.get(".nav-parent").attributes("aria-expanded")).toBe("false");
-    expect(wrapper.find(".nav-submenu").exists()).toBe(false);
-    await wrapper.get(".nav-parent").trigger("click");
-    expect(wrapper.find(".nav-submenu").exists()).toBe(true);
+    expect(wrapper.get('[data-nav-id="resources"]').text()).toContain("资源库");
+    await aiApplicationsNav.trigger("click");
+    expect(aiApplicationsNav.attributes("aria-expanded")).toBe("false");
+    expect(wrapper.find("#ai-applications-submenu").exists()).toBe(false);
+    await aiApplicationsNav.trigger("click");
+    expect(wrapper.find("#ai-applications-submenu").exists()).toBe(true);
     wrapper.unmount();
   });
 
-  it("does not duplicate Knowledge Bases outside the Resource Library", async () => {
+  it("exposes each Resource Library type in its secondary navigation directory", async () => {
     const wrapper = await mountAt("/sessions");
 
     expect(wrapper.find('a[href="/knowledge-bases"]').exists()).toBe(false);
-    expect(wrapper.get('a[href="/resources"]').text()).toContain("资源库");
+    const resourcesNav = wrapper.get('[data-nav-id="resources"]');
+    expect(resourcesNav.text()).toContain("资源库");
+    expect(resourcesNav.attributes("aria-expanded")).toBe("true");
+    expect(wrapper.findAll("#resources-submenu a").map((link) => link.text())).toEqual(["专家", "技能", "连接器", "知识库"]);
+    await resourcesNav.trigger("click");
+    expect(resourcesNav.attributes("aria-expanded")).toBe("false");
+    expect(wrapper.find("#resources-submenu").exists()).toBe(false);
+    await resourcesNav.trigger("click");
+    expect(wrapper.find("#resources-submenu").exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -109,9 +118,24 @@ describe("App navigation", () => {
   it("renders AI applications as a secondary navigation directory", async () => {
     const wrapper = await mountAt("/ai-apps/assistants/assistant-1");
 
-    expect(wrapper.get(".nav-parent").classes()).toContain("router-link-active");
+    expect(wrapper.get('[data-nav-id="ai-applications"]').classes()).toContain("router-link-active");
     expect(wrapper.get('a[href="/ai-apps/assistants"]').classes()).toContain("router-link-active");
     expect(wrapper.find('a[href="/ai-creation/image-generation"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each([
+    ["/resources", "/resources"],
+    ["/resources?tab=skills", "/resources?tab=skills"],
+    ["/resources?tab=connectors", "/resources?tab=connectors"],
+    ["/resources?tab=knowledge", "/resources?tab=knowledge"],
+    ["/resources/skills/skill-1", "/resources?tab=skills"],
+  ])("keeps the matching Resource Library child selected at %s", async (path, selectedHref) => {
+    const wrapper = await mountAt(path);
+
+    expect(wrapper.get('[data-nav-id="resources"]').classes()).toContain("router-link-active");
+    expect(wrapper.get(`#resources-submenu a[href="${selectedHref}"]`).classes()).toContain("router-link-active");
+    expect(wrapper.findAll("#resources-submenu a.router-link-active")).toHaveLength(1);
     wrapper.unmount();
   });
 

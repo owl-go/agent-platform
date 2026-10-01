@@ -1,8 +1,13 @@
 package workspace
 
 import (
+	accountapplication "agent-platform/backend/internal/biz/account/application"
+	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
+	"agent-platform/backend/internal/productanalytics"
 	"encoding/base64"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -46,5 +51,23 @@ func TestIssueWorkflowTokenCreates72HourJWT(t *testing.T) {
 	}
 	if !expires.Equal(now.Add(72*time.Hour)) || claims.ExpiresAt != expires.Unix() {
 		t.Fatalf("expiry = %v / %d", expires, claims.ExpiresAt)
+	}
+}
+
+func TestOnlyExactTeambitionGETCallbackBypassesBearerAuthentication(t *testing.T) {
+	filter, err := NewAuthenticationFilter(&accountapplication.Service{}, &workspaceapplication.Service{}, productanalytics.Nop{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := filter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	for _, test := range []struct {
+		method, path string
+		status       int
+	}{{"GET", teambitionOAuthCallbackPath, 204}, {"POST", teambitionOAuthCallbackPath, 401}, {"GET", teambitionOAuthCallbackPath + "/other", 401}, {"GET", "/api/v1/connectors/teambition/authorizations", 401}} {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(test.method, test.path, nil))
+		if recorder.Code != test.status {
+			t.Fatalf("%s %s: %d", test.method, test.path, recorder.Code)
+		}
 	}
 }

@@ -25,6 +25,113 @@ function mountManager(api: PlatformApi, administrator = false, language = "zh-CN
 }
 
 describe("ExtensionManager", () => {
+  it("starts Notion browser login from the setup-required card without asking for a token", async () => {
+    const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "active" as const, authorized: false, version: 1, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const beginConnectorAuthorizationFlow = vi.fn(async () => ({ id: "flow-1", installation_id: installation.id, identity: "user", scopes: [], state: "waiting_for_user", action_url: "https://app.notion.com/workers/cli-login?verificationCode=ABC-123" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      expect(wrapper.get(".published-connector-card").text()).toContain("需要设置");
+      const setup = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接");
+      expect(setup).toBeDefined();
+      await setup!.trigger("click");
+      await flushPromises();
+      expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
+      expect(wrapper.get(".published-connector-card").text()).toContain("ABC-123");
+      expect(wrapper.find('a[href="https://app.notion.com/workers/cli-login?verificationCode=ABC-123"]').exists()).toBe(true);
+      expect(document.body.querySelector('[data-testid="notion-connector-token"]')).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
+  it("offers a direct connect action for a disabled Notion installation", async () => {
+    const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "disabled" as const, authorized: false, version: 2, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const installPublishedConnector = vi.fn(async () => ({ ...installation, state: "active" as const }));
+    const beginConnectorAuthorizationFlow = vi.fn(async () => ({ id: "flow-1", installation_id: installation.id, identity: "user", scopes: [], state: "waiting_for_user", action_url: "https://app.notion.com/workers/cli-login?verificationCode=ABC-123" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, state: installPublishedConnector.mock.calls.length ? "active" as const : "disabled" as const }]), listConnectorAuthorizations: vi.fn(async () => []), installPublishedConnector, beginConnectorAuthorizationFlow } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      const actions = () => wrapper.findAll(".published-connector-card .extension-card-actions button").map((button) => button.text());
+      expect(actions()).toContain("连接");
+      const connect = wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接")!;
+      expect(connect.find(".lucide-plus-icon").exists()).toBe(true);
+      await connect.trigger("click");
+      await flushPromises();
+      expect(installPublishedConnector).toHaveBeenCalledWith("notion");
+      expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
+      expect(document.body.querySelector('[data-testid="notion-connector-token"]')).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
+  it("upgrades an older Notion package before starting browser login", async () => {
+    const installation = { id: "notion-installation", source: "notion", active_revision_id: "revision-old", state: "active" as const, authorized: false, version: 3, package_version: "0.23.13", name: "Notion", description: "", authentication_driver: "connector_package", upgrade_available: true };
+    const publication = { source: "notion", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "notion", package_version: "0.23.14", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const upgraded = { ...installation, active_revision_id: "revision-new", version: 4, package_version: "0.23.14", upgrade_available: false };
+    const upgradeConnectorInstallation = vi.fn(async () => upgraded);
+    const beginConnectorAuthorizationFlow = vi.fn(async () => ({ id: "flow-1", installation_id: installation.id, identity: "user", scopes: [], state: "waiting_for_user", action_url: "https://app.notion.com/workers/cli-login?verificationCode=ABC-123" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgradeConnectorInstallation.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation, beginConnectorAuthorizationFlow } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      await wrapper.findAll(".published-connector-card .extension-card-actions button").find((button) => button.text() === "连接")!.trigger("click");
+      await flushPromises();
+      expect(upgradeConnectorInstallation).toHaveBeenCalledWith(installation.id, installation.version);
+      expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
+      expect(upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(beginConnectorAuthorizationFlow.mock.invocationCallOrder[0]!);
+    } finally { wrapper.unmount(); }
+  });
+
+  it("connects a published WeCom package with provided Bot credentials", async () => {
+    let authorized = false;
+    const installation = { id: "installation-1", source: "wecom", active_revision_id: "revision-1", state: "active" as const, authorized: false, version: 1, package_version: "1.3.4", name: "企业微信", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "wecom", active_revision_id: "revision-1", state: "available" as const, version: 1, revision: { id: "revision-1", source: "wecom", package_version: "1.3.4", mode: "cli", sha256: "a".repeat(64), name: "企业微信", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => { authorized = true; return { ...installation, authorized: true }; });
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    await flushPromises();
+    const connect = wrapper.findAll(".published-connector-card button").find((item) => item.text() === "连接");
+    expect(connect).toBeDefined();
+    await connect!.trigger("click");
+    await flushPromises();
+    const form = new DOMWrapper(document.body).get(".provided-connector-form");
+    await form.get('input[name="bot_id"]').setValue("bot-123");
+    await form.get('input[name="secret"]').setValue("secret-456");
+    await form.trigger("submit");
+    await flushPromises();
+    expect(connectConnector).toHaveBeenCalledWith(installation.id, "user", [], JSON.stringify({ bot_id: "bot-123", secret: "secret-456" }));
+    expect(new DOMWrapper(document.body).find(".provided-connector-form").exists()).toBe(false);
+    expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+    wrapper.unmount();
+  });
+  it.each([false, true])("opens Teambition browser OAuth and upgrades old installations first (old: %s)", async (old) => {
+    const installation = { id: "teambition-installation", source: "teambition", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const scopes = ["user:read", "project:read", "task:read", "task:write"];
+    const publication = { source: "teambition", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "teambition", package_version: "0.3.5", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+    const upgraded = { ...installation, package_version: "0.3.5", upgrade_available: false, version: 2 };
+    const upgrade = vi.fn(async () => upgraded);
+    const begin = vi.fn(async () => ({ id: "flow-tb", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://account.teambition.com/oauth2/mcp/authorize?state=sealed&code_challenge=challenge" }));
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      await wrapper.findAll(".published-connector-card button").find(item => item.text() === "连接")!.trigger("click");
+      await flushPromises();
+      expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
+      expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://account.teambition.com/oauth2/mcp/authorize"));
+      expect(api.connectConnector).not.toHaveBeenCalled();
+      expect(api.beginConnectorSetup).not.toHaveBeenCalled();
+      expect(document.querySelector('input[name="user_token"]')).toBeNull();
+      expect(wrapper.find('a[href^="https://account.teambition.com/"]').exists()).toBe(true);
+    } finally { wrapper.unmount(); }
+  });
+
   it("opens DingTalk device authorization from an installed package without Feishu application setup", async () => {
     const installation = { id: "installation-1", source: "dingtalk", active_revision_id: "revision-1", state: "active", authorized: false, version: 1, package_version: "1.0.62", name: "钉钉", description: "", authentication_driver: "dingtalk", upgrade_available: false };
     const publication = { source: "dingtalk", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "dingtalk", package_version: "1.0.62", mode: "cli", sha256: "a".repeat(64), name: "钉钉", description: "", icon: "plug", authentication_driver: "dingtalk", runtime_digests: [], conformance_available: true, required_scopes: [] } };
@@ -33,6 +140,9 @@ describe("ExtensionManager", () => {
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow, beginConnectorSetup } as unknown as PlatformApi;
     const wrapper = mountManager(api);
     await flushPromises();
+    expect(wrapper.find(".published-connector-card .connector-card-heading .connector-card-icon").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card .connector-card-header > .extension-card-actions").exists()).toBe(true);
+    expect(wrapper.find(".published-connector-card > .connector-card-icon").exists()).toBe(false);
     await wrapper.get(".published-connector-card .extension-card-actions button").trigger("click");
     await flushPromises();
     expect(beginConnectorSetup).not.toHaveBeenCalled();
@@ -349,6 +459,9 @@ describe("ExtensionManager", () => {
     expect(skillGroups).toHaveLength(2);
     expect(skillGroups[0]!.text()).toContain("平台技能");
     expect(skillGroups[0]!.text()).toContain(platformSkill.name);
+    expect(skillGroups[0]!.find(".skill-card-heading .profile-icon").exists()).toBe(true);
+    expect(skillGroups[0]!.find(".skill-card-header > .extension-card-actions").exists()).toBe(true);
+    expect(skillGroups[0]!.find(".skill-catalog-card > .profile-icon").exists()).toBe(false);
     expect(skillGroups[0]!.find('button[aria-label="删除"]').exists()).toBe(false);
     expect(skillGroups[1]!.text()).toContain("我的技能");
     expect(skillGroups[1]!.text()).toContain(mySkill.name);
@@ -575,6 +688,9 @@ describe("ExtensionManager", () => {
     await flushPromises();
 
     expect(wrapper.findAll(".connector-catalog-grid > .connector-catalog-card")).toHaveLength(2);
+    expect(wrapper.findAll(".connector-card-heading .connector-card-icon")).toHaveLength(2);
+    expect(wrapper.findAll(".connector-card-header > .extension-card-actions")).toHaveLength(2);
+    expect(wrapper.find(".connector-catalog-card > .connector-card-icon").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("第三方 CLI");
     wrapper.unmount();
   });

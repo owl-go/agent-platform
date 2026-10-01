@@ -590,6 +590,43 @@ func TestBuildInstructionDescribesOnlyReviewedCLIConnectorForms(t *testing.T) {
 	}
 }
 
+func TestBuildInstructionRequiresTargetForHighRiskCLICommand(t *testing.T) {
+	capabilities, err := json.Marshal([]cliconnector.Capability{
+		{ID: "page-read", ArgvPrefix: []string{"pages", "get"}, Risk: cliconnector.RiskLow, Identities: []cliconnector.Identity{cliconnector.IdentityUser}},
+		{ID: "page-create", ArgvPrefix: []string{"pages", "create"}, Risk: cliconnector.RiskHigh, Identities: []cliconnector.Identity{cliconnector.IdentityUser}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Instruction: "Create a test page", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "notion-1", Name: "Notion", PackageObjectKey: "packages/notion", Capabilities: capabilities}}}}
+	instruction := buildInstruction(job, nil)
+	for _, want := range []string{
+		"--capability page-read --identity user [--target <target>] -- pages get",
+		"--capability page-create --identity user --target <target> -- pages create",
+		"High-risk commands require a non-empty --target before the -- separator",
+	} {
+		if !strings.Contains(instruction, want) {
+			t.Fatalf("missing reviewed command guidance %q", want)
+		}
+	}
+}
+
+func TestManagedWeComLargeCatalogUsesCompactSkillInstruction(t *testing.T) {
+	capabilities := make([]cliconnector.Capability, 90)
+	for i := range capabilities {
+		capabilities[i] = cliconnector.Capability{ID: fmt.Sprintf("command_%d", i), ArgvPrefix: []string{"doc", "search"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}
+	}
+	encoded, err := json.Marshal(capabilities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := application.ExecutionJob{Instruction: "Find a document", Snapshot: domain.ExecutionSnapshot{CLIConnectors: []domain.CLIConnectorSnapshot{{ID: "wecom-1", Name: "企业微信", Executable: "wecom-workspace", AuthenticationDriver: "connector_package", PackageObjectKey: "packages/wecom", Capabilities: encoded}}}}
+	instruction := buildInstruction(job, nil)
+	if !strings.Contains(instruction, "/run/agent-credentials/connector-skills/wecom-1/SKILL.md") || !strings.Contains(instruction, "capabilities.json") || !strings.Contains(instruction, "--identity <reviewed-identity>") || strings.Contains(instruction, "command_89") {
+		t.Fatalf("WeCom large-catalog instruction = %q", instruction)
+	}
+}
+
 func TestSelectedFeishuConnectorProvidesSkillBeforeCLIUse(t *testing.T) {
 	capabilities, err := json.Marshal([]cliconnector.Capability{{ID: "im_messages_send", ArgvPrefix: []string{"im", "+messages-send"}, Identities: []cliconnector.Identity{cliconnector.IdentityUser}}})
 	if err != nil {

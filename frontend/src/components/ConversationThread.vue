@@ -8,7 +8,7 @@ import { displayArtifactNames } from "../artifactDisplay";
 import ArtifactDisclosure from "./ArtifactDisclosure.vue";
 import ConversationAttachments from "./ConversationAttachments.vue";
 import CreditConsumption from "./CreditConsumption.vue";
-import { runtimeEngineDisplayName, type Artifact, type Evidence, type ExpertStage } from "../api/client";
+import type { Artifact, Evidence, ExpertStage } from "../api/client";
 import type { ConversationActivityKind, ConversationMessage } from "../conversationThread";
 import { hasTaskWorkspaceContent } from "../taskWorkspace";
 
@@ -16,6 +16,7 @@ const props = defineProps<{
   messages: ConversationMessage[];
   loadAttachment: (id: string) => Promise<Blob>;
   selectedTaskId?: string;
+  planActionsInPanelId?: string;
 }>();
 const emit = defineEmits<{
   downloadArtifact: [artifact: Artifact];
@@ -123,9 +124,16 @@ function evidenceActionLabel(evidence: Evidence) {
 function canOpenEvidence(evidence: Evidence) {
   return evidence.kind === "knowledge" && evidence.state === "succeeded" && Boolean(evidence.container_id && evidence.citation?.revision_id);
 }
-function planStateLabel(state: string) { return t(`sessions.executionPlan.states.${state}`); }
+function planStateLabel(plan: NonNullable<ConversationMessage["executionPlan"]>) {
+  if (plan.state === "approved" && !plan.reasons?.includes("user_requested")) return t("sessions.executionPlan.automaticStart");
+  return t(`sessions.executionPlan.states.${plan.state}`);
+}
 function planStepStateLabel(state: string) { return t(`sessions.executionPlan.stepStates.${state}`); }
 function planCodeLabel(group: "reasons" | "sideEffects", code: string) { return t(`sessions.executionPlan.${group}.${code}`); }
+function planCredits(hundredths: number | undefined) {
+  const amount = Number(hundredths ?? 0);
+  return Number.isFinite(amount) && amount >= 0 ? (amount / 100).toFixed(2) : "—";
+}
 onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 </script>
 
@@ -145,21 +153,22 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         <div v-else-if="message.role === 'assistant' && isPending(message) && message.finalizing" class="finalizing-state">{{ message.progressTitle || t('sessions.progress.finalizing') }}</div>
 
         <section v-if="message.role === 'assistant' && message.executionPlan" class="execution-plan-card" :class="`is-${message.executionPlan.state}`" aria-live="polite">
-          <header><div><small>{{ t('sessions.executionPlan.title') }}</small><strong>{{ message.executionPlan.objective }}</strong></div><span>{{ planStateLabel(message.executionPlan.state) }}</span></header>
+          <header><div><small>{{ t('sessions.executionPlan.title') }}</small><strong>{{ message.executionPlan.objective }}</strong></div><span>{{ planStateLabel(message.executionPlan) }}</span></header>
+          <p v-if="message.executionPlan.generator === 'model_failed'" class="muted" role="status">{{ t('sessions.executionPlan.modelFailedHint') }}</p>
           <ol class="execution-plan-steps">
-            <li v-for="step in message.executionPlan.steps" :key="step.id" :class="`is-${step.state}`"><span>{{ step.position }}</span><div><strong>{{ step.label }}</strong><small>{{ planStepStateLabel(step.state) }}</small></div></li>
+            <li v-for="step in message.executionPlan.steps ?? []" :key="step.id" :class="`is-${step.state}`"><span>{{ step.position }}</span><div><strong>{{ step.label || t(`taskWorkspace.stepKinds.${step.kind}`) }}</strong><small>{{ planStepStateLabel(step.state) }}</small></div></li>
           </ol>
           <dl class="execution-plan-meta">
-            <div v-if="message.executionPlan.resources.length"><dt>{{ t('sessions.executionPlan.resources') }}</dt><dd>{{ message.executionPlan.resources.map((item) => item.name).join(' · ') }}</dd></div>
-            <div v-if="message.executionPlan.side_effects.length"><dt>{{ t('sessions.executionPlan.sideEffectsTitle') }}</dt><dd>{{ message.executionPlan.side_effects.map((item) => planCodeLabel('sideEffects', item)).join(' · ') }}</dd></div>
-            <div><dt>{{ t('sessions.executionPlan.estimate') }}</dt><dd>{{ t('sessions.executionPlan.estimateValue', { calls: message.executionPlan.estimated_model_calls, credits: (message.executionPlan.estimated_credit_hundredths / 100).toFixed(2) }) }}</dd></div>
-            <div><dt>{{ t('sessions.executionPlan.generationCost') }}</dt><dd>{{ t('sessions.executionPlan.generationCostValue', { credits: (message.executionPlan.generation_credit_hundredths / 100).toFixed(2) }) }}</dd></div>
+            <div v-if="message.executionPlan.resources?.length"><dt>{{ t('sessions.executionPlan.resources') }}</dt><dd>{{ message.executionPlan.resources.map((item) => item.name).join(' · ') }}</dd></div>
+            <div v-if="message.executionPlan.side_effects?.length"><dt>{{ t('sessions.executionPlan.sideEffectsTitle') }}</dt><dd>{{ message.executionPlan.side_effects.map((item) => planCodeLabel('sideEffects', item)).join(' · ') }}</dd></div>
+            <div><dt>{{ t('sessions.executionPlan.estimate') }}</dt><dd>{{ t('sessions.executionPlan.estimateValue', { calls: message.executionPlan.estimated_model_calls ?? 0, credits: planCredits(message.executionPlan.estimated_credit_hundredths) }) }}</dd></div>
+            <div><dt>{{ t('sessions.executionPlan.generationCost') }}</dt><dd>{{ t(message.executionPlan.generator === 'model' || message.executionPlan.generator === 'model_failed' ? 'sessions.executionPlan.modelGenerationCostValue' : 'sessions.executionPlan.generationCostValue', { credits: planCredits(message.executionPlan.generation_credit_hundredths) }) }}</dd></div>
           </dl>
-          <small class="execution-plan-reasons">{{ message.executionPlan.reasons.map((item) => planCodeLabel('reasons', item)).join(' · ') }}</small>
-          <footer v-if="message.executionPlan.state === 'pending'">
+          <small v-if="message.executionPlan.reasons?.length" class="execution-plan-reasons">{{ message.executionPlan.reasons.map((item) => planCodeLabel('reasons', item)).join(' · ') }}</small>
+          <footer v-if="message.executionPlan.state === 'pending' && message.id !== props.planActionsInPanelId">
             <el-button type="primary" @click="emit('planDecision', message.id, 'start')">{{ t('sessions.executionPlan.start') }}</el-button>
             <el-button @click="emit('editPlan', message.id)">{{ t('sessions.executionPlan.edit') }}</el-button>
-            <el-button v-if="!message.executionPlan.side_effects.length" @click="emit('planDecision', message.id, 'direct')">{{ t('sessions.executionPlan.direct') }}</el-button>
+            <el-button v-if="!message.executionPlan.side_effects?.length" @click="emit('planDecision', message.id, 'direct')">{{ t('sessions.executionPlan.direct') }}</el-button>
             <el-button text @click="emit('planDecision', message.id, 'cancel')">{{ t('common.cancel') }}</el-button>
           </footer>
         </section>
@@ -213,7 +222,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 
         <div v-if="message.role === 'assistant' && visibleStages(message).length" class="expert-stage-list">
           <details v-for="stage in visibleStages(message)" :key="`${message.id}-${stage.position}-${stage.expert_id}`">
-            <summary><span>{{ stage.position }}/{{ stage.total || message.stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.runtime_engine"> · {{ runtimeEngineDisplayName(stage.runtime_engine) }}</template><template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary>
+            <summary><span>{{ stage.position }}/{{ stage.total || message.stages?.length }} · {{ stage.expert_name }}</span><small>{{ stageStateLabel(stage.state) }}<template v-if="stage.provider_model_name"> · {{ stage.provider_model_name }}</template><template v-if="stage.elapsed_ms"> · {{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</template></small></summary>
             <div v-if="stage.final_text" class="markdown-body" v-html="renderMarkdown(displayArtifactNames(stage.final_text, message.artifacts))"></div>
             <p v-else-if="stage.error">{{ stage.error }}</p>
             <button v-if="stage.final_text" type="button" class="stage-copy" @click="copy(stage.final_text, stageCopyKey(message.id, stage.position))">{{ isCopied(stageCopyKey(message.id, stage.position)) ? t('common.copied') : t('common.copy') }}</button>

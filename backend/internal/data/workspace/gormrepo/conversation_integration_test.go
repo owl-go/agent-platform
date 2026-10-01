@@ -66,6 +66,120 @@ func conversationTestDatabase(t *testing.T) *gorm.DB {
 	return db
 }
 
+func TestPlannedSessionMessageWithConnectorUsesAllowedProgressStage(t *testing.T) {
+	db := conversationTestDatabase(t)
+	ctx := context.Background()
+	repository := New(db, nil)
+	owner, connection, model, sessionID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if err := db.Exec(query, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner)
+	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses"]','test')`, connection, owner)
+	exec(`INSERT INTO model_provider_credential_versions(connection_id,connection_version,api_key_ciphertext) VALUES(?,1,'test')`, connection)
+	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name) VALUES(?,?,'model','Model')`, model, connection)
+	defaults, _ := json.Marshal(map[string]string{"codex": model})
+	exec(`INSERT INTO personal_settings(user_id,default_runtime_engine,runtime_model_defaults) VALUES(?,'codex',?::jsonb)`, owner, string(defaults))
+	exec(`INSERT INTO sessions(id,owner_user_id) VALUES(?,?)`, sessionID, owner)
+	scope := domain.ConversationScope{SessionID: sessionID}
+	selection, err := repository.GetConversationSelection(ctx, owner, scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection.CLIConnectors = []domain.CLIConnectorSnapshot{{ID: uuid.NewString(), Name: "Feishu", Capabilities: json.RawMessage(`[{"risk":"high"}]`)}}
+	if err := db.Transaction(func(tx *gorm.DB) error { return saveConversationSelection(tx, owner, scope, &selection, false) }); err != nil {
+		t.Fatal(err)
+	}
+	_, assistant, err := repository.CreatePlannedMessagePair(ctx, owner, sessionID, "send a group message", nil, selection.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if assistant.State != "queued" || assistant.ExecutionPlan == nil || assistant.ExecutionPlan.State != "approved" || assistant.ProgressStage != "preparing" {
+		t.Fatalf("automatic Session Plan blocked execution: state=%q progress=%q plan=%#v", assistant.State, assistant.ProgressStage, assistant.ExecutionPlan)
+	}
+	_, explicit, err := repository.CreatePlannedMessagePair(ctx, owner, sessionID, "send a second group message", nil, selection.ID, domain.PlanPreferenceAlways)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if explicit.State != "waiting_for_user" || explicit.ExecutionPlan == nil || explicit.ExecutionPlan.State != "pending" || explicit.ProgressStage != "" {
+		t.Fatalf("explicit Session Plan did not wait: state=%q progress=%q plan=%#v", explicit.State, explicit.ProgressStage, explicit.ExecutionPlan)
+	}
+}
+
+func TestWorkflowPlansOnlyWaitWhenExplicitlyRequested(t *testing.T) {
+	db := conversationTestDatabase(t)
+	ctx := context.Background()
+	repository := New(db, nil)
+	owner, connection, model, workflowID := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if err := db.Exec(query, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner)
+	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses"]','test')`, connection, owner)
+	exec(`INSERT INTO model_provider_credential_versions(connection_id,connection_version,api_key_ciphertext) VALUES(?,1,'test')`, connection)
+	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name) VALUES(?,?,'model','Model')`, model, connection)
+	defaults, _ := json.Marshal(map[string]string{"codex": model})
+	exec(`INSERT INTO personal_settings(user_id,default_runtime_engine,runtime_model_defaults) VALUES(?,'codex',?::jsonb)`, owner, string(defaults))
+	exec(`INSERT INTO workflows(id,owner_user_id,name,goal,workspace_path) VALUES(?,?,'Workflow','Send report','workspace/test')`, workflowID, owner)
+
+	automatic, err := repository.CreatePlannedRun(ctx, owner, workflowID, "manual", nil, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if automatic.State != "queued" || automatic.ExecutionPlan == nil || automatic.ExecutionPlan.State != "approved" {
+		t.Fatalf("automatic Workflow Plan blocked execution: %#v", automatic)
+	}
+	continued, err := repository.ContinuePlannedRunConversation(ctx, owner, workflowID, automatic.ID, "send another report", nil, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if continued.State != "queued" || continued.ExecutionPlan == nil || continued.ExecutionPlan.State != "approved" {
+		t.Fatalf("automatic follow-up Plan blocked execution: %#v", continued)
+	}
+	explicit, err := repository.CreatePlannedRun(ctx, owner, workflowID, "manual", nil, nil, domain.PlanPreferenceAlways)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if explicit.State != "waiting_for_user" || explicit.ExecutionPlan == nil || explicit.ExecutionPlan.State != "pending" {
+		t.Fatalf("explicit Workflow Plan did not wait: %#v", explicit)
+	}
+	explicitFollowUp, err := repository.ContinuePlannedRunConversation(ctx, owner, workflowID, automatic.ID, "review the report first", nil, "", domain.PlanPreferenceAlways)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if explicitFollowUp.State != "waiting_for_user" || explicitFollowUp.ExecutionPlan == nil || explicitFollowUp.ExecutionPlan.State != "pending" {
+		t.Fatalf("explicit follow-up Plan did not wait: %#v", explicitFollowUp)
+	}
+	events, err := repository.ListRunEvents(ctx, owner, workflowID, automatic.ID, 0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Type != "run.queued" {
+		t.Fatalf("automatic Run events = %#v", events)
+	}
+	t.Cleanup(func() { _ = repository.releaseWorkerClaimLock(context.Background()) })
+	claimed, err := repository.ClaimNext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claimed == nil || claimed.ID != automatic.ID {
+		t.Fatalf("automatic Run was not claimable: %#v", claimed)
+	}
+	started, err := repository.GetRun(ctx, owner, workflowID, automatic.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if started.State != "running" || started.ExecutionPlan == nil || started.ExecutionPlan.State != "executing" {
+		t.Fatalf("automatic Run did not start its Plan: %#v", started)
+	}
+}
+
 func TestExistingConversationsUseCurrentExecutionDefaultsForNewTurns(t *testing.T) {
 	db := conversationTestDatabase(t)
 	ctx := context.Background()

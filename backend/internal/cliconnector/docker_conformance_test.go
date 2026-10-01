@@ -88,3 +88,25 @@ func testBundle(t *testing.T, files map[string]string) []byte {
 	}
 	return output.Bytes()
 }
+
+func TestDockerConformanceUsesDeclaredResourceLimits(t *testing.T) {
+	digest := "sha256:" + strings.Repeat("a", 64)
+	uid, gid := os.Getuid(), os.Getgid()
+	if uid == 0 {
+		uid, gid = 65532, 65532
+	}
+	var arguments []string
+	suite, err := NewDockerConformance(DockerConformanceConfig{DockerCommand: "docker", Runtime: "runsc", TempRoot: t.TempDir(), RuntimeImages: map[string]string{digest: "registry.example/runtime@" + digest}, UID: uid, GID: gid, Timeout: time.Minute}, func(_ context.Context, _ string, args ...string) error { arguments = slices.Clone(args); return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := suite.Test(context.Background(), testBundle(t, map[string]string{"node_modules/.bin/tool": "#!/bin/sh\n"}), digest, Definition{Executable: "tool", CPUMillis: 500, MemoryMiB: 256, ChildProcesses: 16}); err != nil {
+		t.Fatal(err)
+	}
+	for flag, want := range map[string]string{"--cpus": "0.5", "--memory": "268435456", "--pids-limit": "16"} {
+		index := slices.Index(arguments, flag)
+		if index < 0 || arguments[index+1] != want {
+			t.Errorf("%s = %v, want %s", flag, arguments, want)
+		}
+	}
+}

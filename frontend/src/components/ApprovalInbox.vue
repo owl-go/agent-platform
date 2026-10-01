@@ -2,7 +2,7 @@
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { ApiError, platformApiKey, type CommandApproval } from "../api/client";
-import { embeddedSessionApprovalID } from "../commandApprovalPlacement";
+import { embeddedCommandApproval } from "../commandApprovalPlacement";
 import CommandApprovalCards from "./CommandApprovalCards.vue";
 
 const api = inject(platformApiKey)!;
@@ -11,9 +11,15 @@ const approvals = ref<CommandApproval[]>([]);
 const identities = ref<Record<string, "user" | "bot">>({});
 const decidingID = ref<string>();
 const decisionNotice = ref<{ kind: "success" | "error"; message: string; executionKind: CommandApproval["execution_kind"]; executionID: string }>();
-const embeddedApprovals = computed(() => approvals.value.filter((item) => item.execution_kind === "session" && item.execution_id === embeddedSessionApprovalID.value));
+const embeddedApprovals = computed(() => {
+  const placement = embeddedCommandApproval.value;
+  return placement ? approvals.value.filter((item) => item.execution_kind === placement.executionKind && item.execution_id === placement.executionID) : [];
+});
 const globalApprovals = computed(() => approvals.value.filter((item) => !embeddedApprovals.value.includes(item)));
-const embeddedNotice = computed(() => decisionNotice.value?.executionKind === "session" && decisionNotice.value.executionID === embeddedSessionApprovalID.value ? decisionNotice.value : undefined);
+const embeddedNotice = computed(() => {
+  const placement = embeddedCommandApproval.value;
+  return placement && decisionNotice.value?.executionKind === placement.executionKind && decisionNotice.value.executionID === placement.executionID ? decisionNotice.value : undefined;
+});
 const globalNotice = computed(() => embeddedNotice.value ? undefined : decisionNotice.value);
 let poll: number | undefined;
 let noticeTimer: number | undefined;
@@ -70,14 +76,14 @@ async function decide(item: CommandApproval, decision: "approved" | "rejected") 
 }
 function setIdentity(approvalID: string, identity: "user" | "bot") { identities.value[approvalID] = identity; }
 onMounted(() => { document.addEventListener("visibilitychange", onVisibilityChange); void refresh(); });
-watch(embeddedSessionApprovalID, () => void refresh(true));
+watch(embeddedCommandApproval, () => void refresh(true));
 onBeforeUnmount(() => { disposed = true; clearPoll(); if (noticeTimer !== undefined) window.clearTimeout(noticeTimer); document.removeEventListener("visibilitychange", onVisibilityChange); });
 </script>
 
 <template>
   <CommandApprovalCards :items="globalApprovals" :identities="identities" :deciding-id="decidingID" @decide="decide" @identity="setIdentity" />
   <p v-if="globalNotice" class="approval-decision-notice" :class="globalNotice.kind" :role="globalNotice.kind === 'error' ? 'alert' : 'status'">{{ globalNotice.message }}</p>
-  <Teleport v-if="embeddedApprovals.length || embeddedNotice" to="#session-command-approval-slot">
+  <Teleport v-if="embeddedApprovals.length || embeddedNotice" to="#command-approval-slot">
     <CommandApprovalCards embedded :items="embeddedApprovals" :identities="identities" :deciding-id="decidingID" @decide="decide" @identity="setIdentity" />
     <p v-if="embeddedNotice" class="approval-decision-notice" :class="embeddedNotice.kind" :role="embeddedNotice.kind === 'error' ? 'alert' : 'status'">{{ embeddedNotice.message }}</p>
   </Teleport>

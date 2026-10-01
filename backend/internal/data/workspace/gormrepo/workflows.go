@@ -43,7 +43,65 @@ func (repository *Repository) ListWorkflows(ctx context.Context, ownerID string,
 	if err := repository.loadWorkflowOrigins(ctx, ownerID, items); err != nil {
 		return nil, err
 	}
+	if err := repository.loadWorkflowOperationalSummaries(ctx, ownerID, items, time.Now().UTC()); err != nil {
+		return nil, err
+	}
 	return items, nil
+}
+
+type workflowOperationalSummary struct {
+	WorkflowID              string     `gorm:"column:workflow_id"`
+	LastRunID               string     `gorm:"column:last_run_id"`
+	LastRunState            string     `gorm:"column:last_run_state"`
+	LastRunAt               *time.Time `gorm:"column:last_run_at"`
+	RunCount30Days          int        `gorm:"column:run_count_30d"`
+	SucceededRunCount30Days int        `gorm:"column:succeeded_run_count_30d"`
+}
+
+func (repository *Repository) loadWorkflowOperationalSummaries(ctx context.Context, ownerID string, items []domain.Workflow, now time.Time) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(items))
+	indexes := make(map[string]int, len(items))
+	for index := range items {
+		ids = append(ids, items[index].ID)
+		indexes[items[index].ID] = index
+	}
+	var summaries []workflowOperationalSummary
+	const query = `
+		WITH latest_turns AS (
+			SELECT workflow_id, conversation_id, id, state, queued_at,
+				ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY turn_number DESC, queued_at DESC, id DESC) AS turn_rank
+			FROM runs
+			WHERE owner_user_id = ? AND workflow_id IN ?
+		)
+		SELECT workflow_id,
+			(ARRAY_AGG(id ORDER BY queued_at DESC, id DESC))[1] AS last_run_id,
+			(ARRAY_AGG(state ORDER BY queued_at DESC, id DESC))[1] AS last_run_state,
+			MAX(queued_at) AS last_run_at,
+			COUNT(*) FILTER (WHERE queued_at >= ?) AS run_count_30d,
+			COUNT(*) FILTER (WHERE queued_at >= ? AND state = 'succeeded') AS succeeded_run_count_30d
+		FROM latest_turns
+		WHERE turn_rank = 1
+		GROUP BY workflow_id`
+	cutoff := now.AddDate(0, 0, -30)
+	if err := repository.db.WithContext(ctx).Raw(query, ownerID, ids, cutoff, cutoff).Scan(&summaries).Error; err != nil {
+		return fmt.Errorf("load Workflow operational summaries: %w", err)
+	}
+	for _, summary := range summaries {
+		index, ok := indexes[summary.WorkflowID]
+		if !ok {
+			continue
+		}
+		items[index].LastRunID = summary.LastRunID
+		items[index].LastRunState = summary.LastRunState
+		items[index].LastRunAt = summary.LastRunAt
+		items[index].RunCount30Days = summary.RunCount30Days
+		items[index].SucceededRunCount30Days = summary.SucceededRunCount30Days
+		items[index].NeedsAttention = summary.LastRunState == "waiting_for_user" || summary.LastRunState == "failed"
+	}
+	return nil
 }
 
 func (repository *Repository) CreateWorkflow(ctx context.Context, ownerID string, input domain.WorkflowInput, secretCiphertext []byte) (domain.Workflow, error) {
@@ -263,6 +321,19 @@ func (repository *Repository) SetWorkflowCredential(ctx context.Context, ownerID
 	return repository.GetWorkflow(ctx, ownerID, workflowID, false)
 }
 
+func (repository *Repository) ClearWorkflowCredential(ctx context.Context, ownerID, workflowID string) error {
+	result := repository.db.WithContext(ctx).Model(&workflowRecord{}).
+		Where("owner_user_id = ? AND id = ? AND deleted_at IS NULL", ownerID, workflowID).
+		Updates(map[string]any{"api_key": nil, "api_secret_hash": nil, "api_secret_ciphertext": nil, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+	if result.Error != nil {
+		return fmt.Errorf("clear Workflow API credential: %w", result.Error)
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 func (repository *Repository) GetWorkflowCredential(ctx context.Context, ownerID, workflowID string) (string, []byte, error) {
 	var row struct {
 		APIKey              string `gorm:"column:api_key"`
@@ -480,6 +551,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	}
 	now := time.Now().UTC()
 	var encodedPlan []byte
+	planPending := false
 	if conditionalPlan {
 		objective := executionSnapshot.Goal
 		if textInput != nil && strings.TrimSpace(*textInput) != "" {
@@ -494,6 +566,7 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 			return runRecord{}, err
 		}
 		if plan != nil {
+			planPending = plan.State == "pending"
 			encodedPlan, err = marshal(plan)
 			if err != nil {
 				return runRecord{}, err
@@ -502,14 +575,14 @@ func createRunOnTx(tx *gorm.DB, ownerID, workflowID, trigger string, textInput *
 	}
 	id := uuid.NewString()
 	state := "queued"
-	if len(encodedPlan) > 0 {
+	if planPending {
 		state = "waiting_for_user"
 	}
 	created := runRecord{ID: id, ConversationID: id, TurnNumber: 1, OwnerID: ownerID, WorkflowID: &workflowID, WorkflowName: workflow.Name, Trigger: trigger, State: state, Input: input, WorkflowSnapshot: snapshot, ExpertStages: []byte("[]"), Evidence: []byte("[]"), ExecutionPlan: encodedPlan, QueuedAt: now, Version: 1}
 	if err := tx.Create(&created).Error; err != nil {
 		return runRecord{}, err
 	}
-	if len(encodedPlan) > 0 {
+	if planPending {
 		return created, appendRunEvents(tx, created.ID, nil, "plan.proposed", created.QueuedAt)
 	}
 	return created, appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
@@ -607,13 +680,15 @@ func (repository *Repository) continueRunConversation(ctx context.Context, owner
 				if err != nil {
 					return err
 				}
-				created.State = "waiting_for_user"
+				if executionPlan.State == "pending" {
+					created.State = "waiting_for_user"
+				}
 			}
 		}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
-		if len(created.ExecutionPlan) > 0 {
+		if created.State == "waiting_for_user" {
 			return appendRunEvents(tx, created.ID, nil, "plan.proposed", created.QueuedAt)
 		}
 		return appendQueuedRunEvent(tx, created.ID, int(queued)+1, created.QueuedAt)
@@ -1260,37 +1335,10 @@ func workflowRecordForInput(id, ownerID, workspacePath string, input domain.Work
 }
 
 func nextScheduledAt(schedule *domain.Schedule, after time.Time) *time.Time {
-	if schedule == nil || !schedule.Enabled {
+	if schedule == nil {
 		return nil
 	}
-	location, err := time.LoadLocation(schedule.Timezone)
-	if err != nil {
-		return nil
-	}
-	local := after.In(location)
-	var next time.Time
-	switch schedule.Frequency {
-	case "hourly":
-		next = time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), int(schedule.Minute), 0, 0, location)
-		if !next.After(local) {
-			next = next.Add(time.Hour)
-		}
-	case "daily":
-		next = time.Date(local.Year(), local.Month(), local.Day(), int(schedule.Hour), int(schedule.Minute), 0, 0, location)
-		if !next.After(local) {
-			next = next.AddDate(0, 0, 1)
-		}
-	case "weekly":
-		days := (int(schedule.Weekday) - int(local.Weekday()) + 7) % 7
-		next = time.Date(local.Year(), local.Month(), local.Day()+days, int(schedule.Hour), int(schedule.Minute), 0, 0, location)
-		if !next.After(local) {
-			next = next.AddDate(0, 0, 7)
-		}
-	default:
-		return nil
-	}
-	utc := next.UTC()
-	return &utc
+	return schedule.Next(after)
 }
 
 func marshalNullable(value any) ([]byte, error) {
@@ -1307,7 +1355,7 @@ func workflowDomain(row workflowRecord) (domain.Workflow, error) {
 			return domain.Workflow{}, fmt.Errorf("decode Workflow Knowledge Selection: %w", err)
 		}
 	}
-	item := domain.Workflow{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Goal: row.Goal, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, KnowledgeBaseIDs: knowledgeBaseIDs, ProviderModelID: row.ProviderModelID, APICredentialConfigured: row.APIKey != nil, WorkspacePath: row.WorkspacePath, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.Workflow{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Goal: row.Goal, ExpertID: row.ExpertID, ExpertTeamID: row.ExpertTeamID, KnowledgeBaseIDs: knowledgeBaseIDs, ProviderModelID: row.ProviderModelID, NextScheduledAt: row.NextScheduledAt, APICredentialConfigured: row.APIKey != nil, WorkspacePath: row.WorkspacePath, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if row.RuntimeEngine != nil {
 		runtime, err := domain.ParseRuntime(*row.RuntimeEngine)
 		if err != nil {
@@ -1325,6 +1373,7 @@ func workflowDomain(row workflowRecord) (domain.Workflow, error) {
 		if err := json.Unmarshal(row.Schedule, item.Schedule); err != nil {
 			return domain.Workflow{}, fmt.Errorf("decode Workflow schedule: %w", err)
 		}
+		item.UpcomingScheduleTimes = item.Schedule.Upcoming(time.Now().UTC(), 3)
 	}
 	if len(row.GitSource) > 0 && string(row.GitSource) != "null" {
 		item.GitSource = &domain.GitSource{}
