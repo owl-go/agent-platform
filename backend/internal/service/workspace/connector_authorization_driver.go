@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
@@ -62,6 +64,52 @@ func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id,
 }
 func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type klingConnectorAuthorizationDriver struct{ client *klingmcp.Client }
+
+func (d klingConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d klingConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d klingConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, klingmcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, klingmcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return klingGrant(v), e
+}
+func (d klingConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return klingGrant(v), e
+}
+func klingGrant(v klingmcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+func isKlingMCPLoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "kling-ai" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == klingmcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "klingai.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+func isBrowserOAuthPolicy(policy connectorRevisionPolicy) bool {
+	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy)
+}
+func browserOAuthProfileFor(policy connectorRevisionPolicy) browserOAuthProfile {
+	if isKlingMCPLoginPolicy(policy) {
+		return klingBrowserOAuth
+	}
+	return teambitionBrowserOAuth
+}
+func (s *Service) klingCallbackURL() (string, error) {
+	u, e := url.Parse(s.config.Authentication.RedirectURI)
+	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
+		return "", fmt.Errorf("%w: Kling AI requires platform HTTPS origin", domain.ErrInvalid)
+	}
+	return "https://" + u.Host + klingOAuthCallbackPath, nil
 }
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
@@ -206,6 +254,13 @@ func translateFeishuAuthorizationError(err error) error {
 func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolicy, repository connectorPackageRepository) (interactiveConnectorAuthorizationDriver, error) {
 	if err := validateInteractiveConnectorDriver(policy); err != nil {
 		return nil, err
+	}
+	if isKlingMCPLoginPolicy(policy) {
+		redirect, err := service.klingCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return klingConnectorAuthorizationDriver{client: klingmcp.NewClient(redirect)}, nil
 	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil

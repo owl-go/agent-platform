@@ -123,7 +123,7 @@ function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetail
 async function connectFromDetails() {
   const entry = detailPackage.value;
   if (entry?.installation) {
-    if (["notion", "teambition"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    if (["notion", "teambition", "kling-ai"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
     else if (["wecom", "modao", "picset-ai"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao", "picset-ai"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "kling-ai", "wecom", "modao", "picset-ai"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
 
 async function completeBrowserReturn() {
   await refresh();
-  const flowID = router?.currentRoute.value.query.teambition_auth;
+  const flowID = router?.currentRoute.value.query.connector_auth ?? router?.currentRoute.value.query.teambition_auth;
   if (typeof flowID !== "string" || !/^[0-9a-f-]{36}$/i.test(flowID)) return;
   try { await api.completeConnectorAuthorizationFlow(flowID); }
   catch (cause) { if (!(cause instanceof ApiError && cause.kind === "not_found")) reportError(cause); }
@@ -255,6 +255,7 @@ async function completeBrowserReturn() {
   await refresh();
   const query = { ...router.currentRoute.value.query };
   delete query.teambition_auth;
+  delete query.connector_auth;
   await router.replace({ query });
 }
 
@@ -397,7 +398,7 @@ async function completePublishedConnectorFlows() {
         connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
         if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
       } catch (cause) {
-        if (connectorInstallations.value.find(item => item.id === installationID)?.source === "teambition" && cause instanceof ApiError && cause.kind === "not_found") {
+        if (["teambition", "kling-ai"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
           await refresh();
           if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
             connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };

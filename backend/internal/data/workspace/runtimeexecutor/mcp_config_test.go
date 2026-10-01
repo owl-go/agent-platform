@@ -89,35 +89,39 @@ func TestNativeMCPFilesRevalidatesLifecycleBeforeReadingSnapshot(t *testing.T) {
 }
 
 func TestNativeMCPFilesDecryptsConnectorAuthorizationAAD(t *testing.T) {
-	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	secret, err := box.Encrypt([]byte(`{"MCP_BEARER_TOKEN":"package-secret"}`), "connector-authorization:user-owner")
-	if err != nil {
-		t.Fatal(err)
-	}
-	configuration, _ := json.Marshal(map[string]any{
-		"url":         "https://mcp.example.test/mcp",
-		"environment": []domain.EnvironmentVariable{{Name: "MCP_BEARER_TOKEN", Secret: true, Configured: true}},
-	})
-	executor := &Executor{box: box}
-	_, variables, redactions, err := executor.nativeMCPFiles(context.Background(), application.ExecutionJob{
-		ID:      "run-connector",
-		OwnerID: "user-owner",
-		Snapshot: domain.ExecutionSnapshot{
-			ProviderModel: domain.ProviderModelSnapshot{ModelID: "model", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"}},
-			MCPServers: []domain.MCPServerSnapshot{{
-				ID: "installation-id", Name: "package", Transport: "streamable_http", Configuration: configuration,
-				SecretCiphertext: secret, SecretOwnerID: "user-owner", SecretAAD: "connector-authorization:user-owner",
-			}},
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if variables == nil || len(redactions) != 1 || string(redactions[0]) != "package-secret" {
-		t.Fatalf("connector authorization projection = variables:%v redactions:%q", variables, redactions)
+	for _, aad := range []string{"connector-authorization:user-owner", "connector-authorization:user-owner:installation-id:external-id"} {
+		t.Run(aad, func(t *testing.T) {
+			box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			secret, err := box.Encrypt([]byte(`{"MCP_BEARER_TOKEN":"package-secret"}`), aad)
+			if err != nil {
+				t.Fatal(err)
+			}
+			configuration, _ := json.Marshal(map[string]any{
+				"url":         "https://mcp.example.test/mcp",
+				"environment": []domain.EnvironmentVariable{{Name: "MCP_BEARER_TOKEN", Secret: true, Configured: true}},
+			})
+			executor := &Executor{box: box}
+			_, variables, redactions, err := executor.nativeMCPFiles(context.Background(), application.ExecutionJob{
+				ID:      "run-connector",
+				OwnerID: "user-owner",
+				Snapshot: domain.ExecutionSnapshot{
+					ProviderModel: domain.ProviderModelSnapshot{ModelID: "model", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"}},
+					MCPServers: []domain.MCPServerSnapshot{{
+						ID: "installation-id", Name: "package", Transport: "streamable_http", Configuration: configuration,
+						SecretCiphertext: secret, SecretOwnerID: "user-owner", SecretAAD: aad,
+					}},
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if variables == nil || len(redactions) != 1 || string(redactions[0]) != "package-secret" {
+				t.Fatalf("connector authorization projection = variables:%v redactions:%q", variables, redactions)
+			}
+		})
 	}
 }
 

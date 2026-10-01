@@ -1236,3 +1236,14 @@ it("disconnects every connector grant but preserves installation, then uninstall
   expect(wrapper.find('.connector-summary-card button[aria-label="安装"]').exists()).toBe(true);
   wrapper.unmount();
 });
+
+it("connects an installed Kling MCP through browser OAuth with reviewed scopes", async () => {
+ const scopes=["generation.create","generation.read","account.credit.read"];
+ const installation={id:"kling-installation",source:"kling-ai",active_revision_id:"kling-revision",state:"active" as const,authorized:false,version:1,package_version:"0.1.0",name:"可灵 AI",description:"",mode:"mcp" as const,authentication_driver:"oauth",upgrade_available:false};
+ const publication={source:"kling-ai",active_revision_id:"kling-revision",state:"available" as const,version:1,revision:{id:"kling-revision",source:"kling-ai",package_version:"0.1.0",mode:"mcp" as const,sha256:"a".repeat(64),name:"可灵 AI",description:"",icon:"plug",authentication_driver:"oauth",runtime_digests:[],conformance_available:true,required_scopes:scopes}};
+ const begin=vi.fn(async()=>({id:"flow",installation_id:installation.id,identity:"user",scopes,state:"waiting_for_user",action_url:"https://klingai.com/auth/authorize?client_id=client"}));
+ const api={listMCPServers:vi.fn(async()=>[]),listSkills:vi.fn(async()=>[]),listCLIConnectorDefinitions:vi.fn(async()=>[]),listCLIConnectorEnablements:vi.fn(async()=>[]),listConnectorPublications:vi.fn(async()=>[publication]),listConnectorInstallations:vi.fn(async()=>[installation]),listConnectorAuthorizations:vi.fn(async()=>[]),beginConnectorAuthorizationFlow:begin,beginConnectorSetup:vi.fn(),connectConnector:vi.fn()} as unknown as PlatformApi;
+ const wrapper=mountManager(api);
+ try {await flushPromises();const details=await openDetails(wrapper);await details.findAll("button").find(b=>b.text()==="连接")!.trigger("click");await flushPromises();expect(begin).toHaveBeenCalledWith(installation.id,"user",scopes);expect(api.beginConnectorSetup).not.toHaveBeenCalled();expect(api.connectConnector).not.toHaveBeenCalled();}
+ finally {wrapper.unmount();}
+});

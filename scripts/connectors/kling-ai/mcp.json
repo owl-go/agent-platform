@@ -1,0 +1,8 @@
+{
+  "transport": "streamable_http",
+  "url": "https://klingai.com/mcp",
+  "egress_hosts": [
+    "klingai.com"
+  ],
+  "timeout_seconds": 120
+}
