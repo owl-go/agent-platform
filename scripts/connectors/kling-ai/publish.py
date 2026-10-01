@@ -72,7 +72,7 @@ def main():
         if not current or current['active_revision_id'] != target['id'] or current['state'] != 'available':
             current = platform.api(base, token, 'POST', '/api/v1/admin/connectors/publications/' + parse.quote(target['id']) + '/publish',
                                    {'expected_version': current['version'] if current else 0})
-        catalog = platform.api(base, token, 'GET', '/api/v1/connectors/publications').get('items', [])
+        catalog = platform.api(base, token, 'GET', '/api/v1/connectors/catalog').get('items', [])
         matches = [item for item in catalog if item['source'] == 'kling-ai']
         if len(matches) != 1 or matches[0]['active_revision_id'] != target['id'] or not matches[0]['revision']['icon'].startswith('data:image/png;base64,'):
             raise RuntimeError('User catalog or brand image verification failed')

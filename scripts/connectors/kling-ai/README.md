@@ -31,3 +31,5 @@ Builder 真正执行当前仓库的 `connectorpackage.Parse`，再保存规范�
 本地验证：实际 ZIP Parse 与重复构建一致；`go test ./internal/klingmcp ./internal/service/workspace ./internal/connectorpackage ./internal/data/workspace/gormrepo ./internal/data/workspace/runtimeexecutor`、`make test`、`make build`、`make web-typecheck`、`make web-build` 已执行。全量 Go 测试中缺少真实服务配置的集成测试会 Skip，不能视为远端验收；MCP Snapshot 的真实 PostgreSQL 测试另在临时 PostgreSQL 17 中执行。
 
 平台暂存 Revision：`2c548c49-355a-4336-ab6a-786dc9559e1c`；规范化包 SHA-256：`6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7`。暂存未创建 Publication 或 Installation。前端全量 46 个文件、415 项测试通过。服务适配代码尚未部署，线上不得将此 Revision 激活为可使用连接器。
+
+Publisher 的两个 Fixture 测试覆盖暂存幂等且无额外写入，以及激活前的回调检查和真实 User 目录路由。线上核对结果：Administrator 下 1 个暂存 Revision，User 正式目录 0 个条目，当前 User Installation 0 个；没有创建不可连接的正式条目。
