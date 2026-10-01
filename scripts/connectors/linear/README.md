@@ -9,7 +9,7 @@ python3 scripts/connectors/linear/build.py --output /absolute/path/linear-1.0.0.
 go -C backend run ./cmd/connector-package-validate /absolute/path/linear-1.0.0.zip
 ```
 
-构建无需网络和额外依赖，使用固定文件清单、时间和权限生成 ZIP。必须再执行当前 Go parser，普通 ZIP 检查不能代替平台验证。User 在连接器页面上传 ZIP 会创建私人 Installation；Administrator 暂存及发布 Revision 是另一条流程。发布前先查询目录中的 `linear` Publication 和当前账号的 Installation，复用或升级符合要求的修订。用户已选择平台发布；实际 Publication、目录与 Installation 状态以完成后的证据为准。
+构建无需网络和额外依赖，使用固定文件清单、时间和权限生成 ZIP。必须再执行当前 Go parser，普通 ZIP 检查不能代替平台验证。User 在连接器页面上传 ZIP 会创建私人 Installation；Administrator 暂存及发布 Revision 是另一条流程。发布前先查询目录中的 `linear` Publication 和当前账号的 Installation，复用或升级符合要求的修订。此修订已发布到平台目录，实际状态见下方发布证据。
 
 ## 浏览器授权
 
@@ -50,3 +50,19 @@ python3 scripts/connectors/linear/publish.py \
   --normalized-sha256 '<SHA-256 returned by connector-package-validate>' \
   --evidence-directory /absolute/path/linear-publication-evidence
 ```
+
+## 2026-10-01 发布证据
+
+通过 `main_temp` 的 Commit `9c21bc3` 部署 Release `linear-20261001T091000Z`，API、Worker、Egress Controller 和 Web 健康检查通过。[线上连接器目录](https://47-237-108-63.sslip.io/resources?tab=connectors) 中 `linear` 的 Publication 状态为 `available`，版本为 1，包版本为 `1.0.0`。
+
+- Revision：`95e0a7bc-30ab-42f3-93f3-5fb81dc4e6f1`。
+- 当前 Go parser 验证的 normalized package SHA-256：`677938b0e9d4a479d13e481ae011b784e4c4d3a25f317e75469d3aca9e9bbd39`。它不是 ZIP 文件字节的 SHA-256。
+- Administrator 与 User 目录各只有一个正式条目；重复执行发布器复用了同一 Revision 与 Publication 版本。
+- Linear `/register` 实际接受平台 HTTPS callback，空 callback 请求返回 400 并带 `no-store`、`no-referrer`。
+- 仅在验收用 Platform Administrator 账号安装：Installation `14ca6cb6-9fd1-4e3f-96c6-2c7747747a39`，状态 `active`、`authorized=false`、Authorization 数量 0。没有安装或升级其他 User。
+- 线上浏览器确认官方 PNG 品牌图标已加载、安装后“连接”可操作，并成功打开官方 MCP `/authorize`，随后跳转 `linear.app`。上游页面停留在加载状态，未完成真实账号授权。桌面与 390×844 移动端详情截图已保存，移动端页面宽度与 scrollWidth 均为 390。
+- `make test`、`make build`、`make web-typecheck`、`make web-build` 通过；前端全量 426 项、Python 发布器 5 项通过；一次性 PostgreSQL 上的 Linear Snapshot 集成测试通过。部署脚本的一般镜像 smoke 与服务健康检查通过。
+
+非敏感目录响应位于忽略目录 `outputs/linear/publication`，ZIP 位于 `outputs/linear/linear-1.0.0.zip`，截图位于 `output/playwright/linear`。临时平台凭证文件、浏览器会话和远程发布临时文件已清理。人工注入的短期平台登录态未附带续期能力，浏览器验收后期遇到登录态过期；这次检查不能作为正常 OIDC 登录／续期的验收。
+
+仍未验证：真实 Linear 账号换码、刷新、工具发现或业务调用，以及 Linear MCP 在 Linux + gVisor 中的执行、完整 Production Conformance 和远端存储 Conformance。目录发布与浏览器入口检查不替代这些证据。
