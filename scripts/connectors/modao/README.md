@@ -36,6 +36,20 @@ python3 scripts/connectors/modao/publish.py \
 
 已安装且未授权的墨刀卡片提供“连接”入口，弹窗包含一个密码类型的个人空间令牌字段和官方指南链接。成功清空表单，失败可重试，取消会清空令牌；会话选择器将未连接的墨刀导向该设置页面。表单和跳转已通过组件测试，实际部署与目录验收状态以发布证据为准。
 
+## 线上发布证据（2026-10-01）
+
+`main_temp` 集成提交 `1d9a637` 经完整部署脚本发布为 `modao-20261001`，API、Worker、Egress Controller 与 Web 健康检查通过，备份位于部署主机 `backups/pre-modao-20261001`。正式版本为 0.1.1：
+
+- Revision：`c32ea922-896c-4a2f-809f-b30300bafd51`，Publication `available`。
+- Installation：`5dd2c4f9-f2a3-418f-9767-b52f7d3e680c`，所有者 `platform-admin@agent-workspace.local`，状态 `active`、未授权。
+- Bundle SHA-256：`fecf444238a9144daa83f6a8dfc152e0976078998a1e2e89a1934034b5534f5e`。
+- Runtime：`sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b`，平台 Worker 真实 Conformance 通过并已入库。
+- 临时 Definition：`322e9103-2254-474b-8aab-5c53cb181ff7`，无用户使用，已通过管理员 DELETE 软删除；重跑复用相同 Revision，没有新增 Definition。
+
+管理员与 User 目录各有一个墨刀正式条目，Conformance 为 true。Playwright 实际检查桌面与 390×844 移动端：卡片和会话选择器均加载 158px 官方品牌资产；“连接”打开单个密码类型令牌输入与官方链接，取消后关闭，重新打开仍为空（输入清空另由组件 fixture 覆盖）；移动端文档宽度 390、表单边界 20–370，无横向溢出。会话选择器点击未授权墨刀能到达 `/resources?tab=connectors`。线上未提交任何真实或测试墨刀令牌；真实账号权益、生成和导入仍未验证。
+
+0.1.1 本地 18 项协议测试、5 项构建测试、4 项发布生命周期测试通过；目标 Runtime 在 Linux + runsc、无外网、非 root、只读 Rootfs、512 MiB/1 CPU/64 进程下通过全部 18 项协议测试。当前最终 ZIP 已通过实际 Go Parse，完整 `make test`、`make build`、前端 46 文件/402 项测试、`make web-typecheck` 和生产构建通过。未运行完整模型 Runtime Production Conformance 或存储 Conformance；本次没有更改其契约。包、非敏感 API/构建证据位于被忽略的 `outputs/modao`，截图位于 `output/playwright/modao`。
+
 ## 验证
 
 ```bash
