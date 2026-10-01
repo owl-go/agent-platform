@@ -31,6 +31,20 @@ function validateArguments(args) {
   if ((prefix.length === 1 || prefix.at(-1) === '--help') && tail.length !== 0) {
     throw new Error('Diagnostic command must have no trailing arguments');
   }
+  if (prefix[0] === 'task' && prefix[1] === 'comment' && !(tail.length === 1 && ['--help', '-h'].includes(tail[0]))) {
+    // The official Schema omits content from required, while its docs require it.
+    const value = names => {
+      for (let i = tail.length - 1; i >= 0; i--) {
+        if (names.includes(tail[i])) return tail[i + 1] || '';
+        const separator = tail[i].indexOf('=');
+        if (separator > 0 && names.includes(tail[i].slice(0, separator))) return tail[i].slice(separator + 1);
+      }
+      return '';
+    };
+    if (!value(['-t', '--task-id']).trim() || !value(['-c', '--content']).trim()) {
+      throw new Error('task comment requires non-empty taskId and content; use -t <taskId> -c <content>');
+    }
+  }
   if (prefix[0] === 'tools' && prefix[1] === 'call') {
     for (let i = 0; i < tail.length; i++) {
       if (['--json', '--help', '-h'].includes(tail[i])) continue;
