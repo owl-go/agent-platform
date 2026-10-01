@@ -5,8 +5,8 @@ import { Lightbulb, MessageSquare } from "@lucide/vue";
 import type { CLIConnectorDefinition, CLIConnectorEnablement, ConnectorInstallation, ConnectorPublication, MCPServer } from "../api/client";
 import ConnectorIcon from "./ConnectorIcon.vue";
 
-const props = defineProps<{ mcp?: MCPServer; cli?: CLIConnectorDefinition; enablement?: CLIConnectorEnablement; canEdit?: boolean; canConnect?: boolean; installation?: ConnectorInstallation; publication?: ConnectorPublication; busy?: boolean }>();
-const emit = defineEmits<{ close: []; use: [prompt: string]; connect: []; "edit-mcp": [item: MCPServer]; "edit-cli": [item: CLIConnectorDefinition] }>();
+const props = withDefaults(defineProps<{ mcp?: MCPServer; cli?: CLIConnectorDefinition; enablement?: CLIConnectorEnablement; canEdit?: boolean; canConnect?: boolean; installation?: ConnectorInstallation; publication?: ConnectorPublication; busy?: boolean; canUninstall?: boolean; canDisconnect?: boolean; connectedState?: boolean }>(), { connectedState: undefined });
+const emit = defineEmits<{ close: []; use: [prompt: string]; connect: []; disconnect: []; uninstall: []; "edit-mcp": [item: MCPServer]; "edit-cli": [item: CLIConnectorDefinition] }>();
 const { t, locale } = useI18n();
 const open = computed(() => Boolean(props.mcp || props.cli || props.installation || props.publication));
 const title = computed(() => props.mcp?.name || props.cli?.name || props.installation?.name || props.publication?.revision.name || "");
@@ -20,7 +20,7 @@ const examples = computed(() => {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 });
 const prompts = computed(() => examples.value.length ? examples.value : [t("resources.connectorStarter", { name: title.value })]);
-const connected = computed(() => props.installation ? props.installation.state === "active" && props.installation.authorized : props.cli ? props.enablement?.state === "enabled" : Boolean(props.mcp?.tested && !props.mcp.test_error));
+const connected = computed(() => props.connectedState ?? (props.installation ? props.installation.state === "active" && props.installation.authorized : props.cli ? props.enablement?.state === "enabled" : Boolean(props.mcp?.tested && !props.mcp.test_error)));
 const available = computed(() => !props.busy && (props.installation ? (props.installation.state === "active" || props.installation.state === "disabled" && props.publication?.state === "available") : props.publication ? props.publication.state === "available" && props.publication.revision.conformance_available : props.cli ? props.cli.state === "available" : Boolean(props.mcp?.tested && !props.mcp.test_error)));
 
 function edit() {
@@ -31,13 +31,12 @@ function edit() {
 </script>
 
 <template>
-  <el-drawer :model-value="open" class="catalog-details connector-details" :title="title" size="min(620px, 100vw)" destroy-on-close @close="emit('close')">
+  <el-dialog :model-value="open" class="connector-details" :title="title" width="min(720px, calc(100vw - 32px))" align-center append-to-body destroy-on-close :close-on-click-modal="!busy" :close-on-press-escape="!busy" @close="emit('close')">
     <template v-if="metadata">
       <div class="catalog-detail-intro">
         <ConnectorIcon :icon="metadata.icon || 'plug'" :size="56" />
         <div><el-tag :type="connected ? 'success' : 'info'" size="small">{{ t(connected ? 'resources.connected' : 'resources.setupRequired') }}</el-tag><p>{{ metadata.description }}</p></div>
       </div>
-      <el-button v-if="!connected && (canConnect || (!installation || installation.authentication_driver === 'feishu' || installation.authentication_driver === 'dingtalk'))" type="primary" :loading="busy" :disabled="!available" @click="emit('connect')">{{ t('resources.connectConnector') }}</el-button>
     </template>
     <template v-else-if="mcp">
       <div class="catalog-detail-intro">
@@ -54,7 +53,7 @@ function edit() {
     <template v-else-if="cli">
       <div class="catalog-detail-intro">
         <ConnectorIcon :icon="cli.icon || 'terminal'" :size="42" />
-        <div><el-tag size="small">{{ t(`resources.state.${cli.state}`) }}</el-tag><p>{{ cli.description || (cli.npm_package === '@larksuite/cli' ? t('resources.feishuCapability') : t('resources.noCapabilityDescription')) }}</p></div>
+        <div><el-tag size="small">{{ t(`resources.state.${cli.state}`) }}</el-tag><el-tag v-if="cli.state === 'available'" :type="connected ? 'success' : 'info'" size="small">{{ t(connected ? 'resources.connected' : 'resources.setupRequired') }}</el-tag><p>{{ cli.description || (cli.npm_package === '@larksuite/cli' ? t('resources.feishuCapability') : t('resources.noCapabilityDescription')) }}</p></div>
       </div>
       <dl class="connector-detail-fields">
         <div><dt>{{ t('resources.connectorType') }}</dt><dd>{{ t('resources.cliConnector') }}</dd></div>
@@ -63,11 +62,19 @@ function edit() {
       </dl>
       <el-alert v-if="cli.failure_reason" :title="cli.failure_reason" type="error" :closable="false" />
     </template>
+    <slot name="details" />
     <section class="connector-usage">
       <h3><Lightbulb :size="20" />{{ t('resources.connectorExamples') }}</h3>
       <p>{{ t('resources.connectorDraftHint') }}</p>
       <button v-for="prompt in prompts" :key="prompt" type="button" class="connector-usage-prompt" :disabled="!available" @click="emit('use', prompt)"><span>{{ prompt }}</span><MessageSquare :size="20" aria-hidden="true" /></button>
     </section>
-    <template #footer><el-button v-if="canEdit" type="primary" @click="edit">{{ t('common.edit') }}</el-button></template>
-  </el-drawer>
+    <template #footer>
+      <div class="connector-detail-actions">
+        <el-button v-if="canEdit" :disabled="busy" @click="edit">{{ t('common.edit') }}</el-button>
+        <el-button v-if="canUninstall" type="danger" plain :disabled="busy" @click="emit('uninstall')">{{ t('resources.uninstall') }}</el-button>
+        <el-button v-if="connected && canDisconnect" :disabled="busy" @click="emit('disconnect')">{{ t('resources.disconnectConnector') }}</el-button>
+        <el-button v-else-if="!connected && (canConnect || !installation && publication)" type="primary" :loading="busy" :disabled="busy || publication && !installation && (publication.state !== 'available' || !publication.revision.conformance_available) || cli && cli.state !== 'available'" @click="emit('connect')">{{ t('resources.connectConnector') }}</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
