@@ -19,11 +19,23 @@
 - `pnpm --dir frontend test`: 428 tests across 46 files passed; Pixso browser launch and upgrade behavior included.
 - `make web-typecheck` and `make web-build` passed.
 
-## Publication and remaining evidence
+## Publication and deployment
 
-Publication is pending deployment of the tested `main_temp` integration. This
-record will be updated with actual revision, catalog, deployment and browser
-results after execution. Package validation and public endpoint checks do not
-establish real Pixso account authorization, authenticated tools/list or
-business tools/call. No Linux + gVisor model Runtime, complete Production
-Conformance, remote object-store Conformance or real design write was run.
+- Feature commit `7fda071` was pushed on `codex/pixso-connector`, then merged and pushed to `main_temp` as `b2ec8b5` before deployment. No `main` push was performed.
+- Release `pixso-connector-20261001T091800Z` deployed successfully via `scripts/deploy-platform.sh` from that integration checkout. Completed local gates were reused with `SKIP_DEPLOY_GATES=1`; tests and builds listed above were actually executed before release. The script created verified database/config/source/Web backups, built services and Web, reverified installed CLI bundles against the candidate Runtime, and completed deployed health checks.
+- API image `sha256:1b2c9791352d6046f3f183025623baef62e758cf60b07f71fe622025fdf99fc2`; Worker image `sha256:ed9a4186033b240b4460374a1fb6bb9c6638de72231f732e879c70a029256422`.
+- Pixso publication is `available`, publication version 1, active Revision `61e48202-e15e-4c09-b728-fd6e83c7dee9`, exact normalized package digest above.
+- `publish.py` checked the deployed callback returns 400 for missing state with `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, and Pixso accepted DCR using that actual callback. User catalog and Administrator catalog each had exactly one formal Pixso Publication with its brand PNG. Publication was also rerun to verify it reuses the exact revision.
+- Playwright browser check under the deployment Administrator's User identity showed one Pixso entry in the design category, its real brand image, version 1.0.0 and the explicit package-validation label. A temporary Installation was created; before authorization its dialog exposed an actionable “连接” button. Clicking it launched the official Pixso browser login, and the platform displayed waiting-for-authorization plus “打开授权页面”; no manual Token form was used. Screenshots `output/playwright/pixso-details.png` and `pixso-installed.png` remain local and ignored by Git.
+- The temporary Installation was uninstalled after the browser-entry check; no Pixso account grant or design mutation was created. Disposable PostgreSQL and temporary browser-login material were removed. MCP packaging created no temporary CLI Definition or bundle build resource.
+
+## Remaining evidence
+
+Real Pixso account authorization, authenticated tools/list, business tools/call
+and real-account refresh were not run: browser verification stopped at Pixso
+login. Package validation, DCR and a working browser entry do not establish those
+results. No Pixso Linux + gVisor model Runtime, complete Production Conformance,
+remote object-store Conformance or real design write was run. Existing CLI bundle
+reverification during deployment is not Pixso MCP Runtime Conformance. Users must
+install the published Connector and connect their own Pixso accounts; publication
+does not authorize them or silently upgrade their existing Installations.
