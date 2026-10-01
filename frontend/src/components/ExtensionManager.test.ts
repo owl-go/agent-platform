@@ -2,6 +2,8 @@
 import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, createPlatformApi, platformApiKey, type CLIConnectorDefinition, type CLIConnectorDefinitionInput, type MCPServer, type PlatformApi, type Skill } from "../api/client";
+import { createMemoryHistory, type Router } from "vue-router";
+import { createAppRouter } from "../router";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExtensionManager from "./ExtensionManager.vue";
@@ -12,17 +14,36 @@ const timestamps = { created_at: "2026-08-30T00:00:00Z", updated_at: "2026-08-30
 beforeEach(() => { vi.spyOn(window, "open").mockReturnValue(null); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); document.body.innerHTML = ""; });
 
-function mountManager(api: PlatformApi, administrator = false, language = "zh-CN", mineOnly = false) {
+function mountManager(api: PlatformApi, administrator = false, language = "zh-CN", mineOnly = false, router?: Router) {
   const auth = { session: { state: { value: { kind: "authenticated", currentUser: { administrator } } } } } as unknown as AuthContext;
   return mount(ExtensionManager, {
     attachTo: document.body,
     props: { selectable: true, mineOnly, mcpServerIds: [], skillIds: [], cliConnectorDefinitionIds: [] },
     global: {
-      plugins: [createAppI18n({ getItem: () => language }, language)],
+      plugins: [createAppI18n({ getItem: () => language }, language), ...(router ? [router] : [])],
       provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth },
     },
   });
 }
+
+it("opens published guidance and installs before launching the exact unsent connector draft", async () => {
+  const publication = { source: "example", active_revision_id: "revision-1", state: "available", version: 1, revision: { id: "revision-1", source: "example", package_version: "1.0.0", mode: "mcp", name: "Example", description: "Read data", conformance_available: true, examples_zh: ["查询示例数据"] } };
+  const installation = { id: "installation-1", source: "example", active_revision_id: "revision-1", state: "active", authorized: true, version: 1, mode: "mcp", name: "Example", examples_zh: ["查询示例数据"] };
+  let installed = false;
+  const installPublishedConnector = vi.fn(async () => { installed = true; return installation; });
+  const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => installed ? [installation] : []), listConnectorAuthorizations: vi.fn(async () => []), installPublishedConnector } as unknown as PlatformApi;
+  const router = createAppRouter(createMemoryHistory()); await router.push("/resources?tab=connectors"); await router.isReady();
+  const wrapper = mountManager(api, false, "zh-CN", false, router);
+  await flushPromises();
+  await wrapper.get(".published-connector-card").trigger("keydown", { key: "Enter" }); await flushPromises();
+  expect(installPublishedConnector).not.toHaveBeenCalled();
+  document.body.querySelector<HTMLButtonElement>(".connector-usage-prompt")!.click(); await flushPromises();
+  expect(installPublishedConnector).toHaveBeenCalledWith("example");
+  expect(router.currentRoute.value.path).toBe("/sessions");
+  expect(router.currentRoute.value.query).toMatchObject({ connector_kind: "mcp", connector_id: "installation-1", draft: "查询示例数据" });
+  expect(router.currentRoute.value.query.new).toBeTruthy();
+  wrapper.unmount();
+});
 
 describe("ExtensionManager", () => {
   it("starts Notion browser login from the setup-required card without asking for a token", async () => {
@@ -122,6 +143,19 @@ describe("ExtensionManager", () => {
     await flushPromises();
     return new DOMWrapper(document.body).get(".provided-connector-form");
   }
+  it("keeps the existing Modao token flow available from connector guidance details", async () => {
+    const fixture = modaoFixture(), wrapper = mountManager(fixture.api);
+    try {
+      await flushPromises();
+      await wrapper.get(".published-connector-card").trigger("click"); await flushPromises();
+      const details = new DOMWrapper(document.body).get(".connector-details");
+      expect(details.text()).toContain("试试这样用");
+      await details.findAll("button").find(item => item.text() === "连接")!.trigger("click"); await flushPromises();
+      const form = new DOMWrapper(document.body).get(".provided-connector-form");
+      expect(form.get('input[name="modao_token"]').attributes("type")).toBe("password");
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
   it.each([false, true])("connects Modao with one masked token and upgrades first when needed (%s)", async old => {
     const fixture = modaoFixture(old), wrapper = mountManager(fixture.api);
     try {

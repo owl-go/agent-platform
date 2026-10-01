@@ -15,6 +15,8 @@ Status: implemented with local validation. Production and exact-image conformanc
 - Each sent message preserves its actual specialist, resource, and execution configuration. Later selection or Personal Settings changes affect new turns without changing historical execution or its retry configuration.
 - File suggestions include the current conversation's uploaded attachments and available generated Artifacts. Workflow follow-ups additionally expose files from that Workflow's Workspace in a clearly labeled group. Unavailable files show a reason. A selected reference must make the actual file available to that execution, rather than merely inserting its name.
 
+- Connector catalog cards open details with a description, the existing connection action, and localized `Try these prompts` guidance from the installed package's active revision (or the published revision before installation). Missing locale examples fall back to the other locale; legacy Connectors without examples offer a generic editable starter. Choosing guidance installs an available published package if needed, opens a new Session, selects that Connector through the existing activation/authorization path, and fills and focuses the composer without sending. Unavailable Connectors cannot be launched; pending authorization preserves the unsent text and exposes the existing recovery controls. A newer published revision does not replace an installed revision's guidance.
+
 ## Resource Selection
 
 - An Expert's own Skills remain available while that Expert is selected. Clearing explicit Skill tokens after a message does not clear Expert-owned Skills. Deduplicate the same Skill identity within an Execution Stage.

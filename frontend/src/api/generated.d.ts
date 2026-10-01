@@ -2491,6 +2491,10 @@ export interface components {
             authentication_driver?: string;
             selected_authorization_id?: string;
             upgrade_available?: boolean;
+            examples_zh?: string[];
+            examples_en?: string[];
+            mode?: string;
+            icon?: string;
         };
         v1ConnectorPublication: {
             source?: string;
@@ -2533,6 +2537,8 @@ export interface components {
             runtime_digests?: string[];
             conformance_available?: boolean;
             required_scopes?: string[];
+            examples_zh?: string[];
+            examples_en?: string[];
         };
         v1ConnectorSetup: {
             id?: string;

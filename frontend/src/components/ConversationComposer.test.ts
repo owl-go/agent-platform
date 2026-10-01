@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 import { createMemoryHistory } from "vue-router";
-import { ApiError, platformApiKey, type CLIConnectorDefinition, type ConversationScope, type PlatformApi, type Skill } from "../api/client";
+import { ApiError, platformApiKey, type CLIConnectorDefinition, type ConnectorLaunch, type ConversationScope, type PlatformApi, type Skill } from "../api/client";
 import { conversationDraftKey, saveConversationDraft } from "../conversationDraft";
 import type { CLIAuthorizationRequest } from "../cliAuthorization";
 import { authContextKey } from "../auth/session";
@@ -13,7 +13,7 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; installationVersion?: number; dingtalk?: boolean; notion?: boolean; managedDisabled?: boolean; provided?: boolean; modao?: boolean; teambition?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; disabledConnector?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
+async function setup(options: { fail?: boolean; initial?: boolean; initialConnector?: ConnectorLaunch; initialPrompt?: string; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; installationVersion?: number; dingtalk?: boolean; notion?: boolean; managedDisabled?: boolean; provided?: boolean; modao?: boolean; teambition?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; disabledConnector?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
  const connectorName = options.modao ? "墨刀" : options.notion ? "Notion" : options.teambition ? "钉钉项目" : options.provided ? "企业微信" : options.dingtalk ? "钉钉" : "飞书 CLI";
  const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: options.managed ? "installation-1" : "feishu", name: connectorName, revision: "3" }] : [], disabled_connectors: options.disabledConnector ? [`cli:${options.managed ? "installation-1" : "feishu"}`] : [] };
  const definition = { id: options.managed ? "installation-1" : "feishu", name: options.managed ? connectorName : "飞书 CLI", state: options.managedDisabled ? "disabled" : "available", authentication_driver: options.provided || options.notion || options.teambition ? "connector_package" : options.dingtalk ? "dingtalk" : "feishu", managed_installation: options.managed, managed_authorized: options.managedAuthorized, capabilities: options.noScopes ? [] : [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: options.teambition ? ["user:read", "project:read", "task:read"] : options.dingtalk || options.provided || options.notion ? [] : ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }, ...(options.taskCapability ? [{ id: "task_create", argv_prefix: ["task", "+create"], risk: "high", identities: ["user"], scopes: ["task:task:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] : []), ...(options.documentCapability ? [{ id: "docs_create", argv_prefix: ["docs", "+create"], risk: "high", identities: ["user"], scopes: ["docx:document:create", "docx:document:write_only"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }, { id: "mail_send", argv_prefix: ["mail", "+send"], risk: "high", identities: ["user"], scopes: ["mail:mail:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }] : [])] } as CLIConnectorDefinition;
@@ -39,7 +39,7 @@ async function setup(options: { fail?: boolean; initial?: boolean; session?: str
  } : {}), uploadAttachment: vi.fn(async (file: File) => ({ id: `attachment-${file.name}`, name: file.name, content_type: file.type, size: file.size, sha256: "sha256", image: file.type.startsWith("image/") })) } as unknown as PlatformApi;
  const submit = options.fail ? vi.fn(async () => { throw new Error("offline"); }) : vi.fn(async () => {});
  const router = createAppRouter(createMemoryHistory()); await router.push("/sessions"); await router.isReady();
- const wrapper = mount(ConversationComposer, { attachTo: document.body, props: { scope: options.scope ?? { session_id: options.session ?? "session-1" }, submit, initialSkillId: options.initial ? "pdf" : undefined, authorizationRequest: options.authorizationRequest }, global: {
+ const wrapper = mount(ConversationComposer, { attachTo: document.body, props: { scope: options.scope ?? { session_id: options.session ?? "session-1" }, submit, initialConnector: options.initialConnector, initialPrompt: options.initialPrompt, initialSkillId: options.initial ? "pdf" : undefined, authorizationRequest: options.authorizationRequest }, global: {
   plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
   provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: { session: { state: ref({ kind: "authenticated", currentUser: { id: options.owner ?? "owner-1" } }) } } } },
  }); await flushPromises(); return { wrapper, api, submit, router };
@@ -47,6 +47,23 @@ async function setup(options: { fail?: boolean; initial?: boolean; session?: str
 afterEach(() => { localStorage.clear(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 
 describe("ConversationComposer", () => {
+ it("launches a managed connector with an editable focused draft without submitting", async () => {
+  const { wrapper, api, submit } = await setup({ managed: true, managedAuthorized: true, initialConnector: { kind: "cli", id: "installation-1" }, initialPrompt: "搜索飞书群聊" });
+  expect(api.resolveConversationSelection).toHaveBeenCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: ["installation-1"] }));
+  expect(wrapper.get(".composer-editor").text()).toBe("搜索飞书群聊");
+  expect(document.activeElement).toBe(wrapper.get(".composer-editor").element);
+  expect(submit).not.toHaveBeenCalled();
+  wrapper.unmount();
+ });
+ it("keeps connector guidance unsent while authorization is pending", async () => {
+  const { wrapper, api, submit } = await setup({ managed: true, dingtalk: true, initialConnector: { kind: "cli", id: "installation-1" }, initialPrompt: "查询钉钉日程" });
+  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalled();
+  expect(wrapper.get(".composer-editor").text()).toBe("查询钉钉日程");
+  expect(api.resolveConversationSelection).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cli_connector_ids: ["installation-1"] }));
+  expect(submit).not.toHaveBeenCalled();
+  wrapper.unmount();
+ });
+
  it("replaces action icons with a single loading icon while sending or stopping", async () => {
   const { wrapper, submit } = await setup({ initial: true });
   const editor = wrapper.get<HTMLElement>(".composer-editor"); editor.element.append(document.createTextNode("创建 PDF")); await editor.trigger("input");

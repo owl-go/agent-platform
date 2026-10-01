@@ -190,3 +190,16 @@ func mustZipFile(t *testing.T, reader *zip.Reader, name string) []byte {
 	t.Fatalf("missing %s", name)
 	return nil
 }
+
+func TestConnectorDetailsExposeExamplesFromExactRevision(t *testing.T) {
+	pkg := connectorpackage.Package{Metadata: connectorpackage.Metadata{Source: "example", Version: "1.0.0", Type: connectorpackage.TypeMCP, Name: "Example", ExamplesZH: []string{"查询示例数据"}, ExamplesEN: []string{"Query example data"}}, SHA256: strings.Repeat("a", 64)}
+	revision, _ := connectorRevisionFromPackage(pkg)
+	publication := connectorRevisionResponse(revision)
+	installation := connectorInstallationDetailsResponse(domain.ConnectorInstallation{ID: "installation-1", PackageSource: "example"}, revision, true)
+	if len(publication.ExamplesZh) != 1 || publication.ExamplesZh[0] != "查询示例数据" || len(publication.ExamplesEn) != 1 || publication.ExamplesEn[0] != "Query example data" {
+		t.Fatalf("publication examples = %#v / %#v", publication.ExamplesZh, publication.ExamplesEn)
+	}
+	if len(installation.ExamplesZh) != 1 || installation.ExamplesZh[0] != publication.ExamplesZh[0] || len(installation.ExamplesEn) != 1 || installation.ExamplesEn[0] != publication.ExamplesEn[0] || installation.Mode != "mcp" {
+		t.Fatalf("installation details = %#v", installation)
+	}
+}
