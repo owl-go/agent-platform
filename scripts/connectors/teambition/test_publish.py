@@ -45,6 +45,24 @@ class PublicationLifecycleTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'user usage'):
             self.run_cleanup({'enablement_count': 1})
 
+    def test_modao_cleanup_is_scoped_and_soft_deletes_only_its_build(self):
+        calls = []
+        items = [{'id': 'modao-stage', 'name': 'Modao package build 0.1.1 hash', 'version': 2, 'npm_package': '@agent-platform/modao-connector'},
+                 {'id': 'tb-stage', 'name': 'Teambition package build 0.3.5 hash', 'version': 2, 'npm_package': '@agent-platform/teambition-connector'}]
+        def fake_api(base, token, method, path, body=None):
+            calls.append((method, path))
+            if method == 'DELETE':
+                items.pop(0)
+                return {'deleted': True}
+            if path.endswith('/cli-health'):
+                return {'items': [{'definition_id': 'modao-stage', 'enablement_count': 0, 'active_authorization_count': 0}]}
+            return {'items': items.copy()}
+        with patch.object(publisher, 'api', fake_api):
+            publisher.cleanup_staging_definitions('base', 'token', 'modao')
+        self.assertEqual([path for method, path in calls if method == 'DELETE'], ['/api/v1/admin/connectors/cli/modao-stage?expected_version=2'])
+        with self.assertRaisesRegex(RuntimeError, 'unreviewed'):
+            publisher.build_identity('other')
+
 
 if __name__ == '__main__':
     unittest.main()

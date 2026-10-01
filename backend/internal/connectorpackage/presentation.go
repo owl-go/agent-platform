@@ -15,7 +15,7 @@ func DisplayIcon(source string) string {
 	switch source {
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
-	case "feishu", "dingtalk", "notion":
+	case "feishu", "dingtalk", "notion", "modao":
 		return source
 	}
 	return "plug"

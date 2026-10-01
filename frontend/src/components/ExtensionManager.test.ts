@@ -106,6 +106,65 @@ describe("ExtensionManager", () => {
     expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
     wrapper.unmount();
   });
+  function modaoFixture(old = false) {
+    let authorized = false;
+    const installation = { id: "modao-installation", source: "modao", active_revision_id: "modao-revision", state: "active" as const, authorized: false, version: 3, package_version: "0.1.1", name: "墨刀", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const upgraded = { ...installation, version: 4, upgrade_available: false };
+    const publication = { source: "modao", active_revision_id: "modao-revision", state: "available" as const, version: 1, revision: { id: "modao-revision", source: "modao", package_version: "0.1.1", mode: "cli" as const, sha256: "a".repeat(64), name: "墨刀", description: "", icon: "modao", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => { authorized = true; return { ...upgraded, authorized }; });
+    const upgradeConnectorInstallation = vi.fn(async () => upgraded);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, upgradeConnectorInstallation } as unknown as PlatformApi;
+    return { api, installation, connectConnector, upgradeConnectorInstallation };
+  }
+  async function openModao(wrapper: ReturnType<typeof mountManager>) {
+    await flushPromises();
+    await wrapper.findAll(".published-connector-card button").find(item => item.text() === "连接")!.trigger("click");
+    await flushPromises();
+    return new DOMWrapper(document.body).get(".provided-connector-form");
+  }
+  it.each([false, true])("connects Modao with one masked token and upgrades first when needed (%s)", async old => {
+    const fixture = modaoFixture(old), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openModao(wrapper);
+      expect(form.get('input[name="modao_token"]').attributes("type")).toBe("password");
+      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
+      expect(form.get('a[href="https://modao.cc/feature/ai-mcp.html"]').attributes("rel")).toContain("noopener");
+      await form.get('input[name="modao_token"]').setValue("fixture-token");
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledWith(fixture.installation.id, "user", [], JSON.stringify({ modao_token: "fixture-token" }));
+      expect(fixture.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(fixture.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(fixture.connectConnector.mock.invocationCallOrder[0]!);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+      expect(wrapper.get(".published-connector-card").text()).toContain("已连接");
+    } finally { wrapper.unmount(); }
+  });
+  it.each(["", "token with-space", "x".repeat(32769)])("rejects invalid Modao tokens locally", async token => {
+    const fixture = modaoFixture(), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openModao(wrapper);
+      await form.get('input[name="modao_token"]').setValue(token);
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it("retains a failed Modao token for retry and clears it on cancellation", async () => {
+    const fixture = modaoFixture(), wrapper = mountManager(fixture.api);
+    fixture.connectConnector.mockRejectedValueOnce(new ApiError("validation", 422, "invalid_token"));
+    try {
+      const form = await openModao(wrapper);
+      await form.get('input[name="modao_token"]').setValue("fixture-token");
+      await form.trigger("submit"); await flushPromises();
+      expect((form.get('input[name="modao_token"]').element as HTMLInputElement).value).toBe("fixture-token");
+      await form.get('button[type="button"]').trigger("click"); await flushPromises();
+      const reopened = await openModao(wrapper);
+      expect((reopened.get('input[name="modao_token"]').element as HTMLInputElement).value).toBe("");
+      await reopened.get('input[name="modao_token"]').setValue("retry-token");
+      await reopened.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledTimes(2);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   it.each([false, true])("opens Teambition browser OAuth and upgrades old installations first (old: %s)", async (old) => {
     const installation = { id: "teambition-installation", source: "teambition", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
     const scopes = ["user:read", "project:read", "task:read", "task:write"];

@@ -28,3 +28,14 @@ func TestTeambitionDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
 		t.Fatalf("brand image: %v, %v", config, err)
 	}
 }
+
+func TestDisplayIconProjectsReviewedBrands(t *testing.T) {
+	for _, source := range []string{"feishu", "dingtalk", "notion", "modao"} {
+		if got := DisplayIcon(source); got != source {
+			t.Fatalf("DisplayIcon(%q) = %q", source, got)
+		}
+	}
+	if got := DisplayIcon("unreviewed"); got != "plug" {
+		t.Fatalf("unknown source icon = %q", got)
+	}
+}
