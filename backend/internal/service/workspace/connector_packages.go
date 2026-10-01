@@ -665,6 +665,10 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	allowedScopes := map[string]struct{}{}
+	if isLinearMCPPolicy(policy) {
+		allowedScopes["read"] = struct{}{}
+		allowedScopes["write"] = struct{}{}
+	}
 	if isKlingMCPLoginPolicy(policy) {
 		for _, scope := range klingmcp.Scopes() {
 			allowedScopes[scope] = struct{}{}
@@ -867,7 +871,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
-	if isKlingMCPLoginPolicy(policy) {
+	if isLinearMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
 		return "interactive"
 	}
 	if policy.CLI != nil {
@@ -896,6 +900,10 @@ func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 }
 
 func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
+	if isLinearMCPPolicy(policy) {
+		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
+	}
+
 	if isKlingMCPLoginPolicy(policy) {
 		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID}
 	}
@@ -1233,6 +1241,9 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 			}
 		}
 	}
+	if isLinearMCPPolicy(policy) {
+		response.RequiredScopes = []string{"read", "write"}
+	}
 	if isKlingMCPLoginPolicy(policy) {
 		response.RequiredScopes = klingmcp.Scopes()
 	}
@@ -1313,4 +1324,8 @@ func connectorAuthorizationFlowResponse(item domain.ConnectorAuthorizationAttemp
 		response.Authorization = connectorAuthorizationResponse(*authorization, true)
 	}
 	return response
+}
+
+func isLinearMCPPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "linear" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://mcp.linear.app/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "mcp.linear.app" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }

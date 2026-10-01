@@ -11,6 +11,7 @@ import (
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/klingmcp"
+	"agent-platform/backend/internal/linearmcp"
 	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
@@ -96,9 +97,12 @@ func isKlingMCPLoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "kling-ai" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == klingmcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "klingai.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
 func isBrowserOAuthPolicy(policy connectorRevisionPolicy) bool {
-	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy)
+	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy)
 }
 func browserOAuthProfileFor(policy connectorRevisionPolicy) browserOAuthProfile {
+	if isLinearMCPPolicy(policy) {
+		return linearBrowserOAuth
+	}
 	if isKlingMCPLoginPolicy(policy) {
 		return klingBrowserOAuth
 	}
@@ -110,6 +114,33 @@ func (s *Service) klingCallbackURL() (string, error) {
 		return "", fmt.Errorf("%w: Kling AI requires platform HTTPS origin", domain.ErrInvalid)
 	}
 	return "https://" + u.Host + klingOAuthCallbackPath, nil
+}
+
+type linearConnectorAuthorizationDriver struct{ client *linearmcp.Client }
+
+func (d linearConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d linearConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d linearConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, linearmcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, linearmcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return linearGrant(v), e
+}
+func (d linearConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return linearGrant(v), e
+}
+func linearGrant(v linearmcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
 }
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
@@ -254,6 +285,13 @@ func translateFeishuAuthorizationError(err error) error {
 func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolicy, repository connectorPackageRepository) (interactiveConnectorAuthorizationDriver, error) {
 	if err := validateInteractiveConnectorDriver(policy); err != nil {
 		return nil, err
+	}
+	if isLinearMCPPolicy(policy) {
+		redirect, err := service.linearCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return linearConnectorAuthorizationDriver{client: linearmcp.NewClient(redirect)}, nil
 	}
 	if isKlingMCPLoginPolicy(policy) {
 		redirect, err := service.klingCallbackURL()

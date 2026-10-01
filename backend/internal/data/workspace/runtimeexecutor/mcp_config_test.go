@@ -1,6 +1,7 @@
 package runtimeexecutor
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -139,4 +140,41 @@ func (lifecycle *recordingMCPLifecycle) ValidateMCPInvocation(ctx context.Contex
 	lifecycle.serverID = serverID
 	lifecycle.contextValue, _ = ctx.Value(mcpLifecycleContextKey{}).(string)
 	return lifecycle.err
+}
+
+func TestLinearOAuthMaterializesBearerForEveryRuntimeWithoutRefreshToken(t *testing.T) {
+	box, err := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	aad := "connector-authorization:owner:installation:"
+	secret, err := box.Encrypt([]byte(`{"MCP_BEARER_TOKEN":"linear-access-canary","client_id":"registered-client","access_expires_at":"2026-10-01T12:00:00Z"}`), aad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configuration, _ := json.Marshal(map[string]any{"url": "https://mcp.linear.app/mcp", "egress_hosts": []string{"mcp.linear.app"}})
+	executor := &Executor{box: box}
+	files, variables, redactions, err := executor.nativeMCPFiles(context.Background(), application.ExecutionJob{OwnerID: "owner", Snapshot: domain.ExecutionSnapshot{
+		ProviderModel: domain.ProviderModelSnapshot{ModelID: "model", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"}},
+		MCPServers:    []domain.MCPServerSnapshot{{ID: "installation", Name: "linear", Transport: "streamable_http", Configuration: configuration, SecretCiphertext: secret, SecretOwnerID: "owner", SecretAAD: aad}},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if variables[mcpTokenVariable("installation")] != "linear-access-canary" {
+		t.Fatal("Codex bearer token was not materialized")
+	}
+	for _, name := range []string{"extensions/claude-mcp.json", "runtime-home/.hermes/config.yaml", "extensions/openclaw.json"} {
+		if !bytes.Contains(files[name], []byte("Bearer linear-access-canary")) {
+			t.Fatalf("%s lost bearer authentication", name)
+		}
+	}
+	if len(redactions) != 3 {
+		t.Fatalf("secret redaction set: %d", len(redactions))
+	}
+	for _, body := range files {
+		if bytes.Contains(body, []byte("refresh_token")) {
+			t.Fatal("refresh token entered Runtime files")
+		}
+	}
 }

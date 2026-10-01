@@ -1,0 +1,19 @@
+{
+  "source": "linear",
+  "version": "1.0.0",
+  "type": "mcp",
+  "name": "Linear",
+  "description": "通过官方 MCP 查询和管理 Linear 事项、项目与评论",
+  "examples_zh": [
+    "查找分配给我的 Linear 事项",
+    "汇总团队最近一个周期已完成的事项",
+    "根据这份计划创建 Linear 项目和事项"
+  ],
+  "examples_en": [
+    "Find my assigned Linear issues",
+    "Summarize completed issues from the latest team cycle",
+    "Create a Linear project and issues from this plan"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "oauth"
+}

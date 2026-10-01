@@ -9,7 +9,7 @@ import SkillsConnectorsPage from "./SkillsConnectorsPage.vue";
 afterEach(() => { document.body.innerHTML = ""; });
 
 describe("SkillsConnectorsPage", () => {
-  it.each(["teambition_auth", "connector_auth"])("completes a browser callback without relying on its original tab (%s)", async (returnKey) => {
+  it.each(["teambition_auth", "connector_auth", "linear_auth"])("completes a browser callback without relying on its original tab (%s)", async (returnKey) => {
     const flowID = "11111111-1111-4111-8111-111111111111";
     const complete = vi.fn(async () => ({ id: flowID, installation_id: "installation", identity: "user", scopes: [], state: "completed" }));
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => []), listConnectorInstallations: vi.fn(async () => []), completeConnectorAuthorizationFlow: complete } as unknown as PlatformApi;
