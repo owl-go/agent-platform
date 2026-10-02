@@ -16,6 +16,9 @@ describe("ConnectorIcon", () => {
     const notion = mount(ConnectorIcon, { props: { icon: "notion" } });
     expect(notion.find("img").attributes("src")).toContain("Notion%20connector");
 
+    const openboost = mount(ConnectorIcon, { props: { icon: "openboost" } });
+    expect(openboost.find("img").attributes("src")).toContain("openboost.svg");
+
     const preset = mount(ConnectorIcon, { props: { icon: "terminal" } });
     expect(preset.find("img").exists()).toBe(false);
     expect(preset.find(".profile-icon").exists()).toBe(true);

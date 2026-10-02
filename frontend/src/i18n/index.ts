@@ -591,3 +591,6 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 
 Object.assign((zh as unknown as { resources: Record<string, unknown> }).resources, { connectorMarket: "市场", installed: "已安装", disconnectConnector: "断开", connectorCategory: { collaboration: "沟通协作", documents: "知识文档", projects: "项目管理", design: "设计创作", other: "其他" } });
 Object.assign((en as unknown as { resources: Record<string, unknown> }).resources, { connectorMarket: "Market", installed: "Installed", disconnectConnector: "Disconnect", connectorCategory: { collaboration: "Communication & collaboration", documents: "Knowledge & documents", projects: "Project management", design: "Design & creation", other: "Other" } });
+
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { openboostTokenHelp: "在 OpenBoost 官网获取已开通服务的 Secret Key", openboostCredentialsInvalid: "请填写有效的 OpenBoost Secret Key，不能包含空格或换行。" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { openboostTokenHelp: "Get a Secret Key for your subscribed services on the OpenBoost website", openboostCredentialsInvalid: "Enter a valid OpenBoost Secret Key without spaces or line breaks." });
