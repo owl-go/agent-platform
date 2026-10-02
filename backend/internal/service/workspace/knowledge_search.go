@@ -31,7 +31,7 @@ func (service *Service) searchKnowledgeBase(writer http.ResponseWriter, request 
 		writeAuthError(writer, http.StatusUnauthorized, "authentication_required")
 		return
 	}
-	baseID, valid := parseKnowledgeUUID(request.PathValue("knowledge_base_id"))
+	baseID, valid := knowledgeBaseActionPath(request.URL.Path, "search")
 	if !valid {
 		writeAuthError(writer, http.StatusNotFound, "resource_not_found")
 		return
