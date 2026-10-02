@@ -47,3 +47,9 @@
 当前没有 Moka 企业 API Key，真实企业授权、模块权限、职位/候选人/面试数据调用未验证。协议 fixture 与平台 Conformance 不代表 14 项业务 API 已在真实账号成功。未运行完整模型 Production Conformance、完整 Sandbox Conformance 或真实远端存储 Conformance；集成测试的 Skip 不计为远端通过。
 
 本地 ZIP、source ZIP、Linux 协议输出、部署日志和不含凭证的发布/目录/浏览器响应位于功能工作区忽略目录 `outputs/moka-hr`，截图位于 `output/playwright/moka-hr`。包内包含 companion Skill 与查询表。远端本次临时 source ZIP、构建 ZIP 与验收文件在复制证据后清理；浏览器上下文关闭。临时构建资源的清理使用平台软删除 API，未硬删除记录或撤销既有用户资源。
+
+## 人力招聘分类调整
+
+同日按用户要求将 `moka-hr` 从“其他”归入“人力招聘”（英文 `HR & recruitment`），市场与已安装视图使用同一分类映射。功能提交 `084e058` 已通过 `main_temp` 集成提交 `2889900` 发布；Web release 为 `moka-hr-category-20261002-2889900`，只发布 Web，没有改动 Connector Revision、安装或授权。
+
+112 项 `ExtensionManager` 测试、`make web-typecheck`、`make web-build` 与 `git diff --check` 通过。`make web-deploy` 使用线上 OIDC 配置再次构建并激活 release。Playwright 实际检查市场与已安装视图，均只有一个 Moka HR 卡片位于“人力招聘”下；390px 手机端 documentWidth 为 390，截图已人工查看，API healthz 为 `ok`。部署日志与浏览器结果保存在分类工作区的 `outputs/moka-hr-category`，截图位于 `output/playwright/moka-hr-category`。
