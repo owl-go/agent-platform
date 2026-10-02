@@ -1338,14 +1338,16 @@ describe("ExtensionManager", () => {
 });
 
 it("groups real connector sources, filters installed/search, and installs without opening a modal", async () => {
-  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "modao", "custom"];
+  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "modao", "caoliao", "camscanner", "custom"];
   const publications = sources.map(source => ({ source, state: "available", revision: { name: source, description: `Description ${source}`, mode: "cli", conformance_available: true } }));
   const installations: Array<{ id: string; source: string; name: string; state: string; authorized: boolean; version: number }> = [{ id: "notion-id", source: "notion", name: "notion", state: "active", authorized: false, version: 1 }];
   const install = vi.fn(async (source: string) => { installations.push({ id: `${source}-id`, source, name: source, state: "active", authorized: false, version: 1 }); });
   const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => publications), listConnectorInstallations: vi.fn(async () => [...installations]), listConnectorAuthorizations: vi.fn(async () => []), installPublishedConnector: install } as unknown as PlatformApi;
   const wrapper = mountManager(api);
   await flushPromises();
-  expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["沟通协作", "知识文档", "项目管理", "设计创作", "其他"]);
+  expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["沟通协作", "知识文档", "项目管理", "设计创作", "效率工具", "其他"]);
+  const productivity = wrapper.findAll(".catalog-group").find(group => group.get("h2").text() === "效率工具")!;
+  expect(productivity.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["caoliao", "camscanner"]);
   const card = (name: string) => wrapper.get(`.connector-summary-card[aria-label="${name}"]`);
   expect(card("notion").find(".connector-installed-mark").exists()).toBe(true);
   expect(card("notion").text()).not.toContain("需要设置");
@@ -1360,6 +1362,11 @@ it("groups real connector sources, filters installed/search, and installs withou
   expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["知识文档"]);
   expect(wrapper.findAll(".connector-summary-card")).toHaveLength(1);
   wrapper.unmount();
+  const english = mountManager(api, false, "en-US");
+  await flushPromises();
+  const englishProductivity = english.findAll(".catalog-group").find(group => group.get("h2").text() === "Productivity tools")!;
+  expect(englishProductivity.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["caoliao", "camscanner"]);
+  english.unmount();
 });
 
 it("disconnects every connector grant but preserves installation, then uninstalls the current version", async () => {
