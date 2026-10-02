@@ -1,5 +1,7 @@
 # RAGFlow local validation — 2026-10-02
 
+This report records the pre-deployment state. Deployment and authenticated acceptance later on the same day are recorded in [platform acceptance](2026-10-02-ragflow-platform-validation.md).
+
 ## Installation and scope
 
 The development branch is `codex/ragflow-knowledge-loop`. No server release or production database migration was performed for this change. RAGFlow, its trusted platform adapter and local embeddings were exercised on the Mac with Docker Desktop; this is local integration evidence, not authenticated production acceptance.
@@ -27,7 +29,7 @@ The real API returned code 108 for an absent exact dataset-name lookup and code 
 
 Restricted gateway checks returned 404 for `/`, `/v1/user/login` and `/v1/user/register`. Its shared-entry Nginx configuration passed `nginx -t`; the model `/health` returned 200 directly and through the proxy, model `/api/v1/models` retained the identical unauthenticated 401 response, and an authenticated Knowledge dataset request returned HTTP 200/code 0 through port 19382. Existing public model routing was not changed. Streaming/WebSocket forwarding is configured but was not black-box tested.
 
-## Remaining acceptance
+## Remaining acceptance at the time of this report
 
 The existing free ngrok endpoint is already online for the local model relay on port 3000. Starting an independent Knowledge tunnel failed with `ERR_NGROK_334`; that unsuccessful launch agent was stopped. The optional shared entry is prepared and locally validated, but switching the existing tunnel requires the user's pending choice because it affects an existing model service. A separate ngrok account/endpoint is the alternative.
 
