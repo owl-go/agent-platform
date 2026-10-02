@@ -56,12 +56,27 @@ export function createAuthSession(
 ): AuthSession {
   const state = ref<AuthState>({ kind: "checking" });
   let activeAccessToken: string | undefined;
+  let signInStarted = false;
+
+  async function signIn() {
+    if (signInStarted) return;
+    signInStarted = true;
+    activeAccessToken = undefined;
+    state.value = { kind: "checking" };
+    try {
+      await client.signIn();
+    } catch (error) {
+      signInStarted = false;
+      state.value = { kind: "error", message: safeErrorMessage(error) };
+    }
+  }
+
   const removeUserLoadedListener = client.onUserLoaded((user) => {
     if (!user.expired) activeAccessToken = user.accessToken;
   });
   const removeExpiredListener = client.onExpired(() => {
     activeAccessToken = undefined;
-    state.value = { kind: "unauthenticated", reason: "expired" };
+    if (state.value.kind === "authenticated") void signIn();
   });
 
   return {
@@ -82,24 +97,28 @@ export function createAuthSession(
           user = await client.getUser();
         }
         if (!user || user.expired) {
-          state.value = { kind: "unauthenticated", reason: user?.expired ? "expired" : "missing" };
+          if (isCallback) throw new Error("OIDC callback did not return a valid session");
+          await signIn();
           return;
         }
         const currentUser = await loadCurrentUser(user.accessToken);
         activeAccessToken = user.accessToken;
+        signInStarted = false;
         state.value = { kind: "authenticated", currentUser };
       } catch (error) {
         activeAccessToken = undefined;
         state.value = { kind: "error", message: safeErrorMessage(error) };
       }
     },
-    async signIn() {
-      await client.signIn();
-    },
+    signIn,
     async signOut() {
       activeAccessToken = undefined;
       state.value = { kind: "unauthenticated", reason: "missing" };
-      await client.signOut();
+      try {
+        await client.signOut();
+      } catch (error) {
+        state.value = { kind: "error", message: safeErrorMessage(error) };
+      }
     },
     dispose() {
       removeUserLoadedListener();

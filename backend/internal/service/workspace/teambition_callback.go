@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/teambitioncli"
 	"context"
 	"encoding/base64"
@@ -9,12 +10,13 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const teambitionOAuthCallbackPath = "/api/v1/connectors/teambition/oauth/callback"
 const teambitionCallbackAAD = "teambition-oauth-callback"
 
-type teambitionCallbackReference struct {
+type browserOAuthCallbackReference struct {
 	OwnerID string `json:"owner_id"`
 	FlowID  string `json:"flow_id"`
 }
@@ -26,15 +28,31 @@ func (s *Service) teambitionCallbackURL() (string, error) {
 	}
 	return "https://" + u.Host + teambitionOAuthCallbackPath, nil
 }
+
+type browserOAuthProfile struct {
+	callbackPath, aad, authorizationURL, issuer, returnKey string
+	accept                                                 func(string, string, string) (string, error)
+	matches                                                func(connectorRevisionPolicy) bool
+	issuerRequired                                         bool
+}
+
+var teambitionBrowserOAuth = browserOAuthProfile{teambitionOAuthCallbackPath, teambitionCallbackAAD, teambitioncli.Issuer + "/oauth2/mcp/authorize", teambitioncli.Issuer, "teambition_auth", teambitioncli.AcceptCallback, isTeambitionCLILoginPolicy, true}
+var klingBrowserOAuth = browserOAuthProfile{klingOAuthCallbackPath, "kling-ai-oauth-callback", klingmcp.Issuer + "/authorize", klingmcp.Issuer, "connector_auth", klingmcp.AcceptCallback, isKlingMCPLoginPolicy, false}
+
+const klingOAuthCallbackPath = "/api/v1/connectors/kling-ai/oauth/callback"
+
 func (s *Service) sealTeambitionCallback(ctx context.Context, r connectorPackageRepository, flow domain.ConnectorAuthorizationAttempt) (domain.ConnectorAuthorizationAttempt, error) {
-	reference, _ := json.Marshal(teambitionCallbackReference{flow.OwnerID, flow.ID})
-	sealed, e := s.box.Encrypt(reference, teambitionCallbackAAD)
+	return s.sealBrowserOAuthCallback(ctx, r, flow, teambitionBrowserOAuth)
+}
+func (s *Service) sealBrowserOAuthCallback(ctx context.Context, r connectorPackageRepository, flow domain.ConnectorAuthorizationAttempt, profile browserOAuthProfile) (domain.ConnectorAuthorizationAttempt, error) {
+	reference, _ := json.Marshal(browserOAuthCallbackReference{flow.OwnerID, flow.ID})
+	sealed, e := s.box.Encrypt(reference, profile.aad)
 	if e != nil {
 		return flow, e
 	}
 	action, e := url.Parse(flow.ActionURL)
-	if e != nil || action.Scheme != "https" || action.Host != "account.teambition.com" || action.Path != "/oauth2/mcp/authorize" {
-		return flow, errors.New("invalid Teambition authorization URL")
+	if e != nil || action.Scheme != "https" || action.Scheme+"://"+action.Host+action.Path != profile.authorizationURL || action.User != nil || action.Fragment != "" {
+		return flow, errors.New("invalid Connector authorization URL")
 	}
 	q := action.Query()
 	q.Set("state", base64.RawURLEncoding.EncodeToString(sealed))
@@ -44,10 +62,16 @@ func (s *Service) sealTeambitionCallback(ctx context.Context, r connectorPackage
 	return flow, e
 }
 func (s *Service) teambitionOAuthCallback(w http.ResponseWriter, req *http.Request) {
+	s.browserOAuthCallback(w, req, teambitionBrowserOAuth)
+}
+func (s *Service) klingOAuthCallback(w http.ResponseWriter, req *http.Request) {
+	s.browserOAuthCallback(w, req, klingBrowserOAuth)
+}
+func (s *Service) browserOAuthCallback(w http.ResponseWriter, req *http.Request, profile browserOAuthProfile) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	fail := func() {
-		http.Error(w, "Teambition authorization was not completed. Return to Connector settings and connect again.", http.StatusBadRequest)
+		http.Error(w, "Connector authorization was not completed. Return to Connector settings and connect again.", http.StatusBadRequest)
 	}
 	if req.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -55,7 +79,7 @@ func (s *Service) teambitionOAuthCallback(w http.ResponseWriter, req *http.Reque
 	}
 	q := req.URL.Query()
 	encoded := q.Get("state")
-	if len(encoded) > 2048 || q.Get("error") != "" || q.Get("iss") != teambitioncli.Issuer {
+	if len(q["state"]) != 1 || len(q["code"]) != 1 || len(q["iss"]) > 1 || len(encoded) > 2048 || q.Get("error") != "" || (q.Get("iss") != "" && q.Get("iss") != profile.issuer) || (profile.issuerRequired && q.Get("iss") == "") {
 		fail()
 		return
 	}
@@ -64,13 +88,13 @@ func (s *Service) teambitionOAuthCallback(w http.ResponseWriter, req *http.Reque
 		fail()
 		return
 	}
-	raw, e := s.box.Decrypt(cipher, teambitionCallbackAAD)
+	raw, e := s.box.Decrypt(cipher, profile.aad)
 	if e != nil {
 		fail()
 		return
 	}
 	defer clear(raw)
-	var ref teambitionCallbackReference
+	var ref browserOAuthCallbackReference
 	if json.Unmarshal(raw, &ref) != nil || ref.OwnerID == "" || ref.FlowID == "" {
 		fail()
 		return
@@ -86,12 +110,12 @@ func (s *Service) teambitionOAuthCallback(w http.ResponseWriter, req *http.Reque
 		return
 	}
 	action, e := url.Parse(flow.ActionURL)
-	if e != nil || action.Query().Get("state") != encoded {
+	if e != nil || action.Query().Get("state") != encoded || !flow.ExpiresAt.After(time.Now()) {
 		fail()
 		return
 	}
 	_, _, policy, e := connectorInstallationPolicy(req.Context(), repository, ref.OwnerID, flow.InstallationID)
-	if e != nil || !isTeambitionCLILoginPolicy(policy) {
+	if e != nil || !profile.matches(policy) {
 		fail()
 		return
 	}
@@ -101,7 +125,7 @@ func (s *Service) teambitionOAuthCallback(w http.ResponseWriter, req *http.Reque
 		return
 	}
 	defer clear(plaintext)
-	state, e := teambitioncli.AcceptCallback(string(plaintext), q.Get("code"), q.Get("iss"))
+	state, e := profile.accept(string(plaintext), q.Get("code"), q.Get("iss"))
 	if e != nil {
 		fail()
 		return
@@ -117,5 +141,5 @@ func (s *Service) teambitionOAuthCallback(w http.ResponseWriter, req *http.Reque
 	}
 	// Only an owner-authenticated completion request exchanges the code and stores the grant.
 	// The callback never accepts an owner ID or emits provider credentials.
-	http.Redirect(w, req, "/resources?tab=connectors&teambition_auth="+url.QueryEscape(flow.ID), http.StatusSeeOther)
+	http.Redirect(w, req, "/resources?tab=connectors&"+profile.returnKey+"="+url.QueryEscape(flow.ID), http.StatusSeeOther)
 }

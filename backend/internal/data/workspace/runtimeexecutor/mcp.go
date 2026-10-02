@@ -16,6 +16,7 @@ import (
 	"agent-platform/backend/internal/agentruntime/containerprocess"
 	"agent-platform/backend/internal/agentruntime/processharness"
 	"agent-platform/backend/internal/biz/workspace/application"
+	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/credentials"
 	"agent-platform/backend/internal/sandbox"
 )
@@ -23,18 +24,14 @@ import (
 var errMCPHandshakeObserved = errors.New("MCP handshake observed")
 
 type mcpProbeConfiguration struct {
-	URL            *string  `json:"url"`
-	Runner         *string  `json:"runner"`
-	Package        *string  `json:"package"`
-	PackageVersion *string  `json:"package_version"`
-	Arguments      []string `json:"arguments"`
-	Environment    []struct {
-		Name   string `json:"name"`
-		Value  string `json:"value"`
-		Secret bool   `json:"secret"`
-	} `json:"environment"`
-	EgressHosts    []string `json:"egress_hosts"`
-	TimeoutSeconds int      `json:"timeout_seconds"`
+	URL            *string                               `json:"url"`
+	Runner         *string                               `json:"runner"`
+	Package        *string                               `json:"package"`
+	PackageVersion *string                               `json:"package_version"`
+	Arguments      []string                              `json:"arguments"`
+	Environment    []workspacedomain.EnvironmentVariable `json:"environment"`
+	EgressHosts    []string                              `json:"egress_hosts"`
+	TimeoutSeconds int                                   `json:"timeout_seconds"`
 	ResourceLimits struct {
 		CPUMillis      int `json:"cpu_millis"`
 		MemoryMiB      int `json:"memory_mib"`
@@ -47,31 +44,26 @@ func (executor *Executor) testMCP(ctx context.Context, job application.Execution
 	if err := json.Unmarshal(job.MCPServer.Configuration, &configuration); err != nil {
 		return result, fmt.Errorf("decode MCP test configuration: %w", err)
 	}
-	variables := make(map[string]string)
 	files := make(map[string][]byte)
-	for _, variable := range configuration.Environment {
-		if !variable.Secret {
-			variables[variable.Name] = variable.Value
-		}
-	}
+	secretValues := make(map[string]string)
 	if len(job.MCPServer.SecretCiphertext) > 0 {
 		plaintext, err := executor.box.Decrypt(job.MCPServer.SecretCiphertext, "mcp-server:"+job.OwnerID)
 		if err != nil {
 			return result, fmt.Errorf("decrypt MCP test environment: %w", err)
 		}
 		defer clear(plaintext)
-		var secretValues map[string]string
 		if err := json.Unmarshal(plaintext, &secretValues); err != nil {
 			return result, fmt.Errorf("decode MCP test environment: %w", err)
-		}
-		for name, value := range secretValues {
-			variables[name] = value
 		}
 		if token := secretValues["MCP_BEARER_TOKEN"]; token != "" {
 			files["mcp/http-headers"] = []byte("Authorization: Bearer " + token + "\n")
 		}
 	}
-	environment, err := executor.materializer.Create(credentials.Request{Ref: job.ID, Variables: variables, Files: files})
+	variables, err := mcpEnvironment(configuration.Environment, secretValues)
+	if err != nil {
+		return result, err
+	}
+	environment, err := executor.materializer.Create(credentials.Request{Ref: job.ID, Variables: variables, Files: files, RedactValues: mcpSecretRedactions(secretValues)})
 	if err != nil {
 		return result, err
 	}

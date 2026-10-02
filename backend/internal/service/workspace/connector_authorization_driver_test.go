@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/feishucli"
 )
 
@@ -63,5 +64,25 @@ func TestFeishuAuthorizationDriverPreservesPendingStateAndCredentials(t *testing
 	rotated, err := driver.Refresh(context.Background(), "app-id", "app-secret", grant.RefreshToken)
 	if err != nil || rotated.RefreshToken != "new-refresh" {
 		t.Fatalf("refresh material did not rotate: %v", err)
+	}
+}
+
+func TestGitHubPolicyRequiresBrowserAuthorizationAndOnlyReleasesAccessCredential(t *testing.T) {
+	policy := connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "github"}, AuthMode: "oauth", CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}
+	if connectorAuthorizationMode(policy) != "interactive" {
+		t.Fatal("GitHub fell back to manual token connection")
+	}
+	fields := connectorAuthorizationCredentialFields(policy, connectorAuthorizationGrant{AccessToken: "access", RefreshToken: "refresh", ClientID: "client"})
+	if len(fields) != 1 || fields["access_token"] != "access" {
+		t.Fatal("unexpected process credential fields")
+	}
+	policy.AuthMode = "cli"
+	if isGitHubCLILoginPolicy(policy) {
+		t.Fatal("unreviewed auth mode received GitHub device driver")
+	}
+	policy.AuthMode = "oauth"
+	policy.Metadata.Source = "unknown"
+	if isGitHubCLILoginPolicy(policy) {
+		t.Fatal("unknown package received GitHub driver")
 	}
 }

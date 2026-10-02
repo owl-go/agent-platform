@@ -73,7 +73,8 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { platformSkills: "平台技能", mySkills: "我的技能", platformConnectors: "平台连接器", myConnectors: "我的连接器" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connected: "已连接", setupRequired: "需要设置", availableToInstall: "可安装", packageVersion: "版本 {version}", conformanceAvailable: "已通过运行验证", conformanceUnavailable: "运行验证不可用", selectedAccount: "当前账号", refreshAuthorization: "刷新授权", upgrade: "升级", uninstall: "卸载" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connect: "连接", wecomBotId: "Bot ID", wecomSecret: "Secret", providedCredentialsInvalid: "请填写有效的企业微信 Bot 凭证。" });
-Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { modaoToken: "个人空间令牌", modaoTokenHelp: "在墨刀头像菜单的令牌设置中创建令牌", modaoCredentialsInvalid: "请填写有效的墨刀个人空间令牌，不能包含空格或换行。" });
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { aiHiveApiKey: "API Key", aiHiveApiKeyHelp: "在蜂巢 AI 网页的 MCP 接入中开启 MCP 并获取 API Key", aiHiveCredentialsInvalid: "请填写有效的 AI-Hive API Key，不能包含空格或换行。", picsetApiKey: "Agent Secret Key", picsetApiKeyHelp: "在 Picset AI 开发者页面的密钥管理中创建 Key", picsetCredentialsInvalid: "请填写有效的 Picset AI sk_live_ 密钥，不能包含空格或换行。", modaoToken: "个人空间令牌", modaoTokenHelp: "在墨刀头像菜单的令牌设置中创建令牌", modaoCredentialsInvalid: "请填写有效的墨刀个人空间令牌，不能包含空格或换行。" });
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { mokaApiKey: "企业 API Key", mokaOrgId: "组织 ID", mokaConnectionHelp: "向 Moka CSM 获取企业 API Key 和组织 ID（官方指南）", mokaCredentialsInvalid: "请填写有效的 Moka 企业 API Key 和组织 ID。" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { deactivate: "取消激活" });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorPackageUpload: "上传连接器", connectorPackageUploadHint: "上传一个经过校验的 ZIP；安装后仍显示在同一个连接器目录中。" });
 Object.assign(zh.experts, { platformExperts: "平台专家", myExperts: "我的专家" });
@@ -142,7 +143,8 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { platformSkills: "Platform Skills", mySkills: "My Skills", platformConnectors: "Platform Connectors", myConnectors: "My Connectors" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connected: "Connected", setupRequired: "Setup required", availableToInstall: "Available to install", packageVersion: "Version {version}", conformanceAvailable: "Runtime verified", conformanceUnavailable: "Runtime verification unavailable", selectedAccount: "Selected account", refreshAuthorization: "Refresh authorization", upgrade: "Upgrade", uninstall: "Uninstall" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connect: "Connect", wecomBotId: "Bot ID", wecomSecret: "Secret", providedCredentialsInvalid: "Enter valid WeCom Bot credentials." });
-Object.assign((en as unknown as { resources: Record<string, string> }).resources, { modaoToken: "Personal-space token", modaoTokenHelp: "Create a token in Modao's avatar menu under Token Settings", modaoCredentialsInvalid: "Enter a valid Modao personal-space token without spaces or line breaks." });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { aiHiveApiKey: "API Key", aiHiveApiKeyHelp: "Enable MCP and get an API Key in the AI-Hive web app MCP settings", aiHiveCredentialsInvalid: "Enter a valid AI-Hive API Key without spaces or line breaks.", picsetApiKey: "Agent Secret Key", picsetApiKeyHelp: "Create a Key in the Picset AI developer page key manager", picsetCredentialsInvalid: "Enter a valid Picset AI sk_live_ Key without spaces or line breaks.", modaoToken: "Personal-space token", modaoTokenHelp: "Create a token in Modao's avatar menu under Token Settings", modaoCredentialsInvalid: "Enter a valid Modao personal-space token without spaces or line breaks." });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { mokaApiKey: "Enterprise API Key", mokaOrgId: "Organization ID", mokaConnectionHelp: "Get an enterprise API Key and organization ID from Moka CSM (official guide)", mokaCredentialsInvalid: "Enter a valid Moka enterprise API Key and organization ID." });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { deactivate: "Deactivate" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorPackageUpload: "Upload Connector", connectorPackageUploadHint: "Upload a validated ZIP. The installation appears in this same Connector catalog." });
 Object.assign(en.experts, { platformExperts: "Platform Experts", myExperts: "My Experts" });
@@ -190,7 +192,10 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorType: "连接器类型", connectionAddress: "连接地址", connectedApplication: "已连接应用", mcpDetailDescription: "通过标准 MCP 协议为会话、工作流和专家提供外部能力。" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorType: "Connector type", connectionAddress: "Connection", connectedApplication: "Connected application", mcpDetailDescription: "Provides external capabilities to Sessions, Workflows, and Experts through the standard MCP protocol." });
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, {
+  githubVerifyCode: "请在 GitHub 授权页面输入验证码：{code}。",
   notionVerifyCode: "请核对验证码：{code}。",
+  tianyanchaRegionBlocked: "天眼查暂不支持当前服务器所在地区，无法完成授权。请联系天眼查确认支持的部署地区后重新连接。",
+  xiaoeOAuthCallbackBlocked: "小鹅通安全机制拦截了当前平台回调域名，暂时无法授权。请联系小鹅通放行回调域名，或配置正式平台域名后重新连接。",
   connectorAuthorizeNow: "打开授权页面", connectorAuthorizationPending: "等待在对应应用中完成授权", connectorAuthorizationInvalidInput: "无法发起账号授权，请刷新页面后重试。",
   dingtalkCLIAccessDisabled: "钉钉账号已确认授权，但当前企业或账号尚未获得 CLI 使用权限。请联系钉钉企业管理员检查开放范围，处理后再点击“继续完成授权”。",
   dingtalkCLIEnterpriseDenied: "钉钉账号已确认授权，但未通过企业的 CLI 安全认证。请联系钉钉企业管理员开放 CLI 使用权限；处理后重新授权。",
@@ -201,7 +206,10 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
   dingtalkAuthorizationFailed: "钉钉已确认授权，但连接器未能完成账号连接。请点击“继续完成授权”重新授权；若仍失败，请联系管理员检查服务日志。"
 });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, {
+  githubVerifyCode: "Enter this code on the GitHub authorization page: {code}.",
   notionVerifyCode: "Confirm the verification code: {code}.",
+  tianyanchaRegionBlocked: "Tianyancha does not support this server region. Contact Tianyancha to confirm a supported deployment region before reconnecting.",
+  xiaoeOAuthCallbackBlocked: "Xiaoe blocked this platform callback domain. Ask Xiaoe to allow it, or configure a permanent platform domain before reconnecting.",
   connectorAuthorizeNow: "Open authorization page", connectorAuthorizationPending: "Waiting for authorization in the connected app", connectorAuthorizationInvalidInput: "Could not start account authorization. Refresh and retry.",
   dingtalkCLIAccessDisabled: "DingTalk authorization was approved, but this organization or account does not have CLI access. Ask your DingTalk administrator to check access, then continue authorization.",
   dingtalkCLIEnterpriseDenied: "DingTalk approved the account sign-in but denied enterprise CLI security access. Ask your DingTalk administrator to enable CLI access, then authorize again.",
@@ -589,5 +597,11 @@ export function formatDuration(milliseconds: number, locale: SupportedLocale): s
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { connectorExamples: "试试这样用", connectorDraftHint: "点击指引，在新会话中选中此连接器并填入输入框，确认后再发送。", connectorStarter: "使用{name}，帮我完成……", connectConnector: "连接" });
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, { connectorExamples: "Try these prompts", connectorDraftHint: "Choose a prompt to select this connector in a new conversation and fill the composer. Send when ready.", connectorStarter: "Use {name} to help me with…", connectConnector: "Connect" });
 
-Object.assign((zh as unknown as { resources: Record<string, unknown> }).resources, { connectorMarket: "市场", installed: "已安装", disconnectConnector: "断开", connectorCategory: { collaboration: "沟通协作", documents: "知识文档", projects: "项目管理", design: "设计创作", other: "其他" } });
-Object.assign((en as unknown as { resources: Record<string, unknown> }).resources, { connectorMarket: "Market", installed: "Installed", disconnectConnector: "Disconnect", connectorCategory: { collaboration: "Communication & collaboration", documents: "Knowledge & documents", projects: "Project management", design: "Design & creation", other: "Other" } });
+Object.assign((zh as unknown as { resources: Record<string, unknown> }).resources, { connectorMarket: "市场", installed: "已安装", disconnectConnector: "断开", connectorCategory: { collaboration: "沟通协作", documents: "知识文档", projects: "项目管理", design: "设计创作", marketing: "市场营销", productivity: "效率工具", industry: "行业数据", recruitment: "人力招聘", legal: "法务合规", other: "其他" } });
+Object.assign((en as unknown as { resources: Record<string, unknown> }).resources, { connectorMarket: "Market", installed: "Installed", disconnectConnector: "Disconnect", connectorCategory: { collaboration: "Communication & collaboration", documents: "Knowledge & documents", projects: "Project management", design: "Design & creation", marketing: "Marketing", productivity: "Productivity tools", industry: "Industry data", recruitment: "HR & recruitment", legal: "Legal & compliance", other: "Other" } });
+
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { openboostTokenHelp: "在 OpenBoost 官网获取已开通服务的 Secret Key", openboostCredentialsInvalid: "请填写有效的 OpenBoost Secret Key，不能包含空格或换行。" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { openboostTokenHelp: "Get a Secret Key for your subscribed services on the OpenBoost website", openboostCredentialsInvalid: "Enter a valid OpenBoost Secret Key without spaces or line breaks." });
+
+Object.assign((zh as unknown as { resources: Record<string, string> }).resources, { pkulawTokenHelp: "在北大法宝 MCP 控制台获取 Token（仅填写 Token 值）", pkulawCredentialsInvalid: "请填写有效的北大法宝 Token，不能包含空格或换行。" });
+Object.assign((en as unknown as { resources: Record<string, string> }).resources, { pkulawTokenHelp: "Get a Token from the PKULaw MCP console; enter only the token value", pkulawCredentialsInvalid: "Enter a valid PKULaw token without spaces or line breaks." });

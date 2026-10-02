@@ -325,3 +325,114 @@ func TestFeishuPublicationProjectsLegacyUsersAfterMigration(t *testing.T) {
 		t.Fatalf("projection is not idempotent: installations=%d authorizations=%d", installations, authorizations)
 	}
 }
+
+func TestLinearMCPSnapshotUsesAuthorizationAADAndExcludesRefreshMaterial(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "linear", Version: "1.0.0", Mode: domain.ConnectorModeMCP, PackageSHA256: strings.Repeat("a", 64), ObjectKey: "connectors/linear/package.zip", RuntimePolicy: []byte(`{"auth_mode":"oauth","metadata":{"source":"linear"},"mcp":{"transport":"streamable_http","url":"https://mcp.linear.app/mcp","egress_hosts":["mcp.linear.app"],"timeout_seconds":60}}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	installation, err := repository.InstallConnector(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "linear", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := time.Now().Add(time.Hour)
+	aad := "connector-authorization:" + owner + ":" + installation.ID + ":"
+	authorization, err := repository.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: installation.ID, IdentityRef: "user", CredentialCiphertext: []byte("encrypted-access"), CredentialAAD: aad, CredentialFormat: "json", RefreshCredentialCiphertext: []byte("platform-only-refresh"), RefreshCredentialAAD: aad + ":refresh", ExpiresAt: &expires})
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := connectorMCPServerSnapshot(db, owner, installation.ID)
+	if err != nil || snapshot.SecretAAD != aad || string(snapshot.SecretCiphertext) != "encrypted-access" || strings.Contains(string(snapshot.Configuration), "refresh") {
+		t.Fatalf("MCP snapshot failed to preserve authorization boundary: %v", err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, uuid.NewString(), installation.ID); err == nil {
+		t.Fatal("another owner read authorization")
+	}
+	if err := db.Model(&connectorAuthorizationRecord{}).Where("id = ?", authorization.ID).Update("expires_at", time.Now().Add(-time.Minute)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, owner, installation.ID); err == nil {
+		t.Fatal("expired grant was materialized")
+	}
+}
+
+func TestPixsoMCPSnapshotUsesAuthorizationAADAndExcludesRefreshMaterial(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "pixso", Version: "1.0.0", Mode: domain.ConnectorModeMCP, PackageSHA256: strings.Repeat("a", 64), ObjectKey: "connectors/pixso/package.zip", RuntimePolicy: []byte(`{"auth_mode":"oauth","metadata":{"source":"pixso"},"mcp":{"transport":"streamable_http","url":"https://pixso.net/mcp","egress_hosts":["pixso.net"],"timeout_seconds":60}}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	installation, err := repository.InstallConnector(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "pixso", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := time.Now().Add(time.Hour)
+	aad := "connector-authorization:" + owner + ":" + installation.ID + ":"
+	authorization, err := repository.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: installation.ID, IdentityRef: "user", CredentialCiphertext: []byte("encrypted-access"), CredentialAAD: aad, CredentialFormat: "json", RefreshCredentialCiphertext: []byte("platform-only-refresh"), RefreshCredentialAAD: aad + ":refresh", ExpiresAt: &expires})
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := connectorMCPServerSnapshot(db, owner, installation.ID)
+	if err != nil || snapshot.SecretAAD != aad || string(snapshot.SecretCiphertext) != "encrypted-access" || strings.Contains(string(snapshot.Configuration), "refresh") {
+		t.Fatalf("MCP snapshot failed to preserve authorization boundary: %v", err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, uuid.NewString(), installation.ID); err == nil {
+		t.Fatal("another owner read authorization")
+	}
+	if err := db.Model(&connectorAuthorizationRecord{}).Where("id = ?", authorization.ID).Update("expires_at", time.Now().Add(-time.Minute)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, owner, installation.ID); err == nil {
+		t.Fatal("expired grant was materialized")
+	}
+}
+
+func TestTianyanchaMCPSnapshotUsesAuthorizationAADAndExcludesRefreshMaterial(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repository := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repository.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "tianyancha", Version: "1.0.0", Mode: domain.ConnectorModeMCP, PackageSHA256: strings.Repeat("a", 64), ObjectKey: "connectors/tianyancha/package.zip", RuntimePolicy: []byte(`{"auth_mode":"oauth","metadata":{"source":"tianyancha"},"mcp":{"transport":"streamable_http","url":"https://mcp.tianyancha.com/mcp","egress_hosts":["mcp.tianyancha.com"],"timeout_seconds":60}}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	installation, err := repository.InstallConnector(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "tianyancha", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := time.Now().Add(time.Hour)
+	aad := "connector-authorization:" + owner + ":" + installation.ID + ":"
+	authorization, err := repository.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: installation.ID, IdentityRef: "user", CredentialCiphertext: []byte("encrypted-access"), CredentialAAD: aad, CredentialFormat: "json", RefreshCredentialCiphertext: []byte("platform-only-refresh"), RefreshCredentialAAD: aad + ":refresh", ExpiresAt: &expires})
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := connectorMCPServerSnapshot(db, owner, installation.ID)
+	if err != nil || snapshot.SecretAAD != aad || string(snapshot.SecretCiphertext) != "encrypted-access" || strings.Contains(string(snapshot.Configuration), "refresh") {
+		t.Fatalf("MCP snapshot failed to preserve authorization boundary: %v", err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, uuid.NewString(), installation.ID); err == nil {
+		t.Fatal("another owner read authorization")
+	}
+	if err := db.Model(&connectorAuthorizationRecord{}).Where("id = ?", authorization.ID).Update("expires_at", time.Now().Add(-time.Minute)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, owner, installation.ID); err == nil {
+		t.Fatal("expired grant was materialized")
+	}
+}

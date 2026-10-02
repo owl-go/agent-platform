@@ -1,0 +1,6 @@
+{
+  "transport": "streamable_http",
+  "url": "https://agent.xiaoe-tech.com/mcp",
+  "egress_hosts": ["agent.xiaoe-tech.com"],
+  "timeout_seconds": 60
+}

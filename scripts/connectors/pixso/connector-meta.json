@@ -1,0 +1,17 @@
+{
+  "source": "pixso",
+  "version": "1.0.0",
+  "type": "mcp",
+  "name": "Pixso",
+  "description": "读取 Pixso 云端设计、导出素材并生成前端代码；通过浏览器连接各用户自己的 Pixso 账号。",
+  "examples_zh": [
+    "读取这个 Pixso 图层的设计结构",
+    "根据 Pixso 图层链接生成 Vue 3 代码"
+  ],
+  "examples_en": [
+    "Read the design structure of this Pixso layer",
+    "Generate Vue 3 code from this Pixso layer link"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "oauth"
+}

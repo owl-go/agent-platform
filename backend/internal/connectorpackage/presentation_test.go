@@ -29,13 +29,117 @@ func TestTeambitionDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
 	}
 }
 
+func TestLinearDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
+	value := DisplayIcon("linear")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("Linear must project its official brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := png.DecodeConfig(bytes.NewReader(body)); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDisplayIconProjectsReviewedBrands(t *testing.T) {
-	for _, source := range []string{"feishu", "dingtalk", "notion", "modao"} {
+	for _, source := range []string{"feishu", "dingtalk", "notion", "modao", "github", "xiaoe", "openboost"} {
 		if got := DisplayIcon(source); got != source {
 			t.Fatalf("DisplayIcon(%q) = %q", source, got)
 		}
 	}
 	if got := DisplayIcon("unreviewed"); got != "plug" {
 		t.Fatalf("unknown source icon = %q", got)
+	}
+}
+
+func TestKlingDisplayIconIsOfficialPNG(t *testing.T) {
+	value := DisplayIcon("kling-ai")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("missing brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := png.DecodeConfig(bytes.NewReader(body))
+	if err != nil || config.Width != 180 || config.Height != 180 {
+		t.Fatalf("invalid Kling icon: %v", err)
+	}
+}
+
+func TestPixsoDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
+	value := DisplayIcon("pixso")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("Pixso must project its official brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := png.DecodeConfig(bytes.NewReader(body)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAIHiveDisplayIconUsesReviewedOfficialSVG(t *testing.T) {
+	value := DisplayIcon("ai-hive")
+	prefix := "data:image/svg+xml;base64,"
+	if !strings.HasPrefix(value, prefix) {
+		t.Fatal("AI-Hive icon is not an image Data URL")
+	}
+	body, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(value, prefix))
+	if err != nil || !bytes.Equal(body, aiHiveIcon) {
+		t.Fatal("AI-Hive icon differs from bundled brand asset")
+	}
+}
+
+func TestMokaHRDisplayIconUsesOfficialBrandPNG(t *testing.T) {
+	value := DisplayIcon("moka-hr")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("Moka HR must project a frontend-supported brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil || !bytes.Equal(body, mokaHRIcon) {
+		t.Fatal("Moka HR image differs from the bundled brand asset")
+	}
+	config, err := png.DecodeConfig(bytes.NewReader(body))
+	if err != nil || config.Width != 24 || config.Height != 24 {
+		t.Fatalf("brand image: %v, %v", config, err)
+	}
+}
+
+func TestTianyanchaDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
+	value := DisplayIcon("tianyancha")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("Tianyancha must project its official brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := png.DecodeConfig(bytes.NewReader(body)); err != nil {
+		t.Fatal(err)
 	}
 }

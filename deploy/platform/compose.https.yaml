@@ -74,6 +74,7 @@ services:
       KC_HEALTH_ENABLED: "true"
     volumes:
       - ${OIDC_REALM_FILE:?OIDC_REALM_FILE is required}:/opt/keycloak/data/import/agent-platform-realm.json:ro
+      - ${KEYCLOAK_THEME_ROOT:?KEYCLOAK_THEME_ROOT must point to a built login theme}:/opt/keycloak/themes:ro
     depends_on:
       identity-db:
         condition: service_healthy

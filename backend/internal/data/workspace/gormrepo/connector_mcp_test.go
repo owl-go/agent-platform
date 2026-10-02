@@ -1,7 +1,11 @@
 package gormrepo
 
 import (
+	"agent-platform/backend/internal/biz/workspace/domain"
+	"context"
 	"encoding/json"
+	"github.com/google/uuid"
+	"strings"
 	"testing"
 )
 
@@ -26,5 +30,41 @@ func TestConnectorMCPConfigurationProjectsRevisionPolicy(t *testing.T) {
 func TestConnectorMCPConfigurationRejectsMissingPolicy(t *testing.T) {
 	if _, _, err := connectorMCPConfiguration([]byte(`{"auth_mode":"none"}`)); err == nil {
 		t.Fatal("expected missing MCP policy to be rejected")
+	}
+}
+
+func TestMCPAuthorizationSnapshotPreservesGrantAADAndExcludesRefresh(t *testing.T) {
+	db := conversationTestDatabase(t)
+	repo := New(db, nil)
+	ctx := context.Background()
+	owner := uuid.NewString()
+	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repo.CreateConnectorRevision(ctx, domain.ConnectorRevision{PackageSource: "kling-ai", Version: "0.1.0", Mode: domain.ConnectorModeMCP, PackageSHA256: strings.Repeat("a", 64), ObjectKey: "connectors/kling-ai/package.zip", RuntimePolicy: []byte(`{"auth_mode":"oauth","mcp":{"transport":"streamable_http","url":"https://klingai.com/mcp","egress_hosts":["klingai.com"],"timeout_seconds":120}}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	installation, err := repo.InstallConnector(ctx, domain.ConnectorInstallation{OwnerID: owner, PackageSource: "kling-ai", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connectorMCPServerSnapshot(db, owner, installation.ID); err == nil {
+		t.Fatal("unauthorized snapshot accepted")
+	}
+	aad := "connector-authorization:" + owner + ":" + installation.ID + ":"
+	_, err = repo.CreateConnectorAuthorization(ctx, domain.ConnectorAuthorization{OwnerID: owner, InstallationID: installation.ID, IdentityRef: "user", CredentialCiphertext: []byte("access-only"), CredentialAAD: aad, CredentialFormat: "json", RefreshCredentialCiphertext: []byte("platform-only-refresh"), RefreshCredentialAAD: aad + ":refresh"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := connectorMCPServerSnapshot(db, owner, installation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.SecretAAD != aad || string(snapshot.SecretCiphertext) != "access-only" || strings.Contains(string(snapshot.Configuration), "refresh") {
+		t.Fatal("authorization AAD or refresh boundary lost")
+	}
+	if _, err := connectorMCPServerSnapshot(db, uuid.NewString(), installation.ID); err == nil {
+		t.Fatal("another owner obtained snapshot")
 	}
 }

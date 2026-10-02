@@ -4,6 +4,7 @@ Status: implemented with local validation. Production and exact-image conformanc
 
 ## Confirmed Scope
 
+- The Connector catalog groups the `caoliao` and `camscanner` package sources under `Productivity tools` (Chinese: `效率工具`) in both Market and Installed views. Unknown sources remain in `Other`.
 - Skill catalog cards expose `Go use` on hover. Clicking that action opens a new Session with the Skill selected, without sending a message. Clicking the card opens read-only details whose body is the package's `SKILL.md` content.
 - Expert and Expert Team cards expose `Summon` on hover. Clicking that action opens a new Session with that Expert or Expert Team selected, without sending a message. Clicking the card opens read-only details, with edit and summon actions.
 - Expert, Expert Team, and Skill details use a side panel on desktop and a full-screen presentation on mobile. Connector details use a centered, responsive modal with a scrollable body and bottom actions. Expert details include visible structured guidance and associated Skills and Connectors; Expert Team details include its profile and ordered member roles.

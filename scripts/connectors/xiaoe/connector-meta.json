@@ -1,0 +1,17 @@
+{
+  "source": "xiaoe",
+  "version": "0.1.0",
+  "type": "mcp",
+  "name": "小鹅通",
+  "description": "通过小鹅通 MCP 查询和管理店铺课程、学员、订单、直播与素材。授权暂受阻：当前平台回调域名被小鹅通拦截，需上游放行后连接。",
+  "examples_zh": [
+    "查询小鹅通店铺课程",
+    "查看指定课程的学员和订单"
+  ],
+  "examples_en": [
+    "List courses in my Xiaoe shop",
+    "Find students and orders for a course"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "oauth"
+}

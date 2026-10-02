@@ -71,6 +71,31 @@ docker compose --env-file /opt/agent-platform/config/platform.env \
   wget -qO- http://127.0.0.1:8080/readyz
 ```
 
+## Identity login theme
+
+The `agent-workspace` Keycloak login theme inherits the pinned image's native templates and Chinese/English messages. It replaces the dark background with workspace tokens and a compact white card. Build before provisioning the identity container; source theme files alone do not include the generated token stylesheet:
+
+```bash
+python3 scripts/build-identity-theme.py /tmp/agent-workspace-theme-RELEASE
+rsync -a /tmp/agent-workspace-theme-RELEASE/ agent-platform:/opt/agent-platform/identity-themes/releases/RELEASE/
+```
+
+Set `KEYCLOAK_THEME_ROOT` in the private host env to the built release directory (or `/opt/agent-platform/identity-themes/current`, a symlink to it). Files must be readable by container UID 1000, with directories 0755 and files 0644. The Compose bind is read-only. Changing a symlink requires recreating only the identity container so Docker resolves the new source; restart alone retains the previous bind. Keep the previous release for rollback. Public CSS/message files contain no credentials; verify `manifest.json` against the uploaded bytes before activation.
+
+New realms import `loginTheme=agent-workspace`, `internationalizationEnabled=true`, `supportedLocales=[zh-Hans,en]`, and `defaultLocale=zh-Hans`. An existing realm does not reimport those settings. On the host, export the protected platform env and run the following helper from the integrated release; it authenticates using an HTTPS POST body and changes only those four fields:
+
+```bash
+set -a
+. /opt/agent-platform/config/platform.env
+set +a
+python3 scripts/configure-identity-theme.py backup /opt/agent-platform/backups/RELEASE-appearance.json
+python3 scripts/configure-identity-theme.py apply
+# Restore appearance when rolling back the mount:
+python3 scripts/configure-identity-theme.py restore /opt/agent-platform/backups/RELEASE-appearance.json
+```
+
+Do not print the environment or shell trace these commands. Back up the private host env before updating the mount. For a currently deployed source bundle predating the theme bind, a small Compose override can add the read-only `/opt/keycloak/themes` bind; use the existing project/config files and `up -d --no-deps identity`, then verify OIDC discovery before applying appearance. Future source releases include the bind in `compose.https.yaml`. The helper does not import accounts, modify clients, change authentication policy, or revoke sessions. After activation, verify fresh product entry, Chinese defaults, the language selector, native error/password/reset flows, mobile layout, and public Health/Readiness. Rollback restores the previous bind/env, recreates identity, and restores the backed-up appearance fields.
+
 ## Same-origin HTTPS and OIDC
 
 Set `PUBLIC_HOST` to a DNS name whose A/AAAA record reaches the Worker, allow inbound TCP 80/443 and UDP 443, and set all OIDC URLs to that exact HTTPS origin. `scripts/deploy-web.sh` requires the four `VITE_OIDC_*` values in the release workstation environment and consumes them during the local production build. API and Worker consume `platform.https.yaml` at startup. These values are configuration, not source-code constants.

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"agent-platform/backend/internal/xiaoemcp"
 	"archive/zip"
 	"bytes"
 	"context"
@@ -12,14 +13,17 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/githubcli"
+	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/objectstore"
-	"agent-platform/backend/internal/teambitioncli"
+	"agent-platform/backend/internal/tianyanchamcp"
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -438,6 +442,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
+	nativeDomestic := ""
 	refreshToken := ""
 	appID := ""
 	switch current.CredentialFormat {
@@ -452,10 +457,16 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		var credentials struct {
 			RefreshToken string `json:"refresh_token"`
 			ClientID     string `json:"client_id"`
+			UserID       string `json:"user_id"`
+			IsDomestic   string `json:"is_domestic"`
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
-			if policy.CLI != nil && (policy.CLI.AuthenticationDriver == "dingtalk" || isTeambitionCLILoginPolicy(policy)) {
+			if isCamScannerCLILoginPolicy(policy) {
+				appID = credentials.UserID
+				nativeDomestic = credentials.IsDomestic
+			}
+			if isBrowserOAuthPolicy(policy) || policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
 				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
 				appID = credentials.ClientID
 			}
@@ -470,7 +481,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 			refreshToken = string(plaintext)
 		}
 	}
-	if refreshToken == "" && isTeambitionCLILoginPolicy(policy) && len(current.RefreshCredentialCiphertext) > 0 {
+	if refreshToken == "" && (isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy)) && len(current.RefreshCredentialCiphertext) > 0 {
 		plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
 		if decryptErr != nil {
 			return nil, publicError(decryptErr)
@@ -505,6 +516,9 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if result.RefreshToken == "" {
 		result.RefreshToken = refreshToken
 	}
+	if isCamScannerCLILoginPolicy(policy) {
+		result.IsDomestic = nativeDomestic
+	}
 	refreshedCredentials, err := json.Marshal(connectorAuthorizationCredentialFields(policy, result))
 	if err != nil {
 		return nil, publicError(err)
@@ -515,7 +529,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isTeambitionCLILoginPolicy(policy) {
+	if isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy) {
 		current.RefreshCredentialAAD = aad + ":refresh"
 		current.RefreshCredentialCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), current.RefreshCredentialAAD)
 		if err != nil {
@@ -533,7 +547,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	current.CredentialFormat = "json"
 	current.State = domain.ConnectorAuthorizationActive
 	expiry := result.ExpiresAt
-	if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
+	if !result.RefreshExpiresAt.IsZero() && !isBrowserOAuthPolicy(policy) {
 		expiry = result.RefreshExpiresAt
 	}
 	current.ExpiresAt = &expiry
@@ -665,6 +679,21 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	allowedScopes := map[string]struct{}{}
+	if isTianyanchaMCPPolicy(policy) {
+		allowedScopes["mcp:tools.call"] = struct{}{}
+	}
+	if isPixsoMCPPolicy(policy) {
+		allowedScopes["mcp:connect"] = struct{}{}
+	}
+	if isLinearMCPPolicy(policy) {
+		allowedScopes["read"] = struct{}{}
+		allowedScopes["write"] = struct{}{}
+	}
+	if isKlingMCPLoginPolicy(policy) {
+		for _, scope := range klingmcp.Scopes() {
+			allowedScopes[scope] = struct{}{}
+		}
+	}
 	if policy.CLI != nil {
 		for _, capability := range policy.CLI.Capabilities {
 			for _, identity := range capability.Identities {
@@ -686,6 +715,12 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	providerFlow, err := driver.Begin(ctx, appID, appSecret, request.Scopes)
+	if errors.Is(err, tianyanchamcp.ErrRegionBlocked) {
+		return nil, kratoserrors.New(http.StatusBadGateway, "tianyancha_region_blocked", "Tianyancha does not support the deployment server region")
+	}
+	if errors.Is(err, xiaoemcp.ErrCallbackBlocked) {
+		return nil, kratoserrors.New(http.StatusBadGateway, "xiaoe_oauth_callback_blocked", "Xiaoe blocked registration of this platform callback domain")
+	}
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -697,8 +732,8 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isTeambitionCLILoginPolicy(policy) {
-		flow, err = service.sealTeambitionCallback(ctx, repository, flow)
+	if isBrowserOAuthPolicy(policy) {
+		flow, err = service.sealBrowserOAuthCallback(ctx, repository, flow, browserOAuthProfileFor(policy))
 		if err != nil {
 			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 			return nil, publicError(err)
@@ -737,8 +772,10 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return nil, publicError(err)
 	}
 	defer clear(deviceCode)
-	if isTeambitionCLILoginPolicy(policy) {
-		var state teambitioncli.Pending
+	if isBrowserOAuthPolicy(policy) {
+		var state struct {
+			Code string `json:"code"`
+		}
 		if json.Unmarshal(deviceCode, &state) != nil {
 			return nil, publicError(domain.ErrInvalid)
 		}
@@ -750,7 +787,57 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 			}
 		}
 	}
+	if isGitHubCLILoginPolicy(policy) {
+		next, reserveErr := githubcli.ReservePoll(string(deviceCode))
+		if errors.Is(reserveErr, githubcli.ErrPending) {
+			return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
+		}
+		if errors.Is(reserveErr, githubcli.ErrExpired) {
+			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
+		if reserveErr != nil {
+			return nil, publicError(reserveErr)
+		}
+		encrypted, encryptErr := service.box.Encrypt([]byte(next), connectorAuthorizationFlowAAD(principal.UserID, flow.InstallationID, flow.Identity))
+		if encryptErr != nil {
+			return nil, publicError(encryptErr)
+		}
+		if updateErr := repository.UpdateConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext, encrypted, flow.ActionURL); updateErr != nil {
+			return nil, publicError(updateErr)
+		}
+		clear(deviceCode)
+		deviceCode = []byte(next)
+		defer clear(deviceCode)
+		flow.DeviceCodeCiphertext = encrypted
+	}
 	result, err := driver.Poll(ctx, appID, appSecret, string(deviceCode))
+	if isGitHubCLILoginPolicy(policy) {
+		if errors.Is(err, githubcli.ErrSlowDown) {
+			next, slowErr := githubcli.SlowPoll(string(deviceCode))
+			if slowErr != nil {
+				return nil, publicError(slowErr)
+			}
+			encrypted, encryptErr := service.box.Encrypt([]byte(next), connectorAuthorizationFlowAAD(principal.UserID, flow.InstallationID, flow.Identity))
+			if encryptErr != nil {
+				return nil, publicError(encryptErr)
+			}
+			if updateErr := repository.UpdateConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext, encrypted, flow.ActionURL); updateErr != nil {
+				return nil, publicError(updateErr)
+			}
+			return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
+		}
+		if errors.Is(err, githubcli.ErrConsumed) {
+			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
+		if err == nil {
+			if consumeErr := repository.ConsumeConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext); consumeErr != nil {
+				return nil, publicError(consumeErr)
+			}
+		}
+	}
+
 	if errors.Is(err, errConnectorAuthorizationPending) {
 		return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
 	}
@@ -759,7 +846,7 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
 	if err != nil {
-		if isTeambitionCLILoginPolicy(policy) {
+		if isBrowserOAuthPolicy(policy) {
 			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 		}
@@ -792,6 +879,13 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		}
 		return nil, publicError(err)
 	}
+	if isCamScannerCLILoginPolicy(policy) {
+		// Polling may return the same upstream grant more than once. Only one owner
+		// request may consume this flow and persist a grant.
+		if err := repository.ConsumeConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext); err != nil {
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
+	}
 	credentials, err := json.Marshal(connectorAuthorizationCredentialFields(policy, result))
 	if err != nil {
 		return nil, publicError(err)
@@ -805,14 +899,14 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	var expiry *time.Time
 	if !result.ExpiresAt.IsZero() {
 		value := result.ExpiresAt
-		if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
+		if !result.RefreshExpiresAt.IsZero() && !isBrowserOAuthPolicy(policy) {
 			value = result.RefreshExpiresAt
 		}
 		expiry = &value
 	}
 	var refreshCiphertext []byte
 	refreshAAD := ""
-	if isTeambitionCLILoginPolicy(policy) && result.RefreshToken != "" {
+	if (isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy)) && result.RefreshToken != "" {
 		refreshAAD = aad + ":refresh"
 		refreshCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), refreshAAD)
 		if err != nil {
@@ -860,8 +954,11 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
+	if isTianyanchaMCPPolicy(policy) || isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
+		return "interactive"
+	}
 	if policy.CLI != nil {
-		if isNotionCLILoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) {
+		if isNotionCLILoginPolicy(policy) || isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy) || isGitHubCLILoginPolicy(policy) {
 			return "interactive"
 		}
 		switch policy.CLI.AuthenticationDriver {
@@ -877,8 +974,20 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	return "none"
 }
 
+func isGitHubCLILoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "github" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
+}
+
+func isXiaoeMCPLoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "xiaoe" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == xiaoemcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "agent.xiaoe-tech.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
 func isTeambitionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "teambition" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
+}
+
+func isCamScannerCLILoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "camscanner" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
 
 func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
@@ -886,11 +995,24 @@ func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 }
 
 func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
+	if isTianyanchaMCPPolicy(policy) || isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) {
+		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
+	}
+
+	if isKlingMCPLoginPolicy(policy) {
+		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID}
+	}
+	if isCamScannerCLILoginPolicy(policy) {
+		return map[string]string{"access_token": result.AccessToken, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339), "user_id": result.ExternalID, "is_domestic": result.IsDomestic}
+	}
+	if isGitHubCLILoginPolicy(policy) {
+		return map[string]string{"access_token": result.AccessToken}
+	}
 	if isNotionCLILoginPolicy(policy) {
 		return map[string]string{"token": result.AccessToken}
 	}
 	fields := map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
-	if isTeambitionCLILoginPolicy(policy) {
+	if isBrowserOAuthPolicy(policy) {
 		delete(fields, "refresh_token")
 	}
 	return fields
@@ -947,6 +1069,9 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 }
 
 func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "xiaoe" {
+		return fmt.Errorf("%w: Xiaoe login is reserved for the platform publication", domain.ErrInvalid)
+	}
 	if pkg.Metadata.Source == "notion" {
 		return fmt.Errorf("%w: Notion login is reserved for the platform publication", domain.ErrInvalid)
 	}
@@ -957,6 +1082,9 @@ func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
 }
 
 func validatePlatformConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "xiaoe" && !isXiaoeMCPLoginPolicy(connectorRevisionPolicy{Metadata: pkg.Metadata, AuthMode: pkg.Metadata.AuthMode, MCP: pkg.MCP, CLI: pkg.CLI}) {
+		return fmt.Errorf("%w: Xiaoe requires the reviewed remote MCP policy", domain.ErrInvalid)
+	}
 	if pkg.CLI == nil {
 		return nil
 	}
@@ -1045,6 +1173,9 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 	if err := validateProvidedConnectorCredentials(policy, request.Scopes); err != nil {
 		return nil, publicError(err)
 	}
+	if err := validatePKULawCredentials(policy, request.CredentialsJson); err != nil {
+		return nil, publicError(err)
+	}
 	ciphertext, err := service.box.Encrypt(request.CredentialsJson, "connector-authorization:"+ownerID)
 	if err != nil {
 		return nil, publicError(err)
@@ -1063,6 +1194,21 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 		}
 	}
 	return nil, publicError(fmt.Errorf("%w: connector installation not found after authorization", domain.ErrNotFound))
+}
+
+func validatePKULawCredentials(policy connectorRevisionPolicy, credentials []byte) error {
+	if policy.Metadata.Source != "pkulaw" {
+		return nil
+	}
+	var values map[string]string
+	if err := json.Unmarshal(credentials, &values); err != nil || len(values) != 1 {
+		return fmt.Errorf("%w: PKULaw requires one MCP Bearer token", domain.ErrInvalid)
+	}
+	token := values["MCP_BEARER_TOKEN"]
+	if token == "" || len(token) > 4096 || strings.IndexFunc(token, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
+		return fmt.Errorf("%w: PKULaw requires a bounded token without whitespace or control characters", domain.ErrInvalid)
+	}
+	return nil
 }
 
 func validateProvidedConnectorCredentials(policy connectorRevisionPolicy, requestedScopes []string) error {
@@ -1220,6 +1366,18 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 			}
 		}
 	}
+	if isTianyanchaMCPPolicy(policy) {
+		response.RequiredScopes = []string{"mcp:tools.call"}
+	}
+	if isPixsoMCPPolicy(policy) {
+		response.RequiredScopes = []string{"mcp:connect"}
+	}
+	if isLinearMCPPolicy(policy) {
+		response.RequiredScopes = []string{"read", "write"}
+	}
+	if isKlingMCPLoginPolicy(policy) {
+		response.RequiredScopes = klingmcp.Scopes()
+	}
 	if response.AuthenticationDriver == "" {
 		response.AuthenticationDriver = policy.AuthMode
 	}
@@ -1297,4 +1455,16 @@ func connectorAuthorizationFlowResponse(item domain.ConnectorAuthorizationAttemp
 		response.Authorization = connectorAuthorizationResponse(*authorization, true)
 	}
 	return response
+}
+
+func isLinearMCPPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "linear" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://mcp.linear.app/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "mcp.linear.app" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
+func isPixsoMCPPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "pixso" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://pixso.net/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "pixso.net" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
+func isTianyanchaMCPPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "tianyancha" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://mcp.tianyancha.com/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "mcp.tianyancha.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
