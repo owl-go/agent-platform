@@ -324,6 +324,8 @@ Run metadata and final text/JSON results are retained without a time limit in th
 
 The detailed profile and management behavior and implementation/test seams are defined in `docs/product/expert-skill-connector-simplification.md`. Catalog details, launch actions, and conversation resource selection are defined in `docs/product/conversation-resource-selection.md`.
 
+Expert, Skill, Connector, and Knowledge Base catalogs show card-shaped loading skeletons while their initial requests are pending. Empty guidance appears only after loading completes; a failed request ends loading and displays the existing localized error feedback. Background Connector status refreshes retain the visible catalog.
+
 ### 9.1 Experts
 
 - An Expert contains a preset Profile Icon, a unique-per-User name, required display-only Introduction, required Core Capability, required Operating Procedure, required Output Standard, optional Cautions, Derived Expertise Tags, and selected Skills and Connectors. It contains no Provider Model or Runtime Engine setting.
