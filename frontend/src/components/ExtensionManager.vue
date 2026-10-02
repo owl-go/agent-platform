@@ -125,7 +125,7 @@ async function connectFromDetails() {
   if (entry?.installation) {
     if (["notion", "teambition", "github", "camscanner", "kling-ai", "linear", "pixso"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
-    else if (["wecom", "modao", "picset-ai", "ai-hive"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (["wecom", "modao", "picset-ai", "ai-hive", "openboost"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
   } else if (entry?.publication) await installPublication(entry.publication);
   else if (detailCLI.value) {
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "github", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai", "ai-hive"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "github", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai", "ai-hive", "openboost"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -313,19 +313,20 @@ async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
   const modao = form.installation.source === "modao";
+  const openboost = form.installation.source === "openboost";
   const picset = form.installation.source === "picset-ai";
   const aiHive = form.installation.source === "ai-hive";
-  const invalidKey = aiHive ? "aiHiveCredentialsInvalid" : picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const invalidKey = openboost ? "openboostCredentialsInvalid" : aiHive ? "aiHiveCredentialsInvalid" : picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (aiHive ? !form.secret || form.secret.length > 4096 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+  if (aiHive ? !form.secret || form.secret.length > 4096 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : (modao || openboost) ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = aiHive ? { MCP_BEARER_TOKEN: form.secret } : picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    const credentials = openboost ? { openboost_secret_key: form.secret } : aiHive ? { MCP_BEARER_TOKEN: form.secret } : picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
     let installation = form.installation;
-    if ((modao || picset || aiHive) && installation.upgrade_available) {
+    if ((modao || picset || aiHive || openboost) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       form.installation = installation;
     }
@@ -889,6 +890,10 @@ async function fileToBase64(file: File): Promise<string> {
         <template v-else-if="providedConnection.installation.source === 'modao'">
           <label>{{ t('resources.modaoToken') }}<input v-model="providedConnection.secret" name="modao_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
           <a href="https://modao.cc/feature/ai-mcp.html" target="_blank" rel="noopener noreferrer">{{ t('resources.modaoTokenHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'openboost'">
+          <label>Secret Key<input v-model="providedConnection.secret" name="openboost_secret_key" type="password" autocomplete="new-password" maxlength="32768" required></label>
+          <a href="https://open.microdata-inc.com/mcp-list" target="_blank" rel="noopener noreferrer">{{ t('resources.openboostTokenHelp') }}</a>
         </template>
         <template v-else>
           <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>
