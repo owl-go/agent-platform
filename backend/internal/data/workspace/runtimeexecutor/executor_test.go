@@ -1380,6 +1380,39 @@ func TestSanitizeNativeStateRemovesTransientConfigAndRedactsSessionFiles(t *test
 	}
 }
 
+func TestFirstWorkflowCommitCreatesOwnerDirectory(t *testing.T) {
+	root := t.TempDir()
+	executor := &Executor{config: platformconfig.Config{
+		Workspace: platformconfig.WorkspaceConfig{Root: root},
+		Worker:    platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()},
+	}}
+	job := application.ExecutionJob{Kind: application.JobWorkflow, Snapshot: domain.ExecutionSnapshot{WorkspacePath: "workflows/new-owner/new-workflow"}}
+	workspace, persistent, _, err := executor.stageWorkspaceAt(job, filepath.Join(root, ".runtime-containers", "slot", "workspace"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "result.txt"), []byte("first result"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	commit := &nativeStateCommit{promotions: []nativeStatePromotion{{temporary: workspace, persistent: persistent}}, temporaryRoots: []string{workspace}}
+	if err := commit.Commit(); err != nil {
+		t.Fatalf("first Workflow Workspace commit: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(persistent, "result.txt"))
+	if err != nil || string(content) != "first result" {
+		t.Fatalf("persistent Workspace content = %q, error = %v", content, err)
+	}
+	if err := commit.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(persistent); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("rollback left new persistent Workspace: %v", err)
+	}
+	if err := commit.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestNativeStateCommitCanRollbackAllPromotedMembers(t *testing.T) {
 	root := t.TempDir()
 	commit := &nativeStateCommit{}
