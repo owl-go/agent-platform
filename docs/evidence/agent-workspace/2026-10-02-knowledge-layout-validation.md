@@ -21,3 +21,14 @@ Feature commit: `51bfed8`. Integrated and pushed `main_temp` commit: `fa11684`. 
 - Public `/api/healthz` returned HTTP 200.
 
 This is frontend layout validation, with isolated visual fixtures and public deployment asset verification. An authenticated production browser session was not rerun. Backend services, RAGFlow configuration, credentials, and document data were not changed; RAGFlow ingestion/retrieval, Go gates, Runtime image smoke, and Linux/gVisor Production Conformance were not rerun for this frontend-only change.
+
+## Follow-up: retrieval dialog
+
+The User requested a single retrieval button that opens a dialog. Feature commit `96a1960` moves the query and all retrieval feedback/results into that dialog; `main_temp` commit `038856d` integrates it. The detail header keeps the button available to readers while edit/delete remain restricted to maintainers. Closing and reopening preserves the current query; changing the Knowledge Base resets it.
+
+- Targeted Vitest (8 tests) passed, covering dialog queries/citations, unready/no-match/failure responses, reopening, and reader access. `main_temp` full frontend Vitest, `make web-typecheck`, `make web-build`, and `git diff --check` passed.
+- Isolated Playwright Chromium fixtures verified the desktop and 390×844 mobile dialog, input autofocus, Enter submission, ten-result scrolling, and Escape dismissal with focus returned to the retrieval button. Mobile document width remained 390px; the result list scrolled inside the dialog. Temporary fixtures/processes were removed, and screenshots are retained only under ignored `output/playwright/knowledge-search-dialog-*.png`.
+- Published from `main_temp` with the existing production OIDC configuration using `scripts/deploy-web.sh`. Active web release is now `/opt/agent-platform/web/releases/knowledge-layout-20261002-2`; release `knowledge-layout-20261002-1` remains available.
+- The public resource route, main JS/CSS, and Resource Center JS/CSS returned HTTP 200 and matched all five local production files. Entrypoint SHA-256: `454ce25082f1db566caa377f8b9f3b19a6c3e1f8b8e28f133893400638367bfc`. Public `/api/healthz` returned HTTP 200.
+
+The same frontend-only validation limits above apply to this follow-up.
