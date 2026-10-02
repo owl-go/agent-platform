@@ -9,6 +9,7 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/githubcli"
 	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
@@ -62,6 +63,31 @@ func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id,
 }
 func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type githubConnectorAuthorizationDriver struct{ client *githubcli.Client }
+
+func (d githubConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d githubConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d githubConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	switch {
+	case errors.Is(e, githubcli.ErrPending):
+		e = errConnectorAuthorizationPending
+	case errors.Is(e, githubcli.ErrDenied):
+		e = errConnectorAuthorizationDenied
+	case errors.Is(e, githubcli.ErrExpired):
+		e = errConnectorAuthorizationExpired
+	}
+	return connectorAuthorizationGrant{ExternalID: v.ExternalID, DisplayName: v.DisplayName, AccessToken: v.AccessToken, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d githubConnectorAuthorizationDriver) Refresh(context.Context, string, string, string) (connectorAuthorizationGrant, error) {
+	return connectorAuthorizationGrant{}, fmt.Errorf("%w: reconnect GitHub to renew access", domain.ErrInvalid)
 }
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
@@ -209,6 +235,9 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil
+	}
+	if isGitHubCLILoginPolicy(policy) {
+		return githubConnectorAuthorizationDriver{client: githubcli.NewClient()}, nil
 	}
 	if isTeambitionCLILoginPolicy(policy) {
 		redirect, err := service.teambitionCallbackURL()
