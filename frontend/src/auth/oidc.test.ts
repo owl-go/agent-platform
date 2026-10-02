@@ -1,6 +1,7 @@
 import type { User, UserManagerSettings } from "oidc-client-ts";
 import { describe, expect, it, vi } from "vitest";
 import { createBrowserOIDC, readOIDCSettings } from "./oidc";
+import { localeStorageKey } from "../i18n";
 
 describe("readOIDCSettings", () => {
   const environment = {
@@ -60,6 +61,28 @@ describe("readOIDCSettings", () => {
     expect(browser.sessionStorage.length).toBe(0);
     await expect(oidc.client.getUser()).resolves.toEqual({ accessToken: "fresh-token", expired: false });
     expect(manager.signinSilent).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [null, "zh-Hans"],
+    ["zh-CN", "zh-Hans"],
+    ["en-US", "en"],
+  ])("passes the saved language to the identity form: %s", async (locale, expected) => {
+    const manager = { signinRedirect: vi.fn(async () => undefined) };
+    const browser = {
+      location: { origin: "https://app.example.test", pathname: "/", search: "" },
+      history: { replaceState: vi.fn() },
+      sessionStorage: new MemoryStorage(),
+      localStorage: new MemoryStorage(),
+    };
+    if (locale) browser.localStorage.setItem(localeStorageKey, locale);
+    const oidc = createBrowserOIDC(environment, browser as unknown as Window, () => manager as never);
+
+    await oidc.client.signIn();
+    expect(manager.signinRedirect).toHaveBeenLastCalledWith({ ui_locales: expected });
+    browser.localStorage.setItem(localeStorageKey, "en-US");
+    await oidc.client.signIn();
+    expect(manager.signinRedirect).toHaveBeenLastCalledWith({ ui_locales: "en" });
   });
 
   it.each([
