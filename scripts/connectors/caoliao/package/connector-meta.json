@@ -1,0 +1,19 @@
+{
+  "source": "caoliao",
+  "version": "1.0.0",
+  "type": "mcp",
+  "name": "草料二维码",
+  "description": "通过草料公开 MCP 查询二维码关联的实体、业务状态、记录、表单字段和绑定信息。仅访问公开内容，无须登录。",
+  "examples_zh": [
+    "查询这个草料码对应的设备及当前状态",
+    "查看这个草料码的巡检记录",
+    "查看这个草料码的表单需要填写哪些字段"
+  ],
+  "examples_en": [
+    "Inspect the device and current state behind this Caoliao QR code",
+    "Read inspection records for this Caoliao QR code",
+    "Show the fields required by this QR code's form"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "none"
+}

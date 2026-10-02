@@ -48,9 +48,14 @@ func DisplayIcon(source string) string {
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
 	case "feishu", "dingtalk", "notion", "modao":
 		return source
+	case "caoliao":
+		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(caoliaoIcon)
 	}
 	return "plug"
 }
+
+//go:embed icons/caoliao.svg
+var caoliaoIcon []byte
 
 // DisplayName and DisplayDescription keep previously published Notion revisions
 // on the current product label without mutating their immutable package metadata.
