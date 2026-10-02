@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App.vue";
 import { platformApiKey, type PlatformApi } from "./api/client";
 import { authContextKey, type AuthContext, type AuthState } from "./auth/session";
-import { createAppI18n } from "./i18n";
+import { createAppI18n, type SupportedLocale } from "./i18n";
 import { createAppRouter } from "./router";
 
 vi.mock("./api/client", async (importOriginal) => {
@@ -14,7 +14,7 @@ vi.mock("./api/client", async (importOriginal) => {
   return { ...actual, getHealth: vi.fn(async () => ({ status: "ok" })) };
 });
 
-function authContext(): AuthContext {
+function authContext() {
   const state = ref<AuthState>({
     kind: "authenticated",
     currentUser: {
@@ -36,19 +36,19 @@ function authContext(): AuthContext {
       signOut: vi.fn(async () => {}),
       dispose: vi.fn(),
     },
-  };
+  } satisfies AuthContext;
 }
 
 const defaultApi = { listImageGenerations: vi.fn(async () => []) } as unknown as PlatformApi;
 
-async function mountAt(path: string, api: PlatformApi = defaultApi) {
+async function mountAt(path: string, api: PlatformApi = defaultApi, auth: AuthContext = authContext(), locale: SupportedLocale = "zh-CN") {
   const router = createAppRouter(createMemoryHistory());
   await router.push(path);
   await router.isReady();
   const wrapper = mount(App, {
     global: {
-      plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
-      provide: { [authContextKey as symbol]: authContext(), [platformApiKey as symbol]: api },
+      plugins: [router, createAppI18n({ getItem: () => locale }, locale)],
+      provide: { [authContextKey as symbol]: auth, [platformApiKey as symbol]: api },
       stubs: { RouterView: true },
     },
   });
@@ -57,6 +57,46 @@ async function mountAt(path: string, api: PlatformApi = defaultApi) {
 }
 
 afterEach(() => vi.useRealTimers());
+
+describe("App authentication screen", () => {
+  it.each([
+    ["zh-CN", "登录后开始使用", "登录"],
+    ["en-US", "Sign in to continue", "Sign in"],
+  ] as const)("keeps one localized login action and the existing OIDC entry in %s", async (locale, title, action) => {
+    const auth = authContext();
+    auth.session.state.value = { kind: "unauthenticated", reason: "missing" };
+    const wrapper = await mountAt("/home", defaultApi, auth, locale);
+
+    expect(wrapper.get("main").attributes("aria-labelledby")).toBe("auth-title");
+    expect(wrapper.findAll("h1").map((heading) => heading.text())).toEqual([title]);
+    expect(wrapper.get(".auth-brand").text()).toContain("Agent Workspace");
+    expect(wrapper.find(".eyebrow").exists()).toBe(false);
+    expect(wrapper.findAll("button")).toHaveLength(1);
+    expect(wrapper.get("button").text()).toBe(action);
+    expect(wrapper.find(".app-shell").exists()).toBe(false);
+    await wrapper.get("button").trigger("click");
+    expect(auth.session.signIn).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it("announces loading and identity errors inside the same branded card", async () => {
+    const auth = authContext();
+    auth.session.state.value = { kind: "checking" };
+    const wrapper = await mountAt("/home", defaultApi, auth);
+
+    expect(wrapper.get('[role="status"]').attributes("aria-busy")).toBe("true");
+    expect(wrapper.get("h1").text()).toBe("正在连接工作空间");
+    expect(wrapper.find("button").exists()).toBe(false);
+
+    auth.session.state.value = { kind: "error", message: "Authentication could not be completed" };
+    await flushPromises();
+    expect(wrapper.get(".auth-card .auth-brand").text()).toContain("Agent Workspace");
+    expect(wrapper.get('[role="alert"] h1').text()).toBe("身份服务暂时不可用");
+    expect(wrapper.get('[role="alert"]').text()).toContain("Authentication could not be completed");
+    expect(wrapper.find("button").exists()).toBe(false);
+    wrapper.unmount();
+  });
+});
 
 describe("App navigation", () => {
   it("groups primary navigation by product area", async () => {

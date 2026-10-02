@@ -3,7 +3,7 @@ import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElNotification } from "element-plus";
-import { Box, ChatDotRound, Connection, HomeFilled, Loading, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
+import { ArrowRight, Box, ChatDotRound, CircleClose, Connection, HomeFilled, Loading, Menu, MoreFilled, Picture, Plus, Setting, SwitchButton, User, UserFilled } from "@element-plus/icons-vue";
 import en from "element-plus/es/locale/lang/en";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { getHealth, platformApiKey, type CreditBalance } from "./api/client";
@@ -179,13 +179,25 @@ function toggleNavItem(item: NavItem) {
 
 <template>
   <el-config-provider :locale="elementLocale">
-    <section v-if="authState.kind === 'checking'" class="auth-screen">
-      <el-icon class="auth-loading" :size="42"><Loading /></el-icon><h1>{{ t('auth.checking') }}</h1>
-    </section>
-    <section v-else-if="authState.kind === 'unauthenticated'" class="auth-screen">
-      <el-card class="auth-card" shadow="always"><div class="logo-mark">AW</div><p class="eyebrow">{{ t('product') }}</p><h1>{{ t('auth.required') }}</h1><p>{{ t('auth.body') }}</p><el-button type="primary" size="large" class="wide" @click="auth.session.signIn()">{{ t('auth.signIn') }} <span>→</span></el-button></el-card>
-    </section>
-    <section v-else-if="authState.kind === 'error'" class="auth-screen"><el-result icon="error" :title="t('auth.unavailable')" :sub-title="authState.message" /></section>
+    <main v-if="authState.kind !== 'authenticated'" class="auth-screen" aria-labelledby="auth-title">
+      <el-card class="auth-card" shadow="never">
+        <div class="auth-brand"><span class="logo-mark" aria-hidden="true">AW</span><strong>{{ t('product') }}</strong></div>
+        <div v-if="authState.kind === 'checking'" class="auth-content" role="status" aria-live="polite" aria-busy="true">
+          <el-icon class="auth-loading" :size="24" aria-hidden="true"><Loading /></el-icon>
+          <h1 id="auth-title">{{ t('auth.checking') }}</h1>
+        </div>
+        <div v-else-if="authState.kind === 'unauthenticated'" class="auth-content">
+          <h1 id="auth-title">{{ t('auth.required') }}</h1>
+          <p>{{ t('auth.body') }}</p>
+          <el-button type="primary" size="large" class="auth-sign-in" @click="auth.session.signIn()">{{ t('auth.signIn') }}<el-icon aria-hidden="true"><ArrowRight /></el-icon></el-button>
+        </div>
+        <div v-else class="auth-content" role="alert">
+          <el-icon class="auth-error-icon" :size="24" aria-hidden="true"><CircleClose /></el-icon>
+          <h1 id="auth-title">{{ t('auth.unavailable') }}</h1>
+          <p>{{ authState.message }}</p>
+        </div>
+      </el-card>
+    </main>
     <el-container v-else class="app-shell">
       <el-aside class="sidebar" :class="{ open: mobileOpen }" width="240px">
         <RouterLink to="/home" class="product-lockup" @click="mobileOpen = false"><span class="logo-mark">AW</span><span><strong>Agent</strong><small>Workspace</small></span></RouterLink>
