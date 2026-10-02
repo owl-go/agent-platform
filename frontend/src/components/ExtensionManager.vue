@@ -15,6 +15,7 @@ import ConnectorIcon from "./ConnectorIcon.vue";
 import ProfileIcon from "./ProfileIcon.vue";
 import IconPicker from "./IconPicker.vue";
 import ResourceTrustMeta from "./ResourceTrustMeta.vue";
+import CatalogLoading from "./CatalogLoading.vue";
 
 type ResourceTab = "mcp" | "skills";
 type ConnectorCatalogEntry = { publication?: ConnectorPublication; installation?: ConnectorInstallation };
@@ -77,6 +78,7 @@ function setStatusError(source: string, failed: boolean) {
 }
 const canManageCLI = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const activeTab = ref<ResourceTab>(props.initialTab);
+const loading = ref(true);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
 const createdSkillIDs = ref(new Set<string>());
@@ -273,6 +275,7 @@ async function refresh() {
     await Promise.all([refreshCLIAuthorizations(), refreshConnectorAuthorizations(), refreshSkillDocuments()]);
     notifyResources();
   } catch (cause) { reportError(cause); }
+  finally { loading.value = false; }
 }
 
 async function refreshConnectorAuthorizations() {
@@ -774,7 +777,8 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar extension-catalog-toolbar connector-catalog-toolbar">
         <nav v-if="!mineOnly || !selectable" class="subtabs connector-view-tabs" :aria-label="t('resources.connectors')"><el-button text :class="{ active: connectorView === 'market' }" :aria-pressed="connectorView === 'market'" @click="connectorView = 'market'">{{ t('resources.connectorMarket') }}</el-button><el-button text :class="{ active: connectorView === 'installed' }" :aria-pressed="connectorView === 'installed'" @click="connectorView = 'installed'">{{ t('resources.installed') }}</el-button></nav><slot name="catalog-actions" /><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
-      <div class="catalog-groups">
+      <CatalogLoading v-if="loading" compact />
+      <div v-else class="catalog-groups">
       <section v-for="section in connectorSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid connector-catalog-grid">
@@ -805,7 +809,8 @@ async function fileToBase64(file: File): Promise<string> {
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
       <div class="resource-toolbar extension-catalog-toolbar skill-add-actions"><slot name="catalog-actions" /><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button><el-dropdown trigger="click" @command="handleSkillAction"><el-button type="primary" class="skill-add-menu-button"><ChevronDown :size="15" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="create">{{ t('resources.createSkill') }}</el-dropdown-item><el-dropdown-item command="upload">{{ t('resources.uploadSkill') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
-      <div class="catalog-groups">
+      <CatalogLoading v-if="loading" />
+      <div v-else class="catalog-groups">
       <section v-for="section in skillSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid skill-catalog-grid">

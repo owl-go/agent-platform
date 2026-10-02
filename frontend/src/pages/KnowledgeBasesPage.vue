@@ -8,6 +8,7 @@ import { useI18n } from "vue-i18n";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ResourceTrustMeta from "../components/ResourceTrustMeta.vue";
+import CatalogLoading from "../components/CatalogLoading.vue";
 
 const props = withDefaults(defineProps<{ embedded?: boolean; catalogQuery?: string; availableOnly?: boolean }>(), { embedded: false, catalogQuery: "", availableOnly: false });
 
@@ -393,7 +394,7 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
     <div v-else-if="!selected" class="resource-toolbar knowledge-embedded-toolbar"><div class="view-toggle" role="group" :aria-label="t('knowledgeBases.displayMode')"><button :class="{ active: displayMode === 'card' }" :aria-label="t('knowledgeBases.cardView')" :title="t('knowledgeBases.cardView')" @click="setDisplayMode('card')"><LayoutGrid :size="16" /></button><button :class="{ active: displayMode === 'list' }" :aria-label="t('knowledgeBases.listView')" :title="t('knowledgeBases.listView')" @click="setDisplayMode('list')"><ListIcon :size="16" /></button></div><el-button type="primary" @click="openCreate"><Plus :size="16" />{{ t("knowledgeBases.new") }}</el-button></div>
 
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
-    <el-skeleton v-if="loading" :rows="8" animated class="page-loading" />
+    <CatalogLoading v-if="loading" />
 
     <template v-else-if="!selected">
       <div class="catalog-heading"><div><strong>{{ t("knowledgeBases.catalog") }}</strong><span>{{ visibleBases.length }}</span></div><small>{{ t("knowledgeBases.catalogHint") }}</small></div>

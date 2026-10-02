@@ -8,6 +8,7 @@ import ToastMessage from "../components/ToastMessage.vue";
 import CatalogDetails from "../components/CatalogDetails.vue";
 import ProfileIcon from "../components/ProfileIcon.vue";
 import ResourceTrustMeta from "../components/ResourceTrustMeta.vue";
+import CatalogLoading from "../components/CatalogLoading.vue";
 
 const props = withDefaults(defineProps<{ embedded?: boolean; catalogQuery?: string; availableOnly?: boolean }>(), { embedded: false, catalogQuery: "", availableOnly: true });
 
@@ -20,6 +21,7 @@ const teams = ref<ExpertTeam[]>([]);
 const query = ref("");
 const category = ref("");
 const error = ref("");
+const loading = ref(true);
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
@@ -44,10 +46,14 @@ onMounted(refresh);
 watch(activeTab, () => { query.value = ""; category.value = ""; });
 
 async function refresh() {
+  loading.value = true;
+  error.value = "";
   try {
     [experts.value, teams.value] = await Promise.all([api.listExperts(), api.listExpertTeams()]);
   } catch {
     error.value = t("experts.loadFailed");
+  } finally {
+    loading.value = false;
   }
 }
 
@@ -91,7 +97,8 @@ function toggleMine() {
 
     <ToastMessage v-if="error" kind="error" :title="t('experts.operationFailed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
 
-    <div v-if="activeTab === 'experts'" class="catalog-groups">
+    <CatalogLoading v-if="loading" />
+    <div v-else-if="activeTab === 'experts'" class="catalog-groups">
       <section v-for="section in expertSections" :key="section.key" class="catalog-group">
         <h2 class="catalog-group-title">{{ section.title }}</h2>
         <div class="expert-grid catalog-grid">
