@@ -34,7 +34,7 @@ Egress 清单只含已确认的 npm registry 和默认 API 域名。上游媒体
 
 ## 本地验收证据（2026-10-01）
 
-已执行最终 ZIP 的 `connectorpackage.Parse`、上游完整性拒绝测试、官方 0.3.0 MCP 握手和 8 个工具发现，以及 Runtime Executor／Connector Package 目标测试、`make test` 和 `make build`。全量测试命令通过不代表依赖外部环境的集成测试都执行过。凭证别名在 Claude、Codex、Hermes、OpenClaw 的配置中正确投影，缺失或空授权变量拒绝物化，不使用宿主凭证。原始 Secret 保留在精确字节脱敏集合中。当前没有目标 Linux + runsc、真实账号或平台目录验收证据。
+已执行最终 ZIP 的 `connectorpackage.Parse`、上游完整性拒绝测试、官方 0.3.0 MCP 握手和 8 个工具发现，以及 Runtime Executor／Connector Package 目标测试、`make test` 和 `make build`。全量测试命令通过不代表依赖外部环境的集成测试都执行过。凭证别名在 Claude、Codex、Hermes、OpenClaw 的配置中正确投影，缺失或空授权变量拒绝物化，不使用宿主凭证。原始 Secret 保留在精确字节脱敏集合中。该初版检查当时没有目标 Linux + runsc、真实账号或平台目录验收证据；后续发布检查见下文。
 
 ## 发布并安装
 
@@ -49,3 +49,18 @@ python3 scripts/connectors/ai-hive/publish.py \
 ```
 
 发布后核对 Administrator／User 正式目录各只有一个 AI-Hive 条目、安装版本匹配、官网图标加载，以及未授权时可打开 API Key 表单。
+
+## 线上发布证据（2026-10-02）
+
+`main_temp` 集成提交 `696bf00` 经完整部署脚本发布为 `ai-hive-20261002`，API、Worker、Egress Controller、Web 和公网健康检查通过；部署备份位于 `backups/pre-ai-hive-20261002`。
+
+- Publication：`available`，正式版本 0.3.0。
+- Revision：`d5b19b31-5277-406f-a719-c035bb2b84b2`，规范化包 SHA-256 为 `9184a303e13e54c7013a290e73ca96989c64118b33748ae4d300b3bae1f68289`。
+- Installation：`c910c163-4de3-4ecd-88fe-3e036d978621`，所有者 `platform-admin@agent-workspace.local`，状态 `active`、未授权。
+- 重跑发布器复用了同一 Revision 和 Installation；Administrator／User 正式目录与该账号 Installation 各只有一个 AI-Hive 条目。
+
+指定 Runtime `127.0.0.1:5000/agent-platform/runtime@sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b`（部署后 Digest 未变）在 Linux + runsc、非 root、只读 Rootfs、无外网、1 CPU／512 MiB／64 进程限制下实际通过官方 MCP 0.3.0 initialize 与 8 个工具发现。该检查使用虚构 canary 和不可连接的本地 API 地址，业务调用数为 0；依赖准备禁用 npm 安装脚本。临时依赖目录与远端发布 ZIP／证据目录均已清理。
+
+本地及发布门禁的完整 `make test`、`make build`、`make web-typecheck`、生产 Web 构建通过；前端完整 46 个测试文件／438 项测试通过。目标连接表单与图标的相邻测试通过。Playwright 实际检查 1200px 桌面和 390×844 移动端：只有一个 AI-Hive 卡片，官方 SVG 图标加载成功（26px 原生尺寸）；未授权时“连接”打开一个空的密码类型 API Key 字段和官方获取说明链接；移动端文档宽度 390，表单左右边界为 20／370，没有横向溢出。成功清空、失败重试、取消清空与先升级再连接由组件 fixture 覆盖。
+
+非敏感 API 与 Linux 协议证据保存在忽略目录 `outputs/ai-hive`，桌面／移动端截图位于 `output/playwright/ai-hive`。线上没有提交任何真实或测试 AI-Hive API Key。真实账号授权、余额／模型查询、媒体上传及付费图片／视频生成仍未验证；没有执行完整模型 Runtime Production Conformance 或存储 Conformance。上述 Linux MCP 协议 smoke 不能替代这些业务验收。
