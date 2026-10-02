@@ -35,7 +35,7 @@ class PackageTest(unittest.TestCase):
             with self.subTest(source=source):
                 revision = {"id": source + "-revision", "source": source, "sha256": "a" * 64, "mode": "mcp", "icon": "data:image/png;base64,asset"}
                 publication = {"source": source, "active_revision_id": revision["id"], "state": "available", "version": 1, "revision": revision}
-                installation = {"id": source + "-installation", "source": source, "active_revision_id": revision["id"], "state": "active", "authentication_driver": "connector_package" if source == "pkulaw" else "none", "authorized": source == "mindbye"}
+                installation = {"id": source + "-installation", "source": source, "active_revision_id": revision["id"], "state": "active", "authentication_driver": "oauth" if source == "pkulaw" else "none", "authorized": source == "mindbye"}
                 calls = []
 
                 def api(base, token, method, path, body=None):

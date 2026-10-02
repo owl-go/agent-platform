@@ -46,7 +46,7 @@ def publish(base, token, source, archive, normalized_sha256):
         raise RuntimeError("publication or installation did not activate")
     if not user[0]["revision"]["icon"].startswith("data:image/png;base64,"):
         raise RuntimeError("official brand projection is not deployed")
-    expected_driver = "connector_package" if source == "pkulaw" else "none"
+    expected_driver = "oauth" if source == "pkulaw" else "none"
     if installation["authentication_driver"] != expected_driver or source == "mindbye" and not installation.get("authorized"):
         raise RuntimeError("installation authorization policy differs from reviewed service")
     return {"revision": target, "publication": current, "installation": installation,
