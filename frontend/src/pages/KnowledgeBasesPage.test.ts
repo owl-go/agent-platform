@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { flushPromises, mount } from "@vue/test-utils";
+import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, ref } from "vue";
 import { describe, expect, it, vi } from "vitest";
 import { platformApiKey, type KnowledgeBase, type KnowledgeDocument, type KnowledgeCategory, type PlatformApi } from "../api/client";
@@ -27,7 +27,7 @@ function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], docu
     retryKnowledgeDocument: retry,
   } as unknown as PlatformApi;
   const auth: AuthContext = { isCallback: false, session: { state: ref({ kind: "authenticated", currentUser: { id: "user-1", username: "user", email: "u@example.test", display_name: "User", administrator: false, settings_ready: true } }), accessToken: () => "token", initialize: vi.fn(async () => {}), signIn: vi.fn(async () => {}), signOut: vi.fn(async () => {}), dispose: vi.fn() } };
-  return mount(KnowledgeBasesPage, { props, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
+  return mount(KnowledgeBasesPage, { attachTo: globalThis.document.body, props, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
 }
 
 describe("KnowledgeBasesPage search", () => {
@@ -61,6 +61,13 @@ describe("KnowledgeBasesPage search", () => {
     expect(wrapper.text()).toContain("部门知识库");
     expect(wrapper.text()).toContain("财务部");
     expect(wrapper.findAll(".knowledge-card")[0]!.find(".card-more").exists()).toBe(false);
+    await wrapper.findAll(".knowledge-card")[0]!.trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".detail-actions").text()).toBe("检索");
+    expect(wrapper.find(".source-controls").exists()).toBe(false);
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
+    await flushPromises();
+    expect(document.querySelector(".knowledge-search-dialog input")).not.toBeNull();
     wrapper.unmount();
   });
 
@@ -83,12 +90,22 @@ describe("KnowledgeBasesPage search", () => {
     await flushPromises();
     await wrapper.get(".knowledge-card").trigger("click");
     await flushPromises();
-    await wrapper.get(".knowledge-search-controls input").setValue("如何安装");
-    await wrapper.get(".knowledge-search-controls").trigger("submit");
+    expect(wrapper.find(".knowledge-search-controls").exists()).toBe(false);
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
+    await flushPromises();
+    const dialog = new DOMWrapper(document.querySelector<HTMLElement>(".knowledge-search-dialog")!);
+    await dialog.get(".knowledge-search-controls input").setValue("如何安装");
+    await dialog.get(".knowledge-search-controls").trigger("submit");
     await flushPromises();
     expect(search).toHaveBeenCalledWith("base-1", "如何安装");
-    expect(wrapper.get(".knowledge-search-results").text()).toContain("请先安装客户端。");
-    expect(wrapper.get(".knowledge-search-results").text()).toContain("安装指南.txt · 指南");
+    expect(dialog.get(".knowledge-search-results").text()).toContain("请先安装客户端。");
+    expect(dialog.get(".knowledge-search-results").text()).toContain("安装指南.txt · 指南");
+    await dialog.get(".el-dialog__headerbtn").trigger("click");
+    await flushPromises();
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
+    await flushPromises();
+    expect(dialog.get(".knowledge-search-controls input").element).toHaveProperty("value", "如何安装");
+    expect(search).toHaveBeenCalledTimes(1);
     wrapper.unmount();
   });
 
@@ -98,14 +115,21 @@ describe("KnowledgeBasesPage search", () => {
     await flushPromises();
     await wrapper.get(".knowledge-card").trigger("click");
     await flushPromises();
-    await wrapper.get(".knowledge-search-controls input").setValue("问题");
-    await wrapper.get(".knowledge-search-controls").trigger("submit");
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
     await flushPromises();
-    expect(wrapper.get(".knowledge-search-feedback").text()).toContain("尚未完成索引");
+    const dialog = new DOMWrapper(document.querySelector<HTMLElement>(".knowledge-search-dialog")!);
+    await dialog.get(".knowledge-search-controls input").setValue("问题");
+    await dialog.get(".knowledge-search-controls").trigger("submit");
+    await flushPromises();
+    expect(dialog.get(".knowledge-search-feedback").text()).toContain("尚未完成索引");
     search.mockResolvedValueOnce({ index_ready: true, items: [] });
-    await wrapper.get(".knowledge-search-controls").trigger("submit");
+    await dialog.get(".knowledge-search-controls").trigger("submit");
     await flushPromises();
-    expect(wrapper.get(".knowledge-search-feedback").text()).toContain("没有找到相关内容");
+    expect(dialog.get(".knowledge-search-feedback").text()).toContain("没有找到相关内容");
+    search.mockRejectedValueOnce(new Error("retrieval_failed"));
+    await dialog.get(".knowledge-search-controls").trigger("submit");
+    await flushPromises();
+    expect(dialog.get('[role="alert"]').text()).toContain("检索失败");
     wrapper.unmount();
   });
 
