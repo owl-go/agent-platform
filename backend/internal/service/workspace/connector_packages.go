@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	workspacev1 "agent-platform/backend/api/workspace/v1"
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -1172,6 +1173,9 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 	if err := validateProvidedConnectorCredentials(policy, request.Scopes); err != nil {
 		return nil, publicError(err)
 	}
+	if err := validatePKULawCredentials(policy, request.CredentialsJson); err != nil {
+		return nil, publicError(err)
+	}
 	ciphertext, err := service.box.Encrypt(request.CredentialsJson, "connector-authorization:"+ownerID)
 	if err != nil {
 		return nil, publicError(err)
@@ -1190,6 +1194,21 @@ func (service *Service) ConnectConnector(ctx context.Context, request *workspace
 		}
 	}
 	return nil, publicError(fmt.Errorf("%w: connector installation not found after authorization", domain.ErrNotFound))
+}
+
+func validatePKULawCredentials(policy connectorRevisionPolicy, credentials []byte) error {
+	if policy.Metadata.Source != "pkulaw" {
+		return nil
+	}
+	var values map[string]string
+	if err := json.Unmarshal(credentials, &values); err != nil || len(values) != 1 {
+		return fmt.Errorf("%w: PKULaw requires one MCP Bearer token", domain.ErrInvalid)
+	}
+	token := values["MCP_BEARER_TOKEN"]
+	if token == "" || len(token) > 4096 || strings.IndexFunc(token, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
+		return fmt.Errorf("%w: PKULaw requires a bounded token without whitespace or control characters", domain.ErrInvalid)
+	}
+	return nil
 }
 
 func validateProvidedConnectorCredentials(policy connectorRevisionPolicy, requestedScopes []string) error {

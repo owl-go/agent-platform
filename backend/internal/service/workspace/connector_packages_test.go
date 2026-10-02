@@ -222,3 +222,27 @@ func TestCamScannerUsesInteractiveLoginAndOnlyShortLivedRuntimeCredential(t *tes
 		t.Fatal("driver chosen without reviewed policy")
 	}
 }
+
+func TestPKULawProvidedTokenBoundary(t *testing.T) {
+	policy := connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "pkulaw"}}
+	for _, test := range []struct {
+		name, credentials string
+		valid             bool
+	}{
+		{"valid", `{"MCP_BEARER_TOKEN":"fixture-token"}`, true},
+		{"empty", `{"MCP_BEARER_TOKEN":""}`, false},
+		{"wrong field", `{"token":"fixture-token"}`, false},
+		{"non string", `{"MCP_BEARER_TOKEN":123}`, false},
+		{"extra secret", `{"MCP_BEARER_TOKEN":"fixture-token","other":"secret"}`, false},
+		{"header injection", `{"MCP_BEARER_TOKEN":"value\r\nInjected: yes"}`, false},
+		{"bearer prefix", `{"MCP_BEARER_TOKEN":"Bearer token"}`, false},
+		{"oversized", `{"MCP_BEARER_TOKEN":"` + strings.Repeat("x", 4097) + `"}`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := validatePKULawCredentials(policy, []byte(test.credentials))
+			if (err == nil) != test.valid {
+				t.Fatalf("validation = %v, valid = %v", err, test.valid)
+			}
+		})
+	}
+}

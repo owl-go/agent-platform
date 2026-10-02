@@ -32,11 +32,21 @@ var aiHiveIcon []byte
 //go:embed icons/tianyancha.png
 var tianyanchaIcon []byte
 
+//go:embed icons/pkulaw.png
+var pkulawIcon []byte
+
+//go:embed icons/mindbye.png
+var mindbyeIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
 // Connectors, including the official Teambition image. Other packages keep
 // the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
+	case "pkulaw":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pkulawIcon)
+	case "mindbye":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(mindbyeIcon)
 	case "tianyancha":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(tianyanchaIcon)
 	case "ai-hive":

@@ -125,7 +125,7 @@ async function connectFromDetails() {
   if (entry?.installation) {
     if (["notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
-    else if (["wecom", "modao", "picset-ai", "ai-hive", "openboost", "moka-hr"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (["wecom", "modao", "picset-ai", "ai-hive", "openboost", "moka-hr", "pkulaw"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
   } else if (entry?.publication) await installPublication(entry.publication);
   else if (detailCLI.value) {
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha", "wecom", "modao", "picset-ai", "ai-hive", "openboost", "moka-hr"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha", "wecom", "modao", "picset-ai", "ai-hive", "openboost", "moka-hr", "pkulaw"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -198,6 +198,7 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
 }));
 // Categories describe existing connector sources; unknown and private connectors stay discoverable.
 function connectorCategory(source: string) {
+  if (["pkulaw", "mindbye"].includes(source)) return "legal";
   if (source === "moka-hr") return "recruitment";
   if (source === "tianyancha") return "industry";
   if (["xiaoe", "openboost"].includes(source)) return "marketing";
@@ -209,7 +210,7 @@ function connectorCategory(source: string) {
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
-const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "industry", "recruitment", "other"].map(key => ({
+const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "industry", "recruitment", "legal", "other"].map(key => ({
   key, title: t(`resources.connectorCategory.${key}`),
   mcp: visibleMCP.value.filter(item => !item.managed_installation && connectorCategory("") === key && (!props.mineOnly || !props.selectable || !item.platform)),
   cli: visibleCLI.value.filter(item => !item.managed_installation && connectorCategory(item.npm_package) === key && (!installedOnly.value || cliInstalled(item))),
@@ -321,17 +322,19 @@ async function saveProvidedConnection() {
   const openboost = form.installation.source === "openboost";
   const picset = form.installation.source === "picset-ai";
   const aiHive = form.installation.source === "ai-hive";
-  const invalidKey = moka ? "mokaCredentialsInvalid" : openboost ? "openboostCredentialsInvalid" : aiHive ? "aiHiveCredentialsInvalid" : picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const pkulaw = form.installation.source === "pkulaw";
+  const bearerToken = aiHive || pkulaw;
+  const invalidKey = pkulaw ? "pkulawCredentialsInvalid" : moka ? "mokaCredentialsInvalid" : openboost ? "openboostCredentialsInvalid" : aiHive ? "aiHiveCredentialsInvalid" : picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (moka ? !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(botID) || !form.secret || form.secret.length > 8192 || /[\s:\x00-\x1f\x7f]/u.test(form.secret) : aiHive ? !form.secret || form.secret.length > 4096 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : (modao || openboost) ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+  if (moka ? !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(botID) || !form.secret || form.secret.length > 8192 || /[\s:\x00-\x1f\x7f]/u.test(form.secret) : bearerToken ? !form.secret || form.secret.length > 4096 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : (modao || openboost) ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = moka ? { moka_api_key: form.secret, moka_org_id: botID } : openboost ? { openboost_secret_key: form.secret } : aiHive ? { MCP_BEARER_TOKEN: form.secret } : picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    const credentials = moka ? { moka_api_key: form.secret, moka_org_id: botID } : openboost ? { openboost_secret_key: form.secret } : bearerToken ? { MCP_BEARER_TOKEN: form.secret } : picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
     let installation = form.installation;
-    if ((modao || picset || aiHive || openboost || moka) && installation.upgrade_available) {
+    if ((modao || picset || bearerToken || openboost || moka) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       form.installation = installation;
     }
@@ -884,7 +887,11 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <template v-if="providedConnection.installation.source === 'ai-hive'">
+        <template v-if="providedConnection.installation.source === 'pkulaw'">
+          <label>Access Token<input v-model="providedConnection.secret" name="pkulaw_token" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://mcp.pkulaw.com/" target="_blank" rel="noopener noreferrer">{{ t('resources.pkulawTokenHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'ai-hive'">
           <label>{{ t('resources.aiHiveApiKey') }}<input v-model="providedConnection.secret" name="ai_hive_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
           <a href="https://ai-hive.iclip.cn/" target="_blank" rel="noopener noreferrer">{{ t('resources.aiHiveApiKeyHelp') }}</a>
         </template>
