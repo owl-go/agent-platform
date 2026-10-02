@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -202,15 +201,39 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	if err != nil {
 		return result, err
 	}
-	var decision struct {
-		Decision string `json:"decision"`
-		FAQID    string `json:"faq_id"`
-		Question string `json:"question"`
+	decision, err := parseAssistantClassification(classified.Text)
+	if err != nil {
+		return result, err
 	}
-	classification := strings.TrimSpace(classified.Text)
-	classification = strings.TrimPrefix(strings.TrimSuffix(strings.TrimPrefix(classification, "```json"), "```"), "```")
-	if err := json.Unmarshal([]byte(strings.TrimSpace(classification)), &decision); err != nil {
-		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned invalid classification", Cause: err}
+	question := turn.Question
+	if decision.Decision == "continue" {
+		if rewritten := strings.TrimSpace(decision.Question); rewritten != "" && len([]rune(rewritten)) <= 4000 {
+			question = rewritten
+		}
+	}
+	var knowledge string
+	var grounded, retrieved bool
+	if decision.Decision == "out_of_scope" && len(assistant.KnowledgeBaseIDs) > 0 {
+		// A classifier without Knowledge context cannot decide whether a
+		// selected source covers the question. Retrieve the original request
+		// before final refusal and reuse these verified excerpts if admitted.
+		knowledge, grounded, err = service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
+		if err != nil {
+			return result, err
+		}
+		retrieved = true
+		if grounded {
+			checked, checkErr := service.runAssistantModel(ctx, owner, turn.ID, 4, model, assistantKnowledgeScopeMessages(assistant, enabled, question, knowledge), false, nil)
+			result.inputTokens += checked.InputTokens
+			result.outputTokens += checked.OutputTokens
+			if checkErr != nil {
+				return result, checkErr
+			}
+			decision, err = parseAssistantClassification(checked.Text)
+			if err != nil {
+				return result, err
+			}
+		}
 	}
 	switch decision.Decision {
 	case "faq":
@@ -225,16 +248,12 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text, result.source = assistantScopeRefusal, "scope"
 		return result, nil
 	case "continue":
-	default:
-		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned an unknown decision"}
 	}
-	question := strings.TrimSpace(decision.Question)
-	if question == "" || len([]rune(question)) > 4000 {
-		question = turn.Question
-	}
-	knowledge, grounded, err := service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
-	if err != nil {
-		return result, err
+	if !retrieved {
+		knowledge, grounded, err = service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
+		if err != nil {
+			return result, err
+		}
 	}
 	result.source = "model"
 	if grounded {

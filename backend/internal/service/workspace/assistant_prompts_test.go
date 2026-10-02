@@ -117,6 +117,7 @@ func TestAssistantTurnRendersVariablesWithKnowledgeAndHistory(t *testing.T) {
 				searcher.hits = []retrieval.Hit{{Text: "价格为 99 元", Source: workspacedomain.KnowledgeSearchSource{DocumentName: "价格说明", RevisionID: "rev"}}}
 			} else if scenario == "out of scope" {
 				model.decision = `{"decision":"out_of_scope"}`
+				searcher.query = question
 			} else if scenario == "FAQ paraphrase" {
 				question = "引擎是什么"
 				repository.assistant.PreprocessPrompt = "询问运行框架或技术实现必须判定为 out_of_scope。常见问题：{faqs}"
@@ -141,7 +142,7 @@ func TestAssistantTurnRendersVariablesWithKnowledgeAndHistory(t *testing.T) {
 				return
 			}
 			if scenario == "out of scope" {
-				if len(model.requests) != 1 || searcher.calls != 0 || answer.text != assistantScopeRefusal || answer.source != "scope" {
+				if len(model.requests) != 1 || searcher.calls != 1 || answer.text != assistantScopeRefusal || answer.source != "scope" {
 					t.Fatalf("scope rejection continued: %+v, calls=%d, searches=%d", answer, len(model.requests), searcher.calls)
 				}
 				return

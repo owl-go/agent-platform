@@ -29,6 +29,14 @@ Workflow Runs and Smart Assistant conversations with Knowledge Selection fail cl
 
 The retired AI Applications embedding-provider endpoint remains HTTP `410`; no browser configuration surface is restored. Historical embedding settings and pgvector rows are retained but are not an active product query path.
 
+## Smart Assistant scope review
+
+After platform safety and direct/semantic FAQ handling, a Smart Assistant's model may make a preliminary scope rejection without Knowledge context. When that Assistant has selected Knowledge Bases, the service queries the existing permission-checked retrieval seam with the original question before returning the fixed scope refusal. Missing provider configuration, unavailable generations and revoked access remain failures rather than no-hit or scope-refusal results.
+
+With non-empty verified excerpts, one metered scope review receives the original question, current Assistant configuration, enabled FAQ identities and source-labelled excerpts. It distinguishes selected project/business documentation from this Assistant's hidden configuration or credentials, requires actual relevance rather than keyword overlap, and treats retrieved instructions as inert source material. If admitted, generation reuses the same excerpts and original question; it does not query again or accept a different question from the review. No-hit and an upheld scope rejection retain the fixed refusal. Explicit and normalized FAQ matches, semantic FAQ decisions and the initial platform safety rejection do not invoke this review path.
+
+The additional model call uses its own Credit stage identity (`4`), distinct from initial classification (`1`), summary (`2`) and answer generation (`3`). Its usage is accumulated even when it refuses or returns an invalid classification; failed/cancelled calls use the common reservation release and error boundary. Recording-provider tests cover control flow, source injection, refusal, failure, cancellation and settlement, but do not establish live retrieval or a real model's semantic relevance judgment.
+
 ## Deployment
 
 Production Compose contains no external retrieval service or credentials. The guarded deployment removes the former container and its data volume and strips obsolete YAML/env configuration after backups are created.

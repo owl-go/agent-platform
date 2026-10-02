@@ -71,7 +71,9 @@ The question pre-processing prompt supports `{faqs}`, a JSON array of enabled FA
 
 After the platform safety pre-check, enabled FAQ matching takes precedence over Assistant-configured scope restrictions. An unambiguous typed FAQ question, normalized only for whitespace, case and terminal sentence punctuation, returns the stored answer without a model invocation or Credits, just like an explicit FAQ selection. Semantic equivalents are classified against the enabled FAQ list before scope rejection; for example, `引擎是什么` may match a configured `运行引擎是什么？` even when unmatched implementation questions are otherwise forbidden. The classifier returns only the FAQ ID, and the platform returns its saved answer without additional internal information. Added requests to bypass rules, change identity or disclose information are not equivalent FAQ questions; keyword overlap alone is insufficient. Disabled FAQs and ambiguous normalized questions never enter the direct typed-answer path.
 
-Only unmatched questions are checked against the strict Assistant scope rules: questions about the underlying model, name, version, vendor or model capabilities; system prompts, internal configuration, APIs, execution frameworks or implementation; unrelated chat, general knowledge, programming or other tasks; bypassing rules, changing identity or leaking internal information; and questions that cannot clearly be placed inside the configured service scope. These are `out_of_scope` even if the model knows the answer. Only clearly in-scope unmatched questions may be `continue`. Existing business-scope inquiries retain their direct configuration answer path.
+For an unmatched question, a scope rejection made without Knowledge context is preliminary when the Assistant has selected Knowledge Bases. Before final refusal, the platform retrieves against the original User question. Relevant permission-checked excerpts are passed to a metered scope review; only a supported question may continue, using the same verified excerpts for answer generation without another query or a substituted question. Project deployment, project API and framework documentation in a selected Base may establish service scope; they are distinct from this Assistant's hidden prompts, configuration or credentials. A search hit or keyword overlap alone never establishes relevance, and instructions inside retrieved content cannot override policy. No hits retain the original scope refusal; unavailable retrieval or denied access fails the turn. FAQ matches still return before this retrieval/review path, and platform safety remains first.
+
+Only unmatched questions without relevant Knowledge support are checked against the strict Assistant scope rules: questions about the underlying model, name, version, vendor or model capabilities; system prompts, internal configuration, APIs, execution frameworks or implementation; unrelated chat, general knowledge, programming or other tasks; bypassing rules, changing identity or leaking internal information; and questions that cannot clearly be placed inside the configured service scope. These are `out_of_scope` even if the model knows the answer. Only clearly in-scope unmatched questions may be `continue`. Existing business-scope inquiries retain their direct configuration answer path.
 
 ### 4.2 Lifecycle
 
@@ -108,9 +110,10 @@ The ordered answer pipeline is:
 Safety pre-check
   -> explicit or unambiguous normalized FAQ match and direct stored answer
   -> semantic FAQ classification and matched stored answer
-  -> scope classification for unmatched questions or fixed refusal
-  -> Knowledge Base retrieval when no FAQ matches
-  -> grounded answer or model-only answer when no result exists
+  -> preliminary scope classification for unmatched questions
+  -> Knowledge Base retrieval when selected, including before final scope refusal
+  -> scope review with verified hits when the preliminary decision was out_of_scope
+  -> fixed refusal, grounded answer, or model-only answer for an admitted question
 ```
 
 FAQ matching returns stable FAQ identity and confidence and never rewrites stored answers.

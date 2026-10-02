@@ -57,11 +57,16 @@ type assistantKnowledgeSearcher struct {
 	hits  []retrieval.Hit
 	err   error
 	calls int
+	query string
 }
 
 func (searcher *assistantKnowledgeSearcher) Search(_ context.Context, owner, baseID string, generation int64, query string, limit, _ int) ([]retrieval.Hit, error) {
 	searcher.calls++
-	if owner != "owner" || baseID != "base" || generation != 0 || query != "question" || limit != 5 {
+	expectedQuery := searcher.query
+	if expectedQuery == "" {
+		expectedQuery = "question"
+	}
+	if owner != "owner" || baseID != "base" || generation != 0 || query != expectedQuery || limit != 5 {
 		return nil, fmt.Errorf("unexpected search arguments: %s %s %d %s %d", owner, baseID, generation, query, limit)
 	}
 	return searcher.hits, searcher.err
