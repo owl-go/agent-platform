@@ -19,7 +19,7 @@ class Response(io.BytesIO):
         super().__init__(json.dumps(value).encode())
 
 class PublicationTest(unittest.TestCase):
-    def run_publication(self, existing=False, wrong_hash=False, callback_status=400, registration_matches=True):
+    def run_publication(self, existing=False, wrong_hash=False, callback_status=400, registration_matches=True, blocked=False, allow_blocked=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             package = root / "tianyancha.zip"
@@ -41,12 +41,15 @@ class PublicationTest(unittest.TestCase):
                 def open(self, req, timeout):
                     if isinstance(req,str):
                         raise error.HTTPError(req,callback_status,"",{"Cache-Control":"no-store","Referrer-Policy":"no-referrer"},None)
+                    if blocked:
+                        raise error.HTTPError(req.full_url,419,"",{},io.BytesIO(b'{"errorCode":301000,"message":"bannedLocation"}'))
                     body = json.loads(req.data)
                     self_outer.assertEqual(req.full_url,"https://capi.tianyancha.com/oauth/register")
                     self_outer.assertEqual(body["token_endpoint_auth_method"],"none")
                     return Response({"client_id":"public-client","redirect_uris":body["redirect_uris"] if registration_matches else ["https://attacker.test"],"token_endpoint_auth_method":"none"})
             self_outer = self
             argv = ["publish.py","--config",str(root / "env"),"--package",str(package),"--normalized-sha256","a"*64,"--evidence-directory",str(root / "evidence")]
+            if allow_blocked: argv.append("--allow-region-blocked")
             with patch("sys.argv",argv), patch.object(publication.platform,"read_config",return_value={"VITE_OIDC_AUTHORITY":"https://workspace.test/identity/realms/platform"}), patch.object(publication.platform,"administrator_token",return_value="private-canary"), patch.object(publication.platform,"api",side_effect=api), patch.object(publication.request,"build_opener",return_value=Opener()), contextlib.redirect_stdout(io.StringIO()) as output:
                 publication.main()
             self.assertNotIn("private-canary",output.getvalue())
@@ -66,6 +69,11 @@ class PublicationTest(unittest.TestCase):
     def test_old_callback_requires_deployment(self):
         with self.assertRaisesRegex(RuntimeError,"not deployed"):
             self.run_publication(callback_status=401)
+
+    def test_region_block_requires_explicit_disclosed_publication(self):
+        with self.assertRaisesRegex(RuntimeError,"HTTP 419"):
+            self.run_publication(blocked=True)
+        self.assertTrue(self.run_publication(blocked=True, allow_blocked=True))
 
     def test_registration_redirect_mismatch_stops_activation(self):
         with self.assertRaisesRegex(RuntimeError,"registration mismatch"):

@@ -181,3 +181,5 @@ The existing encrypted callback state, owner/flow checks, CAS replay protection
 and single-use code consumption apply. OAuth requests reject redirects; an
 optional callback issuer must match the reviewed issuer. Package validation and
 browser entry are separate from real-account business and model Runtime evidence.
+
+Tianyancha currently rejects OAuth registration from the Singapore deployment with HTTP 419, errorCode 301000 and message `bannedLocation`. The adapter maps only that exact bounded response to `tianyancha_region_blocked`, exposes no provider payload, and offers a support/deployment-region message. The catalog description discloses this blocker. Publication may record `blocked_region` only through an explicit disclosed-catalog option; it never records registration or real-account success.

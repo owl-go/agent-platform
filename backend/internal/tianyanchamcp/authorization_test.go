@@ -189,3 +189,23 @@ func TestCallbackAllowsOmittedIssuerButRejectsOtherIssuer(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRegionRestrictionIsIdentifiedWithoutLeakingProviderPayload(t *testing.T) {
+	for _, test := range []struct {
+		body    string
+		blocked bool
+	}{
+		{`{"errorCode":301000,"message":"bannedLocation","private":"credential-canary"}`, true},
+		{`{"errorCode":301000,"message":"other","private":"credential-canary"}`, false},
+		{`not-json credential-canary`, false},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(419); _, _ = w.Write([]byte(test.body)) }))
+		client := NewClient("https://workspace.test/callback")
+		client.endpoint = server.URL
+		_, err := client.Begin(context.Background(), nil)
+		server.Close()
+		if err == nil || errors.Is(err, ErrRegionBlocked) != test.blocked || strings.Contains(err.Error(), "canary") {
+			t.Fatalf("unsafe restriction mapping: %v", err)
+		}
+	}
+}

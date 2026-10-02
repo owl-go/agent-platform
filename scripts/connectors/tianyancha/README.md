@@ -12,6 +12,10 @@ python3 -B -m unittest discover -s scripts/connectors/tianyancha -p 'test_*.py'
 
 构建器打包固定文件清单、时间和权限，离线生成无凭证的 ZIP。
 `connectorpackage.Parse` 是最终结构与规范化 SHA-256 的验证依据。
+生产服务器请求 OAuth 注册实际返回 HTTP 419 `bannedLocation`：当前新加坡地区不受支持。目录明确标出授权阻塞，连接失败显示联系天眼查确认支持地区的提示。上游限制解除前不能完成授权或宣称业务可用。
+
+发布器默认拒绝注册失败；只有 `--allow-region-blocked`、精确的官方地区错误及包内阻塞说明同时存在，才允许发布目录条目，并记录 `blocked_region`。此选项不改变网络路径或绕过授权。
+
 发布器复用相同修订并检查 User 与 Administrator 目录唯一条目及品牌图标；
 发布不自动授权、安装或升级其他 User 的 Installation。
 

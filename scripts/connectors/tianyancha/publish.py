@@ -20,6 +20,7 @@ class NoRedirect(request.HTTPRedirectHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--allow-region-blocked", action="store_true", help="Publish a disclosed region-blocked catalog entry; does not claim OAuth passed")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--package", type=Path, required=True)
     parser.add_argument("--normalized-sha256", required=True, help="SHA-256 returned by the current connectorpackage.Parse")
@@ -49,12 +50,17 @@ def main():
         if exc.code != 400 or exc.headers.get("Cache-Control") != "no-store" or exc.headers.get("Referrer-Policy") != "no-referrer":
             raise RuntimeError("Tianyancha browser OAuth adapter is not deployed") from None
     registration = {"client_name":"Agent Workspace Tianyancha", "redirect_uris":[redirect], "grant_types":["authorization_code","refresh_token"], "response_types":["code"], "token_endpoint_auth_method":"none"}
+    callback_registration = "passed"
     try:
         with opener.open(request.Request("https://capi.tianyancha.com/oauth/register", data=json.dumps(registration).encode(), headers={"Content-Type":"application/json","Accept":"application/json"}), timeout=20) as response:
             registered = json.load(response)
     except error.HTTPError as exc:
-        raise RuntimeError(f"Tianyancha rejected the actual platform callback (HTTP {exc.code})") from None
-    if not registered.get("client_id") or registered.get("redirect_uris") != [redirect] or registered.get("token_endpoint_auth_method") != "none":
+        blocked = json.loads(exc.read(4096)) if exc.code == 419 else {}
+        if not args.allow_region_blocked or blocked.get("errorCode") != 301000 or blocked.get("message") != "bannedLocation" or "授权暂受阻" not in meta["description"]:
+            raise RuntimeError(f"Tianyancha rejected the actual platform callback (HTTP {exc.code})") from None
+        registered = None
+        callback_registration = "blocked_region"
+    if registered is not None and (not registered.get("client_id") or registered.get("redirect_uris") != [redirect] or registered.get("token_endpoint_auth_method") != "none"):
         raise RuntimeError("Tianyancha public client registration mismatch")
     token = platform.administrator_token(config)
     listing = platform.api(base, token, "GET", "/api/v1/admin/connectors/publications").get("items", [])
@@ -80,7 +86,7 @@ def main():
     args.evidence_directory.mkdir(parents=True, exist_ok=True)
     for filename, value in [("stage-response.json",target),("publication-response.json",current),("user-catalog.json",matches),("administrator-catalog.json",active)]:
         (args.evidence_directory / filename).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
-    print(json.dumps({"source":"tianyancha", "revision_id":target["id"], "sha256":target["sha256"], "state":"available", "callback_registration":"passed", "account_verification":"not_run"}))
+    print(json.dumps({"source":"tianyancha", "revision_id":target["id"], "sha256":target["sha256"], "state":"available", "callback_registration":callback_registration, "account_verification":"not_run"}))
 
 if __name__ == "__main__":
     try:
