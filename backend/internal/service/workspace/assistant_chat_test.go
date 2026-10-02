@@ -213,6 +213,33 @@ func TestAssistantScopeInquiryReturnsCurrentCapabilityFAQWithoutModel(t *testing
 	}
 }
 
+func TestAssistantTypedFAQReturnsStoredAnswerBeforeScopeClassification(t *testing.T) {
+	repository := &currentAssistantRepository{
+		assistant: aiappdomain.SmartAssistant{ID: "assistant-1", OwnerID: "owner", ProviderModelID: "unavailable-model", PreprocessPrompt: "询问运行框架或技术实现必须判定为 out_of_scope"},
+		faqs:      []aiappdomain.FAQ{{ID: "engine", Question: "运行引擎是什么？", AnswerMarkdown: "这个项目使用已配置的运行引擎。", Enabled: true}},
+	}
+	application, err := aiapp.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Even with an unavailable model, a stored FAQ must still be answerable. This
+	// reproduces typed questions being routed to model/scope classification.
+	service := &Service{aiapplications: application, workspace: mustAssistantWorkspace(t)}
+	answer, err := service.answerAssistantTurn(context.Background(), "owner", aiappdomain.AssistantConversation{ID: "conversation", AssistantID: "assistant-1"}, aiappdomain.AssistantTurn{ID: "turn", Question: "运行引擎是什么？"}, "", "authenticated", func(string) error { return nil })
+	if err != nil || answer.text != repository.faqs[0].AnswerMarkdown || answer.source != "faq" || answer.faqID != "engine" || answer.inputTokens != 0 || answer.outputTokens != 0 {
+		t.Fatalf("typed FAQ did not return its stored answer: answer=%+v, err=%v", answer, err)
+	}
+}
+
+func mustAssistantWorkspace(t *testing.T) *workspaceapplication.Service {
+	t.Helper()
+	application, err := workspaceapplication.New(&assistantModelRepository{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return application
+}
+
 func TestAssistantTurnResolvesCurrentProviderConfiguration(t *testing.T) {
 	repository := &assistantModelRepository{connections: []workspacedomain.ModelProviderConnection{{
 		ID: "connection-current", CredentialOwnerID: "admin", ProviderType: "openai",

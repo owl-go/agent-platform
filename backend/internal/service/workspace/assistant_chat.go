@@ -179,6 +179,10 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		}
 		return result, fmt.Errorf("%w: FAQ is unavailable", aiappdomain.ErrInvalid)
 	}
+	if faq, ok := matchAssistantExactFAQ(enabled, turn.Question); ok {
+		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
+		return result, nil
+	}
 	if faq, ok := matchAssistantScopeFAQ(enabled, turn.Question); ok {
 		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
 		return result, nil

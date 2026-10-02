@@ -69,7 +69,9 @@ The Assistant prompt supports `{knowledge}`, replaced at every occurrence with t
 
 The question pre-processing prompt supports `{faqs}`, a JSON array of enabled FAQ `id` and `question` values in display order, excluding answers and disabled FAQs. Without the variable, the same list remains available as classification context. Substitution is stage-specific and single-pass: unknown placeholders and placeholders inside inserted source content remain literal; stored prompts are unchanged.
 
-Pre-processing first rejects questions about the underlying model, name, version, vendor or model capabilities; system prompts, internal configuration, APIs, execution frameworks or implementation; unrelated chat, general knowledge, programming or other tasks; bypassing rules, changing identity or leaking internal information; and questions that cannot clearly be placed inside the configured service scope. These are `out_of_scope` even if the model knows the answer or finds a similar FAQ. Only clearly in-scope questions may be `faq` or `continue`. Existing explicit FAQ shortcuts and business-scope inquiries retain their direct configuration answer path.
+After the platform safety pre-check, enabled FAQ matching takes precedence over Assistant-configured scope restrictions. An unambiguous typed FAQ question, normalized only for whitespace, case and terminal sentence punctuation, returns the stored answer without a model invocation or Credits, just like an explicit FAQ selection. Semantic equivalents are classified against the enabled FAQ list before scope rejection; for example, `引擎是什么` may match a configured `运行引擎是什么？` even when unmatched implementation questions are otherwise forbidden. The classifier returns only the FAQ ID, and the platform returns its saved answer without additional internal information. Added requests to bypass rules, change identity or disclose information are not equivalent FAQ questions; keyword overlap alone is insufficient. Disabled FAQs and ambiguous normalized questions never enter the direct typed-answer path.
+
+Only unmatched questions are checked against the strict Assistant scope rules: questions about the underlying model, name, version, vendor or model capabilities; system prompts, internal configuration, APIs, execution frameworks or implementation; unrelated chat, general knowledge, programming or other tasks; bypassing rules, changing identity or leaking internal information; and questions that cannot clearly be placed inside the configured service scope. These are `out_of_scope` even if the model knows the answer. Only clearly in-scope unmatched questions may be `continue`. Existing business-scope inquiries retain their direct configuration answer path.
 
 ### 4.2 Lifecycle
 
@@ -86,7 +88,7 @@ Enabling an Assistant and serving a new authenticated or public conversation req
 ### 4.3 Conversation Execution
 
 - Opening an enabled Assistant reopens its latest authenticated Assistant Conversation or creates one. It never creates a Workspace Session.
-- Selecting an FAQ returns its stored answer without model invocation or Credits.
+- Selecting an FAQ or typing its unambiguous normalized question returns its stored answer without model invocation or Credits. Semantic paraphrases may use the metered classifier, then return the matched stored answer without answer generation.
 - Free text is safety-checked, preprocessed for FAQ and scope classification, optionally grounded with Knowledge Base results, and then streamed through the selected Provider Model. A question asking what business the Assistant can handle resolves to its enabled capability FAQ or current public description instead of being rejected as out of scope; if neither contains a concrete scope, the answer states that the business scope is not configured.
 - Each accepted turn resolves the Smart Assistant's current saved configuration, including its prompts, response style, Knowledge Base selection, enabled FAQs, and selected Provider Model. It then resolves that Provider Model's current Model Provider Connection, including its Endpoint, protocol, model identifier, connection version, and protected current credential. A saved Assistant edit therefore applies to the next turn in both existing and new conversations; once execution starts, the resolved configuration and execution identity remain fixed for that turn's audit evidence.
 - Only one turn generates at a time. The User may stop it or create a new conversation without deleting history. Assistant turn streams use the long-running event timeout; an upstream timeout or provider failure is recorded as failed rather than presented as a User stop.
@@ -104,8 +106,9 @@ The ordered answer pipeline is:
 
 ```text
 Safety pre-check
-  -> FAQ and scope classification
-  -> direct FAQ answer or fixed refusal
+  -> explicit or unambiguous normalized FAQ match and direct stored answer
+  -> semantic FAQ classification and matched stored answer
+  -> scope classification for unmatched questions or fixed refusal
   -> Knowledge Base retrieval when no FAQ matches
   -> grounded answer or model-only answer when no result exists
 ```
