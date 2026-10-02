@@ -61,6 +61,28 @@ describe("readOIDCSettings", () => {
     await expect(oidc.client.getUser()).resolves.toEqual({ accessToken: "fresh-token", expired: false });
     expect(manager.signinSilent).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    [null, false],
+    [{ access_token: "valid-token", expired: false }, false],
+    [{ access_token: "expired-token", expired: true }, true],
+  ] as const)("returns the stored session when silent renewal is unavailable: %j", async (storedUser, attemptsRenewal) => {
+    const manager = {
+      getUser: vi.fn(async () => storedUser as User | null),
+      signinSilent: vi.fn(async () => { throw new Error("login_required"); }),
+      events: { addAccessTokenExpired: vi.fn(), removeAccessTokenExpired: vi.fn(), addUserLoaded: vi.fn(), removeUserLoaded: vi.fn() },
+    };
+    const browser = {
+      location: { origin: "https://app.example.test", pathname: "/", search: "" },
+      history: { replaceState: vi.fn() },
+      sessionStorage: new MemoryStorage(),
+      localStorage: new MemoryStorage(),
+    };
+    const oidc = createBrowserOIDC(environment, browser as unknown as Window, () => manager as never);
+
+    await expect(oidc.client.getUser()).resolves.toEqual(storedUser ? { accessToken: storedUser.access_token, expired: storedUser.expired } : null);
+    expect(manager.signinSilent).toHaveBeenCalledTimes(attemptsRenewal ? 1 : 0);
+  });
 });
 
 class MemoryStorage implements Storage {

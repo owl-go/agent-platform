@@ -2,6 +2,10 @@
   color-scheme: light;
   --aw-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --aw-font-mono: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --aw-font-size-title: 24px;
+  --aw-line-height-title: 1.4;
+  --aw-font-size-body: 13px;
+  --aw-line-height-body: 1.6;
 
   --aw-n0: #ffffff;
   --aw-n1: #fbfbfc;
