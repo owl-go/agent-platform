@@ -34,3 +34,11 @@ python3 scripts/connectors/github/publish.py \
 ```
 
 正式发布前检查 Administrator 和 User catalog 各只有一个正式 GitHub 条目，图标实际显示，已安装未授权时可打开 GitHub 设备页面并显示验证码。平台发布不替任何 User 安装或授权；Conformance、模拟协议、真实登录入口和真实账号 API 必须分别报告。
+
+## 2026-10-02 发布证据
+
+集成 `main_temp` 的 `6fffda0` 已部署为 `github-6fffda0`，正式 Revision `66cf9265-5d8c-48bb-9a0c-d8b5679b7448`（0.1.0）为 available。最终 ZIP 经当前 Parse 校验；规范化 package SHA-256 为 `ae22bb4fcf2b27b4bb18c4e3e545ec9bdd57247438cdd6187884609560da24b4`，bundle 为 `b98cf1c75a45b73c9c3b3254bee28da1cd54524586ccd981e1c4646bea13b073`。生产 Worker 对此 bundle × Runtime `sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b` 记录 Linux + runsc Conformance。两次发布返回同一 Revision；Administrator 与 User catalog 各一个正式条目，临时构建 Definition 为零。
+
+同一隔离 Runtime 的原版 Linux amd64 CLI 版本为 2.102.0，全部 113 个业务前缀的 `--help` 可启动；wrapper 的未授权 status、未放行 api 拒绝和未授权业务拒绝均通过。完整 Go 测试／构建、集成分支 440 个前端测试、typecheck／生产构建、三个 Node 边界测试、三个包完整性测试、四个共享发布器测试和镜像 smoke 已执行通过。source 构建 bundle 与最终包逐字节一致。
+
+线上 Playwright 验证 Administrator 作为 User 的 Installation `31279857-8743-4e07-a2bb-dda5a99a3d4b`：品牌图标实际显示、详情标记运行环境已验证、未授权连接入口显示一次性验证码并打开官方 GitHub 登录页。该 Installation 当前 active、未授权；没有保存测试 Token。会话选择器完整路径、真实 GitHub 账号授权／API、Linux arm64 执行和完整模型 Runtime Production Conformance 未验证。非敏感发布、目录和 Runtime 记录及截图保存在忽略目录 `outputs/github/evidence`；输出 ZIP 为 `outputs/github/github-0.1.0.zip`。
