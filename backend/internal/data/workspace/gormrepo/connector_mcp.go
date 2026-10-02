@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/connectorpackage"
 	"gorm.io/gorm"
 )
 
@@ -120,7 +121,7 @@ func connectorMCPServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 	if err != nil {
 		return domain.MCPServerSnapshot{}, err
 	}
-	return domain.MCPServerSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Transport: configuration.Transport, Configuration: encoded, SecretCiphertext: ciphertext, SecretOwnerID: ownerID, SecretAAD: secretAAD}, nil
+	return domain.MCPServerSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: connectorpackage.DisplayIcon(installation.PackageSource), PackageObjectKey: revision.ObjectKey, PackageSHA256: revision.PackageSHA256, Transport: configuration.Transport, Configuration: encoded, SecretCiphertext: ciphertext, SecretOwnerID: ownerID, SecretAAD: secretAAD}, nil
 }
 
 func connectorMCPServerCatalog(tx *gorm.DB, ownerID string, installation connectorInstallationRecord) (domain.MCPServer, error) {
@@ -148,7 +149,7 @@ func connectorMCPServerCatalog(tx *gorm.DB, ownerID string, installation connect
 			testError = "authorization required"
 		}
 	}
-	return domain.MCPServer{ID: installation.ID, OwnerID: ownerID, Name: installation.PackageSource, Icon: "plug", Transport: configuration.Transport, URL: optionalConnectorString(configuration.URL), Runner: optionalConnectorString(configuration.Runner), Package: optionalConnectorString(configuration.Package), PackageVersion: optionalConnectorString(configuration.PackageVersion), Arguments: configuration.Arguments, Environment: configuration.Environment, TestError: testError, TestedAt: func() *time.Time {
+	return domain.MCPServer{ID: installation.ID, OwnerID: ownerID, Name: installation.PackageSource, Icon: connectorpackage.DisplayIcon(installation.PackageSource), Transport: configuration.Transport, URL: optionalConnectorString(configuration.URL), Runner: optionalConnectorString(configuration.Runner), Package: optionalConnectorString(configuration.Package), PackageVersion: optionalConnectorString(configuration.PackageVersion), Arguments: configuration.Arguments, Environment: configuration.Environment, TestError: testError, TestedAt: func() *time.Time {
 		if tested {
 			now := time.Now().UTC()
 			return &now

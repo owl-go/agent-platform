@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"agent-platform/backend/internal/xiaoemcp"
 	"archive/zip"
 	"bytes"
 	"context"
@@ -709,6 +710,9 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	providerFlow, err := driver.Begin(ctx, appID, appSecret, request.Scopes)
+	if errors.Is(err, xiaoemcp.ErrCallbackBlocked) {
+		return nil, kratoserrors.New(http.StatusBadGateway, "xiaoe_oauth_callback_blocked", "Xiaoe blocked registration of this platform callback domain")
+	}
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -942,7 +946,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
-	if isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
+	if isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
 		return "interactive"
 	}
 	if policy.CLI != nil {
@@ -966,6 +970,10 @@ func isGitHubCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "github" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
 
+func isXiaoeMCPLoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "xiaoe" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == xiaoemcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "agent.xiaoe-tech.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
 func isTeambitionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "teambition" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
@@ -979,7 +987,7 @@ func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 }
 
 func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
-	if isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) {
+	if isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) {
 		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
 	}
 
@@ -1053,6 +1061,9 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 }
 
 func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "xiaoe" {
+		return fmt.Errorf("%w: Xiaoe login is reserved for the platform publication", domain.ErrInvalid)
+	}
 	if pkg.Metadata.Source == "notion" {
 		return fmt.Errorf("%w: Notion login is reserved for the platform publication", domain.ErrInvalid)
 	}
@@ -1063,6 +1074,9 @@ func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
 }
 
 func validatePlatformConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "xiaoe" && !isXiaoeMCPLoginPolicy(connectorRevisionPolicy{Metadata: pkg.Metadata, AuthMode: pkg.Metadata.AuthMode, MCP: pkg.MCP, CLI: pkg.CLI}) {
+		return fmt.Errorf("%w: Xiaoe requires the reviewed remote MCP policy", domain.ErrInvalid)
+	}
 	if pkg.CLI == nil {
 		return nil
 	}

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"agent-platform/backend/internal/xiaoemcp"
 	"context"
 	"errors"
 	"fmt"
@@ -101,9 +102,12 @@ func isKlingMCPLoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "kling-ai" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == klingmcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "klingai.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
 func isBrowserOAuthPolicy(policy connectorRevisionPolicy) bool {
-	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy)
+	return isXiaoeMCPLoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy)
 }
 func browserOAuthProfileFor(policy connectorRevisionPolicy) browserOAuthProfile {
+	if isXiaoeMCPLoginPolicy(policy) {
+		return xiaoeBrowserOAuth
+	}
 	if isPixsoMCPPolicy(policy) {
 		return pixsoBrowserOAuth
 	}
@@ -230,6 +234,33 @@ func (d githubConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, stat
 }
 func (d githubConnectorAuthorizationDriver) Refresh(context.Context, string, string, string) (connectorAuthorizationGrant, error) {
 	return connectorAuthorizationGrant{}, fmt.Errorf("%w: reconnect GitHub to renew access", domain.ErrInvalid)
+}
+
+type xiaoeConnectorAuthorizationDriver struct{ client *xiaoemcp.Client }
+
+func (d xiaoeConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d xiaoeConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d xiaoeConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, xiaoemcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, xiaoemcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return xiaoeGrant(v), e
+}
+func (d xiaoeConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return xiaoeGrant(v), e
+}
+func xiaoeGrant(v xiaoemcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
 }
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
@@ -395,6 +426,16 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 			return nil, err
 		}
 		return klingConnectorAuthorizationDriver{client: klingmcp.NewClient(redirect)}, nil
+	}
+	if isXiaoeMCPLoginPolicy(policy) {
+		redirect, err := service.xiaoeCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return xiaoeConnectorAuthorizationDriver{client: xiaoemcp.NewClient(redirect)}, nil
+	}
+	if policy.CLI == nil {
+		return nil, fmt.Errorf("%w: authorization adapter is unavailable", domain.ErrInvalid)
 	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil

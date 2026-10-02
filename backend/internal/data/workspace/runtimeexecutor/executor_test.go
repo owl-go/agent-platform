@@ -1595,3 +1595,49 @@ func TestWarmSlotIsStablePerResourceAndRuntime(t *testing.T) {
 	}
 
 }
+
+func TestSelectedManagedMCPConnectorMountsFrozenPackageSkills(t *testing.T) {
+	var archive bytes.Buffer
+	writer := zip.NewWriter(&archive)
+	entries := map[string]string{
+		"connector-meta.json":  `{"source":"example-mcp","version":"1.0.0","type":"mcp","name":"Example","description":"Example CLI","examples_zh":["发送"],"examples_en":["Send"],"minPlatformVersion":"1.0.0","auth_mode":"none"}`,
+		"icon.svg":             `<svg xmlns="http://www.w3.org/2000/svg"></svg>`,
+		"mcp.json":             `{"transport":"streamable_http","url":"https://mcp.example.com","egress_hosts":["mcp.example.com"],"timeout_seconds":60}`,
+		"skills/send/SKILL.md": "---\nname: example-send\ndisplay_name: Send\ndescription: Send messages\nversion: 1.0.0\nauthor: Example\n---\n\n# Send\nUse the reviewed send command.\n",
+	}
+	for name, content := range entries {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	provider := memory.New()
+	digest := sha256.Sum256(archive.Bytes())
+	sha := hex.EncodeToString(digest[:])
+	key := "connectors/example-mcp/1.0.0/" + sha + ".zip"
+	if _, err := provider.Put(context.Background(), key, bytes.NewReader(archive.Bytes()), objectstore.PutOptions{Size: int64(archive.Len()), SHA256: sha, ContentType: "application/zip"}); err != nil {
+		t.Fatal(err)
+	}
+	connector := domain.MCPServerSnapshot{ID: "installed-1", Name: "Example", Transport: "streamable_http", Configuration: json.RawMessage(`{"url":"https://mcp.example.com","egress_hosts":["mcp.example.com"]}`), PackageObjectKey: key, PackageSHA256: sha}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{MCPServers: []domain.MCPServerSnapshot{connector}, ProviderModel: domain.ProviderModelSnapshot{ModelID: "model", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"}}}}
+	files, _, _, err := (&Executor{objects: provider}).extensionFiles(context.Background(), job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(files["connector-skills/installed-1/SKILL.md"], []byte(entries["skills/send/SKILL.md"])) || !bytes.Equal(files["connector-skills/installed-1/skills/send/SKILL.md"], []byte(entries["skills/send/SKILL.md"])) {
+		t.Fatalf("mounted Connector Skills = %#v", files)
+	}
+	if !strings.Contains(buildInstruction(job, nil), "first read /run/agent-credentials/connector-skills/installed-1/SKILL.md") {
+		t.Fatal("managed Connector Skill was not prioritized")
+	}
+	job.Snapshot.MCPServers[0].PackageSHA256 = strings.Repeat("b", 64)
+	if _, _, _, err := (&Executor{objects: provider}).extensionFiles(context.Background(), job); err == nil {
+		t.Fatal("expected a changed frozen package digest to be rejected")
+	}
+}

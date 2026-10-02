@@ -189,6 +189,8 @@ type ExpertMemberSnapshot struct {
 }
 
 type MCPServerSnapshot struct {
+	PackageObjectKey string          `json:"package_object_key,omitempty"`
+	PackageSHA256    string          `json:"package_sha256,omitempty"`
 	ID               string          `json:"id"`
 	Name             string          `json:"name"`
 	Icon             string          `json:"icon,omitempty"`

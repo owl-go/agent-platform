@@ -46,7 +46,7 @@ func DisplayIcon(source string) string {
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(camscannerIcon)
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
-	case "feishu", "dingtalk", "notion", "modao", "github":
+	case "feishu", "dingtalk", "notion", "modao", "github", "xiaoe":
 		return source
 	case "caoliao":
 		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(caoliaoIcon)

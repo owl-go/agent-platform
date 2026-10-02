@@ -66,7 +66,7 @@ const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
 function reportError(cause?: unknown, validationKey = "invalidInput") {
   const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: validationKey, rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
-  const authorizationErrors: Record<string, string> = { dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_cli_enterprise_denied: "dingtalkCLIEnterpriseDenied", dingtalk_cli_user_denied: "dingtalkCLIUserDenied", dingtalk_cli_channel_required: "dingtalkCLIChannelRequired", dingtalk_cli_auth_expired: "dingtalkCLIAuthExpired", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
+  const authorizationErrors: Record<string, string> = { xiaoe_oauth_callback_blocked: "xiaoeOAuthCallbackBlocked", dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_cli_enterprise_denied: "dingtalkCLIEnterpriseDenied", dingtalk_cli_user_denied: "dingtalkCLIUserDenied", dingtalk_cli_channel_required: "dingtalkCLIChannelRequired", dingtalk_cli_auth_expired: "dingtalkCLIAuthExpired", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
   const key = cause instanceof ApiError ? authorizationErrors[cause.code] ?? (cause.status === 413 ? "uploadTooLarge" : keys[cause.kind]) : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
@@ -123,7 +123,7 @@ function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetail
 async function connectFromDetails() {
   const entry = detailPackage.value;
   if (entry?.installation) {
-    if (["notion", "teambition", "github", "camscanner", "kling-ai", "linear", "pixso"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    if (["notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
     else if (["wecom", "modao", "picset-ai", "ai-hive"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "github", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai", "ai-hive"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai", "ai-hive"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -246,7 +246,7 @@ onBeforeUnmount(() => {
 
 async function completeBrowserReturn() {
   await refresh();
-  const flowID = router?.currentRoute.value.query.connector_auth ?? router?.currentRoute.value.query.linear_auth ?? router?.currentRoute.value.query.teambition_auth;
+  const flowID = router?.currentRoute.value.query.xiaoe_auth ?? router?.currentRoute.value.query.connector_auth ?? router?.currentRoute.value.query.linear_auth ?? router?.currentRoute.value.query.teambition_auth;
   if (typeof flowID !== "string" || !/^[0-9a-f-]{36}$/i.test(flowID)) return;
   try { await api.completeConnectorAuthorizationFlow(flowID); }
   catch (cause) { if (!(cause instanceof ApiError && cause.kind === "not_found")) reportError(cause); }
@@ -256,6 +256,7 @@ async function completeBrowserReturn() {
   await refresh();
   const query = { ...router.currentRoute.value.query };
   delete query.teambition_auth;
+  delete query.xiaoe_auth;
   delete query.connector_auth;
   delete query.linear_auth;
   await router.replace({ query });
@@ -401,7 +402,7 @@ async function completePublishedConnectorFlows() {
         connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
         if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
       } catch (cause) {
-        if (["teambition", "kling-ai", "linear", "pixso"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
+        if (["teambition", "xiaoe", "kling-ai", "linear", "pixso"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
           await refresh();
           if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
             connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };
