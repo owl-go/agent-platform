@@ -32,6 +32,73 @@ async function openDetails(wrapper: ReturnType<typeof mountManager>, selector = 
   await flushPromises();
   return wrapper.get(".connector-details");
 }
+
+describe("legal MCP connectors", () => {
+  function fixture(source = "pkulaw", old = false) {
+    const installation = { id: source + "-installation", source, active_revision_id: source + "-revision", state: "active", authorized: source === "mindbye", version: 3, package_version: "1.0.0", name: source === "pkulaw" ? "北大法宝" : "明白律师", description: "", authentication_driver: source === "pkulaw" ? "connector_package" : "none", upgrade_available: old };
+    const publication = { source, active_revision_id: installation.active_revision_id, state: "available", version: 1, revision: { ...installation, id: installation.active_revision_id, mode: "mcp", conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => ({ ...installation, authorized: true }));
+    const upgradeConnectorInstallation = vi.fn(async () => ({ ...installation, version: 4, upgrade_available: false }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, upgradeConnectorInstallation } as unknown as PlatformApi;
+    return { api, installation, connectConnector, upgradeConnectorInstallation };
+  }
+  async function open(wrapper: ReturnType<typeof mountManager>) {
+    await flushPromises(); await connectPublished(wrapper);
+    return new DOMWrapper(document.body).get(".provided-connector-form");
+  }
+  it.each([false, true])("connects PKULaw using a masked token and upgrades if needed (%s)", async old => {
+    const f = fixture("pkulaw", old), wrapper = mountManager(f.api);
+    try {
+      const form = await open(wrapper);
+      expect(form.get('input[name="pkulaw_token"]').attributes("type")).toBe("password");
+      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
+      expect(form.get('a[href="https://mcp.pkulaw.com/"]').attributes("rel")).toContain("noopener");
+      await form.get('input[name="pkulaw_token"]').setValue("fixture-token");
+      await form.trigger("submit"); await flushPromises();
+      expect(f.connectConnector).toHaveBeenCalledWith(f.installation.id, "user", [], JSON.stringify({ MCP_BEARER_TOKEN: "fixture-token" }));
+      expect(f.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(f.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(f.connectConnector.mock.invocationCallOrder[0]!);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+  it.each(["", "Bearer token", "token\u007fheader", "x".repeat(4097)])("rejects invalid PKULaw tokens", async token => {
+    const f = fixture(), wrapper = mountManager(f.api);
+    try {
+      const form = await open(wrapper);
+      await form.get('input[name="pkulaw_token"]').setValue(token);
+      await form.trigger("submit"); await flushPromises();
+      expect(f.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it("retains failed input for retry and clears the token on cancel", async () => {
+    const f = fixture(), wrapper = mountManager(f.api);
+    f.connectConnector.mockRejectedValueOnce(new ApiError("validation", 422, "invalid_token"));
+    try {
+      const form = await open(wrapper);
+      await form.get('input[name="pkulaw_token"]').setValue("fixture-token");
+      await form.trigger("submit"); await flushPromises();
+      expect((form.get('input[name="pkulaw_token"]').element as HTMLInputElement).value).toBe("fixture-token");
+      await form.get('button[type="button"]').trigger("click"); await flushPromises();
+      const reopened = await open(wrapper);
+      expect((reopened.get('input[name="pkulaw_token"]').element as HTMLInputElement).value).toBe("");
+    } finally { wrapper.unmount(); }
+  });
+  it.each(["pkulaw", "mindbye"])("groups %s under legal compliance in market and installed views", async source => {
+    const f = fixture(source), wrapper = mountManager(f.api);
+    try {
+      await flushPromises();
+      const section = wrapper.findAll(".catalog-group").find(item => item.text().includes("法务合规"));
+      expect(section?.findAll(".published-connector-card")).toHaveLength(1);
+      await wrapper.findAll("button").find(item => item.text() === "已安装")!.trigger("click"); await flushPromises();
+      expect(wrapper.text()).toContain("法务合规");
+      expect(wrapper.findAll(".published-connector-card")).toHaveLength(1);
+      if (source === "mindbye") {
+        expect(f.connectConnector).not.toHaveBeenCalled();
+        expect(document.querySelector(".provided-connector-form")).toBeNull();
+      }
+    } finally { wrapper.unmount(); }
+  });
+});
 async function connectPublished(wrapper: ReturnType<typeof mountManager>) {
   const details = await openDetails(wrapper, ".published-connector-card");
   await details.findAll("button").find(button => button.text() === "连接")!.trigger("click");

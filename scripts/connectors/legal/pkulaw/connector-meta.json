@@ -1,0 +1,15 @@
+{
+  "source": "pkulaw",
+  "version": "1.0.0",
+  "type": "mcp",
+  "name": "北大法宝",
+  "description": "通过官方 MCP 进行法律法规语义检索与法条查询。",
+  "examples_zh": [
+    "检索劳动合同解除相关的现行法条"
+  ],
+  "examples_en": [
+    "Find current statutory provisions on employment contract termination"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "oauth"
+}
