@@ -1,0 +1,137 @@
+/* Use the same tokens as the workspace; retain Keycloak's native form templates. */
+.login-pf, .login-pf body {
+  min-height: 100%;
+  background: var(--aw-n2);
+  color: var(--aw-n10);
+  font-family: var(--aw-font-sans);
+  font-size: var(--aw-font-size-body);
+  line-height: var(--aw-line-height-body);
+}
+.login-pf body { margin: 0; }
+.login-pf-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--aw-space-8) var(--aw-space-4);
+}
+.login-pf-page #kc-header {
+  margin: 0 0 var(--aw-space-6);
+  padding: 0;
+  color: var(--aw-n10);
+  text-align: center;
+}
+.login-pf-page #kc-header-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--aw-space-3);
+  padding: 0;
+  color: var(--aw-n10);
+  font-size: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+#kc-header-wrapper::before {
+  content: "AW";
+  display: grid;
+  place-items: center;
+  width: var(--aw-space-8);
+  height: var(--aw-space-8);
+  border-radius: var(--aw-radius-input);
+  background: var(--aw-agent);
+  color: var(--aw-n0);
+  font-weight: 700;
+}
+.login-pf-page .card-pf {
+  width: min(420px, 100%);
+  max-width: none;
+  margin: 0 auto;
+  padding: var(--aw-space-8);
+  border: 1px solid var(--aw-n4);
+  border-radius: var(--aw-radius-card);
+  background: var(--aw-n0);
+  box-shadow: var(--aw-shadow-card);
+}
+.login-pf-page .login-pf-header { margin: 0 0 var(--aw-space-6); }
+h1#kc-page-title {
+  margin: var(--aw-space-4) 0 0;
+  font-family: var(--aw-font-sans);
+  font-size: var(--aw-font-size-title);
+  font-weight: 700;
+  line-height: var(--aw-line-height-title);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+#kc-content-wrapper, #kc-form-wrapper { margin-top: 0; }
+.login-pf-page .form-group { margin-bottom: var(--aw-space-5); }
+.login-pf-page .pf-c-form__label { margin-bottom: var(--aw-space-2); color: var(--aw-n9); font-size: inherit; font-weight: 600; }
+.login-pf-page .pf-c-form-control {
+  min-height: calc(var(--aw-space-8) + var(--aw-space-2));
+  padding: var(--aw-space-2) var(--aw-space-3);
+  border: 1px solid var(--aw-n4);
+  border-radius: var(--aw-radius-input);
+  background: var(--aw-n0);
+  color: var(--aw-n10);
+  font-family: var(--aw-font-sans);
+  font-size: inherit;
+  box-shadow: none;
+}
+.login-pf-page .pf-c-form-control:focus {
+  border-color: var(--aw-primary);
+  outline: 2px solid var(--aw-primary-border);
+  outline-offset: 1px;
+}
+.login-pf-page .pf-c-form-control[aria-invalid="true"] { border-color: var(--aw-danger); }
+.login-pf-page .pf-c-input-group { gap: 0; }
+.login-pf-page .pf-c-input-group > .pf-c-form-control { border-radius: var(--aw-radius-input) 0 0 var(--aw-radius-input); }
+.login-pf-page .pf-c-button {
+  min-height: calc(var(--aw-space-8) + var(--aw-space-2));
+  padding: var(--aw-space-2) var(--aw-space-3);
+  font-family: var(--aw-font-sans);
+  font-size: inherit;
+  border-radius: var(--aw-radius-control);
+  box-shadow: none;
+}
+.login-pf-page .pf-c-button::after { border: 0; }
+.login-pf-page .pf-c-button.pf-m-primary {
+  background: var(--aw-primary);
+  color: var(--aw-n0);
+  font-weight: 600;
+  transition: background-color var(--aw-motion-fast);
+}
+.login-pf-page .pf-c-button.pf-m-primary:hover { background: color-mix(in srgb, var(--aw-primary) 90%, var(--aw-n10)); }
+.login-pf-page .pf-c-button.pf-m-primary:disabled { background: var(--aw-n5); color: var(--aw-n8); }
+.login-pf-page .pf-c-button.pf-m-control {
+  border: 1px solid var(--aw-n4);
+  border-left: 0;
+  border-radius: 0 var(--aw-radius-input) var(--aw-radius-input) 0;
+  background: var(--aw-n1);
+  color: var(--aw-n7);
+}
+.login-pf-page .login-pf-settings { align-items: center; flex-wrap: wrap; gap: var(--aw-space-2); }
+.login-pf-page #kc-form-options .checkbox { margin: 0; color: var(--aw-n8); font-size: inherit; }
+.login-pf-page input[type="checkbox"] { accent-color: var(--aw-primary); }
+.login-pf-page a { color: var(--aw-primary); font-size: inherit; }
+.login-pf-page a:hover { color: var(--aw-primary); text-decoration: underline; }
+.login-pf-page #kc-form-buttons { margin-top: var(--aw-space-6); }
+.login-pf-page #kc-locale { position: relative; top: auto; right: auto; width: auto; padding: 0; text-align: right; }
+.login-pf-page #kc-locale-dropdown button { color: var(--aw-n7); font-family: var(--aw-font-sans); font-size: inherit; }
+.login-pf-page #kc-locale ul { top: 100%; min-width: 120px; border: 1px solid var(--aw-n4); border-radius: var(--aw-radius-input); box-shadow: var(--aw-shadow-overlay); }
+.login-pf-page #kc-locale ul a { text-align: left; }
+.login-pf-page .pf-c-alert { margin-bottom: var(--aw-space-5); border-radius: var(--aw-radius-input); font-size: inherit; }
+.login-pf-page .alert-error { border-color: var(--aw-danger-border); background: var(--aw-danger-soft); }
+.login-pf-page .pf-c-form__helper-text.pf-m-error { color: var(--aw-danger); font-size: inherit; }
+.login-pf-page #kc-info { margin: var(--aw-space-6) 0 0; }
+.login-pf-page #kc-info-wrapper { padding: var(--aw-space-3); border-radius: var(--aw-radius-input); background: var(--aw-n2); color: var(--aw-n7); font-size: inherit; }
+.login-pf-page .instruction { color: var(--aw-n7); overflow-wrap: anywhere; }
+.login-pf-page :where(button, a, input):focus-visible { outline: 2px solid var(--aw-primary); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .login-pf-page { padding: var(--aw-space-6) var(--aw-space-4); }
+  .login-pf-page .card-pf { padding: var(--aw-space-6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-pf-page *, .login-pf-page *::before, .login-pf-page *::after { animation: none !important; transition: none !important; }
+}
