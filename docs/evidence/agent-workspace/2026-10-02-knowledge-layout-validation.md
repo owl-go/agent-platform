@@ -40,3 +40,11 @@ The User requested removal of the generic task search input. Feature commit `fdc
 Targeted Vitest (8 tests), integrated full frontend Vitest (493 tests across 46 files), `make web-typecheck`, `make web-build`, and `git diff --check` passed. Integration retained the existing resource loading/error tests. Published from `main_temp` with the existing production OIDC configuration via `scripts/deploy-web.sh`; active web release is `/opt/agent-platform/web/releases/resource-catalog-20261002-1`. The public resource route and four main/resource JS/CSS files matched local production bytes, the compiled resource route no longer contains the removed toolbar, and `/api/healthz` returned HTTP 200. Entrypoint SHA-256: `ecb8af97bda4e14a96df7f2abab76772f566eb789d1060292df1357fbca38b0d`.
 
 This follow-up used component regression tests and public asset verification, without repeating authenticated production browser, RAGFlow, backend, or Runtime conformance checks.
+
+## Follow-up: simplify document upload controls
+
+The User requested removal of the Category creation, upload Category selector, and webpage import controls. Feature commit `2185854`, integrated as `main_temp` commit `c70e7d4`, removes these controls and places the maintainer-only upload button beside the document heading. Uploads use the existing unclassified default; existing Category navigation remains available.
+
+Targeted Vitest (9 tests), integrated full frontend Vitest (494 tests across 46 files), `make web-typecheck`, `make web-build`, and `git diff --check` passed. The upload regression test submits a file without a Category and verifies that the accepted document appears; the reader test verifies that the upload button is unavailable. Published from `main_temp` with the existing production OIDC configuration via `scripts/deploy-web.sh`; active web release is `/opt/agent-platform/web/releases/knowledge-controls-20261002-1`. The public resource route and four main/resource JS/CSS files returned HTTP 200 and matched local production bytes. Public `/api/healthz` returned HTTP 200. Entrypoint SHA-256: `6d9f38624c9f210a7d93d98489c9b65fb63f4ca9b87d018a4dcfe65c79e9fb0b`.
+
+This follow-up used component regression tests and public asset verification, without repeating authenticated production browser, RAGFlow, backend, or Runtime conformance checks.
