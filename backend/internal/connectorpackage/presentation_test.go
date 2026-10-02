@@ -94,3 +94,15 @@ func TestPixsoDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAIHiveDisplayIconUsesReviewedOfficialSVG(t *testing.T) {
+	value := DisplayIcon("ai-hive")
+	prefix := "data:image/svg+xml;base64,"
+	if !strings.HasPrefix(value, prefix) {
+		t.Fatal("AI-Hive icon is not an image Data URL")
+	}
+	body, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(value, prefix))
+	if err != nil || !bytes.Equal(body, aiHiveIcon) {
+		t.Fatal("AI-Hive icon differs from bundled brand asset")
+	}
+}

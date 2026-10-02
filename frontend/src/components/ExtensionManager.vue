@@ -125,7 +125,7 @@ async function connectFromDetails() {
   if (entry?.installation) {
     if (["notion", "teambition", "camscanner", "kling-ai", "linear", "pixso"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
-    else if (["wecom", "modao", "picset-ai"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (["wecom", "modao", "picset-ai", "ai-hive"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
   } else if (entry?.publication) await installPublication(entry.publication);
   else if (detailCLI.value) {
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai", "ai-hive"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -201,7 +201,7 @@ function connectorCategory(source: string) {
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
   if (["teambition", "linear"].includes(source)) return "projects";
-  if (["modao", "picset-ai", "kling-ai", "pixso"].includes(source)) return "design";
+  if (["modao", "picset-ai", "kling-ai", "pixso", "ai-hive"].includes(source)) return "design";
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
@@ -313,17 +313,18 @@ async function saveProvidedConnection() {
   if (!form || providedConnectionBusy.value) return;
   const modao = form.installation.source === "modao";
   const picset = form.installation.source === "picset-ai";
-  const invalidKey = picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const aiHive = form.installation.source === "ai-hive";
+  const invalidKey = aiHive ? "aiHiveCredentialsInvalid" : picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+  if (aiHive ? !form.secret || form.secret.length > 4096 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    const credentials = aiHive ? { MCP_BEARER_TOKEN: form.secret } : picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
     let installation = form.installation;
-    if ((modao || picset) && installation.upgrade_available) {
+    if ((modao || picset || aiHive) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       form.installation = installation;
     }
@@ -876,7 +877,11 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <template v-if="providedConnection.installation.source === 'picset-ai'">
+        <template v-if="providedConnection.installation.source === 'ai-hive'">
+          <label>{{ t('resources.aiHiveApiKey') }}<input v-model="providedConnection.secret" name="ai_hive_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://ai-hive.iclip.cn/" target="_blank" rel="noopener noreferrer">{{ t('resources.aiHiveApiKeyHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'picset-ai'">
           <label>{{ t('resources.picsetApiKey') }}<input v-model="providedConnection.secret" name="picset_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
           <a href="https://picsetai.cn/developer-api" target="_blank" rel="noopener noreferrer">{{ t('resources.picsetApiKeyHelp') }}</a>
         </template>
