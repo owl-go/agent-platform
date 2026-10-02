@@ -391,7 +391,7 @@ A User-private grant that lets one installed Connector access an external identi
 _Avoid_: Connector Installation, permanent permission, shared platform credential
 
 **Connector Revision**:
-An immutable installed revision identified by its Connector source, semantic version, package checksum, and exact runtime policy. New executions resolve the active revision, while historical execution snapshots continue to reference the revision they originally used.
+An immutable installed revision identified by its Connector source, semantic version, package checksum, and exact runtime policy. New executions resolve the active revision, while historical execution snapshots continue to reference the revision they originally used. A selected MCP or CLI Connector carries the companion Skills of that same frozen revision.
 _Avoid_: Mutable Connector configuration, authorization version, latest tag
 
 **Connector Invocation Result**:

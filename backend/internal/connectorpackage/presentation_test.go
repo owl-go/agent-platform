@@ -30,7 +30,7 @@ func TestTeambitionDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
 }
 
 func TestDisplayIconProjectsReviewedBrands(t *testing.T) {
-	for _, source := range []string{"feishu", "dingtalk", "notion", "modao"} {
+	for _, source := range []string{"feishu", "dingtalk", "notion", "modao", "xiaoe"} {
 		if got := DisplayIcon(source); got != source {
 			t.Fatalf("DisplayIcon(%q) = %q", source, got)
 		}

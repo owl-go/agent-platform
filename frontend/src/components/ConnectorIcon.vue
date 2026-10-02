@@ -4,6 +4,7 @@ import ProfileIcon from "./ProfileIcon.vue";
 import feishuIcon from "../assets/feishu.png";
 import dingtalkIcon from "../assets/dingtalk.png";
 import modaoIcon from "../assets/modao.png";
+import xiaoeIcon from "../assets/xiaoe.svg";
 import notionIcon from "../assets/notion.svg";
 
 const props = withDefaults(defineProps<{ icon?: string; size?: number }>(), { size: 28 });
@@ -11,6 +12,7 @@ const imageSource = computed(() => {
   if (props.icon === "feishu") return feishuIcon;
   if (props.icon === "dingtalk") return dingtalkIcon;
   if (props.icon === "modao") return modaoIcon;
+  if (props.icon === "xiaoe") return xiaoeIcon;
   if (props.icon === "notion") return notionIcon;
   return props.icon?.startsWith("data:image/") ? props.icon : undefined;
 });

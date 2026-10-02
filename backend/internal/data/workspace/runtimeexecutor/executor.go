@@ -1538,7 +1538,20 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 			files[filepath.ToSlash(filepath.Join("skills", skill.ID, name))] = content
 		}
 	}
+	type connectorSkillPackage struct {
+		ID, Name, PackageObjectKey, PackageSHA256, AuthenticationDriver string
+		Mode                                                            connectorpackage.Type
+	}
+	packages := make([]connectorSkillPackage, 0, len(job.Snapshot.CLIConnectors)+len(job.Snapshot.MCPServers))
 	for _, connector := range job.Snapshot.CLIConnectors {
+		packages = append(packages, connectorSkillPackage{connector.ID, connector.Name, connector.PackageObjectKey, connector.PackageSHA256, connector.AuthenticationDriver, connectorpackage.TypeCLI})
+	}
+	for _, connector := range job.Snapshot.MCPServers {
+		if connector.PackageObjectKey != "" {
+			packages = append(packages, connectorSkillPackage{connector.ID, connector.Name, connector.PackageObjectKey, connector.PackageSHA256, "", connectorpackage.TypeMCP})
+		}
+	}
+	for _, connector := range packages {
 		if connector.PackageObjectKey == "" {
 			if connector.AuthenticationDriver == "feishu" {
 				resources, err := connectorpackage.OfficialFeishuSkillResources("1.0.93")
@@ -1571,8 +1584,8 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is invalid: %w", connector.Name, err)
 		}
-		if pkg.CLI == nil {
-			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is not a CLI Connector", connector.Name)
+		if pkg.Metadata.Type != connector.Mode {
+			return nil, nil, nil, fmt.Errorf("Connector %q Skill package mode differs from its snapshot", connector.Name)
 		}
 		reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
 		if err != nil {
@@ -1836,6 +1849,11 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			names = append(names, skill.Name+"@"+skill.SHA256[:12]+" (/run/agent-credentials/skills/"+skill.ID+")")
 		}
 		sections = append(sections, "Available isolated Skills: "+strings.Join(names, ", "))
+	}
+	for _, connector := range job.Snapshot.MCPServers {
+		if connector.PackageObjectKey != "" {
+			sections = append(sections, fmt.Sprintf("MCP Connector %s: first read /run/agent-credentials/connector-skills/%s/SKILL.md before invoking a tool.", connector.Name, connector.ID))
+		}
 	}
 	if len(job.Snapshot.CLIConnectors) > 0 {
 		commands := make([]string, 0)

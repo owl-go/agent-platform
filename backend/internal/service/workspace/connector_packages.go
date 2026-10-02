@@ -19,7 +19,7 @@ import (
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/objectstore"
-	"agent-platform/backend/internal/teambitioncli"
+	"agent-platform/backend/internal/xiaoemcp"
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -455,7 +455,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 		}
 		if unmarshalErr := json.Unmarshal(plaintext, &credentials); unmarshalErr == nil {
 			refreshToken = credentials.RefreshToken
-			if policy.CLI != nil && (policy.CLI.AuthenticationDriver == "dingtalk" || isTeambitionCLILoginPolicy(policy)) {
+			if usesCallbackConnectorLogin(policy) || policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
 				// The OAuth Client ID is bound to the selected authorization, not the current CLI deployment.
 				appID = credentials.ClientID
 			}
@@ -470,7 +470,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 			refreshToken = string(plaintext)
 		}
 	}
-	if refreshToken == "" && isTeambitionCLILoginPolicy(policy) && len(current.RefreshCredentialCiphertext) > 0 {
+	if refreshToken == "" && usesCallbackConnectorLogin(policy) && len(current.RefreshCredentialCiphertext) > 0 {
 		plaintext, decryptErr := service.box.Decrypt(current.RefreshCredentialCiphertext, current.RefreshCredentialAAD)
 		if decryptErr != nil {
 			return nil, publicError(decryptErr)
@@ -515,7 +515,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isTeambitionCLILoginPolicy(policy) {
+	if usesCallbackConnectorLogin(policy) {
 		current.RefreshCredentialAAD = aad + ":refresh"
 		current.RefreshCredentialCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), current.RefreshCredentialAAD)
 		if err != nil {
@@ -533,7 +533,7 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	current.CredentialFormat = "json"
 	current.State = domain.ConnectorAuthorizationActive
 	expiry := result.ExpiresAt
-	if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
+	if !result.RefreshExpiresAt.IsZero() && !usesCallbackConnectorLogin(policy) {
 		expiry = result.RefreshExpiresAt
 	}
 	current.ExpiresAt = &expiry
@@ -686,6 +686,9 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	providerFlow, err := driver.Begin(ctx, appID, appSecret, request.Scopes)
+	if errors.Is(err, xiaoemcp.ErrCallbackBlocked) {
+		return nil, kratoserrors.New(http.StatusBadGateway, "xiaoe_oauth_callback_blocked", "Xiaoe blocked registration of this platform callback domain")
+	}
 	if err != nil {
 		return nil, publicError(err)
 	}
@@ -697,8 +700,12 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 	if err != nil {
 		return nil, publicError(err)
 	}
-	if isTeambitionCLILoginPolicy(policy) {
-		flow, err = service.sealTeambitionCallback(ctx, repository, flow)
+	if usesCallbackConnectorLogin(policy) {
+		if isXiaoeMCPLoginPolicy(policy) {
+			flow, err = service.sealXiaoeCallback(ctx, repository, flow)
+		} else {
+			flow, err = service.sealTeambitionCallback(ctx, repository, flow)
+		}
 		if err != nil {
 			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 			return nil, publicError(err)
@@ -737,8 +744,10 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return nil, publicError(err)
 	}
 	defer clear(deviceCode)
-	if isTeambitionCLILoginPolicy(policy) {
-		var state teambitioncli.Pending
+	if usesCallbackConnectorLogin(policy) {
+		var state struct {
+			Code string `json:"code"`
+		}
 		if json.Unmarshal(deviceCode, &state) != nil {
 			return nil, publicError(domain.ErrInvalid)
 		}
@@ -759,7 +768,7 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 		return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 	}
 	if err != nil {
-		if isTeambitionCLILoginPolicy(policy) {
+		if usesCallbackConnectorLogin(policy) {
 			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
 			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
 		}
@@ -805,14 +814,14 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 	var expiry *time.Time
 	if !result.ExpiresAt.IsZero() {
 		value := result.ExpiresAt
-		if !result.RefreshExpiresAt.IsZero() && !isTeambitionCLILoginPolicy(policy) {
+		if !result.RefreshExpiresAt.IsZero() && !usesCallbackConnectorLogin(policy) {
 			value = result.RefreshExpiresAt
 		}
 		expiry = &value
 	}
 	var refreshCiphertext []byte
 	refreshAAD := ""
-	if isTeambitionCLILoginPolicy(policy) && result.RefreshToken != "" {
+	if usesCallbackConnectorLogin(policy) && result.RefreshToken != "" {
 		refreshAAD = aad + ":refresh"
 		refreshCiphertext, err = service.box.Encrypt([]byte(result.RefreshToken), refreshAAD)
 		if err != nil {
@@ -860,6 +869,9 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
+	if isXiaoeMCPLoginPolicy(policy) {
+		return "interactive"
+	}
 	if policy.CLI != nil {
 		if isNotionCLILoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) {
 			return "interactive"
@@ -877,6 +889,14 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 	return "none"
 }
 
+func usesCallbackConnectorLogin(policy connectorRevisionPolicy) bool {
+	return isTeambitionCLILoginPolicy(policy) || isXiaoeMCPLoginPolicy(policy)
+}
+
+func isXiaoeMCPLoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "xiaoe" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == xiaoemcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "agent.xiaoe-tech.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
 func isTeambitionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "teambition" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
@@ -889,8 +909,11 @@ func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, resu
 	if isNotionCLILoginPolicy(policy) {
 		return map[string]string{"token": result.AccessToken}
 	}
+	if isXiaoeMCPLoginPolicy(policy) {
+		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
+	}
 	fields := map[string]string{"access_token": result.AccessToken, "refresh_token": result.RefreshToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
-	if isTeambitionCLILoginPolicy(policy) {
+	if usesCallbackConnectorLogin(policy) {
 		delete(fields, "refresh_token")
 	}
 	return fields
@@ -947,6 +970,9 @@ func (service *Service) UploadConnectorPackage(ctx context.Context, request *wor
 }
 
 func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "xiaoe" {
+		return fmt.Errorf("%w: Xiaoe login is reserved for the reviewed platform publication", domain.ErrInvalid)
+	}
 	if pkg.Metadata.Source == "notion" {
 		return fmt.Errorf("%w: Notion login is reserved for the platform publication", domain.ErrInvalid)
 	}
@@ -957,6 +983,9 @@ func validatePrivateConnectorPackage(pkg connectorpackage.Package) error {
 }
 
 func validatePlatformConnectorPackage(pkg connectorpackage.Package) error {
+	if pkg.Metadata.Source == "xiaoe" && !isXiaoeMCPLoginPolicy(connectorRevisionPolicy{Metadata: pkg.Metadata, AuthMode: pkg.Metadata.AuthMode, MCP: pkg.MCP, CLI: pkg.CLI}) {
+		return fmt.Errorf("%w: Xiaoe publication must use the reviewed OAuth MCP endpoint", domain.ErrInvalid)
+	}
 	if pkg.CLI == nil {
 		return nil
 	}

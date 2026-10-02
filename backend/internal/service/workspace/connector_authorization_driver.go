@@ -12,6 +12,7 @@ import (
 	"agent-platform/backend/internal/notioncli"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
+	"agent-platform/backend/internal/xiaoemcp"
 )
 
 var (
@@ -61,6 +62,33 @@ func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id,
 	return teambitionGrant(v), e
 }
 func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type xiaoeConnectorAuthorizationDriver struct{ client *xiaoemcp.Client }
+
+func (d xiaoeConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d xiaoeConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d xiaoeConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, xiaoemcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, xiaoemcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return xiaoeGrant(v), e
+}
+func (d xiaoeConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return xiaoeGrant(v), e
+}
+func xiaoeGrant(v xiaoemcp.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
 }
 
@@ -207,7 +235,14 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 	if err := validateInteractiveConnectorDriver(policy); err != nil {
 		return nil, err
 	}
-	if policy.CLI.AuthenticationDriver == "dingtalk" {
+	if isXiaoeMCPLoginPolicy(policy) {
+		redirect, err := service.xiaoeCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return xiaoeConnectorAuthorizationDriver{client: xiaoemcp.NewClient(redirect)}, nil
+	}
+	if policy.CLI != nil && policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil
 	}
 	if isTeambitionCLILoginPolicy(policy) {
