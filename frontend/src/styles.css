@@ -1260,7 +1260,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .catalog-loading .catalog-loading-meta { width: 65%; margin-top: var(--aw-space-2); }
 @media (max-width: 1280px) { .catalog-loading { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .catalog-loading, .catalog-loading.compact { grid-template-columns: minmax(0, 1fr); } }
-@media (prefers-reduced-motion: reduce) { .catalog-loading .el-skeleton__item { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .catalog-loading .el-skeleton.is-animated .el-skeleton__item { animation: none; } }
 @media (max-width: 640px) {
   .resource-list.connector-catalog-grid { grid-template-columns: minmax(0, 1fr); }
   .resource-list .connector-summary-card { padding: var(--aw-space-4); gap: var(--aw-space-3); }
