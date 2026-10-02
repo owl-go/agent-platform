@@ -123,7 +123,7 @@ function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetail
 async function connectFromDetails() {
   const entry = detailPackage.value;
   if (entry?.installation) {
-    if (["notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    if (["notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
     else if (["wecom", "modao", "picset-ai", "ai-hive", "openboost"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai", "ai-hive", "openboost"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha", "wecom", "modao", "picset-ai", "ai-hive", "openboost"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -198,6 +198,7 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
 }));
 // Categories describe existing connector sources; unknown and private connectors stay discoverable.
 function connectorCategory(source: string) {
+  if (source === "tianyancha") return "industry";
   if (["xiaoe", "openboost"].includes(source)) return "marketing";
   if (["caoliao", "camscanner"].includes(source)) return "productivity";
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
@@ -207,7 +208,7 @@ function connectorCategory(source: string) {
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
-const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "other"].map(key => ({
+const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "industry", "other"].map(key => ({
   key, title: t(`resources.connectorCategory.${key}`),
   mcp: visibleMCP.value.filter(item => !item.managed_installation && connectorCategory("") === key && (!props.mineOnly || !props.selectable || !item.platform)),
   cli: visibleCLI.value.filter(item => !item.managed_installation && connectorCategory(item.npm_package) === key && (!installedOnly.value || cliInstalled(item))),
@@ -404,7 +405,7 @@ async function completePublishedConnectorFlows() {
         connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
         if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
       } catch (cause) {
-        if (["teambition", "xiaoe", "kling-ai", "linear", "pixso"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
+        if (["teambition", "xiaoe", "kling-ai", "linear", "pixso", "tianyancha"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
           await refresh();
           if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
             connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };

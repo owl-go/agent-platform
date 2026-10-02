@@ -60,6 +60,7 @@ type Service struct {
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
 	server.Handle(pixsoOAuthCallbackPath, http.HandlerFunc(service.pixsoOAuthCallback))
+	server.Handle(tianyanchaOAuthCallbackPath, http.HandlerFunc(service.tianyanchaOAuthCallback))
 	server.Handle(linearOAuthCallbackPath, http.HandlerFunc(service.linearOAuthCallback))
 	server.Handle(xiaoeOAuthCallbackPath, http.HandlerFunc(service.xiaoeOAuthCallback))
 	server.Handle(teambitionOAuthCallbackPath, http.HandlerFunc(service.teambitionOAuthCallback))

@@ -530,6 +530,32 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
+  it.each([false, true])("opens 天眼查 browser OAuth and upgrades old installations first (old: %s)", async (old) => {
+    const installation = { id: "tianyancha-installation", source: "tianyancha", active_revision_id: "revision-tianyancha", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.9.0" : "1.0.0", name: "天眼查", description: "", authentication_driver: "", upgrade_available: old };
+    const scopes = ["mcp:tools.call"];
+    const publication = { source: "tianyancha", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "tianyancha", package_version: "1.0.0", mode: "mcp", sha256: "a".repeat(64), name: "天眼查", description: "", icon: "plug", authentication_driver: "", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+    const upgraded = { ...installation, package_version: "1.0.0", upgrade_available: false, version: 2 };
+    const upgrade = vi.fn(async () => upgraded);
+    const begin = vi.fn(async () => ({ id: "flow-tianyancha", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://capi.tianyancha.com/oauth/authorize?state=sealed&code_challenge=challenge" }));
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      await connectPublished(wrapper);
+      await flushPromises();
+      expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
+      expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://capi.tianyancha.com/oauth/authorize"));
+      expect(api.connectConnector).not.toHaveBeenCalled();
+      expect(api.beginConnectorSetup).not.toHaveBeenCalled();
+      expect(document.querySelector('input[name="user_token"]')).toBeNull();
+      expect(wrapper.find('a[href^="https://capi.tianyancha.com/"]').exists()).toBe(true);
+    } finally { wrapper.unmount(); }
+  });
+
   it.each([false, true])("opens Xiaoe browser OAuth and upgrades old installations first (old: %s)", async (old) => {
     const installation = { id: "xiaoe-installation", source: "xiaoe", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "小鹅通", description: "", authentication_driver: "oauth", upgrade_available: old };
     const scopes: string[] = [];
@@ -1436,20 +1462,22 @@ describe("ExtensionManager", () => {
 });
 
 it("groups real connector sources, filters installed/search, and installs without opening a modal", async () => {
-  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "github", "modao", "xiaoe", "openboost", "caoliao", "camscanner", "custom"];
+  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "github", "modao", "xiaoe", "openboost", "caoliao", "camscanner", "tianyancha", "custom"];
   const publications = sources.map(source => ({ source, state: "available", revision: { name: source, description: `Description ${source}`, mode: "cli", conformance_available: true } }));
   const installations: Array<{ id: string; source: string; name: string; state: string; authorized: boolean; version: number }> = [{ id: "notion-id", source: "notion", name: "notion", state: "active", authorized: false, version: 1 }];
   const install = vi.fn(async (source: string) => { installations.push({ id: `${source}-id`, source, name: source, state: "active", authorized: false, version: 1 }); });
   const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => publications), listConnectorInstallations: vi.fn(async () => [...installations]), listConnectorAuthorizations: vi.fn(async () => []), installPublishedConnector: install } as unknown as PlatformApi;
   const wrapper = mountManager(api);
   await flushPromises();
-  expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["沟通协作", "知识文档", "项目管理", "设计创作", "市场营销", "效率工具", "其他"]);
+  expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["沟通协作", "知识文档", "项目管理", "设计创作", "市场营销", "效率工具", "行业数据", "其他"]);
   const projects = wrapper.findAll(".catalog-group").find(group => group.get("h2").text() === "项目管理")!;
   expect(projects.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["teambition", "github"]);
   const marketing = wrapper.findAll(".catalog-group").find(group => group.get("h2").text() === "市场营销")!;
   expect(marketing.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["xiaoe", "openboost"]);
   const productivity = wrapper.findAll(".catalog-group").find(group => group.get("h2").text() === "效率工具")!;
   expect(productivity.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["caoliao", "camscanner"]);
+  const industry = wrapper.findAll(".catalog-group").find(group => group.get("h2").text() === "行业数据")!;
+  expect(industry.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["tianyancha"]);
   const card = (name: string) => wrapper.get(`.connector-summary-card[aria-label="${name}"]`);
   expect(card("notion").find(".connector-installed-mark").exists()).toBe(true);
   expect(card("notion").text()).not.toContain("需要设置");
