@@ -22,6 +22,8 @@ const Resource = "https://mcp.tianyancha.com/mcp"
 
 var bearerTokenPattern = regexp.MustCompile(`^[A-Za-z0-9._~+/-]+={0,}$`)
 
+var ErrRegionBlocked = errors.New("Tianyancha does not support the deployment region")
+
 var ErrPending = errors.New("Tianyancha authorization pending")
 var ErrExpired = errors.New("Tianyancha authorization expired")
 
@@ -67,6 +69,15 @@ func (c *Client) call(ctx context.Context, path, contentType string, body io.Rea
 		return errors.New("Tianyancha OAuth service unavailable")
 	}
 	defer response.Body.Close()
+	if response.StatusCode == 419 {
+		var blocked struct {
+			ErrorCode int    `json:"errorCode"`
+			Message   string `json:"message"`
+		}
+		if json.NewDecoder(io.LimitReader(response.Body, 2048)).Decode(&blocked) == nil && blocked.ErrorCode == 301000 && blocked.Message == "bannedLocation" {
+			return ErrRegionBlocked
+		}
+	}
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
 		return fmt.Errorf("Tianyancha OAuth rejected request (HTTP %d)", response.StatusCode)
 	}

@@ -1530,3 +1530,20 @@ it("connects an installed Kling MCP through browser OAuth with reviewed scopes",
  try {await flushPromises();const details=await openDetails(wrapper);expect(details.text()).toContain("安装包校验通过");expect(details.text()).not.toContain("运行环境已验证");expect(details.text()).not.toContain("已通过运行验证");await details.findAll("button").find(b=>b.text()==="连接")!.trigger("click");await flushPromises();expect(begin).toHaveBeenCalledWith(installation.id,"user",scopes);expect(api.beginConnectorSetup).not.toHaveBeenCalled();expect(api.connectConnector).not.toHaveBeenCalled();}
  finally {wrapper.unmount();}
 });
+
+it("explains Tianyancha region restriction without offering manual credentials", async () => {
+  const scopes = ["mcp:tools.call"];
+  const installation = { id: "tyc-installation", source: "tianyancha", active_revision_id: "tyc-revision", state: "active" as const, authorized: false, version: 1, package_version: "1.0.0", name: "天眼查", description: "", authentication_driver: "oauth", upgrade_available: false };
+  const publication = { source: "tianyancha", active_revision_id: "tyc-revision", state: "available" as const, version: 1, revision: { id: "tyc-revision", source: "tianyancha", package_version: "1.0.0", mode: "mcp", sha256: "a".repeat(64), name: "天眼查", description: "", icon: "plug", authentication_driver: "oauth", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+  const begin = vi.fn(async () => { throw new ApiError("unavailable", 502, "tianyancha_region_blocked"); });
+  const manual = vi.fn();
+  const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow: begin, connectConnector: manual } as unknown as PlatformApi;
+  const wrapper = mountManager(api);
+  try {
+    await flushPromises(); const details = await openDetails(wrapper);
+    await details.findAll("button").find(button => button.text() === "连接")!.trigger("click"); await flushPromises();
+    expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+    expect(document.body.textContent).toContain("天眼查暂不支持当前服务器所在地区");
+    expect(manual).not.toHaveBeenCalled();
+  } finally { wrapper.unmount(); }
+});

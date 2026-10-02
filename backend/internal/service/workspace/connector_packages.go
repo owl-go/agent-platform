@@ -22,6 +22,7 @@ import (
 	"agent-platform/backend/internal/githubcli"
 	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/objectstore"
+	"agent-platform/backend/internal/tianyanchamcp"
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -713,6 +714,9 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	providerFlow, err := driver.Begin(ctx, appID, appSecret, request.Scopes)
+	if errors.Is(err, tianyanchamcp.ErrRegionBlocked) {
+		return nil, kratoserrors.New(http.StatusBadGateway, "tianyancha_region_blocked", "Tianyancha does not support the deployment server region")
+	}
 	if errors.Is(err, xiaoemcp.ErrCallbackBlocked) {
 		return nil, kratoserrors.New(http.StatusBadGateway, "xiaoe_oauth_callback_blocked", "Xiaoe blocked registration of this platform callback domain")
 	}

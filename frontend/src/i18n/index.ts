@@ -192,6 +192,7 @@ Object.assign((en as unknown as { resources: Record<string, string> }).resources
 Object.assign((zh as unknown as { resources: Record<string, string> }).resources, {
   githubVerifyCode: "请在 GitHub 授权页面输入验证码：{code}。",
   notionVerifyCode: "请核对验证码：{code}。",
+  tianyanchaRegionBlocked: "天眼查暂不支持当前服务器所在地区，无法完成授权。请联系天眼查确认支持的部署地区后重新连接。",
   xiaoeOAuthCallbackBlocked: "小鹅通安全机制拦截了当前平台回调域名，暂时无法授权。请联系小鹅通放行回调域名，或配置正式平台域名后重新连接。",
   connectorAuthorizeNow: "打开授权页面", connectorAuthorizationPending: "等待在对应应用中完成授权", connectorAuthorizationInvalidInput: "无法发起账号授权，请刷新页面后重试。",
   dingtalkCLIAccessDisabled: "钉钉账号已确认授权，但当前企业或账号尚未获得 CLI 使用权限。请联系钉钉企业管理员检查开放范围，处理后再点击“继续完成授权”。",
@@ -205,6 +206,7 @@ Object.assign((zh as unknown as { resources: Record<string, string> }).resources
 Object.assign((en as unknown as { resources: Record<string, string> }).resources, {
   githubVerifyCode: "Enter this code on the GitHub authorization page: {code}.",
   notionVerifyCode: "Confirm the verification code: {code}.",
+  tianyanchaRegionBlocked: "Tianyancha does not support this server region. Contact Tianyancha to confirm a supported deployment region before reconnecting.",
   xiaoeOAuthCallbackBlocked: "Xiaoe blocked this platform callback domain. Ask Xiaoe to allow it, or configure a permanent platform domain before reconnecting.",
   connectorAuthorizeNow: "Open authorization page", connectorAuthorizationPending: "Waiting for authorization in the connected app", connectorAuthorizationInvalidInput: "Could not start account authorization. Refresh and retry.",
   dingtalkCLIAccessDisabled: "DingTalk authorization was approved, but this organization or account does not have CLI access. Ask your DingTalk administrator to check access, then continue authorization.",
