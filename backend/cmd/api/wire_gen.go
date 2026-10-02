@@ -14,6 +14,7 @@ import (
 	"agent-platform/backend/internal/service/workspace"
 	"agent-platform/backend/internal/wiring/agentworkspace"
 	"agent-platform/backend/internal/wiring/aicreation"
+	"agent-platform/backend/internal/wiring/knowledgebase"
 	platform2 "agent-platform/backend/internal/wiring/platform"
 	"context"
 	"github.com/go-kratos/kratos/v3"
@@ -77,7 +78,11 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	workspaceService, err := workspace.New(applicationService, service2, service3, service4, chatModel, service5, box, store, skillstoreStore, objectstoreProvider, recorder, config)
+	searcher, err := knowledgebase.NewSearcher(config, database)
+	if err != nil {
+		return nil, err
+	}
+	workspaceService, err := workspace.New(applicationService, service2, service3, service4, chatModel, service5, box, store, skillstoreStore, objectstoreProvider, recorder, config, searcher)
 	if err != nil {
 		return nil, err
 	}

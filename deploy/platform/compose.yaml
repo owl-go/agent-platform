@@ -74,6 +74,10 @@ services:
         SERVICE: api
     restart: unless-stopped
     environment:
+      RAGFLOW_ENDPOINT: ${RAGFLOW_ENDPOINT:-}
+      RAGFLOW_API_KEY: ${RAGFLOW_API_KEY:-}
+      RAGFLOW_DEPLOYMENT_ID: ${RAGFLOW_DEPLOYMENT_ID:-}
+      RAGFLOW_EMBEDDING_MODEL: ${RAGFLOW_EMBEDDING_MODEL:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-agent_platform}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_platform}?sslmode=disable
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -128,6 +132,10 @@ services:
         SERVICE: worker
     restart: unless-stopped
     environment:
+      RAGFLOW_ENDPOINT: ${RAGFLOW_ENDPOINT:-}
+      RAGFLOW_API_KEY: ${RAGFLOW_API_KEY:-}
+      RAGFLOW_DEPLOYMENT_ID: ${RAGFLOW_DEPLOYMENT_ID:-}
+      RAGFLOW_EMBEDDING_MODEL: ${RAGFLOW_EMBEDDING_MODEL:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-agent_platform}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agent_platform}?sslmode=disable
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}

@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe 与 Knowledge Base 文档已接入。当前没有活动的 Knowledge Retrieval Provider，新的知识库摄取任务不处理，搜索及绑定知识库的执行 fail closed；历史 Embedding Provider 设置和 pgvector 召回也不是活动产品路径。AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe 与 Knowledge Base 文档已接入。Knowledge Retrieval 通过可选 RAGFlow Adapter 接入受信任 API/Worker：异步解析确认后提交 Ready 状态和不可变 Generation Manifest，检索在当前权限下读取冻结版本；未配置或不可用时 fail closed。历史 Embedding Provider 设置和 pgvector 召回不是活动产品路径；真实部署验收以日期化证据为准。AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 

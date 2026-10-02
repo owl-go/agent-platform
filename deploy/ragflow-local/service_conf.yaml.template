@@ -1,0 +1,32 @@
+ragflow:
+  host: 0.0.0.0
+  http_port: 9380
+mysql:
+  name: rag_flow
+  user: root
+  password: '${MYSQL_PASSWORD}'
+  host: mysql
+  port: 3306
+  max_allowed_packet: 1073741824
+  max_connections: 100
+  stale_timeout: 300
+es:
+  hosts: 'http://elasticsearch:9200'
+  username: elastic
+  password: '${ELASTIC_PASSWORD}'
+redis:
+  db: 1
+  host: 'redis:6379'
+  password: '${REDIS_PASSWORD}'
+user_default_llm:
+  default_models:
+    embedding_model:
+      name: bge-m3:aw-790764642607
+      factory: Ollama
+      api_key: local
+      base_url: 'http://host.docker.internal:11434'
+
+opendal:
+  scheme: mysql
+  config:
+    oss_table: opendal_storage

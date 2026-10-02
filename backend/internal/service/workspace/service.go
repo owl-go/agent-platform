@@ -108,11 +108,11 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
 
-func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, analytics productanalytics.Observer, config platformconfig.Config) (*Service, error) {
+func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, analytics productanalytics.Observer, config platformconfig.Config, searcher retrieval.Searcher) (*Service, error) {
 	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || chatModel == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil || analytics == nil {
 		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, Object Store, and product analytics services are required")
 	}
-	service := &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, analytics: analytics, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
+	service := &Service{knowledgeSearch: searcher, accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, analytics: analytics, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
 	return service, nil
 }
 

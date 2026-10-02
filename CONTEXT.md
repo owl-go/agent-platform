@@ -277,7 +277,7 @@ A source supplied to a Knowledge Base as uploaded bytes or a captured web source
 _Avoid_: Attachment, Workspace file, Artifact
 
 **Document Revision**:
-An immutable accepted source snapshot of a Knowledge Document. A later replacement creates a new revision; only the latest successfully ingested revision participates in retrieval while older revisions remain part of the document's history.
+An immutable accepted source snapshot of a Knowledge Document. A later replacement creates a new revision; current retrieval uses the latest successfully ingested revision, while a frozen Knowledge Index Generation may retain an older Ready revision under current source permissions.
 _Avoid_: Mutable file, overwrite, Runtime Snapshot
 
 **Ingestion**:
@@ -297,7 +297,7 @@ A bounded set of source excerpts returned for one Run from its frozen Knowledge 
 _Avoid_: Model memory, full document dump, Artifact
 
 **Knowledge Index Generation**:
-The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion by an active Retrieval Provider. A queued Run freezes its generation, and unavailable or superseded generations fail closed rather than being substituted with different content.
+The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion by an active Retrieval Provider. A queued Run freezes its immutable set of Ready Document Revisions; retained generations remain usable under current source permissions, while unavailable generations fail closed rather than being substituted with different content.
 _Avoid_: Provider workspace, mutable search state, Workflow Snapshot
 
 **Knowledge Citation**:

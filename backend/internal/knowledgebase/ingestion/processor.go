@@ -2,8 +2,11 @@ package ingestion
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"time"
 
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/objectstore"
@@ -34,15 +37,20 @@ func (processor *Processor) ProcessNext(ctx context.Context) (bool, error) {
 	if err != nil || job == nil {
 		return false, err
 	}
-	processingErr := processor.process(ctx, *job)
-	finishErr := processor.repository.FinishKnowledgeIngestionJob(context.WithoutCancel(ctx), *job, processingErr)
+	processingCtx, cancel := context.WithTimeout(ctx, 8*time.Minute)
+	processingErr := processor.process(processingCtx, *job)
+	cancel()
+	finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+	defer finishCancel()
+	finishErr := processor.repository.FinishKnowledgeIngestionJob(finishCtx, *job, processingErr)
 	if processingErr != nil && finishErr != nil {
 		return true, fmt.Errorf("Knowledge Ingestion failed: %v; recording failure: %w", processingErr, finishErr)
 	}
 	if finishErr != nil {
 		return true, finishErr
 	}
-	if processingErr == nil {
+	retained, supportsRetention := processor.provider.(interface{ RetainsRevisions() bool })
+	if processingErr == nil && !(supportsRetention && retained.RetainsRevisions()) {
 		// Commit the new Ready revision before removing the previous provider
 		// vectors. A cleanup failure cannot roll the committed job backward;
 		// source validation still rejects superseded vectors at query time.
@@ -65,12 +73,21 @@ func (processor *Processor) process(ctx context.Context, job workspaceapplicatio
 		return fmt.Errorf("read Knowledge source: %w", err)
 	}
 	defer reader.Close()
+	if object.Size < 0 || object.Size > 100*1024*1024 || (job.SHA256 != "" && object.Size != job.Size) {
+		return fmt.Errorf("Knowledge source size does not match its immutable revision")
+	}
 	content, err := io.ReadAll(io.LimitReader(reader, object.Size+1))
 	if err != nil {
 		return fmt.Errorf("read Knowledge source bytes: %w", err)
 	}
 	if int64(len(content)) != object.Size {
 		return fmt.Errorf("Knowledge source size changed while ingesting")
+	}
+	if job.SHA256 != "" {
+		digest := sha256.Sum256(content)
+		if hex.EncodeToString(digest[:]) != job.SHA256 {
+			return fmt.Errorf("Knowledge source digest does not match its immutable revision")
+		}
 	}
 	if err := processor.provider.UpsertRevision(ctx, job.KnowledgeBaseID, job.RevisionID, job.ContentType, content); err != nil {
 		return fmt.Errorf("index Knowledge revision: %w", err)
