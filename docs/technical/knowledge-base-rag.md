@@ -1,6 +1,6 @@
 # Knowledge Base ingestion and retrieval boundary
 
-ADR-0042 selects RAGFlow v0.24.0 as the optional Retrieval Provider. Knowledge Base management remains available when `retrieval` is omitted. In that case ingestion is paused and required retrieval fails closed. See the [local deployment instructions](../../deploy/ragflow-local/README.md) and [2026-10-02 local evidence](../evidence/agent-workspace/2026-10-02-ragflow-local-validation.md) for actual verification; configuration and stored Ready flags alone do not establish live availability.
+ADR-0042 selects RAGFlow v0.24.0 as the optional Retrieval Provider. Knowledge Base management remains available when `retrieval` is omitted. In that case ingestion is paused and required retrieval fails closed. See the [local deployment instructions](../../deploy/ragflow-local/README.md) and [2026-10-02 local evidence](../evidence/agent-workspace/2026-10-02-ragflow-local-validation.md) and [platform acceptance](../evidence/agent-workspace/2026-10-02-ragflow-platform-validation.md) for actual verification; configuration and stored Ready flags alone do not establish live availability.
 
 ## Ownership and source persistence
 

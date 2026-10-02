@@ -16,10 +16,13 @@ ollama pull bge-m3
 ollama cp bge-m3 bge-m3:aw-790764642607
 ```
 
-Generate distinct values for `MYSQL_PASSWORD`, `ELASTIC_PASSWORD`, `REDIS_PASSWORD` and `RAGFLOW_SECRET_KEY` in a protected env file outside the checkout. Never commit that file. Start from the repository:
+Generate distinct values for `MYSQL_PASSWORD`, `ELASTIC_PASSWORD`, `REDIS_PASSWORD` and `RAGFLOW_SECRET_KEY` in a protected env file outside the checkout. Never commit that file. Copy the deployment files outside the checkout so later Git operations cannot replace active bind-mounted configuration, then start from that durable directory:
 
 ```bash
-docker compose --env-file /path/to/protected/local.env -f deploy/ragflow-local/compose.yaml up -d
+mkdir -p "$HOME/.local/share/agent-platform-ragflow/deployment"
+cp deploy/ragflow-local/* "$HOME/.local/share/agent-platform-ragflow/deployment/"
+docker compose --env-file "$HOME/.local/share/agent-platform-ragflow/local.env" \
+  -f "$HOME/.local/share/agent-platform-ragflow/deployment/compose.yaml" up -d
 ```
 
 Register a dedicated local RAGFlow account, verify that `bge-m3:aw-790764642607@Ollama` is configured under Embedding, and generate an API token in its settings. Registration is local; the gateway never exposes it. Test dataset creation, parsing and retrieval before enabling the platform provider.
