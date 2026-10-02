@@ -18,6 +18,8 @@ function api(): PlatformApi {
     listSkills: vi.fn(async () => []),
     listCLIConnectorDefinitions: vi.fn(async () => []),
     listCLIConnectorEnablements: vi.fn(async () => []),
+    listKnowledgeCategories: vi.fn(async () => []),
+    listKnowledgeDocuments: vi.fn(async () => []),
     listKnowledgeBases: vi.fn(async () => [{ id: "knowledge-1", owner_id: "user-1", name: "交付手册", description: "部署和验收", visibility: "private", platform: false, deleted: false, created_at: "2026-09-28T00:00:00Z", updated_at: "2026-09-28T00:00:00Z", version: 1, document_count: 2, ready_document_count: 1, last_ready_at: "2026-09-28T00:00:00Z" }]),
   } as unknown as PlatformApi;
 }
@@ -63,6 +65,17 @@ describe("ResourceCenterPage", () => {
     expect(wrapper.get(".knowledge-card").text()).toContain("仅我可见");
     expect(wrapper.get(".knowledge-card").text()).toContain("可检索");
     expect(wrapper.get(".knowledge-card").text()).toContain("1/2 份文档可检索");
+    await wrapper.get(".knowledge-card").trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(false);
+    await wrapper.get(".knowledge-back").trigger("click");
+    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(true);
+    await wrapper.get(".knowledge-card").trigger("click");
+    await router.push("/resources?tab=experts");
+    await flushPromises();
+    await router.push("/resources?tab=knowledge");
+    await flushPromises();
+    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(true);
     wrapper.unmount();
   });
 });
