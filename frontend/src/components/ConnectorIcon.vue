@@ -3,6 +3,7 @@ import { computed } from "vue";
 import ProfileIcon from "./ProfileIcon.vue";
 import feishuIcon from "../assets/feishu.png";
 import dingtalkIcon from "../assets/dingtalk.png";
+import openboostIcon from "../assets/openboost.svg";
 import modaoIcon from "../assets/modao.png";
 import githubIcon from "../assets/github.svg";
 import xiaoeIcon from "../assets/xiaoe.svg";
@@ -12,6 +13,7 @@ const props = withDefaults(defineProps<{ icon?: string; size?: number }>(), { si
 const imageSource = computed(() => {
   if (props.icon === "feishu") return feishuIcon;
   if (props.icon === "dingtalk") return dingtalkIcon;
+  if (props.icon === "openboost") return openboostIcon;
   if (props.icon === "modao") return modaoIcon;
   if (props.icon === "github") return githubIcon;
   if (props.icon === "xiaoe") return xiaoeIcon;

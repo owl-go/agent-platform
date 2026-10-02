@@ -163,6 +163,78 @@ describe("ExtensionManager", () => {
     expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
     wrapper.unmount();
   });
+  function openboostFixture(old = false) {
+    let authorized = false;
+    const installation = { id: "openboost-installation", source: "openboost", active_revision_id: "openboost-revision", state: "active" as const, authorized: false, version: 3, package_version: "0.1.0", name: "OpenBoost", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const upgraded = { ...installation, version: 4, upgrade_available: false };
+    const publication = { source: "openboost", active_revision_id: "openboost-revision", state: "available" as const, version: 1, revision: { id: "openboost-revision", source: "openboost", package_version: "0.1.0", mode: "cli" as const, sha256: "a".repeat(64), name: "OpenBoost", description: "", icon: "openboost", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => { authorized = true; return { ...upgraded, authorized }; });
+    const upgradeConnectorInstallation = vi.fn(async () => upgraded);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, upgradeConnectorInstallation } as unknown as PlatformApi;
+    return { api, installation, connectConnector, upgradeConnectorInstallation };
+  }
+  async function openOpenBoost(wrapper: ReturnType<typeof mountManager>) {
+    await flushPromises();
+    await connectPublished(wrapper);
+    await flushPromises();
+    return new DOMWrapper(document.body).get(".provided-connector-form");
+  }
+  it("keeps the existing OpenBoost token flow available from connector guidance details", async () => {
+    const fixture = openboostFixture(), wrapper = mountManager(fixture.api);
+    try {
+      await flushPromises();
+      await wrapper.get(".published-connector-card").trigger("click"); await flushPromises();
+      const details = new DOMWrapper(document.body).get(".connector-details");
+      expect(details.text()).toContain("试试这样用");
+      await details.findAll("button").find(item => item.text() === "连接")!.trigger("click"); await flushPromises();
+      const form = new DOMWrapper(document.body).get(".provided-connector-form");
+      expect(form.get('input[name="openboost_secret_key"]').attributes("type")).toBe("password");
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it.each([false, true])("connects OpenBoost with one masked token and upgrades first when needed (%s)", async old => {
+    const fixture = openboostFixture(old), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openOpenBoost(wrapper);
+      expect(form.get('input[name="openboost_secret_key"]').attributes("type")).toBe("password");
+      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
+      expect(form.get('a[href="https://open.microdata-inc.com/mcp-list"]').attributes("rel")).toContain("noopener");
+      await form.get('input[name="openboost_secret_key"]').setValue("fixture-token");
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledWith(fixture.installation.id, "user", [], JSON.stringify({ openboost_secret_key: "fixture-token" }));
+      expect(fixture.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(fixture.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(fixture.connectConnector.mock.invocationCallOrder[0]!);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+      expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
+    } finally { wrapper.unmount(); }
+  });
+  it.each(["", "token with-space", "x".repeat(32769)])("rejects invalid OpenBoost tokens locally", async token => {
+    const fixture = openboostFixture(), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openOpenBoost(wrapper);
+      await form.get('input[name="openboost_secret_key"]').setValue(token);
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it("retains a failed OpenBoost token for retry and clears it on cancellation", async () => {
+    const fixture = openboostFixture(), wrapper = mountManager(fixture.api);
+    fixture.connectConnector.mockRejectedValueOnce(new ApiError("validation", 422, "invalid_token"));
+    try {
+      const form = await openOpenBoost(wrapper);
+      await form.get('input[name="openboost_secret_key"]').setValue("fixture-token");
+      await form.trigger("submit"); await flushPromises();
+      expect((form.get('input[name="openboost_secret_key"]').element as HTMLInputElement).value).toBe("fixture-token");
+      await form.get('button[type="button"]').trigger("click"); await flushPromises();
+      const reopened = await openOpenBoost(wrapper);
+      expect((reopened.get('input[name="openboost_secret_key"]').element as HTMLInputElement).value).toBe("");
+      await reopened.get('input[name="openboost_secret_key"]').setValue("retry-token");
+      await reopened.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledTimes(2);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   function modaoFixture(old = false) {
     let authorized = false;
     const installation = { id: "modao-installation", source: "modao", active_revision_id: "modao-revision", state: "active" as const, authorized: false, version: 3, package_version: "0.1.1", name: "墨刀", description: "", authentication_driver: "connector_package", upgrade_available: old };

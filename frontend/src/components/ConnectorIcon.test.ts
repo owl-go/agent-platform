@@ -18,6 +18,8 @@ describe("ConnectorIcon", () => {
 
     const xiaoe = mount(ConnectorIcon, { props: { icon: "xiaoe" } });
     expect(xiaoe.find("img").attributes("src")).toContain("1472FF");
+    const openboost = mount(ConnectorIcon, { props: { icon: "openboost" } });
+    expect(openboost.find("img").attributes("src")).toContain("openboost.svg");
 
     const preset = mount(ConnectorIcon, { props: { icon: "terminal" } });
     expect(preset.find("img").exists()).toBe(false);

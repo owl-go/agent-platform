@@ -61,6 +61,7 @@ class PublicationLifecycleTest(unittest.TestCase):
             publisher.cleanup_staging_definitions('base', 'token', 'modao')
         self.assertEqual([path for method, path in calls if method == 'DELETE'], ['/api/v1/admin/connectors/cli/modao-stage?expected_version=2'])
         self.assertEqual(publisher.build_identity('picset-ai'), ('Picset AI package build ', '@agent-platform/picset-ai-connector'))
+        self.assertEqual(publisher.build_identity('openboost'), ('OpenBoost package build ', '@agent-platform/openboost-connector'))
         with self.assertRaisesRegex(RuntimeError, 'unreviewed'):
             publisher.build_identity('other')
 
