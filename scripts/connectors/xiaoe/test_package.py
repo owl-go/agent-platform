@@ -35,7 +35,7 @@ class PackageTests(unittest.TestCase):
             calls.append((method, path))
             if path == "/api/v1/admin/connectors/publications":
                 return {"items": [{"revision": revision, "publication": publication}]}
-            if path == "/api/v1/connectors/publications":
+            if path == "/api/v1/connectors/catalog":
                 return {"items": [{"source": "xiaoe", "revision": revision}]}
             self.fail("unexpected platform mutation")
 
@@ -58,7 +58,7 @@ class PackageTests(unittest.TestCase):
             if path.endswith("/revision/publish"):
                 self.assertEqual(body, {"expected_version": 0})
                 return {"state": "available", "active_revision_id": "revision"}
-            if path == "/api/v1/connectors/publications": return {"items": [{"source": "xiaoe", "revision": revision}]}
+            if path == "/api/v1/connectors/catalog": return {"items": [{"source": "xiaoe", "revision": revision}]}
             self.fail("unexpected API")
 
         with tempfile.TemporaryDirectory() as directory:

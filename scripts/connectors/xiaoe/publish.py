@@ -31,7 +31,7 @@ def publish(api, archive, normalized_sha):
         current = api("POST", "/api/v1/admin/connectors/publications/" + target["id"] + "/publish", {"expected_version": current["version"] if current else 0})
     if current["state"] != "available" or current["active_revision_id"] != target["id"]:
         raise RuntimeError("publication did not activate expected revision")
-    catalog = api("GET", "/api/v1/connectors/publications").get("items", [])
+    catalog = api("GET", "/api/v1/connectors/catalog").get("items", [])
     matches = [v for v in catalog if v["source"] == "xiaoe"]
     if len(matches) != 1 or matches[0]["revision"]["id"] != target["id"] or matches[0]["revision"]["icon"] != "xiaoe":
         raise RuntimeError("User catalog or brand projection differs from publication")
