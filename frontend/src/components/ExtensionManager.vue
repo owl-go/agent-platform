@@ -198,6 +198,7 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
 }));
 // Categories describe existing connector sources; unknown and private connectors stay discoverable.
 function connectorCategory(source: string) {
+  if (source === "moka-hr") return "recruitment";
   if (source === "tianyancha") return "industry";
   if (["xiaoe", "openboost"].includes(source)) return "marketing";
   if (["caoliao", "camscanner"].includes(source)) return "productivity";
@@ -208,7 +209,7 @@ function connectorCategory(source: string) {
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
-const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "industry", "other"].map(key => ({
+const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "industry", "recruitment", "other"].map(key => ({
   key, title: t(`resources.connectorCategory.${key}`),
   mcp: visibleMCP.value.filter(item => !item.managed_installation && connectorCategory("") === key && (!props.mineOnly || !props.selectable || !item.platform)),
   cli: visibleCLI.value.filter(item => !item.managed_installation && connectorCategory(item.npm_package) === key && (!installedOnly.value || cliInstalled(item))),
