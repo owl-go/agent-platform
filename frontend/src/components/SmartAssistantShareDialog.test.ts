@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
+import { ApiError, platformApiKey, type PlatformApi, type SmartAssistant } from "../api/client";
 import { createAppI18n } from "../i18n";
 import SmartAssistantShareDialog from "./SmartAssistantShareDialog.vue";
 
@@ -21,6 +21,73 @@ function apiStub(): PlatformApi {
 }
 
 describe("SmartAssistantShareDialog", () => {
+  it.each([
+    "http://public.example.test", "https://example.test/page", "https://example.test?query=1",
+    "https://example.test#section", "https://user:password@example.test", "https://*.example.test", "example.test",
+  ])("explains an invalid origin before sending a save: %s", async (origin) => {
+    const api = apiStub();
+    const draft = structuredClone(assistant);
+    draft.share.allowed_origins = [origin];
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: draft },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      (document.body.querySelector(".application-share-dialog [data-testid=share-save]") as HTMLButtonElement).click();
+      await flushPromises();
+      expect(api.updateSmartAssistant).not.toHaveBeenCalled();
+      expect(wrapper.emitted("error")?.[0]?.[0]).toContain("HTTPS");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("saves an HTTPS site address ending in a slash as an embed origin", async () => {
+    const api = apiStub();
+    api.updateSmartAssistant = vi.fn(async (_id, input) => {
+      // The server's origin contract rejects a URL path, including a root slash.
+      if (input.share?.allowed_origins?.some((origin: string) => origin.endsWith("/"))) throw new ApiError("validation", 422, "invalid_input");
+      return { ...assistant, ...input, share: { ...assistant.share, ...input.share, token: "new-token" }, version: 5 };
+    });
+    const draft = structuredClone(assistant);
+    draft.share.allowed_origins = ["https://support.example.test/"];
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: draft },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      (document.body.querySelector(".application-share-dialog [data-testid=share-save]") as HTMLButtonElement).click();
+      await flushPromises();
+      expect(wrapper.emitted("error")).toBeUndefined();
+      expect(wrapper.emitted("updated")?.[0]?.[0]).toMatchObject({ share: { allowed_origins: ["https://support.example.test"], token: "new-token" } });
+      expect((document.body.querySelector(".share-snippet textarea") as HTMLTextAreaElement).value).toContain("/embed/assistant/new-token");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("keeps rejected share edits in the dialog without changing the saved assistant", async () => {
+    const api = apiStub();
+    api.updateSmartAssistant = vi.fn(async () => { throw new ApiError("unknown", 500, "request_failed"); });
+    const saved = structuredClone(assistant);
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: saved },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const origins = document.body.querySelector(".application-share-dialog textarea") as HTMLTextAreaElement;
+      origins.value = "https://changed.example.test";
+      origins.dispatchEvent(new Event("input", { bubbles: true }));
+      (document.body.querySelector(".application-share-dialog [role=switch]") as HTMLButtonElement).click();
+      await flushPromises();
+      (document.body.querySelector(".application-share-dialog [data-testid=share-save]") as HTMLButtonElement).click();
+      await flushPromises();
+      expect(saved.share.allowed_origins).toEqual(assistant.share.allowed_origins);
+      expect(saved.share.enabled).toBe(true);
+      expect(document.body.querySelector(".application-share-dialog [role=alert]")?.textContent).toContain("保存");
+      expect(wrapper.emitted("updated")).toBeUndefined();
+    } finally { wrapper.unmount(); }
+  });
+
   it("shows a history-free visitor preview and privacy-bounded aggregate statistics", async () => {
     const api = apiStub();
     const wrapper = mount(SmartAssistantShareDialog, {

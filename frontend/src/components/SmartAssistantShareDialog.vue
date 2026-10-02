@@ -8,18 +8,27 @@ const emit = defineEmits<{ "update:modelValue": [value: boolean]; updated: [assi
 const api = inject(platformApiKey)!;
 const { t } = useI18n();
 const saving = ref(false);
+const saveError = ref("");
+const shareDraft = ref<SmartAssistant["share"]>({ enabled: false, width: "100%", height: 600 });
+const allowedOrigins = ref("");
 const shareToken = ref("");
 const previewOpen = ref(false);
 const stats = ref<AssistantPublicationStats>();
 const faqs = ref<SmartAssistantFAQ[]>([]);
 const open = computed({ get: () => props.modelValue, set: (value: boolean) => emit("update:modelValue", value) });
-const allowedOrigins = computed({
-  get: () => props.assistant?.share.allowed_origins?.join("\n") || "",
-  set: (value: string) => { if (props.assistant) props.assistant.share.allowed_origins = value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean); },
-});
 const embedSnippet = computed(() => props.assistant && shareToken.value ? `<iframe src="${window.location.origin}/embed/assistant/${shareToken.value}" width="${props.assistant.share.width}" height="${props.assistant.share.height}"></iframe>` : "");
 
-function input(): SmartAssistantInput | undefined {
+function normalizedOrigins(): string[] {
+  return [...new Set(allowedOrigins.value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean).map((origin) => {
+    try {
+      const url = new URL(origin);
+      const localHTTP = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+      if ((url.protocol !== "https:" && !localHTTP) || url.username || url.password || url.hostname.includes("*") || !/^https?:\/\/[^/?#]+\/?$/i.test(origin)) throw new Error();
+      return url.origin;
+    } catch { throw new Error(t("aiApplications.share.invalidOrigins")); }
+  }))];
+}
+function input(origins: string[]): SmartAssistantInput | undefined {
   const assistant = props.assistant;
   if (!assistant) return undefined;
   return {
@@ -39,47 +48,78 @@ function input(): SmartAssistantInput | undefined {
     expert_id: assistant.expert_id,
     expert_team_id: assistant.expert_team_id,
     state: assistant.state,
-    share: { enabled: assistant.share.enabled, allowed_origins: assistant.share.allowed_origins ?? [], width: assistant.share.width || "100%", height: assistant.share.height || 600, free_text_enabled: assistant.share.free_text_enabled ?? false, daily_call_limit: assistant.share.daily_call_limit ?? 0, data_processing_acknowledged: assistant.share.data_processing_acknowledged ?? false },
+    share: { enabled: shareDraft.value.enabled, allowed_origins: origins, width: shareDraft.value.width.trim() || "100%", height: shareDraft.value.height, free_text_enabled: shareDraft.value.free_text_enabled ?? false, daily_call_limit: shareDraft.value.daily_call_limit ?? 0, data_processing_acknowledged: shareDraft.value.data_processing_acknowledged ?? false },
   };
 }
 function errorMessage(cause: unknown) {
   if (cause instanceof ApiError && cause.code === "version_conflict") return t("aiApplications.versionConflict");
+  if (cause instanceof ApiError && cause.code === "assistant_model_unavailable") return t("aiApplications.modelUnavailable");
+  if (cause instanceof ApiError && cause.kind === "validation") return t("aiApplications.share.validationFailed");
   return t("aiApplications.saveFailed");
 }
+function showError(message: string) {
+  saveError.value = message;
+  emit("error", message);
+}
 async function saveShare() {
+  if (saving.value) return;
+  saveError.value = "";
   const assistant = props.assistant;
-  const payload = input();
+  let origins: string[];
+  try { origins = normalizedOrigins(); }
+  catch (cause) { showError((cause as Error).message); return; }
+  const payload = input(origins);
   if (!assistant || !payload) return;
   if (payload.share?.enabled && (!payload.share.allowed_origins?.length || !payload.share.daily_call_limit || !payload.share.data_processing_acknowledged)) {
-    emit("error", t("aiApplications.share.controlsRequired"));
+    showError(t("aiApplications.share.controlsRequired"));
     return;
+  }
+  const width = payload.share?.width ?? "100%";
+  const pixels = /^([0-9]+)px$/.exec(width);
+  if (width !== "100%" && (!pixels || Number(pixels[1]) < 320 || Number(pixels[1]) > 1920)) {
+    showError(t("aiApplications.share.invalidWidth")); return;
+  }
+  if (!Number.isInteger(shareDraft.value.height) || shareDraft.value.height < 400 || shareDraft.value.height > 1600) {
+    showError(t("aiApplications.share.invalidHeight")); return;
+  }
+  if (!Number.isInteger(shareDraft.value.daily_call_limit ?? 0) || (shareDraft.value.daily_call_limit ?? 0) < 0) {
+    showError(t("aiApplications.share.controlsRequired")); return;
   }
   saving.value = true;
   try {
     const updated = await api.updateSmartAssistant(assistant.id, payload, assistant.version);
     emit("updated", updated);
+    shareDraft.value = { ...updated.share, allowed_origins: [...(updated.share.allowed_origins ?? [])] };
+    allowedOrigins.value = origins.join("\n");
     shareToken.value = updated.share.token ?? "";
     if (!shareToken.value) open.value = false;
   } catch (cause) {
-    emit("error", errorMessage(cause));
+    showError(errorMessage(cause));
   } finally {
     saving.value = false;
   }
 }
 async function regenerateToken() {
   const assistant = props.assistant;
-  if (!assistant) return;
+  if (!assistant?.share.enabled || !shareDraft.value.enabled || saving.value) return;
+  saving.value = true;
+  saveError.value = "";
   try {
     const result = await api.regenerateAssistantShareToken(assistant.id, assistant.version);
     emit("updated", result.assistant);
     shareToken.value = result.token;
   } catch (cause) {
-    emit("error", errorMessage(cause));
+    showError(errorMessage(cause));
+  } finally {
+    saving.value = false;
   }
 }
 
 watch(() => props.modelValue, async (value) => {
   if (!value || !props.assistant) return;
+  shareDraft.value = { ...props.assistant.share, allowed_origins: [...(props.assistant.share.allowed_origins ?? [])] };
+  allowedOrigins.value = props.assistant.share.allowed_origins?.join("\n") ?? "";
+  saveError.value = "";
   shareToken.value = "";
   previewOpen.value = false;
   try {
@@ -96,18 +136,19 @@ watch(() => props.modelValue, async (value) => {
 
 <template>
   <el-dialog v-model="open" class="application-share-dialog" :title="t('aiApplications.share.title')" width="min(620px, 92vw)" destroy-on-close>
+    <el-alert v-if="saveError" :title="saveError" type="error" show-icon :closable="false" />
     <el-form v-if="assistant" label-position="top">
-      <el-form-item :label="t('aiApplications.share.enabled')"><el-switch v-model="assistant.share.enabled" /></el-form-item>
-      <el-form-item :label="t('aiApplications.share.width')"><el-input v-model="assistant.share.width" /></el-form-item>
-      <el-form-item :label="t('aiApplications.share.height')"><el-input-number v-model="assistant.share.height" :min="400" :max="1600" /></el-form-item>
+      <el-form-item :label="t('aiApplications.share.enabled')"><el-switch v-model="shareDraft.enabled" /></el-form-item>
+      <el-form-item :label="t('aiApplications.share.width')"><el-input v-model="shareDraft.width" placeholder="100% / 640px" /></el-form-item>
+      <el-form-item :label="t('aiApplications.share.height')"><el-input-number v-model="shareDraft.height" :min="400" :max="1600" /></el-form-item>
       <el-form-item :label="t('aiApplications.share.allowedOrigins')"><el-input v-model="allowedOrigins" type="textarea" :rows="3" :placeholder="t('aiApplications.share.allowedOriginsPlaceholder')" /></el-form-item>
-      <el-form-item :label="t('aiApplications.share.dailyLimit')"><el-input-number v-model="assistant.share.daily_call_limit" :min="1" :max="100000" /></el-form-item>
-      <el-form-item :label="t('aiApplications.share.freeText')"><el-switch v-model="assistant.share.free_text_enabled" /></el-form-item>
-      <el-alert v-if="assistant.share.enabled" type="warning" :closable="false" :title="t('aiApplications.share.impactTitle')" :description="t('aiApplications.share.impactDescription')" show-icon />
-      <el-checkbox v-if="assistant.share.enabled" v-model="assistant.share.data_processing_acknowledged" data-testid="share-acknowledgement">{{ t('aiApplications.share.acknowledge') }}</el-checkbox>
+      <el-form-item :label="t('aiApplications.share.dailyLimit')"><el-input-number v-model="shareDraft.daily_call_limit" :min="1" :max="100000" /></el-form-item>
+      <el-form-item :label="t('aiApplications.share.freeText')"><el-switch v-model="shareDraft.free_text_enabled" /></el-form-item>
+      <el-alert v-if="shareDraft.enabled" type="warning" :closable="false" :title="t('aiApplications.share.impactTitle')" :description="t('aiApplications.share.impactDescription')" show-icon />
+      <el-checkbox v-if="shareDraft.enabled" v-model="shareDraft.data_processing_acknowledged" data-testid="share-acknowledgement">{{ t('aiApplications.share.acknowledge') }}</el-checkbox>
       <div class="share-dialog-actions">
         <el-button @click="previewOpen = !previewOpen">{{ t('aiApplications.share.visitorPreview') }}</el-button>
-        <el-button :disabled="!assistant.share.enabled" @click="regenerateToken">{{ t('aiApplications.share.regenerate') }}</el-button>
+        <el-button :disabled="!assistant.share.enabled || !shareDraft.enabled || saving" @click="regenerateToken">{{ t('aiApplications.share.regenerate') }}</el-button>
       </div>
       <el-input v-if="shareToken" class="share-snippet" :model-value="embedSnippet" readonly type="textarea" :rows="3" />
       <el-alert v-if="shareToken" type="success" :closable="false" :title="t('aiApplications.share.tokenOnce')" />

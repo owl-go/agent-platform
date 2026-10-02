@@ -538,6 +538,13 @@ Object.assign((en as unknown as { knowledgeBases: Record<string, unknown> }).kno
 const zhAIApplications = (zh as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
 const enAIApplications = (en as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
 Object.assign(zhAIApplications.share, {
+  unavailable: "分享链接不可用或已失效。",
+  faqOnly: "请点击上方常见问题提问",
+  callLimited: "调用次数已达上限，请稍后重试。",
+  invalidOrigins: "允许嵌入来源应为 HTTPS 域名，可包含端口，不能包含页面路径、查询参数或登录信息。HTTP 仅允许本地开发地址。",
+  invalidWidth: "iframe 宽度应为 100%，或 320px–1920px 之间的像素值，例如 640px。",
+  invalidHeight: "iframe 高度应为 400–1600 之间的整数。",
+  validationFailed: "保存分享设置失败，请检查来源和尺寸，并运行助手发布检查，确认模型、知识库和可用额度满足要求。",
   allowedOriginsPlaceholder: "每行一个明确的 HTTPS 来源，例如 https://support.example.com",
   dailyLimit: "每日自由提问上限",
   controlsRequired: "开启分享前必须填写允许来源、正数调用上限，并确认数据处理与所有者付费影响。",
@@ -551,6 +558,13 @@ Object.assign(zhAIApplications.share, {
   statConversations: "匿名会话 {count}", statCalls: "自由提问 {count}", statErrors: "失败或取消 {count}", statCredits: "消耗积分 {count}"
 });
 Object.assign(enAIApplications.share, {
+  unavailable: "This share link is unavailable or has expired.",
+  faqOnly: "Choose a frequently asked question above",
+  callLimited: "The call limit has been reached. Try again later.",
+  invalidOrigins: "Enter an HTTPS origin, optionally with a port, without a page path, query, or credentials. HTTP is allowed only for local development.",
+  invalidWidth: "The iframe width must be 100% or a pixel value from 320px to 1920px, such as 640px.",
+  invalidHeight: "The iframe height must be an integer from 400 to 1600.",
+  validationFailed: "Sharing could not be saved. Check origins and dimensions, then run the Assistant publication check to verify the model, Knowledge Bases, and available Credits.",
   allowedOrigins: "Allowed embed origins", allowedOriginsPlaceholder: "One explicit HTTPS origin per line, e.g. https://support.example.com",
   dailyLimit: "Daily free-text limit",
   controlsRequired: "Sharing requires an allowed origin, a positive daily cap, and acknowledgement of data processing and owner-paid usage.",

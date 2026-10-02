@@ -91,6 +91,9 @@ func isImageModelTestRequest(request *http.Request) bool {
 func isEventStreamRequest(request *http.Request) bool {
 	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
 	if request.Method == http.MethodPost {
+		if len(parts) == 6 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "public" && parts[3] == "assistants" && parts[4] != "" && parts[5] == "turns" {
+			return true
+		}
 		return len(parts) == 8 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "ai-apps" &&
 			parts[3] == "assistants" && parts[4] != "" && parts[5] == "conversations" && parts[6] != "" && parts[7] == "turns"
 	}

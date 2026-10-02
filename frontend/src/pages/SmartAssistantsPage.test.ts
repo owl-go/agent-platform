@@ -84,9 +84,15 @@ describe("SmartAssistantsPage lifecycle", () => {
     expect(router.currentRoute.value.path).toBe("/ai-apps/assistants");
     expect(document.body.querySelector(".application-share-dialog")).not.toBeNull();
     expect(wrapper.get(".application-card p").text()).toBe(source.description);
+    vi.mocked(api.updateSmartAssistant).mockRejectedValueOnce(new ApiError("unknown", 500, "save_failed"));
+    await wrapper.get(".application-share-dialog .el-dialog__footer .el-button--primary").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".el-alert").text()).toContain("保存 AI 应用失败");
     await wrapper.get(".application-share-dialog .el-dialog__footer .el-button--primary").trigger("click");
     await flushPromises();
     expect(api.updateSmartAssistant).toHaveBeenCalledWith("assistant-1", expect.objectContaining({ description: source.description, provider_model_id: "model-1" }), 1);
+    expect(wrapper.findAll(".el-alert").some((alert) => alert.text().includes("保存 AI 应用失败"))).toBe(false);
+    wrapper.unmount();
   });
 
   it("keeps the catalog compact and exposes a search action", async () => {

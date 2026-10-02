@@ -123,7 +123,7 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 			return
 		}
 	}
-	flusher, ok := writer.(http.Flusher)
+	_, ok := writer.(http.Flusher)
 	if !ok {
 		writeAuthError(writer, http.StatusInternalServerError, "stream_unavailable")
 		return
@@ -140,19 +140,24 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 		service.writeAIResult(writer, nil, err)
 		return
 	}
+	service.streamAcceptedAssistantTurn(writer, request, owner, conversation, turn, input.FAQID, "authenticated", false)
+}
+
+func (service *Service) streamAcceptedAssistantTurn(writer http.ResponseWriter, request *http.Request, owner string, conversation aiappdomain.AssistantConversation, turn aiappdomain.AssistantTurn, faqID, accessSource string, public bool) {
+	flusher := writer.(http.Flusher)
 	ctx, cancel := context.WithCancel(request.Context())
 	service.activeAssistantTurns.Store(turn.ID, context.CancelFunc(cancel))
 	defer func() { service.activeAssistantTurns.Delete(turn.ID); cancel() }()
 	writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	writer.Header().Set("Cache-Control", "no-store, no-transform")
 	writer.Header().Set("X-Accel-Buffering", "no")
-	if err := writeAssistantEvent(writer, flusher, "thinking", map[string]any{"turn_id": turn.ID, "message": "思考中..."}); err != nil {
+	if err := writeAssistantEvent(writer, flusher, "thinking", map[string]any{"turn_id": turn.ID, "conversation_id": conversation.ID, "message": "思考中..."}); err != nil {
 		finishCtx, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer finishCancel()
 		_, _ = service.aiapplications.FinishAssistantTurn(finishCtx, owner, conversation.ID, turn.ID, "cancelled", "", "", "", "", 0, 0)
 		return
 	}
-	answer, answerErr := service.answerAssistantTurn(ctx, owner, conversation, turn, input.FAQID, "authenticated", func(delta string) error {
+	answer, answerErr := service.answerAssistantTurn(ctx, owner, conversation, turn, faqID, accessSource, func(delta string) error {
 		return writeAssistantEvent(writer, flusher, "delta", map[string]string{"turn_id": turn.ID, "text": delta})
 	})
 	state := assistantTurnState(answerErr)
@@ -169,6 +174,10 @@ func (service *Service) streamAssistantTurn(writer http.ResponseWriter, request 
 	}
 	if answerErr != nil && !errors.Is(answerErr, context.Canceled) {
 		_ = writeAssistantEvent(writer, flusher, "error", map[string]string{"code": failureCode, "message": "对话失败，请重试"})
+	}
+	if public {
+		_ = writeAssistantEvent(writer, flusher, "done", map[string]any{"id": completed.ID, "conversation_id": completed.ConversationID, "answer": completed.Answer, "state": completed.State, "failure_code": completed.Error})
+		return
 	}
 	_ = writeAssistantEvent(writer, flusher, "done", completed)
 }
