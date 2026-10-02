@@ -39,9 +39,6 @@ const displayMode = ref<DisplayMode>((localStorage.getItem("knowledge-base-displ
 const showBaseDialog = ref(false);
 const editingBase = ref<KnowledgeBase>();
 const deleteTarget = ref<KnowledgeBase>();
-const newCategory = ref("");
-const uploadCategory = ref("");
-const sourceURL = ref("");
 const fileInput = ref<HTMLInputElement>();
 const preview = ref<{ document: KnowledgeDocument; kind: PreviewKind; url?: string; text?: string }>();
 const form = ref({ name: "", description: "", scope: "private" as "private" | "group" | "platform", group_id: "" });
@@ -98,7 +95,6 @@ async function openBase(item: KnowledgeBase) {
   selected.value = item;
   resetSearch();
   activeCategory.value = null;
-  uploadCategory.value = "";
   error.value = "";
   try {
     [categories.value, documents.value] = await Promise.all([api.listKnowledgeCategories(item.id), api.listKnowledgeDocuments(item.id)]);
@@ -113,7 +109,6 @@ function closeBase() {
   categories.value = [];
   documents.value = [];
   activeCategory.value = null;
-  uploadCategory.value = "";
 }
 
 function resetSearch() {
@@ -223,22 +218,11 @@ function openCategory(categoryID: string | null) {
   activeCategory.value = categoryID;
 }
 
-async function createCategory() {
-  if (!selected.value || !newCategory.value.trim()) return;
-  try {
-    const category = await api.createKnowledgeCategory(selected.value.id, newCategory.value.trim());
-    categories.value = [...categories.value, category];
-    newCategory.value = "";
-  } catch {
-    error.value = t("knowledgeBases.saveFailed");
-  }
-}
-
 async function upload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (!selected.value || !file) return;
   try {
-    const document = await api.uploadKnowledgeDocument(selected.value.id, file, uploadCategory.value || undefined);
+    const document = await api.uploadKnowledgeDocument(selected.value.id, file);
     documents.value = [document, ...documents.value];
     ElMessage.success(t("knowledgeBases.accepted"));
   } catch {
@@ -250,21 +234,6 @@ async function upload(event: Event) {
 
 function chooseFile() {
   fileInput.value?.click();
-}
-
-async function importURL() {
-  if (!selected.value || !sourceURL.value.trim() || busy.value) return;
-  busy.value = true;
-  try {
-    const document = await api.importKnowledgeDocument(selected.value.id, sourceURL.value.trim(), uploadCategory.value || undefined);
-    documents.value = [document, ...documents.value];
-    sourceURL.value = "";
-    ElMessage.success(t("knowledgeBases.accepted"));
-  } catch {
-    error.value = t("knowledgeBases.importFailed");
-  } finally {
-    busy.value = false;
-  }
 }
 
 async function downloadDocument(document: KnowledgeDocument) {
@@ -428,26 +397,13 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
       <section class="documents-panel">
         <div class="section-heading documents-heading">
           <div class="documents-title"><h3>{{ activeCategoryName }}</h3><span>{{ visibleDocuments.length }} {{ t("knowledgeBases.documentCount") }}</span></div>
-          <form v-if="canManageSelected" class="category-create" @submit.prevent="createCategory">
-            <el-input v-model="newCategory" :placeholder="t('knowledgeBases.categoryPlaceholder')" :aria-label="t('knowledgeBases.categories')" />
-            <el-button native-type="submit" :disabled="!newCategory.trim()"><Plus :size="15" />{{ t("knowledgeBases.addCategory") }}</el-button>
-          </form>
+          <el-button v-if="canManageSelected" type="primary" @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button>
         </div>
         <nav v-if="categories.length" class="category-navigation" :aria-label="t('knowledgeBases.categories')">
           <button :aria-pressed="activeCategory === null" @click="openCategory(null)">{{ t("knowledgeBases.allDocuments") }}<span>{{ documents.length }}</span></button>
           <button v-for="category in categories" :key="category.id" :aria-pressed="activeCategory === category.id" @click="openCategory(category.id)">{{ category.name }}<span>{{ categoryCounts.get(category.id) || 0 }}</span></button>
           <button v-if="unclassifiedCount" :aria-pressed="activeCategory === 'unclassified'" @click="openCategory('unclassified')">{{ t("knowledgeBases.unclassified") }}<span>{{ unclassifiedCount }}</span></button>
         </nav>
-        <div v-if="canManageSelected" class="source-controls">
-          <div class="document-upload-controls">
-            <el-select v-model="uploadCategory" :placeholder="t('knowledgeBases.unclassified')" :aria-label="t('knowledgeBases.categories')" clearable><el-option v-for="category in categories" :key="category.id" :value="category.id" :label="category.name" /></el-select>
-            <el-button type="primary" @click="chooseFile"><Upload :size="15" />{{ t("knowledgeBases.upload") }}</el-button>
-          </div>
-          <form class="document-url-controls" @submit.prevent="importURL">
-            <el-input v-model="sourceURL" :placeholder="t('knowledgeBases.urlPlaceholder')" :aria-label="t('knowledgeBases.urlPlaceholder')" />
-            <el-button native-type="submit" :loading="busy" :disabled="!sourceURL.trim()"><Globe2 :size="15" />{{ t("knowledgeBases.importURL") }}</el-button>
-          </form>
-        </div>
         <div v-if="visibleDocuments.length" class="document-table-scroll" role="region" :aria-label="t('knowledgeBases.document')" tabindex="0">
           <el-table :data="visibleDocuments" class="document-table">
             <el-table-column min-width="240" :label="t('knowledgeBases.document')"><template #default="scope"><div class="document-name"><span class="document-icon"><FileText :size="16" /></span><span><strong :title="(scope.row as KnowledgeDocument).name">{{ (scope.row as KnowledgeDocument).name }}</strong><small>{{ formatSize((scope.row as KnowledgeDocument).latest_revision?.size) }}</small></span></div></template></el-table-column>
