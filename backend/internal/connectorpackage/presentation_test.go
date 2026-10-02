@@ -106,3 +106,21 @@ func TestAIHiveDisplayIconUsesReviewedOfficialSVG(t *testing.T) {
 		t.Fatal("AI-Hive icon differs from bundled brand asset")
 	}
 }
+
+func TestTianyanchaDisplayIconIsAFrontendSupportedBrandImage(t *testing.T) {
+	value := DisplayIcon("tianyancha")
+	if err := icon.Validate(value); err != nil {
+		t.Fatal(err)
+	}
+	encoded, ok := strings.CutPrefix(value, "data:image/png;base64,")
+	if !ok {
+		t.Fatal("Tianyancha must project its official brand image")
+	}
+	body, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := png.DecodeConfig(bytes.NewReader(body)); err != nil {
+		t.Fatal(err)
+	}
+}

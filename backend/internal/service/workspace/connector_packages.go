@@ -677,6 +677,9 @@ func (service *Service) BeginConnectorAuthorizationFlow(ctx context.Context, req
 		return nil, publicError(err)
 	}
 	allowedScopes := map[string]struct{}{}
+	if isTianyanchaMCPPolicy(policy) {
+		allowedScopes["mcp:tools.call"] = struct{}{}
+	}
 	if isPixsoMCPPolicy(policy) {
 		allowedScopes["mcp:connect"] = struct{}{}
 	}
@@ -946,7 +949,7 @@ func validateInteractiveConnectorDriver(policy connectorRevisionPolicy) error {
 }
 
 func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
-	if isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
+	if isTianyanchaMCPPolicy(policy) || isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) || isKlingMCPLoginPolicy(policy) {
 		return "interactive"
 	}
 	if policy.CLI != nil {
@@ -987,7 +990,7 @@ func isNotionCLILoginPolicy(policy connectorRevisionPolicy) bool {
 }
 
 func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, result connectorAuthorizationGrant) map[string]string {
-	if isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) {
+	if isTianyanchaMCPPolicy(policy) || isXiaoeMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy) {
 		return map[string]string{"MCP_BEARER_TOKEN": result.AccessToken, "client_id": result.ClientID, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339)}
 	}
 
@@ -1340,6 +1343,9 @@ func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.Conne
 			}
 		}
 	}
+	if isTianyanchaMCPPolicy(policy) {
+		response.RequiredScopes = []string{"mcp:tools.call"}
+	}
 	if isPixsoMCPPolicy(policy) {
 		response.RequiredScopes = []string{"mcp:connect"}
 	}
@@ -1434,4 +1440,8 @@ func isLinearMCPPolicy(policy connectorRevisionPolicy) bool {
 
 func isPixsoMCPPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "pixso" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://pixso.net/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "pixso.net" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+
+func isTianyanchaMCPPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "tianyancha" && policy.AuthMode == "oauth" && policy.MCP != nil && policy.CLI == nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == "https://mcp.tianyancha.com/mcp" && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "mcp.tianyancha.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
