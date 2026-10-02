@@ -190,6 +190,10 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text, result.source = assistantScopeFallback(assistant), "configuration"
 		return result, nil
 	}
+	if isAssistantIdentityInquiry(turn.Question) {
+		result.text, result.source = assistantIdentityAnswer(assistant), "configuration"
+		return result, nil
+	}
 	model, err := service.resolveAssistantTurnModel(ctx, owner, assistant)
 	if err != nil {
 		return result, err

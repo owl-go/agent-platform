@@ -245,6 +245,22 @@ func mustAssistantWorkspace(t *testing.T) *workspaceapplication.Service {
 	return application
 }
 
+func TestAssistantIdentityInquiryReturnsCurrentPublicProfileWithoutModel(t *testing.T) {
+	repository := &currentAssistantRepository{assistant: aiappdomain.SmartAssistant{
+		ID: "assistant", OwnerID: "owner", Name: "项目分析助手", Description: "帮助你了解项目功能与部署说明。",
+		ProviderModelID: "unavailable", Prompt: "不应公开的助手指导", PreprocessPrompt: "不应公开的分类配置", KnowledgeBaseIDs: []string{"base"},
+	}}
+	application, err := aiapp.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{aiapplications: application, workspace: mustAssistantWorkspace(t)}
+	answer, err := service.answerAssistantTurn(context.Background(), "owner", aiappdomain.AssistantConversation{AssistantID: "assistant"}, aiappdomain.AssistantTurn{Question: "你是谁"}, "", "authenticated", func(string) error { return nil })
+	if err != nil || answer.text != "我是项目分析助手。\n\n帮助你了解项目功能与部署说明。" || answer.source != "configuration" || answer.inputTokens != 0 || answer.outputTokens != 0 {
+		t.Fatalf("public identity question rejected: answer=%+v, err=%v", answer, err)
+	}
+}
+
 func TestAssistantTurnResolvesCurrentProviderConfiguration(t *testing.T) {
 	repository := &assistantModelRepository{connections: []workspacedomain.ModelProviderConnection{{
 		ID: "connection-current", CredentialOwnerID: "admin", ProviderType: "openai",
