@@ -84,9 +84,9 @@ def has_verified_revision(items, bundle_sha, digest):
 
 
 def build_identity(source):
-    if source not in ['teambition', 'modao', 'camscanner', 'picset-ai']:
+    if source not in ['teambition', 'modao', 'camscanner', 'picset-ai', 'github']:
         raise RuntimeError('unreviewed publication source')
-    return {'teambition': 'Teambition', 'modao': 'Modao', 'camscanner': 'CamScanner', 'picset-ai': 'Picset AI'}[source] + ' package build ', '@agent-platform/' + source + '-connector'
+    return {'teambition': 'Teambition', 'modao': 'Modao', 'camscanner': 'CamScanner', 'picset-ai': 'Picset AI', 'github': 'GitHub'}[source] + ' package build ', '@agent-platform/' + source + '-connector'
 
 
 def cleanup_staging_definitions(base, token, source='teambition'):
@@ -111,7 +111,7 @@ def cleanup_staging_definitions(base, token, source='teambition'):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--connector-source', choices=['teambition', 'modao', 'camscanner', 'picset-ai'], default='teambition')
+    parser.add_argument('--connector-source', choices=['teambition', 'modao', 'camscanner', 'picset-ai', 'github'], default='teambition')
     parser.add_argument('--api-base', help='trusted platform API origin; deployment-host container origin avoids public upload hairpin')
     parser.add_argument('--config', type=Path, required=True, help='platform env file on the authorized deployment host')
     parser.add_argument('--package', type=Path, required=True)

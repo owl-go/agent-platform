@@ -79,6 +79,27 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
+  it("starts GitHub device authorization and displays the code without a token form", async () => {
+    const installation = { id: "github-installation", source: "github", active_revision_id: "github-revision", state: "active" as const, authorized: false, version: 1, package_version: "0.23.13", name: "GitHub", description: "", authentication_driver: "connector_package", upgrade_available: false };
+    const publication = { source: "github", active_revision_id: "github-revision", state: "available" as const, version: 1, revision: { id: "github-revision", source: "github", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "GitHub", description: "", icon: "github", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const beginConnectorAuthorizationFlow = vi.fn(async () => ({ id: "flow-1", installation_id: installation.id, identity: "user", scopes: [], state: "waiting_for_user", action_url: "https://github.com/login/device?user_code=ABCD-1234" }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), beginConnectorAuthorizationFlow } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
+      const details = await openDetails(wrapper);
+      const setup = details.findAll("button").find((button) => button.text() === "连接");
+      expect(setup).toBeDefined();
+      await setup!.trigger("click");
+      await flushPromises();
+      expect(beginConnectorAuthorizationFlow).toHaveBeenCalledWith(installation.id, "user", []);
+      expect(wrapper.get(".connector-details").text()).toContain("ABCD-1234");
+      expect(wrapper.find('a[href="https://github.com/login/device?user_code=ABCD-1234"]').exists()).toBe(true);
+      expect(document.body.querySelector('[data-testid="github-connector-token"]')).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   it("offers a direct connect action for a disabled Notion installation", async () => {
     const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "disabled" as const, authorized: false, version: 2, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };
     const publication = { source: "notion", active_revision_id: "notion-revision", state: "available" as const, version: 1, revision: { id: "notion-revision", source: "notion", package_version: "0.23.13", mode: "cli" as const, sha256: "a".repeat(64), name: "Notion CLI", description: "", icon: "notion", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };

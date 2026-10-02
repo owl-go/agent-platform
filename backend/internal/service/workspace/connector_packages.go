@@ -18,6 +18,7 @@ import (
 	"agent-platform/backend/internal/connectorpackage"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/githubcli"
 	"agent-platform/backend/internal/klingmcp"
 	"agent-platform/backend/internal/objectstore"
 	kratoserrors "github.com/go-kratos/kratos/v3/errors"
@@ -774,7 +775,57 @@ func (service *Service) CompleteConnectorAuthorizationFlow(ctx context.Context, 
 			}
 		}
 	}
+	if isGitHubCLILoginPolicy(policy) {
+		next, reserveErr := githubcli.ReservePoll(string(deviceCode))
+		if errors.Is(reserveErr, githubcli.ErrPending) {
+			return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
+		}
+		if errors.Is(reserveErr, githubcli.ErrExpired) {
+			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
+		if reserveErr != nil {
+			return nil, publicError(reserveErr)
+		}
+		encrypted, encryptErr := service.box.Encrypt([]byte(next), connectorAuthorizationFlowAAD(principal.UserID, flow.InstallationID, flow.Identity))
+		if encryptErr != nil {
+			return nil, publicError(encryptErr)
+		}
+		if updateErr := repository.UpdateConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext, encrypted, flow.ActionURL); updateErr != nil {
+			return nil, publicError(updateErr)
+		}
+		clear(deviceCode)
+		deviceCode = []byte(next)
+		defer clear(deviceCode)
+		flow.DeviceCodeCiphertext = encrypted
+	}
 	result, err := driver.Poll(ctx, appID, appSecret, string(deviceCode))
+	if isGitHubCLILoginPolicy(policy) {
+		if errors.Is(err, githubcli.ErrSlowDown) {
+			next, slowErr := githubcli.SlowPoll(string(deviceCode))
+			if slowErr != nil {
+				return nil, publicError(slowErr)
+			}
+			encrypted, encryptErr := service.box.Encrypt([]byte(next), connectorAuthorizationFlowAAD(principal.UserID, flow.InstallationID, flow.Identity))
+			if encryptErr != nil {
+				return nil, publicError(encryptErr)
+			}
+			if updateErr := repository.UpdateConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext, encrypted, flow.ActionURL); updateErr != nil {
+				return nil, publicError(updateErr)
+			}
+			return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
+		}
+		if errors.Is(err, githubcli.ErrConsumed) {
+			_ = repository.DeleteConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID)
+			return connectorAuthorizationFlowResponse(flow, "invalid", nil), nil
+		}
+		if err == nil {
+			if consumeErr := repository.ConsumeConnectorAuthorizationFlow(ctx, principal.UserID, flow.ID, flow.DeviceCodeCiphertext); consumeErr != nil {
+				return nil, publicError(consumeErr)
+			}
+		}
+	}
+
 	if errors.Is(err, errConnectorAuthorizationPending) {
 		return connectorAuthorizationFlowResponse(flow, "waiting_for_user", nil), nil
 	}
@@ -895,7 +946,7 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 		return "interactive"
 	}
 	if policy.CLI != nil {
-		if isNotionCLILoginPolicy(policy) || isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy) {
+		if isNotionCLILoginPolicy(policy) || isBrowserOAuthPolicy(policy) || isCamScannerCLILoginPolicy(policy) || isGitHubCLILoginPolicy(policy) {
 			return "interactive"
 		}
 		switch policy.CLI.AuthenticationDriver {
@@ -909,6 +960,10 @@ func connectorAuthorizationMode(policy connectorRevisionPolicy) string {
 		return "provided"
 	}
 	return "none"
+}
+
+func isGitHubCLILoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "github" && policy.AuthMode == "oauth" && policy.CLI != nil && policy.CLI.AuthenticationDriver == "connector_package"
 }
 
 func isTeambitionCLILoginPolicy(policy connectorRevisionPolicy) bool {
@@ -933,6 +988,9 @@ func connectorAuthorizationCredentialFields(policy connectorRevisionPolicy, resu
 	}
 	if isCamScannerCLILoginPolicy(policy) {
 		return map[string]string{"access_token": result.AccessToken, "access_expires_at": result.ExpiresAt.UTC().Format(time.RFC3339), "user_id": result.ExternalID, "is_domestic": result.IsDomestic}
+	}
+	if isGitHubCLILoginPolicy(policy) {
+		return map[string]string{"access_token": result.AccessToken}
 	}
 	if isNotionCLILoginPolicy(policy) {
 		return map[string]string{"token": result.AccessToken}
