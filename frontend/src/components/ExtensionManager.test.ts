@@ -57,6 +57,65 @@ it("opens published guidance and installs before launching the exact unsent conn
   wrapper.unmount();
 });
 
+describe("Moka HR connection", () => {
+  function fixture(old = false) {
+    const installation = { id: "moka-installation", source: "moka-hr", active_revision_id: "moka-revision", state: "active", authorized: false, version: 3, package_version: "0.1.0", mode: "cli", name: "Moka HR 招聘", description: "ATS", authentication_driver: "connector_package", upgrade_available: old };
+    const publication = { source: "moka-hr", active_revision_id: "moka-revision", state: "available", version: 1, revision: { ...installation, id: "moka-revision", conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => ({ ...installation, authorized: true }));
+    const upgradeConnectorInstallation = vi.fn(async () => ({ ...installation, upgrade_available: false, version: 4 }));
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [installation]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, upgradeConnectorInstallation } as unknown as PlatformApi;
+    return { api, connectConnector, upgradeConnectorInstallation };
+  }
+  async function open(wrapper: ReturnType<typeof mountManager>) {
+    await flushPromises(); await connectPublished(wrapper);
+    return new DOMWrapper(document.body).get(".provided-connector-form");
+  }
+  it.each([false, true])("saves the enterprise credentials and upgrades first when needed (%s)", async old => {
+    const f = fixture(old), wrapper = mountManager(f.api);
+    try {
+      const form = await open(wrapper);
+      expect(form.get('input[name="moka_api_key"]').attributes("type")).toBe("password");
+      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
+      expect(form.get('a[href="https://www.mokahr.com/docs/api/index.html"]').attributes("rel")).toContain("noopener");
+      await form.get('input[name="moka_api_key"]').setValue("fixture-key");
+      await form.get('input[name="moka_org_id"]').setValue("fixture-org");
+      await form.trigger("submit"); await flushPromises();
+      expect(f.connectConnector).toHaveBeenCalledWith("moka-installation", "user", [], JSON.stringify({ moka_api_key: "fixture-key", moka_org_id: "fixture-org" }));
+      expect(f.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(f.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(f.connectConnector.mock.invocationCallOrder[0]!);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+      const reopened = await open(wrapper);
+      expect((reopened.get('input[name="moka_api_key"]').element as HTMLInputElement).value).toBe("");
+      expect((reopened.get('input[name="moka_org_id"]').element as HTMLInputElement).value).toBe("");
+    } finally { wrapper.unmount(); }
+  });
+  it.each([["", "org"], ["key with space", "org"], ["key:password", "org"], ["key", "../org"], ["key", ""], ["x".repeat(8193), "org"]])("rejects invalid credentials before the API call", async (key, org) => {
+    const f = fixture(), wrapper = mountManager(f.api);
+    try {
+      const form = await open(wrapper);
+      await form.get('input[name="moka_api_key"]').setValue(key);
+      await form.get('input[name="moka_org_id"]').setValue(org);
+      await form.trigger("submit"); await flushPromises();
+      expect(f.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it("keeps failed input for retry and clears both fields on cancellation", async () => {
+    const f = fixture(), wrapper = mountManager(f.api);
+    f.connectConnector.mockRejectedValueOnce(new ApiError("validation", 422, "invalid_token"));
+    try {
+      const form = await open(wrapper);
+      await form.get('input[name="moka_api_key"]').setValue("fixture-key");
+      await form.get('input[name="moka_org_id"]').setValue("fixture-org");
+      await form.trigger("submit"); await flushPromises();
+      expect((form.get('input[name="moka_api_key"]').element as HTMLInputElement).value).toBe("fixture-key");
+      await form.get('button[type="button"]').trigger("click"); await flushPromises();
+      const reopened = await open(wrapper);
+      expect((reopened.get('input[name="moka_api_key"]').element as HTMLInputElement).value).toBe("");
+      expect((reopened.get('input[name="moka_org_id"]').element as HTMLInputElement).value).toBe("");
+    } finally { wrapper.unmount(); }
+  });
+});
+
 describe("ExtensionManager", () => {
   it("starts Notion browser login from the setup-required card without asking for a token", async () => {
     const installation = { id: "notion-installation", source: "notion", active_revision_id: "notion-revision", state: "active" as const, authorized: false, version: 1, package_version: "0.23.13", name: "Notion CLI", description: "", authentication_driver: "connector_package", upgrade_available: false };

@@ -8,13 +8,18 @@ import (
 //go:embed icons/teambition.png
 var teambitionIcon []byte
 
+//go:embed icons/moka-hr.png
+var mokaHRIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
-// Connectors, including the official Teambition image. Other packages keep
+// Connectors, including the official Teambition and Moka images. Other packages keep
 // the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
+	case "moka-hr":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(mokaHRIcon)
 	case "feishu", "dingtalk", "notion", "modao":
 		return source
 	}
