@@ -29,6 +29,24 @@ function apiStub() {
 }
 
 describe("SmartAssistantDetailPage", () => {
+  it.each(["zh-CN", "en-US"])("shows literal prompt variables and saves templates unchanged in %s", async (locale) => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1");
+    const api = apiStub();
+    const wrapper = mount(SmartAssistantDetailPage, { global: { plugins: [router, createAppI18n({ getItem: () => locale }, locale)], provide: { [platformApiKey as symbol]: api } } });
+    await flushPromises();
+    expect(wrapper.text()).toContain("{knowledge}");
+    expect(wrapper.text()).toContain("{faqs}");
+    const prompt = "以下是知识库：\n{knowledge}\n以上是知识库。";
+    const preprocess = "常见问题：{faqs}。范围不明确时必须返回 out_of_scope。";
+    await wrapper.get('textarea[data-testid="assistant-prompt"]').setValue(prompt);
+    await wrapper.get('textarea[data-testid="assistant-preprocess-prompt"]').setValue(preprocess);
+    await wrapper.get(".assistant-detail-footer .el-button--primary").trigger("click");
+    await flushPromises();
+    expect(api.updateSmartAssistant).toHaveBeenLastCalledWith("assistant-1", expect.objectContaining({ prompt, preprocess_prompt: preprocess }), 2);
+    wrapper.unmount();
+  });
+
   it("shows the reduced basic form and saves the new assistant fields", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants/assistant-1");

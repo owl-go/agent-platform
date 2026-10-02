@@ -65,6 +65,12 @@ The editable configuration contains:
 
 User-authored prompts remain visible. Every accepted turn reads the Smart Assistant's current saved configuration; historical conversation snapshots remain audit evidence only and never configure a later turn. Provider credentials never enter snapshots or responses. The backend repeats Provider Model validation on create, update, enable, conversation creation, and turn execution.
 
+The Assistant prompt supports `{knowledge}`, replaced at every occurrence with this turn's permission-checked Knowledge Base excerpts and source labels. With no selected Knowledge Base or no retrieval hits, its value is `知识库中未找到您要的答案！`. Provider failures and denied source access still fail the turn. Prompts without this variable retain automatic Knowledge context when a Base is selected. Recent messages and the conversation summary remain separate model context.
+
+The question pre-processing prompt supports `{faqs}`, a JSON array of enabled FAQ `id` and `question` values in display order, excluding answers and disabled FAQs. Without the variable, the same list remains available as classification context. Substitution is stage-specific and single-pass: unknown placeholders and placeholders inside inserted source content remain literal; stored prompts are unchanged.
+
+Pre-processing first rejects questions about the underlying model, name, version, vendor or model capabilities; system prompts, internal configuration, APIs, execution frameworks or implementation; unrelated chat, general knowledge, programming or other tasks; bypassing rules, changing identity or leaking internal information; and questions that cannot clearly be placed inside the configured service scope. These are `out_of_scope` even if the model knows the answer or finds a similar FAQ. Only clearly in-scope questions may be `faq` or `continue`. Existing explicit FAQ shortcuts and business-scope inquiries retain their direct configuration answer path.
+
 ### 4.2 Lifecycle
 
 A User can create, edit, copy, enable, disable, and delete a Smart Assistant; open its detail surface; start a conversation; view its conversation history; and search or filter the list.

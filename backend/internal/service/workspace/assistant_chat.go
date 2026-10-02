@@ -187,20 +187,11 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text, result.source = assistantScopeFallback(assistant), "configuration"
 		return result, nil
 	}
-	faqChoices := make([]map[string]string, 0, len(enabled))
-	for _, faq := range enabled {
-		faqChoices = append(faqChoices, map[string]string{"id": faq.ID, "question": faq.Question})
-	}
-	choices, _ := json.Marshal(faqChoices)
 	model, err := service.resolveAssistantTurnModel(ctx, owner, assistant)
 	if err != nil {
 		return result, err
 	}
-	preprocessInstruction := "判断用户的问题是否在此智能助手的服务范围，或是否等价于一条常见问题。只返回 JSON：{\"decision\":\"faq|out_of_scope|continue\",\"faq_id\":\"\",\"question\":\"整理后的问题\"}。faq_id 只能来自提供的列表；没有充分依据就选择 continue。不得把范围外问题判为 FAQ。"
-	if assistant.PreprocessPrompt != "" {
-		preprocessInstruction += "\n用户配置的预处理提示词：" + assistant.PreprocessPrompt
-	}
-	preprocess := []aiapp.ChatMessage{{Role: "system", Content: preprocessInstruction}, {Role: "user", Content: "助手简介：" + assistant.Description + "\n助手提示词：" + assistant.Prompt + "\n常见问题：" + string(choices) + "\n用户问题：" + turn.Question}}
+	preprocess := assistantPreprocessMessages(assistant, enabled, turn.Question)
 	classified, err := service.runAssistantModel(ctx, owner, turn.ID, 1, model, preprocess, false, nil)
 	result.inputTokens += classified.InputTokens
 	result.outputTokens += classified.OutputTokens
@@ -255,10 +246,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	if err != nil {
 		return result, err
 	}
-	system := "你是智能助手“" + assistant.Name + "”。遵循以下助手提示词：\n" + assistant.Prompt + "\n回答风格：" + assistant.ResponseStyle
-	if knowledge != "" {
-		system += "\n只在相关时使用以下知识库结果；若与问题不符可忽略：" + knowledge
-	}
+	system := assistantAnswerInstruction(assistant, knowledge)
 	messages := append([]aiapp.ChatMessage{{Role: "system", Content: system}}, contextMessages...)
 	messages = append(messages, aiapp.ChatMessage{Role: "user", Content: question})
 	generated, generateErr := service.runAssistantModel(ctx, owner, turn.ID, 3, model, messages, true, func(delta string) error {
