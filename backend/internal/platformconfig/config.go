@@ -21,6 +21,7 @@ const DefaultPath = "config/platform.yaml"
 var immutableImageDigest = regexp.MustCompile(`^[^\s@]+@sha256:[0-9a-f]{64}$`)
 
 type Config struct {
+	Retrieval      RetrievalConfig      `yaml:"retrieval"`
 	API            APIConfig            `yaml:"api"`
 	Authentication AuthenticationConfig `yaml:"authentication"`
 	Accounts       AccountsConfig       `yaml:"accounts"`
@@ -427,6 +428,9 @@ func publicResolverIPv4(address netip.Addr) bool {
 }
 
 func (config Config) validateShared() error {
+	if err := config.Retrieval.Validate(); err != nil {
+		return err
+	}
 	if err := config.Database.Validate(); err != nil {
 		return err
 	}

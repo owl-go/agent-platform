@@ -28,6 +28,7 @@ import (
 	workspaceservice "agent-platform/backend/internal/service/workspace"
 	"agent-platform/backend/internal/skillstore"
 	aicreationwiring "agent-platform/backend/internal/wiring/aicreation"
+	knowledgewiring "agent-platform/backend/internal/wiring/knowledgebase"
 	"agent-platform/backend/internal/workspacefs"
 
 	kratoshttp "github.com/go-kratos/kratos/v3/transport/http"
@@ -35,6 +36,7 @@ import (
 )
 
 var ProviderSet = wire.NewSet(
+	knowledgewiring.NewSearcher,
 	NewTokenVerifier,
 	NewIdentityProvider,
 	NewAccountService,

@@ -21,6 +21,12 @@ type SourceRepository interface {
 	ResolveKnowledgeSearchSource(context.Context, string, string, string, bool) (domain.KnowledgeSearchSource, error)
 }
 
+// GenerationSourceRepository supports retained, immutable generation manifests.
+type GenerationSourceRepository interface {
+	ValidateKnowledgeGeneration(context.Context, string, string, int64) error
+	ResolveKnowledgeGenerationSource(context.Context, string, string, string, int64) (domain.KnowledgeSearchSource, error)
+}
+
 type Hit struct {
 	Source    domain.KnowledgeSearchSource
 	Text      string
@@ -58,9 +64,8 @@ func New(repository SourceRepository, provider Provider) (*Engine, error) {
 	return &Engine{repository: repository, provider: provider}, nil
 }
 
-// Search returns only excerpts whose revision is still the latest Ready
-// revision of an accessible document. Providers may expose only mutable current
-// state, so a frozen older generation must fail closed rather than return it.
+// Search resolves candidates under current access. Snapshot-aware repositories
+// support retained frozen revisions; legacy providers fail closed on older generations.
 func (engine *Engine) Search(ctx context.Context, principalID, baseID string, generation int64, question string, limit, tokenLimit int) ([]Hit, error) {
 	if principalID == "" || baseID == "" {
 		return nil, domain.ErrNotFound
@@ -81,10 +86,17 @@ func (engine *Engine) Search(ctx context.Context, principalID, baseID string, ge
 		}
 		return []Hit{}, nil
 	}
+	preview := generation == 0
 	if generation == 0 {
 		generation = latest
 	}
-	if generation != latest {
+	snapshotRepository, snapshots := engine.repository.(GenerationSourceRepository)
+	if snapshots {
+		if err := snapshotRepository.ValidateKnowledgeGeneration(ctx, principalID, baseID, generation); err != nil {
+			return nil, err
+		}
+	}
+	if !snapshots && generation != latest {
 		return nil, fmt.Errorf("%w: Knowledge index generation is unavailable", domain.ErrInvalid)
 	}
 	candidates := limit * 4
@@ -111,7 +123,13 @@ func (engine *Engine) Search(ctx context.Context, principalID, baseID string, ge
 		if _, err := uuid.Parse(revisionID); err != nil {
 			continue
 		}
-		source, err := engine.repository.ResolveKnowledgeSearchSource(ctx, principalID, baseID, revisionID, true)
+		var source domain.KnowledgeSearchSource
+		var err error
+		if snapshots {
+			source, err = snapshotRepository.ResolveKnowledgeGenerationSource(ctx, principalID, baseID, revisionID, generation)
+		} else {
+			source, err = engine.repository.ResolveKnowledgeSearchSource(ctx, principalID, baseID, revisionID, true)
+		}
 		if errors.Is(err, domain.ErrNotFound) {
 			continue
 		}
@@ -133,7 +151,20 @@ func (engine *Engine) Search(ctx context.Context, principalID, baseID string, ge
 	if err != nil {
 		return nil, err
 	}
-	if current != generation {
+	if snapshots {
+		if preview && current != generation {
+			return nil, fmt.Errorf("%w: Knowledge index generation changed during retrieval", domain.ErrInvalid)
+		}
+		if err := snapshotRepository.ValidateKnowledgeGeneration(ctx, principalID, baseID, generation); err != nil {
+			return nil, err
+		}
+		// Recheck all source permissions after the provider call and source reads.
+		for _, hit := range hits {
+			if _, err := snapshotRepository.ResolveKnowledgeGenerationSource(ctx, principalID, baseID, hit.Source.RevisionID, generation); err != nil {
+				return nil, err
+			}
+		}
+	} else if current != generation {
 		return nil, fmt.Errorf("%w: Knowledge index generation changed during retrieval", domain.ErrInvalid)
 	}
 	return hits, nil

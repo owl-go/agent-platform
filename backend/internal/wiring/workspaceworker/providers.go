@@ -19,11 +19,15 @@ import (
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
 	"agent-platform/backend/internal/infrastructure/gormdb"
+	"agent-platform/backend/internal/knowledgebase/ingestion"
+	"agent-platform/backend/internal/knowledgebase/ragflow"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
 	workerserver "agent-platform/backend/internal/server/worker"
 	aicreationwiring "agent-platform/backend/internal/wiring/aicreation"
+	knowledgewiring "agent-platform/backend/internal/wiring/knowledgebase"
 
 	kratos "github.com/go-kratos/kratos/v3"
 	"github.com/go-kratos/kratos/v3/transport"
@@ -37,8 +41,12 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 }
 
 type Worker struct {
-	workspace  *workspaceapplication.Worker
-	aicreation *aicreationapplication.Service
+	ingestion         *ingestion.Processor
+	legacy            *ingestion.LegacyProcessor
+	knowledgeProvider *ragflow.Client
+	knowledgeSources  func(context.Context) (bool, error)
+	workspace         *workspaceapplication.Worker
+	aicreation        *aicreationapplication.Service
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -46,10 +54,34 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	if err != nil || worked {
 		return worked, err
 	}
+	if worker.legacy != nil {
+		worked, err = worker.legacy.ProcessNext(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
+	if worker.ingestion != nil {
+		worked, err = worker.ingestion.ProcessNext(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
 	return worker.aicreation.ProcessNext(ctx)
 }
 
 func (worker *Worker) CleanupExpiredAIContent(ctx context.Context) (bool, error) {
+	if worker.knowledgeProvider != nil {
+		worked, err := worker.knowledgeProvider.Cleanup(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
+	if worker.knowledgeSources != nil {
+		worked, err := worker.knowledgeSources(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
 	removed, err := worker.aicreation.CleanupExpired(ctx)
 	return removed > 0, err
 }
@@ -111,7 +143,33 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return &Worker{workspace: workspaceWorker, aicreation: aicreation}, nil
+	worker := &Worker{workspace: workspaceWorker, aicreation: aicreation}
+	provider, err := knowledgewiring.NewProvider(config, repository)
+	if err != nil {
+		return nil, err
+	}
+	if provider != nil {
+		searcher, err := retrieval.New(repository, provider)
+		if err != nil {
+			return nil, err
+		}
+		if err = executor.EnableKnowledgeRetrieval(searcher); err != nil {
+			return nil, err
+		}
+		worker.ingestion, err = ingestion.New(repository, objects, provider)
+		if err != nil {
+			return nil, err
+		}
+		worker.legacy, err = ingestion.NewLegacy(repository, objects)
+		if err != nil {
+			return nil, err
+		}
+		worker.knowledgeProvider = provider
+		worker.knowledgeSources = func(ctx context.Context) (bool, error) {
+			return repository.CleanupExpiredKnowledgeSources(ctx, objects)
+		}
+	}
+	return worker, nil
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {

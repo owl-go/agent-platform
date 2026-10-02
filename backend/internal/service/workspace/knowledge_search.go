@@ -63,7 +63,7 @@ func (service *Service) searchKnowledgeBase(writer http.ResponseWriter, request 
 		writeAuthError(writer, http.StatusServiceUnavailable, "knowledge_search_unavailable")
 		return
 	}
-	hits, err := service.knowledgeSearch.Search(request.Context(), owner, baseID, generation, query, knowledgePreviewLimit, 8000)
+	hits, err := service.knowledgeSearch.Search(request.Context(), owner, baseID, 0, query, knowledgePreviewLimit, 8000)
 	if err != nil {
 		writeAuthError(writer, http.StatusBadGateway, "knowledge_search_failed")
 		return
