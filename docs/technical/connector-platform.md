@@ -167,3 +167,17 @@ Managed GitHub revisions use `connector_package` and `auth_mode: oauth`, selecti
 Only `access_token` is released through `CONNECTOR_CREDENTIALS_JSON`. The launcher starts unmodified `gh` with `GH_TOKEN` and a temporary HOME/configuration, using a clean environment and structured argv. The wrapper rejects arbitrary hosts, raw API, local Git operations, extensions, shell/browser/editor execution and file-reading options; body and release-notes file inputs accept only stdin. The package and source ZIP are built through the shared ZIPPackageBuilder, validated by Parse, and published only after actual exact bundle/Runtime evidence. The GitHub brand asset is projected into the catalog and rendered by ConnectorIcon. Installation and real account authorization remain User actions; publication alone is not business API evidence.
 
 On 2026-10-02, integrated main_temp `6fffda0` deployed API/Worker/Web release `github-6fffda0`. Revision `66cf9265-5d8c-48bb-9a0c-d8b5679b7448` (0.1.0, normalized package SHA-256 `ae22bb4fcf2b27b4bb18c4e3e545ec9bdd57247438cdd6187884609560da24b4`) became available with bundle `b98cf1c75a45b73c9c3b3254bee28da1cd54524586ccd981e1c4646bea13b073` × unchanged Runtime `sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b` production Worker Linux + runsc Conformance. The pinned Linux amd64 CLI started all 113 reviewed command help pages in the same isolated Runtime; the wrapper rejected unreviewed raw API and unauthorized business execution. Final Parse, reproducible bundle comparison, targeted/full Go tests/build, 440 integrated frontend tests, typecheck/build, Node/Python policy tests and Runtime/Builder smoke passed. Repeat publication reused the same revision. Administrator and User catalog routes each contain one formal GitHub entry with no temporary Definition. Online Playwright observed the real brand and installed unauthorized Connect entry displaying the device user code and opening the official GitHub login page. Administrator acting as User has active, unauthorized Installation `31279857-8743-4e07-a2bb-dda5a99a3d4b`; no test Token was stored. The complete conversation-selector path, real account authorization/business APIs, Linux arm64 execution and full model Runtime Production Conformance were not verified. Non-secret records and screenshots are retained under ignored `outputs/github/evidence`.
+
+## Tianyancha MCP
+
+The `tianyancha` 1.0.0 package uses the official Streamable HTTP resource
+`https://mcp.tianyancha.com/mcp` and appears in the Industry data category. The
+reviewed browser OAuth adapter uses issuer `https://capi.tianyancha.com/oauth`,
+public-client dynamic registration, S256 PKCE and the exact GET callback
+`/api/v1/connectors/tianyancha/oauth/callback`. It requests only
+`mcp:tools.call`, rejects custom credential channels and noncanonical resource or
+Egress declarations, and retains refresh material outside Runtime credentials.
+The existing encrypted callback state, owner/flow checks, CAS replay protection
+and single-use code consumption apply. OAuth requests reject redirects; an
+optional callback issuer must match the reviewed issuer. Package validation and
+browser entry are separate from real-account business and model Runtime evidence.

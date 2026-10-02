@@ -19,6 +19,7 @@ import (
 	"agent-platform/backend/internal/pixsomcp"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
+	"agent-platform/backend/internal/tianyanchamcp"
 )
 
 var (
@@ -102,9 +103,12 @@ func isKlingMCPLoginPolicy(policy connectorRevisionPolicy) bool {
 	return policy.Metadata.Source == "kling-ai" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == klingmcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "klingai.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
 }
 func isBrowserOAuthPolicy(policy connectorRevisionPolicy) bool {
-	return isXiaoeMCPLoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy)
+	return isTianyanchaMCPPolicy(policy) || isXiaoeMCPLoginPolicy(policy) || isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy)
 }
 func browserOAuthProfileFor(policy connectorRevisionPolicy) browserOAuthProfile {
+	if isTianyanchaMCPPolicy(policy) {
+		return tianyanchaBrowserOAuth
+	}
 	if isXiaoeMCPLoginPolicy(policy) {
 		return xiaoeBrowserOAuth
 	}
@@ -178,6 +182,33 @@ func (d pixsoConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, t
 	return pixsoGrant(v), e
 }
 func pixsoGrant(v pixsomcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type tianyanchaConnectorAuthorizationDriver struct{ client *tianyanchamcp.Client }
+
+func (d tianyanchaConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d tianyanchaConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d tianyanchaConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, tianyanchamcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, tianyanchamcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return tianyanchaGrant(v), e
+}
+func (d tianyanchaConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return tianyanchaGrant(v), e
+}
+func tianyanchaGrant(v tianyanchamcp.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
 }
 
@@ -419,6 +450,13 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 			return nil, err
 		}
 		return pixsoConnectorAuthorizationDriver{client: pixsomcp.NewClient(redirect)}, nil
+	}
+	if isTianyanchaMCPPolicy(policy) {
+		redirect, err := service.tianyanchaCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return tianyanchaConnectorAuthorizationDriver{client: tianyanchamcp.NewClient(redirect)}, nil
 	}
 	if isKlingMCPLoginPolicy(policy) {
 		redirect, err := service.klingCallbackURL()
