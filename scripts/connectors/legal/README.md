@@ -5,7 +5,7 @@
 ## 上游与范围
 
 - [北大法宝官方接入指南](https://mcp.pkulaw.com/docs?doc=mcp-integration)与[官方 CLI npm 文档](https://www.npmjs.com/package/@pkulaw/mcp-cli)提供 MCP 与 `@pkulaw/mcp-cli`。本修订选择远程法规语义服务 `https://apim-gateway.pkulaw.com/mcp-law-search-service`；文档列出 `search_article`、`get_article`。其他法规关键词、案例、引用校验等能力使用不同端点。平台单个 MCP manifest 只有一个服务，因此此修订不宣称覆盖全部法宝服务。
-- 北大法宝使用控制台 Token，无需另造 OAuth 协议。包的兼容元数据 `auth_mode: oauth` 在现有平台被映射为 `connector_package` provided-credentials 流程；表单只收 Token 值，以 `MCP_BEARER_TOKEN` 保存。Runtime 现有适配器生成 `Authorization: Bearer ...`；manifest 的变量引用不包含字面 Secret。平台加密保存，单次执行物化并精确脱敏。未带 Token 的真实请求返回 401；真实 Token 的权限、积分、查询仍需验证。
+- 北大法宝使用控制台 Token，无需另造 OAuth 协议。包的兼容元数据 `auth_mode: oauth` 在现有平台使用 provided-credentials 流程（API 的 `authentication_driver` 兼容字段仍回显 `oauth`）；表单只收 Token 值，以 `MCP_BEARER_TOKEN` 保存。Runtime 现有适配器生成 `Authorization: Bearer ...`；manifest 的变量引用不包含字面 Secret。平台加密保存，单次执行物化并精确脱敏。未带 Token 的真实请求返回 401；真实 Token 的权限、积分、查询仍需验证。
 - [明白律师官方接入页面](https://www.mindbye.com/mcp)提供公开端点 `https://mcp-server.mindbye.com/mcp-servers/contract-review-prod` 和[合同审查技能下载](https://mindbye.com/skill/contract-risk-review.zip)。本修订无需凭证。实际工具发现为 `contract_review_prepare_upload`、`contract_review_submit`、`contract_review_result`；上游下载技能中的旧 `submit_contract_review` 名称不能用于现网调用。包内 Skill 按现网 Schema 适配审查参数，并要求保存 taskId、使用同一任务轮询、只交付服务真实返回的报告与附件。
 - 真实临时上传申请返回 `contract-review-mcp.oss-cn-hangzhou.aliyuncs.com`。该域名与 MCP 服务域名加入 Egress 清单。测试只使用合成文件名和大小，未上传文件或提交合同；签名 URL 和文件 ID 不进入日志或版本库。
 

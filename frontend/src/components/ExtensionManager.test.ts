@@ -35,7 +35,7 @@ async function openDetails(wrapper: ReturnType<typeof mountManager>, selector = 
 
 describe("legal MCP connectors", () => {
   function fixture(source = "pkulaw", old = false) {
-    const installation = { id: source + "-installation", source, active_revision_id: source + "-revision", state: "active", authorized: source === "mindbye", version: 3, package_version: "1.0.0", name: source === "pkulaw" ? "北大法宝" : "明白律师", description: "", authentication_driver: source === "pkulaw" ? "connector_package" : "none", upgrade_available: old };
+    const installation = { id: source + "-installation", source, active_revision_id: source + "-revision", state: "active", authorized: source === "mindbye", version: 3, package_version: "1.0.0", name: source === "pkulaw" ? "北大法宝" : "明白律师", description: "", authentication_driver: source === "pkulaw" ? "oauth" : "none", upgrade_available: old };
     const publication = { source, active_revision_id: installation.active_revision_id, state: "available", version: 1, revision: { ...installation, id: installation.active_revision_id, mode: "mcp", conformance_available: true, required_scopes: [] } };
     const connectConnector = vi.fn(async () => ({ ...installation, authorized: true }));
     const upgradeConnectorInstallation = vi.fn(async () => ({ ...installation, version: 4, upgrade_available: false }));
