@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ArrowLeft, ArrowUp, CircleAlert, CircleHelp, MessageCircle, RotateCcw, Square } from "@lucide/vue";
@@ -81,7 +81,7 @@ async function send(question = draft.value, faqID?: string) {
   busy.value = true;
   activeTurnID.value = "";
   draft.value = "";
-  const pending: AssistantTurn = { id: `pending-${Date.now()}`, conversation_id: conversationID.value, turn_number: turns.value.length + 1, question: text, answer: "", source: "", state: "generating", input_tokens: 0, output_tokens: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  const pending = reactive<AssistantTurn>({ id: `pending-${Date.now()}`, conversation_id: conversationID.value, turn_number: turns.value.length + 1, question: text, answer: "", source: "", state: "generating", input_tokens: 0, output_tokens: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   turns.value.push(pending);
   controller = new AbortController();
   try {

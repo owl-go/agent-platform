@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type AssistantConversation, type AssistantTurn, type PlatformApi, type SmartAssistantFAQ } from "../api/client";
+import { platformApiKey, type AssistantConversation, type AssistantStreamEvent, type AssistantTurn, type PlatformApi, type SmartAssistantFAQ } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import SmartAssistantConversationPage from "./SmartAssistantConversationPage.vue";
@@ -26,6 +26,52 @@ function apiStub(): PlatformApi {
 }
 
 describe("SmartAssistantConversationPage", () => {
+  it("renders each streamed delta before the answer completes and history reloads", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
+    const api = apiStub();
+    let emit!: (event: AssistantStreamEvent) => void;
+    let finish!: () => void;
+    api.streamAssistantTurn = vi.fn((_assistant, _conversation, _question, _faq, onEvent) => {
+      emit = onEvent;
+      return new Promise<void>((resolve) => { finish = resolve; });
+    });
+    const wrapper = mount(SmartAssistantConversationPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+    try {
+      await flushPromises();
+      await wrapper.get("textarea").setValue("分析这个客户");
+      await wrapper.get(".assistant-conversation-send").trigger("click");
+      emit({ type: "thinking", turn_id: "turn-1", message: "思考中..." });
+      await flushPromises();
+
+      emit({ type: "delta", turn_id: "turn-1", text: "客户值得" });
+      await flushPromises();
+      expect(wrapper.get(".assistant-conversation-turn .markdown-body").text()).toBe("客户值得");
+      expect(wrapper.get(".assistant-conversation-send").text()).toBe("停止输出");
+      expect(api.getAssistantConversation).toHaveBeenCalledTimes(1);
+
+      emit({ type: "delta", turn_id: "turn-1", text: "继续跟进。" });
+      await flushPromises();
+      expect(wrapper.get(".assistant-conversation-turn .markdown-body").text()).toBe("客户值得继续跟进。");
+      expect(api.getAssistantConversation).toHaveBeenCalledTimes(1);
+
+      const turn: AssistantTurn = { ...completedTurn, question: "分析这个客户", answer: "客户值得继续跟进。（完成）", source: "knowledge" };
+      api.getAssistantConversation = vi.fn(async () => ({ conversation, turns: [turn], faqs: [faq] }));
+      emit({ type: "done", turn });
+      await flushPromises();
+      expect(wrapper.get(".assistant-conversation-turn .markdown-body").text()).toBe(turn.answer);
+      expect(api.getAssistantConversation).not.toHaveBeenCalled();
+      finish();
+      await flushPromises();
+      expect(wrapper.get(".assistant-conversation-turn .markdown-body").text()).toBe(turn.answer);
+      expect(wrapper.get(".assistant-conversation-send").text()).toBe("发送");
+    } finally {
+      finish();
+      await flushPromises();
+      wrapper.unmount();
+    }
+  });
+
   it("renders the uploaded avatar beside the assistant welcome", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants/assistant-1/conversations/conversation-1");
