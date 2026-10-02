@@ -17,7 +17,7 @@ const inputStub = defineComponent({
   },
 });
 
-function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], document?: KnowledgeDocument | KnowledgeDocument[], regenerate?: PlatformApi["regenerateKnowledgeDocument"], retry?: PlatformApi["retryKnowledgeDocument"], knowledgeBases: KnowledgeBase[] = [base], props?: { availableOnly?: boolean }, categories: KnowledgeCategory[] = []) {
+function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], document?: KnowledgeDocument | KnowledgeDocument[], regenerate?: PlatformApi["regenerateKnowledgeDocument"], retry?: PlatformApi["retryKnowledgeDocument"], knowledgeBases: KnowledgeBase[] = [base], props?: { availableOnly?: boolean }, categories: KnowledgeCategory[] = [], upload?: PlatformApi["uploadKnowledgeDocument"]) {
   const api = {
     listKnowledgeBases: vi.fn(async () => knowledgeBases),
     listKnowledgeCategories: vi.fn(async () => categories),
@@ -25,6 +25,7 @@ function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], docu
     searchKnowledgeBase,
     regenerateKnowledgeDocument: regenerate,
     retryKnowledgeDocument: retry,
+    uploadKnowledgeDocument: upload,
   } as unknown as PlatformApi;
   const auth: AuthContext = { isCallback: false, session: { state: ref({ kind: "authenticated", currentUser: { id: "user-1", username: "user", email: "u@example.test", display_name: "User", administrator: false, settings_ready: true } }), accessToken: () => "token", initialize: vi.fn(async () => {}), signIn: vi.fn(async () => {}), signOut: vi.fn(async () => {}), dispose: vi.fn() } };
   return mount(KnowledgeBasesPage, { attachTo: globalThis.document.body, props, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
@@ -65,6 +66,7 @@ describe("KnowledgeBasesPage search", () => {
     await flushPromises();
     expect(wrapper.get(".detail-actions").text()).toBe("检索");
     expect(wrapper.find(".source-controls").exists()).toBe(false);
+    expect(wrapper.find(".documents-heading .el-button").exists()).toBe(false);
     await wrapper.get(".knowledge-search-trigger").trigger("click");
     await flushPromises();
     expect(document.querySelector(".knowledge-search-dialog input")).not.toBeNull();
@@ -173,6 +175,26 @@ describe("KnowledgeBasesPage search", () => {
     expect(wrapper.find(".documents-heading .eyebrow").exists()).toBe(false);
     await wrapper.get(".knowledge-back").trigger("click");
     expect(wrapper.find(".knowledge-detail-header").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("uploads files from the document heading without category or URL controls", async () => {
+    const document: KnowledgeDocument = { id: "uploaded-1", knowledge_base_id: base.id, name: "资料.txt", source_type: "upload", state: "accepted", deleted: false, created_at: base.created_at, updated_at: base.updated_at, version: 1 };
+    const upload = vi.fn(async () => document);
+    const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [base], undefined, [], upload);
+    await flushPromises();
+    await wrapper.get(".knowledge-card").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".documents-heading .el-button").text()).toBe("上传文件");
+    expect(wrapper.find(".category-create").exists()).toBe(false);
+    expect(wrapper.find(".source-controls").exists()).toBe(false);
+    const file = new File(["资料内容"], "资料.txt", { type: "text/plain" });
+    const input = wrapper.get('input[type="file"]');
+    Object.defineProperty(input.element, "files", { value: [file] });
+    await input.trigger("change");
+    await flushPromises();
+    expect(upload).toHaveBeenCalledWith(base.id, file);
+    expect(wrapper.get(".document-table").text()).toContain("资料.txt");
     wrapper.unmount();
   });
 });
