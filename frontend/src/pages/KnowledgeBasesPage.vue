@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, type InputInstance } from "element-plus";
 import { ArrowLeft, Download, Eye, FileText, FolderOpen, Globe2, LayoutGrid, List as ListIcon, LockKeyhole, MoreHorizontal, Pencil, Plus, Search, Trash2, Upload } from "@lucide/vue";
 import { platformApiKey, type KnowledgeBase, type KnowledgeCategory, type KnowledgeDocument, type KnowledgeSearchResult } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -29,6 +29,8 @@ const loading = ref(true);
 const busy = ref(false);
 const previewBusy = ref(false);
 const searchBusy = ref(false);
+const showSearchDialog = ref(false);
+const searchInput = ref<InputInstance>();
 const searchQuery = ref("");
 const searchResults = ref<KnowledgeSearchResult[]>([]);
 const searchRan = ref(false);
@@ -119,6 +121,7 @@ function closeBase() {
 }
 
 function resetSearch() {
+  showSearchDialog.value = false;
   searchQuery.value = "";
   searchResults.value = [];
   searchRan.value = false;
@@ -423,24 +426,8 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
       <header class="knowledge-detail-header">
         <button class="back-link knowledge-back" @click="closeBase"><ArrowLeft :size="16" />{{ t("knowledgeBases.backToCatalog") }}</button>
         <div class="knowledge-detail-copy"><div class="detail-title-line"><h2>{{ selected.name }}</h2><el-tag size="small" effect="plain">{{ scopeLabel(selected) }}</el-tag></div><p v-if="selected.description">{{ selected.description }}</p></div>
-        <div v-if="canManageSelected" class="detail-actions"><el-button text @click="openEdit(selected)"><Pencil :size="15" />{{ t("common.edit") }}</el-button><el-button type="danger" text @click="deleteTarget = selected"><Trash2 :size="15" />{{ t("common.delete") }}</el-button></div>
+        <div class="detail-actions"><el-button class="knowledge-search-trigger" plain @click="showSearchDialog = true"><Search :size="15" />{{ t("knowledgeBases.search") }}</el-button><el-button v-if="canManageSelected" text @click="openEdit(selected)"><Pencil :size="15" />{{ t("common.edit") }}</el-button><el-button v-if="canManageSelected" type="danger" text @click="deleteTarget = selected"><Trash2 :size="15" />{{ t("common.delete") }}</el-button></div>
       </header>
-
-      <section class="knowledge-search-panel" :aria-label="t('knowledgeBases.search')">
-        <form class="knowledge-search-controls" @submit.prevent="searchKnowledge">
-          <el-input v-model="searchQuery" :maxlength="500" :placeholder="t('knowledgeBases.searchPlaceholder')" :aria-label="t('knowledgeBases.search')" clearable />
-          <el-button type="primary" native-type="submit" :loading="searchBusy" :disabled="!searchQuery.trim()"><Search :size="16" />{{ t("knowledgeBases.search") }}</el-button>
-        </form>
-        <p v-if="searchError" class="knowledge-search-feedback" role="alert">{{ searchError }}</p>
-        <p v-else-if="searchRan && !searchIndexReady" class="knowledge-search-feedback">{{ t("knowledgeBases.searchNotReady") }}</p>
-        <p v-else-if="searchRan && !searchResults.length" class="knowledge-search-feedback">{{ t("knowledgeBases.searchEmpty") }}</p>
-        <ol v-else-if="searchRan" class="knowledge-search-results">
-          <li v-for="item in searchResults" :key="`${item.revision_id}-${item.document_id}-${item.text.slice(0, 30)}`">
-            <p>{{ item.text }}</p>
-            <small>{{ t("knowledgeBases.searchSource") }}：{{ item.document_name }}<span v-if="item.category_name"> · {{ item.category_name }}</span></small>
-          </li>
-        </ol>
-      </section>
 
       <section class="documents-panel">
         <div class="section-heading documents-heading">
@@ -488,6 +475,22 @@ onUnmounted(() => { if (statusTimer) clearInterval(statusTimer); closePreview();
       </section>
     </template>
   </section>
+
+  <el-dialog v-if="selected" v-model="showSearchDialog" class="knowledge-search-dialog" width="min(760px, calc(100vw - 32px))" align-center :title="t('knowledgeBases.search')" @opened="searchInput?.focus()">
+    <form class="knowledge-search-controls" @submit.prevent="searchKnowledge">
+      <el-input ref="searchInput" v-model="searchQuery" :maxlength="500" :placeholder="t('knowledgeBases.searchPlaceholder')" :aria-label="t('knowledgeBases.search')" clearable />
+      <el-button type="primary" native-type="submit" :loading="searchBusy" :disabled="!searchQuery.trim()"><Search :size="16" />{{ t("knowledgeBases.search") }}</el-button>
+    </form>
+    <p v-if="searchError" class="knowledge-search-feedback" role="alert">{{ searchError }}</p>
+    <p v-else-if="searchRan && !searchIndexReady" class="knowledge-search-feedback">{{ t("knowledgeBases.searchNotReady") }}</p>
+    <p v-else-if="searchRan && !searchResults.length" class="knowledge-search-feedback">{{ t("knowledgeBases.searchEmpty") }}</p>
+    <ol v-else-if="searchRan" class="knowledge-search-results">
+      <li v-for="item in searchResults" :key="`${item.revision_id}-${item.document_id}-${item.text.slice(0, 30)}`">
+        <p>{{ item.text }}</p>
+        <small>{{ t("knowledgeBases.searchSource") }}：{{ item.document_name }}<span v-if="item.category_name"> · {{ item.category_name }}</span></small>
+      </li>
+    </ol>
+  </el-dialog>
 
   <el-dialog v-model="showBaseDialog" class="resource-dialog" width="min(560px, calc(100vw - 32px))" align-center :title="editingBase ? t('knowledgeBases.edit') : t('knowledgeBases.new')"><el-form label-position="top" @submit.prevent="saveBase"><el-form-item :label="t('common.name')" required><el-input v-model="form.name" maxlength="100" autofocus /></el-form-item><el-form-item :label="t('knowledgeBases.description')"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item><el-form-item :label="t('knowledgeBases.scope')"><el-select v-model="form.scope" :disabled="Boolean(editingBase)"><el-option value="private" :label="t('knowledgeBases.privateScope')" /><el-option v-if="canCreateGroup" value="group" :label="t('knowledgeBases.departmentScope')" /><el-option v-if="canCreatePlatform" value="platform" :label="t('knowledgeBases.platformScope')" /></el-select><small class="scope-hint">{{ editingBase ? t('knowledgeBases.scopeImmutable') : t(`knowledgeBases.scopeHint.${form.scope}`) }}</small></el-form-item><el-form-item v-if="form.scope === 'group'" :label="t('knowledgeBases.department')" required><el-select v-model="form.group_id"><el-option v-for="group in departmentGroups" :key="group.id" :value="group.id" :label="group.name" /></el-select></el-form-item></el-form><template #footer><el-button @click="showBaseDialog = false">{{ t("common.cancel") }}</el-button><el-button type="primary" :loading="busy" :disabled="!form.name.trim() || (form.scope === 'group' && !form.group_id)" @click="saveBase">{{ t("common.save") }}</el-button></template></el-dialog>
   <ConfirmDialog :open="Boolean(deleteTarget)" :title="t('knowledgeBases.deleteBase')" :message="deleteTarget ? `${t('common.delete')} “${deleteTarget.name}”?` : ''" :confirm-label="t('common.delete')" :cancel-label="t('common.cancel')" danger :busy="busy" @cancel="deleteTarget = undefined" @confirm="removeBase" />
