@@ -47,3 +47,9 @@ python3 scripts/connectors/xiaoe/publish.py \
 refresh token 保存在独立平台加密字段，MCP Runtime 只收到短期 Bearer Token；快照使用授权记录的实际 AAD。过期授权可在连接器详情刷新。历史 MCP 快照没有 package 字段时保持原行为；新托管 MCP 快照冻结 package Object Key 与 SHA-256，验证 ZIP 并只读挂载其 Skill，再调用 MCP 工具。这个包不包含 CLI，CLI bundle × Runtime Conformance 不适用；完整模型 Production Conformance、真实账号授权及店铺操作未验证。
 
 安装后「连接」尝试被 HTTP 566 拒绝时，页面明确说明回调域名被拦截及联系小鹅通放行／配置正式域名的处理办法。上游解除限制后再完成真实授权及业务验收。
+
+## 本次发布结果
+
+已在 `main_temp` 集成并部署 `xiaoe-20261002T1915`，目录 Revision 为 `996c6c5b-7ba9-4a71-a7c2-60b0b42ab308`，状态 available。包规范化 SHA-256 为 `cfc5ca7f6f6670b41416dc594b1d308fa3fdf2a5507e4386c65071f1ac07c543`。真实页面已验收品牌图标、连接入口和域名拦截提示；诊断安装没有凭证，已清理。真实授权和业务调用受上游回调限制，仍未验证。详见[发布证据](../../../docs/evidence/agent-workspace/2026-10-02-xiaoe-connector.md)。
+
+部署 source 上传后修正了发布辅助脚本的 User catalog 路径，实际发布与幂等重跑使用修正后的独立副本；后续发布应从最新 `main_temp` 获取脚本，不能使用这次旧部署 source 内的发布辅助脚本。API/Worker/前端已经包含本次全部功能。
