@@ -21,3 +21,5 @@ describe("ConnectorIcon", () => {
     expect(preset.find(".profile-icon").exists()).toBe(true);
   });
 });
+
+it("renders the GitHub brand asset", () => { const wrapper = mount(ConnectorIcon, { props: { icon: "github" } }); expect(wrapper.get("img").attributes("src")).toContain("data:image/svg+xml"); wrapper.unmount(); });
