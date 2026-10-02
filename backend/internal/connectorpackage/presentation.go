@@ -8,6 +8,9 @@ import (
 //go:embed icons/teambition.png
 var teambitionIcon []byte
 
+//go:embed icons/moka-hr.png
+var mokaHRIcon []byte
+
 //go:embed icons/picset-ai.png
 var picsetIcon []byte
 
@@ -44,6 +47,8 @@ func DisplayIcon(source string) string {
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(linearIcon)
 	case "camscanner":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(camscannerIcon)
+	case "moka-hr":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(mokaHRIcon)
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
 	case "feishu", "dingtalk", "notion", "modao", "github", "xiaoe", "openboost":
