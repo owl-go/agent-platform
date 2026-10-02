@@ -1281,6 +1281,10 @@ type nativeStateCommit struct {
 
 func (commit *nativeStateCommit) Commit() error {
 	for _, promotion := range commit.promotions {
+		if err := os.MkdirAll(filepath.Dir(promotion.persistent), 0o700); err != nil {
+			_ = commit.Rollback()
+			return fmt.Errorf("create persistent Runtime state parent: %w", err)
+		}
 		backup := promotion.persistent + ".previous"
 		if err := os.RemoveAll(backup); err != nil {
 			_ = commit.Rollback()
