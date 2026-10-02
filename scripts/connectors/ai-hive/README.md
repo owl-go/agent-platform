@@ -24,14 +24,28 @@ make build
 
 ## 安装与授权边界
 
-本任务默认交付本地 ZIP；没有自动安装或平台发布。安装前先检查目标 User 的 `/api/v1/connectors` 和 `/api/v1/connectors/catalog`，Administrator 检查 `/api/v1/admin/connectors/publications`，已有匹配修订时优先安装／升级。需要平台安装时使用已有 ZIP 上传接口 `/api/v1/connectors/packages`；生成 ZIP 本身不创建 Installation。
+初版交付本地 ZIP；后续安装与平台发布使用受保护的部署账号配置。安装前先检查目标 User 的 `/api/v1/connectors` 和 `/api/v1/connectors/catalog`，Administrator 检查 `/api/v1/admin/connectors/publications`，已有匹配修订时优先安装／升级。需要平台安装时使用已有 ZIP 上传接口 `/api/v1/connectors/packages`；生成 ZIP 本身不创建 Installation。
 
 包的 `auth_mode: "cli"` 表示平台的 provided-credentials 授权模式，连接器执行模式仍是 MCP。用户在蜂巢 AI 网页开启 MCP 并获取 API Key。平台 ConnectConnector 接口 `/api/v1/connectors/{installation_id}/authorization` 接收 `identity_ref: "user"`、空 scopes 和 bytes 类型的 `credentials_json`（JSON HTTP 中 base64 编码），凭证对象仅含 `MCP_BEARER_TOKEN`。平台加密保存并在本次执行中解析 `${MCP_BEARER_TOKEN}` 为 `AI_HIVE_MCP_KEY`；密钥不会进入包或参数。
 
-该包需要本任务新增的 MCP 变量引用物化支持。旧平台把引用当作字面值时无法正常认证，必须先经 `main_temp` 集成并部署该支持。当前通用前端未提供 AI-Hive 专用 API Key 连接表单；上述授权入口是平台 API，不能声称已完成前端连接验收。上架时还须检查正式条目唯一性、实际图标显示、可操作连接入口及目标 User／Administrator 目录。
+该包需要本任务新增的 MCP 变量引用物化支持。旧平台把引用当作字面值时无法正常认证，必须先经 `main_temp` 集成并部署该支持。AI-Hive 卡片的“连接”入口使用密码类型 API Key 表单，并链接蜂巢 AI 网页；成功或取消时清空表单，失败时可重试。实际线上验收见后续证据。上架时还须检查正式条目唯一性、实际图标显示、可操作连接入口及目标 User／Administrator 目录。
 
 Egress 清单只含已确认的 npm registry 和默认 API 域名。上游媒体上传依赖动态签名 PUT 地址，当前没有上传域名的真实环境证据；目标环境应按真实地址核验策略后再允许上传。工具发现不证明媒体上传、账号余额、付费生成或目标 Runtime RepoDigest Conformance 已通过。
 
 ## 本地验收证据（2026-10-01）
 
 已执行最终 ZIP 的 `connectorpackage.Parse`、上游完整性拒绝测试、官方 0.3.0 MCP 握手和 8 个工具发现，以及 Runtime Executor／Connector Package 目标测试、`make test` 和 `make build`。全量测试命令通过不代表依赖外部环境的集成测试都执行过。凭证别名在 Claude、Codex、Hermes、OpenClaw 的配置中正确投影，缺失或空授权变量拒绝物化，不使用宿主凭证。原始 Secret 保留在精确字节脱敏集合中。当前没有目标 Linux + runsc、真实账号或平台目录验收证据。
+
+## 发布并安装
+
+管理员发布器读取部署主机受保护的 env 文件完成平台 PKCE 登录，检查现有修订，暂存并发布经 Parse 验证的包，然后为该登录账号幂等安装／升级。它不会把同一 Authorization 共享给其他 User，也不会提交 AI-Hive API Key。
+
+```bash
+python3 scripts/connectors/ai-hive/publish.py \
+  --config /opt/agent-platform/config/platform.env \
+  --package /tmp/ai-hive-0.3.0.zip \
+  --normalized-sha256 '<current-connectorpackage.Parse-sha256>' \
+  --evidence-directory /tmp/ai-hive-publication-evidence
+```
+
+发布后核对 Administrator／User 正式目录各只有一个 AI-Hive 条目、安装版本匹配、官网图标加载，以及未授权时可打开 API Key 表单。

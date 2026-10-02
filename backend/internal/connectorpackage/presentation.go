@@ -23,11 +23,16 @@ var pixsoIcon []byte
 //go:embed icons/camscanner.png
 var camscannerIcon []byte
 
+//go:embed icons/ai-hive.svg
+var aiHiveIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
 // Connectors, including the official Teambition image. Other packages keep
 // the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
+	case "ai-hive":
+		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(aiHiveIcon)
 	case "picset-ai":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(picsetIcon)
 

@@ -286,6 +286,78 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
+  function aiHiveFixture(old = false) {
+    let authorized = false;
+    const installation = { id: "aiHive-installation", source: "ai-hive", active_revision_id: "aiHive-revision", state: "active" as const, authorized: false, version: 3, package_version: "0.3.0", name: "AI-Hive", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const upgraded = { ...installation, version: 4, upgrade_available: false };
+    const publication = { source: "ai-hive", active_revision_id: "aiHive-revision", state: "available" as const, version: 1, revision: { id: "aiHive-revision", source: "ai-hive", package_version: "0.3.0", mode: "mcp" as const, sha256: "a".repeat(64), name: "AI-Hive", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => { authorized = true; return { ...upgraded, authorized }; });
+    const upgradeConnectorInstallation = vi.fn(async () => upgraded);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, upgradeConnectorInstallation } as unknown as PlatformApi;
+    return { api, installation, connectConnector, upgradeConnectorInstallation };
+  }
+  async function openAiHive(wrapper: ReturnType<typeof mountManager>) {
+    await flushPromises();
+    await connectPublished(wrapper);
+    await flushPromises();
+    return new DOMWrapper(document.body).get(".provided-connector-form");
+  }
+  it("keeps the existing AI-Hive token flow available from connector guidance details", async () => {
+    const fixture = aiHiveFixture(), wrapper = mountManager(fixture.api);
+    try {
+      await flushPromises();
+      await wrapper.get(".published-connector-card").trigger("click"); await flushPromises();
+      const details = new DOMWrapper(document.body).get(".connector-details");
+      expect(details.text()).toContain("试试这样用");
+      await details.findAll("button").find(item => item.text() === "连接")!.trigger("click"); await flushPromises();
+      const form = new DOMWrapper(document.body).get(".provided-connector-form");
+      expect(form.get('input[name="ai_hive_api_key"]').attributes("type")).toBe("password");
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it.each([false, true])("connects AI-Hive with one masked token and upgrades first when needed (%s)", async old => {
+    const fixture = aiHiveFixture(old), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openAiHive(wrapper);
+      expect(form.get('input[name="ai_hive_api_key"]').attributes("type")).toBe("password");
+      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
+      expect(form.get('a[href="https://ai-hive.iclip.cn/"]').attributes("rel")).toContain("noopener");
+      await form.get('input[name="ai_hive_api_key"]').setValue("fixture-key");
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledWith(fixture.installation.id, "user", [], JSON.stringify({ MCP_BEARER_TOKEN: "fixture-key" }));
+      expect(fixture.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(fixture.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(fixture.connectConnector.mock.invocationCallOrder[0]!);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+      expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
+    } finally { wrapper.unmount(); }
+  });
+  it.each(["", "token with-space", "x".repeat(4097)])("rejects invalid AI-Hive tokens locally", async token => {
+    const fixture = aiHiveFixture(), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openAiHive(wrapper);
+      await form.get('input[name="ai_hive_api_key"]').setValue(token);
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it("retains a failed AI-Hive token for retry and clears it on cancellation", async () => {
+    const fixture = aiHiveFixture(), wrapper = mountManager(fixture.api);
+    fixture.connectConnector.mockRejectedValueOnce(new ApiError("validation", 422, "invalid_token"));
+    try {
+      const form = await openAiHive(wrapper);
+      await form.get('input[name="ai_hive_api_key"]').setValue("fixture-key");
+      await form.trigger("submit"); await flushPromises();
+      expect((form.get('input[name="ai_hive_api_key"]').element as HTMLInputElement).value).toBe("fixture-key");
+      await form.get('button[type="button"]').trigger("click"); await flushPromises();
+      const reopened = await openAiHive(wrapper);
+      expect((reopened.get('input[name="ai_hive_api_key"]').element as HTMLInputElement).value).toBe("");
+      await reopened.get('input[name="ai_hive_api_key"]').setValue("retry-key");
+      await reopened.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledTimes(2);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   it.each([["teambition", false], ["teambition", true], ["camscanner", false], ["camscanner", true]] as const)("opens reviewed browser authorization and upgrades old installations first (source: %s, old: %s)", async (source, old) => {
     const installation = { id: "teambition-installation", source, active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
     const scopes = source === "camscanner" ? [] : ["user:read", "project:read", "task:read", "task:write"];
