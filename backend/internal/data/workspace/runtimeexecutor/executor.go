@@ -1281,7 +1281,17 @@ type nativeStateCommit struct {
 
 func (commit *nativeStateCommit) Commit() error {
 	for _, promotion := range commit.promotions {
-		if err := os.MkdirAll(filepath.Dir(promotion.persistent), 0o700); err != nil {
+		info, err := os.Stat(promotion.temporary)
+		if err != nil {
+			_ = commit.Rollback()
+			return fmt.Errorf("inspect staged Runtime state: %w", err)
+		}
+		owner, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			_ = commit.Rollback()
+			return fmt.Errorf("staged Runtime state ownership is unavailable")
+		}
+		if err := createOwnedStateParent(filepath.Dir(promotion.persistent), int(owner.Uid), int(owner.Gid)); err != nil {
 			_ = commit.Rollback()
 			return fmt.Errorf("create persistent Runtime state parent: %w", err)
 		}
@@ -1302,6 +1312,29 @@ func (commit *nativeStateCommit) Commit() error {
 		commit.promoted = append(commit.promoted, promotion)
 	}
 	return nil
+}
+
+func createOwnedStateParent(path string, uid, gid int) error {
+	info, err := os.Lstat(path)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("persistent Runtime state parent is not a directory")
+		}
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := createOwnedStateParent(filepath.Dir(path), uid, gid); err != nil {
+		return err
+	}
+	if err := os.Mkdir(path, 0o700); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return createOwnedStateParent(path, uid, gid)
+		}
+		return err
+	}
+	return os.Chown(path, uid, gid)
 }
 
 func (commit *nativeStateCommit) Rollback() error {
