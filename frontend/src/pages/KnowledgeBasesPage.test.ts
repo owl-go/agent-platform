@@ -163,7 +163,7 @@ describe("KnowledgeBasesPage search", () => {
     wrapper.unmount();
   });
 
-  it("keeps the return action in the detail header and announces catalog transitions", async () => {
+  it("keeps the return action in the detail header and returns to the catalog", async () => {
     const wrapper = mountPage(vi.fn());
     await flushPromises();
     await wrapper.get(".knowledge-card").trigger("click");
@@ -171,9 +171,7 @@ describe("KnowledgeBasesPage search", () => {
     expect(wrapper.get(".knowledge-detail-header .knowledge-back").text()).toContain("返回知识库目录");
     expect(wrapper.get(".documents-heading").text()).toContain("全部文档");
     expect(wrapper.find(".documents-heading .eyebrow").exists()).toBe(false);
-    expect(wrapper.emitted("detail-open")).toEqual([[true]]);
     await wrapper.get(".knowledge-back").trigger("click");
-    expect(wrapper.emitted("detail-open")).toEqual([[true], [false]]);
     expect(wrapper.find(".knowledge-detail-header").exists()).toBe(false);
     wrapper.unmount();
   });

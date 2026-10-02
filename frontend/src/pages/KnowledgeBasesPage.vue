@@ -10,7 +10,6 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import ResourceTrustMeta from "../components/ResourceTrustMeta.vue";
 
 const props = withDefaults(defineProps<{ embedded?: boolean; catalogQuery?: string; availableOnly?: boolean }>(), { embedded: false, catalogQuery: "", availableOnly: false });
-const emit = defineEmits<{ "detail-open": [open: boolean] }>();
 
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey)!;
@@ -97,7 +96,6 @@ async function refresh() {
 
 async function openBase(item: KnowledgeBase) {
   selected.value = item;
-  emit("detail-open", true);
   resetSearch();
   activeCategory.value = null;
   uploadCategory.value = "";
@@ -111,7 +109,6 @@ async function openBase(item: KnowledgeBase) {
 
 function closeBase() {
   selected.value = undefined;
-  emit("detail-open", false);
   resetSearch();
   categories.value = [];
   documents.value = [];
