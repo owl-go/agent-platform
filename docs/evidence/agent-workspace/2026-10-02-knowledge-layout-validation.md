@@ -32,3 +32,11 @@ The User requested a single retrieval button that opens a dialog. Feature commit
 - The public resource route, main JS/CSS, and Resource Center JS/CSS returned HTTP 200 and matched all five local production files. Entrypoint SHA-256: `454ce25082f1db566caa377f8b9f3b19a6c3e1f8b8e28f133893400638367bfc`. Public `/api/healthz` returned HTTP 200.
 
 The same frontend-only validation limits above apply to this follow-up.
+
+## Follow-up: remove the Resource Library catalog search
+
+The User requested removal of the generic task search input. Feature commit `fdc6187`, integrated as `main_temp` commit `5467452`, removes that input, its spacing, its query binding, and the now-unused Knowledge Base detail notification. Old `q` parameters no longer silently filter resource listings. Product and UI specifications were updated to reflect the requested behavior.
+
+Targeted Vitest (8 tests), integrated full frontend Vitest (493 tests across 46 files), `make web-typecheck`, `make web-build`, and `git diff --check` passed. Integration retained the existing resource loading/error tests. Published from `main_temp` with the existing production OIDC configuration via `scripts/deploy-web.sh`; active web release is `/opt/agent-platform/web/releases/resource-catalog-20261002-1`. The public resource route and four main/resource JS/CSS files matched local production bytes, the compiled resource route no longer contains the removed toolbar, and `/api/healthz` returned HTTP 200. Entrypoint SHA-256: `ecb8af97bda4e14a96df7f2abab76772f566eb789d1060292df1357fbca38b0d`.
+
+This follow-up used component regression tests and public asset verification, without repeating authenticated production browser, RAGFlow, backend, or Runtime conformance checks.
