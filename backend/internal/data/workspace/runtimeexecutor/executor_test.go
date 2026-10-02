@@ -12,7 +12,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -1381,10 +1383,21 @@ func TestSanitizeNativeStateRemovesTransientConfigAndRedactsSessionFiles(t *test
 }
 
 func TestFirstWorkflowCommitCreatesOwnerDirectory(t *testing.T) {
-	root := t.TempDir()
+	root, err := os.MkdirTemp("/tmp", "first-workflow-commit-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	if err := os.Chmod(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	uid, gid := os.Getuid(), os.Getgid()
+	if os.Geteuid() == 0 {
+		uid, gid = 65532, 65532
+	}
 	executor := &Executor{config: platformconfig.Config{
 		Workspace: platformconfig.WorkspaceConfig{Root: root},
-		Worker:    platformconfig.WorkerConfig{SandboxUID: os.Getuid(), SandboxGID: os.Getgid()},
+		Worker:    platformconfig.WorkerConfig{SandboxUID: uid, SandboxGID: gid},
 	}}
 	job := application.ExecutionJob{Kind: application.JobWorkflow, Snapshot: domain.ExecutionSnapshot{WorkspacePath: "workflows/new-owner/new-workflow"}}
 	workspace, persistent, _, err := executor.stageWorkspaceAt(job, filepath.Join(root, ".runtime-containers", "slot", "workspace"))
@@ -1394,13 +1407,52 @@ func TestFirstWorkflowCommitCreatesOwnerDirectory(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(workspace, "result.txt"), []byte("first result"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := preparePersistentWorkspaceTree(workspace, uid, gid); err != nil {
+		t.Fatal(err)
+	}
 	commit := &nativeStateCommit{promotions: []nativeStatePromotion{{temporary: workspace, persistent: persistent}}, temporaryRoots: []string{workspace}}
 	if err := commit.Commit(); err != nil {
 		t.Fatalf("first Workflow Workspace commit: %v", err)
 	}
+	for _, directory := range []string{filepath.Join(root, "workflows"), filepath.Dir(persistent)} {
+		info, err := os.Stat(directory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		owner := info.Sys().(*syscall.Stat_t)
+		if int(owner.Uid) != uid || int(owner.Gid) != gid || info.Mode().Perm() != 0o700 {
+			t.Fatalf("persistent parent owner/mode = %d:%d %o, want %d:%d 700", owner.Uid, owner.Gid, info.Mode().Perm(), uid, gid)
+		}
+	}
 	content, err := os.ReadFile(filepath.Join(persistent, "result.txt"))
 	if err != nil || string(content) != "first result" {
 		t.Fatalf("persistent Workspace content = %q, error = %v", content, err)
+	}
+	if os.Geteuid() == 0 {
+		binary, err := os.Executable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		input, err := os.Open(binary)
+		if err != nil {
+			t.Fatal(err)
+		}
+		accessibleBinary := filepath.Join(root, "runtimeexecutor.test")
+		output, err := os.OpenFile(accessibleBinary, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o755)
+		if err != nil {
+			_ = input.Close()
+			t.Fatal(err)
+		}
+		_, copyErr := io.Copy(output, input)
+		if err := errors.Join(copyErr, input.Close(), output.Close()); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(accessibleBinary, "-test.run=^TestFirstWorkflowPlatformAccessHelper$")
+		command.Env = append(os.Environ(), "TEST_FIRST_WORKFLOW_ROOT="+root)
+		command.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}}
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("platform UID cannot manage first Workflow Workspace: %v\n%s", err, output)
+		}
 	}
 	if err := commit.Rollback(); err != nil {
 		t.Fatal(err)
@@ -1410,6 +1462,44 @@ func TestFirstWorkflowCommitCreatesOwnerDirectory(t *testing.T) {
 	}
 	if err := commit.Cleanup(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFirstWorkflowPlatformAccessHelper(t *testing.T) {
+	root := os.Getenv("TEST_FIRST_WORKFLOW_ROOT")
+	if root == "" {
+		return
+	}
+	store, err := workspacefs.New(root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := "workflows/new-owner/new-workflow"
+	if _, _, err := store.List(context.Background(), path, ""); err != nil {
+		t.Fatalf("list first Workspace: %v", err)
+	}
+	if err := store.Clear(context.Background(), path); err != nil {
+		t.Fatalf("clear first Workspace: %v", err)
+	}
+}
+
+func TestStateParentRejectsSymlinkAndPreservesExistingOwnership(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Symlink(t.TempDir(), filepath.Join(root, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := createOwnedStateParent(filepath.Join(root, "link", "new"), os.Getuid(), os.Getgid()); err == nil {
+		t.Fatal("persistent parent followed a symbolic link")
+	}
+	if err := os.Chmod(root, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := createOwnedStateParent(root, os.Getuid(), os.Getgid()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(root)
+	if err != nil || info.Mode().Perm() != 0o750 {
+		t.Fatalf("existing parent permissions changed: %v, %v", info, err)
 	}
 }
 
