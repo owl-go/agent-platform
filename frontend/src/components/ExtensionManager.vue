@@ -123,9 +123,9 @@ function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetail
 async function connectFromDetails() {
   const entry = detailPackage.value;
   if (entry?.installation) {
-    if (["notion", "teambition"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    if (["notion", "teambition", "camscanner", "kling-ai", "linear", "pixso"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
-    else if (["wecom", "modao"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (["wecom", "modao", "picset-ai"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
   } else if (entry?.publication) await installPublication(entry.publication);
   else if (detailCLI.value) {
@@ -137,7 +137,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "camscanner", "kling-ai", "linear", "pixso", "wecom", "modao", "picset-ai"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -200,8 +200,8 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
 function connectorCategory(source: string) {
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
-  if (source === "teambition") return "projects";
-  if (source === "modao") return "design";
+  if (["teambition", "linear"].includes(source)) return "projects";
+  if (["modao", "picset-ai", "kling-ai", "pixso"].includes(source)) return "design";
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
 
 async function completeBrowserReturn() {
   await refresh();
-  const flowID = router?.currentRoute.value.query.teambition_auth;
+  const flowID = router?.currentRoute.value.query.connector_auth ?? router?.currentRoute.value.query.linear_auth ?? router?.currentRoute.value.query.teambition_auth;
   if (typeof flowID !== "string" || !/^[0-9a-f-]{36}$/i.test(flowID)) return;
   try { await api.completeConnectorAuthorizationFlow(flowID); }
   catch (cause) { if (!(cause instanceof ApiError && cause.kind === "not_found")) reportError(cause); }
@@ -255,6 +255,8 @@ async function completeBrowserReturn() {
   await refresh();
   const query = { ...router.currentRoute.value.query };
   delete query.teambition_auth;
+  delete query.connector_auth;
+  delete query.linear_auth;
   await router.replace({ query });
 }
 
@@ -310,17 +312,18 @@ async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
   const modao = form.installation.source === "modao";
-  const invalidKey = modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const picset = form.installation.source === "picset-ai";
+  const invalidKey = picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+  if (picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    const credentials = picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
     let installation = form.installation;
-    if (modao && installation.upgrade_available) {
+    if ((modao || picset) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       form.installation = installation;
     }
@@ -396,7 +399,7 @@ async function completePublishedConnectorFlows() {
         connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
         if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
       } catch (cause) {
-        if (connectorInstallations.value.find(item => item.id === installationID)?.source === "teambition" && cause instanceof ApiError && cause.kind === "not_found") {
+        if (["teambition", "kling-ai", "linear", "pixso"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
           await refresh();
           if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
             connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };
@@ -821,8 +824,7 @@ async function fileToBase64(file: File): Promise<string> {
               </div>
             </div>
             <p>{{ skillDescription(item) }}</p>
-            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" />
-            <small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small>
+            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" />
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
@@ -835,8 +837,8 @@ async function fileToBase64(file: File): Promise<string> {
   <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :installation="detailPackage?.installation" :publication="detailPackage?.publication" :can-connect="detailCanConnect" :can-uninstall="Boolean(detailPackage?.installation || detailCLI && cliInstalled(detailCLI))" :can-disconnect="Boolean(detailPackage?.installation && detailPackage.installation.authorized || detailCLI && hasActiveCLIAuthorization(detailCLI))" :connected-state="detailCLI ? enablementFor(detailCLI.id)?.state === 'enabled' && (detailCLI.authentication_driver === 'none' || hasActiveCLIAuthorization(detailCLI) && !cliNeedsActivation(detailCLI)) : undefined" :busy="detailBusy" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && ((!detailMCP.platform && !detailMCP.managed_installation) || canManageCLI) || detailCLI && canManageCLI && !detailCLI.managed_installation && detailCLI.mutable)" @close="closeConnectorDetails" @use="useConnectorPrompt" @connect="connectFromDetails" @disconnect="disconnectFromDetails" @uninstall="uninstallFromDetails" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails">
     <template #details>
       <div v-if="detailPackage" class="connector-supplementary-details"><template v-for="entry in [detailPackage]" :key="entry.installation?.id || entry.publication?.source">
-            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
-            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
+            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t(entry.publication.revision.mode === 'mcp' ? 'resources.packageValidated' : 'resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
+            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t(entry.publication.revision.mode === 'mcp' ? 'resources.packageValidated' : 'resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
             <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a @click.stop :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
             <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <span v-if="entry.installation.source === 'notion' && notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url)">{{ t('resources.notionVerifyCode', { code: notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url) }) }}</span> <a @click.stop v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
             <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions" @click.stop>
@@ -874,7 +876,11 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <template v-if="providedConnection.installation.source === 'modao'">
+        <template v-if="providedConnection.installation.source === 'picset-ai'">
+          <label>{{ t('resources.picsetApiKey') }}<input v-model="providedConnection.secret" name="picset_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://picsetai.cn/developer-api" target="_blank" rel="noopener noreferrer">{{ t('resources.picsetApiKeyHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'modao'">
           <label>{{ t('resources.modaoToken') }}<input v-model="providedConnection.secret" name="modao_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
           <a href="https://modao.cc/feature/ai-mcp.html" target="_blank" rel="noopener noreferrer">{{ t('resources.modaoTokenHelp') }}</a>
         </template>

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
@@ -201,5 +202,23 @@ func TestConnectorDetailsExposeExamplesFromExactRevision(t *testing.T) {
 	}
 	if len(installation.ExamplesZh) != 1 || installation.ExamplesZh[0] != publication.ExamplesZh[0] || len(installation.ExamplesEn) != 1 || installation.ExamplesEn[0] != publication.ExamplesEn[0] || installation.Mode != "mcp" {
 		t.Fatalf("installation details = %#v", installation)
+	}
+}
+
+func TestCamScannerUsesInteractiveLoginAndOnlyShortLivedRuntimeCredential(t *testing.T) {
+	policy := connectorRevisionPolicy{AuthMode: "oauth", Metadata: connectorpackage.Metadata{Source: "camscanner"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}
+	if connectorAuthorizationMode(policy) != "interactive" {
+		t.Fatal("browser login unavailable")
+	}
+	if err := validateProvidedConnectorCredentials(policy, nil); err == nil {
+		t.Fatal("manual token bypass accepted")
+	}
+	fields := connectorAuthorizationCredentialFields(policy, connectorAuthorizationGrant{ExternalID: "owner", AccessToken: "short-token", RefreshToken: "renewal-token", IsDomestic: "1", ExpiresAt: time.Now().Add(time.Hour)})
+	if len(fields) != 4 || fields["user_id"] != "owner" || fields["is_domestic"] != "1" || fields["access_token"] != "short-token" || fields["refresh_token"] != "" {
+		t.Fatal("incorrect credential materialization")
+	}
+	policy.AuthMode = "cli"
+	if connectorAuthorizationMode(policy) != "provided" {
+		t.Fatal("driver chosen without reviewed policy")
 	}
 }

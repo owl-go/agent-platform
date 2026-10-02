@@ -1,0 +1,222 @@
+[
+  {
+    "argv_prefix": [
+      "image",
+      "convert"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "edit"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "enhance"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "extract-formula"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "hd"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-excel"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-pdf"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-text"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-word"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "ocr"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "receipt"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "restore"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "scan"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "to-pdf"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "translate"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "validate"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "watermark"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "convert"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "remove-watermark"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "to-images"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "to-images-zip"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "watermark"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "office",
+      "convert"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "txt",
+      "to-word"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "dirs"
+    ],
+    "risk": "low"
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "download"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "move"
+    ],
+    "risk": "high"
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "search"
+    ],
+    "risk": "low"
+  },
+  {
+    "argv_prefix": [
+      "--version"
+    ],
+    "risk": "low"
+  },
+  {
+    "argv_prefix": [
+      "--help"
+    ],
+    "risk": "low"
+  },
+  {
+    "argv_prefix": [
+      "info"
+    ],
+    "risk": "low"
+  },
+  {
+    "argv_prefix": [
+      "help"
+    ],
+    "risk": "low"
+  }
+]

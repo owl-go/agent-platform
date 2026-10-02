@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/camscannercli"
 	"agent-platform/backend/internal/dingtalkcli"
 	"agent-platform/backend/internal/feishucli"
+	"agent-platform/backend/internal/klingmcp"
+	"agent-platform/backend/internal/linearmcp"
 	"agent-platform/backend/internal/notioncli"
+	"agent-platform/backend/internal/pixsomcp"
 	"agent-platform/backend/internal/secretcrypto"
 	"agent-platform/backend/internal/teambitioncli"
 )
@@ -31,6 +36,7 @@ type connectorAuthorizationGrant struct {
 	ExternalID, DisplayName     string
 	AccessToken, RefreshToken   string
 	ClientID                    string
+	IsDomestic                  string
 	Scopes                      []string
 	ExpiresAt, RefreshExpiresAt time.Time
 }
@@ -62,6 +68,142 @@ func (d teambitionConnectorAuthorizationDriver) Refresh(ctx context.Context, id,
 }
 func teambitionGrant(v teambitioncli.Grant) connectorAuthorizationGrant {
 	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type klingConnectorAuthorizationDriver struct{ client *klingmcp.Client }
+
+func (d klingConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d klingConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d klingConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, klingmcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, klingmcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return klingGrant(v), e
+}
+func (d klingConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return klingGrant(v), e
+}
+func klingGrant(v klingmcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+func isKlingMCPLoginPolicy(policy connectorRevisionPolicy) bool {
+	return policy.Metadata.Source == "kling-ai" && policy.AuthMode == "oauth" && policy.CLI == nil && policy.MCP != nil && policy.MCP.Transport == "streamable_http" && policy.MCP.URL == klingmcp.Resource && len(policy.MCP.EgressHosts) == 1 && policy.MCP.EgressHosts[0] == "klingai.com" && len(policy.MCP.Headers) == 0 && len(policy.MCP.Environment) == 0
+}
+func isBrowserOAuthPolicy(policy connectorRevisionPolicy) bool {
+	return isTeambitionCLILoginPolicy(policy) || isKlingMCPLoginPolicy(policy) || isLinearMCPPolicy(policy) || isPixsoMCPPolicy(policy)
+}
+func browserOAuthProfileFor(policy connectorRevisionPolicy) browserOAuthProfile {
+	if isPixsoMCPPolicy(policy) {
+		return pixsoBrowserOAuth
+	}
+	if isLinearMCPPolicy(policy) {
+		return linearBrowserOAuth
+	}
+	if isKlingMCPLoginPolicy(policy) {
+		return klingBrowserOAuth
+	}
+	return teambitionBrowserOAuth
+}
+func (s *Service) klingCallbackURL() (string, error) {
+	u, e := url.Parse(s.config.Authentication.RedirectURI)
+	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
+		return "", fmt.Errorf("%w: Kling AI requires platform HTTPS origin", domain.ErrInvalid)
+	}
+	return "https://" + u.Host + klingOAuthCallbackPath, nil
+}
+
+type linearConnectorAuthorizationDriver struct{ client *linearmcp.Client }
+
+func (d linearConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d linearConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d linearConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, linearmcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, linearmcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return linearGrant(v), e
+}
+func (d linearConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return linearGrant(v), e
+}
+func linearGrant(v linearmcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type pixsoConnectorAuthorizationDriver struct{ client *pixsomcp.Client }
+
+func (d pixsoConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d pixsoConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	v, e := d.client.Begin(ctx, scopes)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt}, e
+}
+func (d pixsoConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, pixsomcp.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, pixsomcp.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return pixsoGrant(v), e
+}
+func (d pixsoConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return pixsoGrant(v), e
+}
+func pixsoGrant(v pixsomcp.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{AccessToken: v.AccessToken, RefreshToken: v.RefreshToken, ClientID: v.ClientID, Scopes: v.Scopes, ExpiresAt: v.ExpiresAt, RefreshExpiresAt: v.RefreshExpiresAt}
+}
+
+type camscannerConnectorAuthorizationDriver struct{ client *camscannercli.Client }
+
+func (d camscannerConnectorAuthorizationDriver) Application(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (d camscannerConnectorAuthorizationDriver) Begin(ctx context.Context, _, _ string, scopes []string) (connectorAuthorizationChallenge, error) {
+	if len(scopes) != 0 {
+		return connectorAuthorizationChallenge{}, fmt.Errorf("%w: CamScanner CLI login does not accept granular scopes", domain.ErrInvalid)
+	}
+	v, e := d.client.Begin(ctx)
+	return connectorAuthorizationChallenge{State: v.State, ActionURL: v.ActionURL, ExpiresAt: v.ExpiresAt}, e
+}
+func (d camscannerConnectorAuthorizationDriver) Poll(ctx context.Context, _, _, state string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Poll(ctx, state)
+	if errors.Is(e, camscannercli.ErrPending) {
+		e = errConnectorAuthorizationPending
+	}
+	if errors.Is(e, camscannercli.ErrExpired) {
+		e = errConnectorAuthorizationExpired
+	}
+	return camscannerGrant(v), e
+}
+func (d camscannerConnectorAuthorizationDriver) Refresh(ctx context.Context, id, _, token string) (connectorAuthorizationGrant, error) {
+	v, e := d.client.Refresh(ctx, id, token)
+	return camscannerGrant(v), e
+}
+func camscannerGrant(v camscannercli.Grant) connectorAuthorizationGrant {
+	return connectorAuthorizationGrant{ExternalID: v.UserID, DisplayName: v.UserID, AccessToken: v.Token, RefreshToken: v.Token, ExpiresAt: v.ExpiresAt, IsDomestic: v.IsDomestic}
 }
 
 type notionConnectorAuthorizationDriver struct{ login *notioncli.Login }
@@ -207,6 +349,27 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 	if err := validateInteractiveConnectorDriver(policy); err != nil {
 		return nil, err
 	}
+	if isLinearMCPPolicy(policy) {
+		redirect, err := service.linearCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return linearConnectorAuthorizationDriver{client: linearmcp.NewClient(redirect)}, nil
+	}
+	if isPixsoMCPPolicy(policy) {
+		redirect, err := service.pixsoCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return pixsoConnectorAuthorizationDriver{client: pixsomcp.NewClient(redirect)}, nil
+	}
+	if isKlingMCPLoginPolicy(policy) {
+		redirect, err := service.klingCallbackURL()
+		if err != nil {
+			return nil, err
+		}
+		return klingConnectorAuthorizationDriver{client: klingmcp.NewClient(redirect)}, nil
+	}
 	if policy.CLI.AuthenticationDriver == "dingtalk" {
 		return dingtalkConnectorAuthorizationDriver{client: dingtalkcli.NewClient()}, nil
 	}
@@ -216,6 +379,9 @@ func (service *Service) interactiveConnectorDriver(policy connectorRevisionPolic
 			return nil, err
 		}
 		return teambitionConnectorAuthorizationDriver{client: teambitioncli.NewClient(redirect)}, nil
+	}
+	if isCamScannerCLILoginPolicy(policy) {
+		return camscannerConnectorAuthorizationDriver{client: camscannercli.NewClient()}, nil
 	}
 	if isNotionCLILoginPolicy(policy) {
 		return notionConnectorAuthorizationDriver{login: notioncli.NewLogin()}, nil

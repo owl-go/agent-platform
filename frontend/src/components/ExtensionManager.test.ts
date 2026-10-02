@@ -214,13 +214,86 @@ describe("ExtensionManager", () => {
     } finally { wrapper.unmount(); }
   });
 
-  it.each([false, true])("opens Teambition browser OAuth and upgrades old installations first (old: %s)", async (old) => {
-    const installation = { id: "teambition-installation", source: "teambition", active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
-    const scopes = ["user:read", "project:read", "task:read", "task:write"];
-    const publication = { source: "teambition", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "teambition", package_version: "0.3.5", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+  function picsetFixture(old = false) {
+    let authorized = false;
+    const installation = { id: "picset-installation", source: "picset-ai", active_revision_id: "picset-revision", state: "active" as const, authorized: false, version: 3, package_version: "0.1.1", name: "Picset AI", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const upgraded = { ...installation, version: 4, upgrade_available: false };
+    const publication = { source: "picset-ai", active_revision_id: "picset-revision", state: "available" as const, version: 1, revision: { id: "picset-revision", source: "picset-ai", package_version: "0.1.1", mode: "cli" as const, sha256: "a".repeat(64), name: "Picset AI", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: [] } };
+    const connectConnector = vi.fn(async () => { authorized = true; return { ...upgraded, authorized }; });
+    const upgradeConnectorInstallation = vi.fn(async () => upgraded);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [{ ...installation, authorized }]), listConnectorAuthorizations: vi.fn(async () => []), connectConnector, upgradeConnectorInstallation } as unknown as PlatformApi;
+    return { api, installation, connectConnector, upgradeConnectorInstallation };
+  }
+  async function openPicset(wrapper: ReturnType<typeof mountManager>) {
+    await flushPromises();
+    await connectPublished(wrapper);
+    await flushPromises();
+    return new DOMWrapper(document.body).get(".provided-connector-form");
+  }
+  it("keeps the existing Picset AI token flow available from connector guidance details", async () => {
+    const fixture = picsetFixture(), wrapper = mountManager(fixture.api);
+    try {
+      await flushPromises();
+      await wrapper.get(".published-connector-card").trigger("click"); await flushPromises();
+      const details = new DOMWrapper(document.body).get(".connector-details");
+      expect(details.text()).toContain("试试这样用");
+      await details.findAll("button").find(item => item.text() === "连接")!.trigger("click"); await flushPromises();
+      const form = new DOMWrapper(document.body).get(".provided-connector-form");
+      expect(form.get('input[name="picset_api_key"]').attributes("type")).toBe("password");
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it.each([false, true])("connects Picset AI with one masked token and upgrades first when needed (%s)", async old => {
+    const fixture = picsetFixture(old), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openPicset(wrapper);
+      expect(form.get('input[name="picset_api_key"]').attributes("type")).toBe("password");
+      expect(form.find('input[name="bot_id"]').exists()).toBe(false);
+      expect(form.get('a[href="https://picsetai.cn/developer-api"]').attributes("rel")).toContain("noopener");
+      await form.get('input[name="picset_api_key"]').setValue("sk_live_fixture");
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledWith(fixture.installation.id, "user", [], JSON.stringify({ picset_api_key: "sk_live_fixture" }));
+      expect(fixture.upgradeConnectorInstallation).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(fixture.upgradeConnectorInstallation.mock.invocationCallOrder[0]).toBeLessThan(fixture.connectConnector.mock.invocationCallOrder[0]!);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+      expect(wrapper.get(".published-connector-card .connector-installed-mark").attributes("aria-label")).toBe("已安装");
+    } finally { wrapper.unmount(); }
+  });
+  it.each(["", "token with-space", "sk_live_" + "x".repeat(4096)])("rejects invalid Picset AI tokens locally", async token => {
+    const fixture = picsetFixture(), wrapper = mountManager(fixture.api);
+    try {
+      const form = await openPicset(wrapper);
+      await form.get('input[name="picset_api_key"]').setValue(token);
+      await form.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).not.toHaveBeenCalled();
+    } finally { wrapper.unmount(); }
+  });
+  it("retains a failed Picset AI token for retry and clears it on cancellation", async () => {
+    const fixture = picsetFixture(), wrapper = mountManager(fixture.api);
+    fixture.connectConnector.mockRejectedValueOnce(new ApiError("validation", 422, "invalid_token"));
+    try {
+      const form = await openPicset(wrapper);
+      await form.get('input[name="picset_api_key"]').setValue("sk_live_fixture");
+      await form.trigger("submit"); await flushPromises();
+      expect((form.get('input[name="picset_api_key"]').element as HTMLInputElement).value).toBe("sk_live_fixture");
+      await form.get('button[type="button"]').trigger("click"); await flushPromises();
+      const reopened = await openPicset(wrapper);
+      expect((reopened.get('input[name="picset_api_key"]').element as HTMLInputElement).value).toBe("");
+      await reopened.get('input[name="picset_api_key"]').setValue("sk_live_retry");
+      await reopened.trigger("submit"); await flushPromises();
+      expect(fixture.connectConnector).toHaveBeenCalledTimes(2);
+      expect(document.querySelector(".provided-connector-form")).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
+  it.each([["teambition", false], ["teambition", true], ["camscanner", false], ["camscanner", true]] as const)("opens reviewed browser authorization and upgrades old installations first (source: %s, old: %s)", async (source, old) => {
+    const installation = { id: "teambition-installation", source, active_revision_id: "revision-tb", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.3.4" : "0.3.5", name: "钉钉项目", description: "", authentication_driver: "connector_package", upgrade_available: old };
+    const scopes = source === "camscanner" ? [] : ["user:read", "project:read", "task:read", "task:write"];
+    const actionURL = source === "camscanner" ? "https://www.camscanner.com/agent-auth?from=callback" : "https://account.teambition.com/oauth2/mcp/authorize?state=sealed&code_challenge=challenge";
+    const publication = { source, active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source, package_version: "0.3.5", mode: "cli", sha256: "a".repeat(64), name: "钉钉项目", description: "", icon: "plug", authentication_driver: "connector_package", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
     const upgraded = { ...installation, package_version: "0.3.5", upgrade_available: false, version: 2 };
     const upgrade = vi.fn(async () => upgraded);
-    const begin = vi.fn(async () => ({ id: "flow-tb", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://account.teambition.com/oauth2/mcp/authorize?state=sealed&code_challenge=challenge" }));
+    const begin = vi.fn(async () => ({ id: "flow-tb", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: actionURL }));
     const replace = vi.fn();
     vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
     const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
@@ -232,11 +305,63 @@ describe("ExtensionManager", () => {
       expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
       if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
       expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
-      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://account.teambition.com/oauth2/mcp/authorize"));
+      expect(replace).toHaveBeenCalledWith(actionURL);
       expect(api.connectConnector).not.toHaveBeenCalled();
       expect(api.beginConnectorSetup).not.toHaveBeenCalled();
       expect(document.querySelector('input[name="user_token"]')).toBeNull();
-      expect(wrapper.find('a[href^="https://account.teambition.com/"]').exists()).toBe(true);
+      expect(wrapper.findAll("a").some(a => a.attributes("href")?.startsWith(actionURL.split("?")[0]!))).toBe(true);
+    } finally { wrapper.unmount(); }
+  });
+
+  it.each([false, true])("opens Linear browser OAuth and upgrades old installations first (old: %s)", async (old) => {
+    const installation = { id: "linear-installation", source: "linear", active_revision_id: "revision-linear", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.9.0" : "1.0.0", name: "Linear", description: "", authentication_driver: "", upgrade_available: old };
+    const scopes = ["read", "write"];
+    const publication = { source: "linear", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "linear", package_version: "1.0.0", mode: "mcp", sha256: "a".repeat(64), name: "Linear", description: "", icon: "plug", authentication_driver: "", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+    const upgraded = { ...installation, package_version: "1.0.0", upgrade_available: false, version: 2 };
+    const upgrade = vi.fn(async () => upgraded);
+    const begin = vi.fn(async () => ({ id: "flow-linear", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://mcp.linear.app/authorize?state=sealed&code_challenge=challenge" }));
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      await connectPublished(wrapper);
+      await flushPromises();
+      expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
+      expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://mcp.linear.app/authorize"));
+      expect(api.connectConnector).not.toHaveBeenCalled();
+      expect(api.beginConnectorSetup).not.toHaveBeenCalled();
+      expect(document.querySelector('input[name="user_token"]')).toBeNull();
+      expect(wrapper.find('a[href^="https://mcp.linear.app/"]').exists()).toBe(true);
+    } finally { wrapper.unmount(); }
+  });
+
+  it.each([false, true])("opens Pixso browser OAuth and upgrades old installations first (old: %s)", async (old) => {
+    const installation = { id: "pixso-installation", source: "pixso", active_revision_id: "revision-pixso", state: "active" as const, authorized: false, version: 1, package_version: old ? "0.9.0" : "1.0.0", name: "Pixso", description: "", authentication_driver: "", upgrade_available: old };
+    const scopes = ["mcp:connect"];
+    const publication = { source: "pixso", active_revision_id: "revision-new", state: "available" as const, version: 2, revision: { id: "revision-new", source: "pixso", package_version: "1.0.0", mode: "mcp", sha256: "a".repeat(64), name: "Pixso", description: "", icon: "plug", authentication_driver: "", runtime_digests: [], conformance_available: true, required_scopes: scopes } };
+    const upgraded = { ...installation, package_version: "1.0.0", upgrade_available: false, version: 2 };
+    const upgrade = vi.fn(async () => upgraded);
+    const begin = vi.fn(async () => ({ id: "flow-pixso", installation_id: installation.id, identity: "user", scopes, state: "waiting_for_user", action_url: "https://pixso.net/api/user/pixso/oauth2/authorize?state=sealed&code_challenge=challenge" }));
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({ location: { replace }, closed: false } as unknown as Window);
+    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listConnectorPublications: vi.fn(async () => [publication]), listConnectorInstallations: vi.fn(async () => [upgrade.mock.calls.length ? upgraded : installation]), listConnectorAuthorizations: vi.fn(async () => []), upgradeConnectorInstallation: upgrade, connectConnector: vi.fn(), beginConnectorSetup: vi.fn(), beginConnectorAuthorizationFlow: begin } as unknown as PlatformApi;
+    const wrapper = mountManager(api);
+    try {
+      await flushPromises();
+      await connectPublished(wrapper);
+      await flushPromises();
+      expect(upgrade).toHaveBeenCalledTimes(old ? 1 : 0);
+      if (old) expect(upgrade.mock.invocationCallOrder[0]).toBeLessThan(begin.mock.invocationCallOrder[0]!);
+      expect(begin).toHaveBeenCalledWith(installation.id, "user", scopes);
+      expect(replace).toHaveBeenCalledWith(expect.stringContaining("https://pixso.net/api/user/pixso/oauth2/authorize"));
+      expect(api.connectConnector).not.toHaveBeenCalled();
+      expect(api.beginConnectorSetup).not.toHaveBeenCalled();
+      expect(document.querySelector('input[name="user_token"]')).toBeNull();
+      expect(wrapper.find('a[href^="https://pixso.net/"]').exists()).toBe(true);
     } finally { wrapper.unmount(); }
   });
 
@@ -601,6 +726,9 @@ describe("ExtensionManager", () => {
     expect(skillGroups[1]!.text()).toContain("我的技能");
     expect(skillGroups[1]!.text()).toContain(mySkill.name);
     expect(skillGroups[1]!.text()).toContain("安装包校验通过");
+    for (const group of skillGroups) {
+      expect(group.find(".skill-card-copy small").exists()).toBe(false);
+    }
 
     await wrapper.setProps({ mineOnly: true });
     await flushPromises();
@@ -714,19 +842,24 @@ describe("ExtensionManager", () => {
     wrapper.unmount();
   });
 
-  it("shows the uploaded Skill description from its document", async () => {
+  it.each([
+    ["zh-CN", "创建、读取并检查 PDF 文档。"],
+    ["en", "Process PDFs."],
+  ])("shows the Skill description without redundant execution or revision metadata in %s", async (language, description) => {
     const saved: Skill = { id: "skill-1", name: "PDF", source: "upload", sha256: "a".repeat(64), ...timestamps };
     const api = {
       listMCPServers: vi.fn(async () => []),
       listSkills: vi.fn(async () => [saved]),
       getSkillDocument: vi.fn(async () => ({ skill: saved, content: "---\nname: pdf\ndisplay_name: PDF 文档处理\ndescription: Process PDFs.\ndescription_zh: 创建、读取并检查 PDF 文档。\n---\n# PDF" })),
     } as unknown as PlatformApi;
-    const wrapper = mountManager(api, false, "zh-CN", true);
+    const wrapper = mountManager(api, false, language, true);
     await flushPromises();
     await wrapper.findAll(".subtabs button")[0]!.trigger("click");
 
-    expect(wrapper.text()).toContain("创建、读取并检查 PDF 文档。");
+    expect(wrapper.text()).toContain(description);
     expect(wrapper.text()).toContain("PDF 文档处理");
+    expect(wrapper.get(".skill-card-copy").find("small").exists()).toBe(false);
+    expect(wrapper.find(".resource-trust-meta [data-kind='status']").exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -1155,4 +1288,15 @@ it("disconnects every connector grant but preserves installation, then uninstall
   expect(wrapper.find(".connector-summary-card .connector-installed-mark").exists()).toBe(false);
   expect(wrapper.find('.connector-summary-card button[aria-label="安装"]').exists()).toBe(true);
   wrapper.unmount();
+});
+
+it("connects an installed Kling MCP through browser OAuth with reviewed scopes", async () => {
+ const scopes=["generation.create","generation.read","account.credit.read"];
+ const installation={id:"kling-installation",source:"kling-ai",active_revision_id:"kling-revision",state:"active" as const,authorized:false,version:1,package_version:"0.1.0",name:"可灵 AI",description:"",mode:"mcp" as const,authentication_driver:"oauth",upgrade_available:false};
+ const publication={source:"kling-ai",active_revision_id:"kling-revision",state:"available" as const,version:1,revision:{id:"kling-revision",source:"kling-ai",package_version:"0.1.0",mode:"mcp" as const,sha256:"a".repeat(64),name:"可灵 AI",description:"",icon:"plug",authentication_driver:"oauth",runtime_digests:[],conformance_available:true,required_scopes:scopes}};
+ const begin=vi.fn(async()=>({id:"flow",installation_id:installation.id,identity:"user",scopes,state:"waiting_for_user",action_url:"https://klingai.com/auth/authorize?client_id=client"}));
+ const api={listMCPServers:vi.fn(async()=>[]),listSkills:vi.fn(async()=>[]),listCLIConnectorDefinitions:vi.fn(async()=>[]),listCLIConnectorEnablements:vi.fn(async()=>[]),listConnectorPublications:vi.fn(async()=>[publication]),listConnectorInstallations:vi.fn(async()=>[installation]),listConnectorAuthorizations:vi.fn(async()=>[]),beginConnectorAuthorizationFlow:begin,beginConnectorSetup:vi.fn(),connectConnector:vi.fn()} as unknown as PlatformApi;
+ const wrapper=mountManager(api);
+ try {await flushPromises();const details=await openDetails(wrapper);expect(details.text()).toContain("安装包校验通过");expect(details.text()).not.toContain("运行环境已验证");expect(details.text()).not.toContain("已通过运行验证");await details.findAll("button").find(b=>b.text()==="连接")!.trigger("click");await flushPromises();expect(begin).toHaveBeenCalledWith(installation.id,"user",scopes);expect(api.beginConnectorSetup).not.toHaveBeenCalled();expect(api.connectConnector).not.toHaveBeenCalled();}
+ finally {wrapper.unmount();}
 });
