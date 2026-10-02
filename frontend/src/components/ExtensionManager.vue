@@ -202,7 +202,7 @@ function connectorCategory(source: string) {
   if (["caoliao", "camscanner"].includes(source)) return "productivity";
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
-  if (["teambition", "linear"].includes(source)) return "projects";
+  if (["teambition", "linear", "github"].includes(source)) return "projects";
   if (["modao", "picset-ai", "kling-ai", "pixso", "ai-hive"].includes(source)) return "design";
   return "other";
 }
