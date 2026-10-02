@@ -88,7 +88,7 @@ describe("ResourceCenterPage", () => {
     }
   });
 
-  it("organizes all reusable resources into one searchable library", async () => {
+  it("organizes reusable resources without a redundant catalog search", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/resources");
     await router.isReady();
@@ -101,7 +101,8 @@ describe("ResourceCenterPage", () => {
     await flushPromises();
 
     expect(wrapper.find(".resource-center-tabs").exists()).toBe(false);
-    expect(wrapper.find(".resource-center-toolbar .el-input").exists()).toBe(true);
+    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(false);
+    expect(wrapper.getComponent(ExpertsPage).props("catalogQuery")).toBe("");
     expect(wrapper.find(".resource-center-toolbar .el-radio-group").exists()).toBe(false);
     expect(wrapper.find(".resource-center-filter-hint").exists()).toBe(false);
     expect(wrapper.getComponent(ExpertsPage).props("availableOnly")).toBe(false);
@@ -118,7 +119,7 @@ describe("ResourceCenterPage", () => {
     expect(wrapper.get(".extension-catalog-toolbar").text()).toContain("添加技能");
     expect(wrapper.find(".resource-tabs").exists()).toBe(false);
 
-    await router.push("/resources?tab=knowledge");
+    await router.push("/resources?tab=knowledge&q=obsolete-search");
     await flushPromises();
     expect(router.currentRoute.value.query.tab).toBe("knowledge");
     expect(wrapper.get(".knowledge-card").text()).toContain("交付手册");
@@ -130,13 +131,13 @@ describe("ResourceCenterPage", () => {
     await flushPromises();
     expect(wrapper.find(".resource-center-toolbar").exists()).toBe(false);
     await wrapper.get(".knowledge-back").trigger("click");
-    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(true);
+    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(false);
     await wrapper.get(".knowledge-card").trigger("click");
     await router.push("/resources?tab=experts");
     await flushPromises();
-    await router.push("/resources?tab=knowledge");
+    await router.push("/resources?tab=knowledge&q=obsolete-search");
     await flushPromises();
-    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(true);
+    expect(wrapper.find(".resource-center-toolbar").exists()).toBe(false);
     wrapper.unmount();
   });
 });
