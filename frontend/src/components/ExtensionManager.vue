@@ -200,7 +200,7 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
 function connectorCategory(source: string) {
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
-  if (source === "teambition") return "projects";
+  if (["teambition", "github"].includes(source)) return "projects";
   if (source === "modao") return "design";
   return "other";
 }

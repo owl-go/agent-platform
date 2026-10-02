@@ -1112,7 +1112,7 @@ describe("ExtensionManager", () => {
 });
 
 it("groups real connector sources, filters installed/search, and installs without opening a modal", async () => {
-  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "modao", "custom"];
+  const sources = ["feishu", "dingtalk", "wecom", "notion", "teambition", "github", "modao", "custom"];
   const publications = sources.map(source => ({ source, state: "available", revision: { name: source, description: `Description ${source}`, mode: "cli", conformance_available: true } }));
   const installations: Array<{ id: string; source: string; name: string; state: string; authorized: boolean; version: number }> = [{ id: "notion-id", source: "notion", name: "notion", state: "active", authorized: false, version: 1 }];
   const install = vi.fn(async (source: string) => { installations.push({ id: `${source}-id`, source, name: source, state: "active", authorized: false, version: 1 }); });
@@ -1120,6 +1120,8 @@ it("groups real connector sources, filters installed/search, and installs withou
   const wrapper = mountManager(api);
   await flushPromises();
   expect(wrapper.findAll(".catalog-group-title").map(title => title.text())).toEqual(["沟通协作", "知识文档", "项目管理", "设计创作", "其他"]);
+  const projects = wrapper.findAll(".catalog-group").find(group => group.get("h2").text() === "项目管理")!;
+  expect(projects.findAll(".connector-summary-card").map(card => card.attributes("aria-label"))).toEqual(["teambition", "github"]);
   const card = (name: string) => wrapper.get(`.connector-summary-card[aria-label="${name}"]`);
   expect(card("notion").find(".connector-installed-mark").exists()).toBe(true);
   expect(card("notion").text()).not.toContain("需要设置");
