@@ -25,7 +25,7 @@ docker compose --env-file "$HOME/.local/share/agent-platform-ragflow/local.env" 
   -f "$HOME/.local/share/agent-platform-ragflow/deployment/compose.yaml" up -d
 ```
 
-Register a dedicated local RAGFlow account, verify that `bge-m3:aw-790764642607@Ollama` is configured under Embedding, and generate an API token in its settings. Registration is local; the gateway never exposes it. Test dataset creation, parsing and retrieval before enabling the platform provider.
+Register a dedicated local RAGFlow account, verify that `bge-m3:aw-790764642607@Ollama` is configured under Embedding, and generate an API token in its settings. Registration is local; the gateway never exposes it. Test dataset creation, parsing and retrieval before enabling the platform provider. Model configuration belongs to each RAGFlow account: a new account must register the same Ollama alias before using it. Before replacing an API token, verify that it can access existing datasets; switching accounts requires copying retained revisions and updating their trusted provider mappings before activation.
 
 ## Tunnel
 
