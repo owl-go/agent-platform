@@ -146,8 +146,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .auth-content { display: grid; justify-items: center; gap: var(--aw-space-3); min-width: 0; text-align: center; }
 .auth-content h1 { margin: 0; color: var(--aw-n10); font-family: var(--aw-font-sans); font-size: var(--aw-font-size-title); font-weight: 700; line-height: var(--aw-line-height-title); overflow-wrap: anywhere; }
 .auth-content p { text-wrap: balance; margin: 0; color: var(--aw-n7); font-size: var(--aw-font-size-body); line-height: var(--aw-line-height-body); overflow-wrap: anywhere; }
-.auth-card .auth-sign-in.el-button { box-shadow: none; width: 100%; margin-top: var(--aw-space-3); border-radius: var(--aw-radius-control); font-weight: 600; }
-.auth-sign-in.el-button > span { display: flex; align-items: center; gap: var(--aw-space-2); }
 .auth-loading { color: var(--aw-n7); animation: spin 1.2s linear infinite; }
 .auth-error-icon { color: var(--aw-danger); }
 

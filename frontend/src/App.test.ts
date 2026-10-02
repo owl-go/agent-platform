@@ -60,22 +60,18 @@ afterEach(() => vi.useRealTimers());
 
 describe("App authentication screen", () => {
   it.each([
-    ["zh-CN", "登录后开始使用", "登录"],
-    ["en-US", "Sign in to continue", "Sign in"],
-  ] as const)("keeps one localized login action and the existing OIDC entry in %s", async (locale, title, action) => {
+    ["zh-CN", "正在连接工作空间"],
+    ["en-US", "Connecting to your workspace"],
+  ] as const)("shows only the transition state while authentication redirects in %s", async (locale, title) => {
     const auth = authContext();
-    auth.session.state.value = { kind: "unauthenticated", reason: "missing" };
+    auth.session.state.value = { kind: "checking" };
     const wrapper = await mountAt("/home", defaultApi, auth, locale);
 
     expect(wrapper.get("main").attributes("aria-labelledby")).toBe("auth-title");
     expect(wrapper.findAll("h1").map((heading) => heading.text())).toEqual([title]);
-    expect(wrapper.get(".auth-brand").text()).toContain("Agent Workspace");
-    expect(wrapper.find(".eyebrow").exists()).toBe(false);
-    expect(wrapper.findAll("button")).toHaveLength(1);
-    expect(wrapper.get("button").text()).toBe(action);
+    expect(wrapper.find("button").exists()).toBe(false);
     expect(wrapper.find(".app-shell").exists()).toBe(false);
-    await wrapper.get("button").trigger("click");
-    expect(auth.session.signIn).toHaveBeenCalledOnce();
+    expect(auth.session.initialize).toHaveBeenCalledWith(false);
     wrapper.unmount();
   });
 
