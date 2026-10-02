@@ -1,6 +1,6 @@
 # 用友好会计 MCP Connector Package
 
-当前交付是官方配置导入器和 companion Skill。没有企业授权配置，因此尚未生成真实好会计 ZIP，也没有完成安装、发布、MCP 握手或业务查询。构建器要求输入真实配置，不填入猜测的服务 ID；测试 fixture 不作为交付包。
+当前交付是官方配置导入器和 companion Skill，工具已部署到服务器。没有企业授权配置，因此尚未生成真实好会计 ZIP，也没有完成安装、发布、MCP 握手或业务查询。构建器要求输入真实配置，不填入猜测的服务 ID；测试 fixture 不作为交付包。
 
 ## 调研结论（2026-10-02）
 
@@ -52,3 +52,9 @@ make build
 测试覆盖配置拒绝边界、凭证不进入 ZIP、固定品牌资产和真实 Go Parse；它们不证明 MCP 连通或财税功能。未运行 Linux + runsc MCP 隔离检查、真实账号调用、目录图标和未授权卡片验收。没有 CLI bundle，因此无 CLI exact bundle × Runtime Conformance 记录。
 
 2026-10-02 已实际执行上述命令：9 项 Python 测试、目标 Go 包测试、完整 Go 测试和构建均通过。真实 Go Parse 验证的是测试目录临时生成的 synthetic fixture ZIP，验证后已删除；它不是目标企业的交付包。未修改 Web，因此没有运行 Web 门禁；未执行 Runtime 镜像、远端存储或 Production Conformance 门禁，常规单元测试不能代替这些真实环境证据。
+
+## 工具部署（2026-10-02）
+
+集成提交 `4f785bac0b05b83f67f25b9781f5a5ab75fff2ed` 已推送到 `main_temp`。服务器 `agent-platform` 的工具入口为 `/opt/agent-platform/connectors/haokuaiji/current/scripts/connectors/haokuaiji/build.py`，激活版本为 `haokuaiji-tooling-4f785bac0b05`。版本目录同时携带该集成提交的 Go 包解析器源码与依赖声明；上传和激活前核对全部 33 个源文件 SHA-256。
+
+服务器实际执行了 9 项 Python 测试、Go 解析器包测试及完整命令行构建／Parse smoke，均通过。smoke 只使用立即清理的 synthetic fixture，未发起畅捷通请求，也未写入平台 Revision、Publication、Installation 或 Authorization。该部署没有启动或替换 API/Worker/Web 服务；部署后公网 Health 为 `ok`、Readiness 为 `ready`。详细证据见仓库 `docs/evidence/agent-workspace/2026-10-02-haokuaiji-tooling-deployment.md`。
