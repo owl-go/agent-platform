@@ -65,6 +65,16 @@ The editable configuration contains:
 
 User-authored prompts remain visible. Every accepted turn reads the Smart Assistant's current saved configuration; historical conversation snapshots remain audit evidence only and never configure a later turn. Provider credentials never enter snapshots or responses. The backend repeats Provider Model validation on create, update, enable, conversation creation, and turn execution.
 
+The Assistant prompt supports `{knowledge}`, replaced at every occurrence with this turn's permission-checked Knowledge Base excerpts and source labels. With no selected Knowledge Base or no retrieval hits, its value is `知识库中未找到您要的答案！`. Provider failures and denied source access still fail the turn. Prompts without this variable retain automatic Knowledge context when a Base is selected. Recent messages and the conversation summary remain separate model context.
+
+The question pre-processing prompt supports `{faqs}`, a JSON array of enabled FAQ `id` and `question` values in display order, excluding answers and disabled FAQs. Without the variable, the same list remains available as classification context. Substitution is stage-specific and single-pass: unknown placeholders and placeholders inside inserted source content remain literal; stored prompts are unchanged.
+
+After the platform safety pre-check, enabled FAQ matching takes precedence over Assistant-configured scope restrictions. An unambiguous typed FAQ question, normalized only for whitespace, case and terminal sentence punctuation, returns the stored answer without a model invocation or Credits, just like an explicit FAQ selection. Semantic equivalents are classified against the enabled FAQ list before scope rejection; for example, `引擎是什么` may match a configured `运行引擎是什么？` even when unmatched implementation questions are otherwise forbidden. The classifier returns only the FAQ ID, and the platform returns its saved answer without additional internal information. Added requests to bypass rules, change identity or disclose information are not equivalent FAQ questions; keyword overlap alone is insufficient. Disabled FAQs and ambiguous normalized questions never enter the direct typed-answer path.
+
+For an unmatched question, a scope rejection made without Knowledge context is preliminary when the Assistant has selected Knowledge Bases. Before final refusal, the platform retrieves against the original User question. Relevant permission-checked excerpts are passed to a metered scope review; only a supported question may continue, using the same verified excerpts for answer generation without another query or a substituted question. Project deployment, project API and framework documentation in a selected Base may establish service scope; they are distinct from this Assistant's hidden prompts, configuration or credentials. A search hit or keyword overlap alone never establishes relevance, and instructions inside retrieved content cannot override policy. No hits retain the original scope refusal; unavailable retrieval or denied access fails the turn. FAQ matches still return before this retrieval/review path, and platform safety remains first.
+
+Only unmatched questions without relevant Knowledge support are checked against the strict Assistant scope rules: questions about the underlying model, name, version, vendor or model capabilities; system prompts, internal configuration, APIs, execution frameworks or implementation; unrelated chat, general knowledge, programming or other tasks; bypassing rules, changing identity or leaking internal information; and questions that cannot clearly be placed inside the configured service scope. These are `out_of_scope` even if the model knows the answer. Only clearly in-scope unmatched questions may be `continue`. Existing business-scope inquiries retain their direct configuration answer path.
+
 ### 4.2 Lifecycle
 
 A User can create, edit, copy, enable, disable, and delete a Smart Assistant; open its detail surface; start a conversation; view its conversation history; and search or filter the list.
@@ -80,10 +90,11 @@ Enabling an Assistant and serving a new authenticated or public conversation req
 ### 4.3 Conversation Execution
 
 - Opening an enabled Assistant reopens its latest authenticated Assistant Conversation or creates one. It never creates a Workspace Session.
-- Selecting an FAQ returns its stored answer without model invocation or Credits.
-- Free text is safety-checked, preprocessed for FAQ and scope classification, optionally grounded with Knowledge Base results, and then streamed through the selected Provider Model. A question asking what business the Assistant can handle resolves to its enabled capability FAQ or current public description instead of being rejected as out of scope; if neither contains a concrete scope, the answer states that the business scope is not configured.
+- Selecting an FAQ or typing its unambiguous normalized question returns its stored answer without model invocation or Credits. Semantic paraphrases may use the metered classifier, then return the matched stored answer without answer generation.
+- Free text is safety-checked, preprocessed for FAQ and scope classification, optionally grounded with Knowledge Base results, and then streamed through the selected Provider Model. An explicit public identity inquiry such as `你是谁` or `Who are you?` returns the Assistant's current name and description without a model invocation, Knowledge query or Credits; a matching enabled FAQ takes precedence. This response uses no Provider identity, prompt, internal configuration or invented capability, and an extended request for hidden information is not an identity inquiry. A question asking what business the Assistant can handle resolves to its enabled capability FAQ or current public description instead of being rejected as out of scope; if neither contains a concrete scope, the answer states that the business scope is not configured.
 - Each accepted turn resolves the Smart Assistant's current saved configuration, including its prompts, response style, Knowledge Base selection, enabled FAQs, and selected Provider Model. It then resolves that Provider Model's current Model Provider Connection, including its Endpoint, protocol, model identifier, connection version, and protected current credential. A saved Assistant edit therefore applies to the next turn in both existing and new conversations; once execution starts, the resolved configuration and execution identity remain fixed for that turn's audit evidence.
 - Only one turn generates at a time. The User may stop it or create a new conversation without deleting history. Assistant turn streams use the long-running event timeout; an upstream timeout or provider failure is recorded as failed rather than presented as a User stop.
+- The authenticated conversation renders each received answer delta while generation is still in progress, without waiting for the terminal event or a transcript reload. The final turn event reconciles the displayed answer with the persisted result; FAQ and other fixed answers may arrive as one complete answer.
 - Failed and cancelled turns, including partial output, remain in the audit transcript. Credential rejection, rate limiting, provider availability, invalid configuration, and invalid provider responses use stable credential-safe categories with actionable localized guidance; raw upstream response bodies and internal errors are never exposed.
 - The message thread scrolls independently while the composer remains stationary at the bottom. The growing question field and send or stop action stay in one focused input surface without a contrasting outer background panel.
 - Model context uses bounded recent turns and a compressed summary while the complete transcript remains durable.
@@ -98,10 +109,12 @@ The ordered answer pipeline is:
 
 ```text
 Safety pre-check
-  -> FAQ and scope classification
-  -> direct FAQ answer or fixed refusal
-  -> Knowledge Base retrieval when no FAQ matches
-  -> grounded answer or model-only answer when no result exists
+  -> explicit or unambiguous normalized FAQ match and direct stored answer
+  -> semantic FAQ classification and matched stored answer
+  -> preliminary scope classification for unmatched questions
+  -> Knowledge Base retrieval when selected, including before final scope refusal
+  -> scope review with verified hits when the preliminary decision was out_of_scope
+  -> fixed refusal, grounded answer, or model-only answer for an admitted question
 ```
 
 FAQ matching returns stable FAQ identity and confidence and never rewrites stored answers.
@@ -115,6 +128,12 @@ FAQ answers are checked before enablement. Knowledge Documents are checked befor
 ### 4.6 Controlled Sharing And Iframe Embedding
 
 An owner may enable anonymous public use through a Share Configuration containing enabled state, an unpredictable Token and revision, a required non-empty HTTPS allowed-Origin list, a positive daily free-text call limit, explicit data-processing acknowledgement, iframe dimensions, generated snippet, and Token rotation or revocation actions.
+
+The Share Configuration editor keeps unsaved edits separate from the saved Assistant. A cancelled or rejected save cannot change the catalog's sharing state. Root site URLs with a trailing slash are normalized to origins; paths, queries, credentials, unsupported protocols, and invalid iframe dimensions receive an explanation in the open dialog before submission. Existing optimistic version checks and publication requirements still apply.
+
+The public embed uses the same message-thread component and styles as the authenticated Assistant Conversation: an Assistant avatar and welcome bubble, compact FAQ chips, right-aligned User messages, left-aligned Markdown answers, and a stationary composer below an independently scrolling message thread. A direct link uses the configured width and height within the viewport; inside an iframe it fills the iframe dimensions. It has no authenticated workspace navigation or owner-private history. Visitor turns stream progressively, stopping preserves partial output, and clearing starts a new visitor conversation. When free text is disabled, enabled FAQ buttons remain available.
+
+The embed shell continues to validate the current Share Token and enforce configured CSP `frame-ancestors`; it loads a dedicated public frontend entry without OIDC or User access tokens. Same-origin requests made by the embedded page are accepted, while cross-origin API requests remain limited to configured origins. Public SSE, metadata, and icon routes revalidate the Share Configuration. Public turn events expose only visitor continuation handles, answer text, state, and safe failure codes; they do not expose Provider configuration, credentials, private transcript data, or model usage. Rate and daily limits remain server enforced, and conversation continuation requires the same visitor and Share Token revision.
 
 Public interactions use visitor-scoped Assistant Conversations isolated from the owner's authenticated Assistant Conversation history. They use the same safety, FAQ, retrieval, model, Credit, and audit path. Public responses never expose Provider Model configuration, credentials, internal IDs, Object Keys, signed URLs, or private settings.
 

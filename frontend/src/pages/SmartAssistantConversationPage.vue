@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ArrowLeft, ArrowUp, CircleAlert, CircleHelp, MessageCircle, RotateCcw, Square } from "@lucide/vue";
+import { ArrowLeft, ArrowUp, RotateCcw, Square } from "@lucide/vue";
 import { ApiError, platformApiKey, type AssistantConversation, type AssistantTurn, type SmartAssistantFAQ } from "../api/client";
-import { renderMarkdown } from "../markdown";
+import AssistantConversationThread from "../components/AssistantConversationThread.vue";
 
 const api = inject(platformApiKey)!;
 const route = useRoute();
@@ -25,17 +25,6 @@ const activeTurnID = ref("");
 const avatarUrl = ref("");
 let controller: AbortController | undefined;
 let avatarController: AbortController | undefined;
-
-function failureMessage(code = "") {
-  const keys: Record<string, string> = {
-    model_authentication: "failureAuthentication",
-    model_rate_limited: "failureRateLimited",
-    model_unavailable: "failureUnavailable",
-    model_configuration: "failureConfiguration",
-    model_response_invalid: "failureInvalidResponse",
-  };
-  return t(`aiApplications.chat.${keys[code] ?? "failed"}`);
-}
 
 function replaceAvatar(url = "") {
   if (avatarUrl.value && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(avatarUrl.value);
@@ -81,7 +70,7 @@ async function send(question = draft.value, faqID?: string) {
   busy.value = true;
   activeTurnID.value = "";
   draft.value = "";
-  const pending: AssistantTurn = { id: `pending-${Date.now()}`, conversation_id: conversationID.value, turn_number: turns.value.length + 1, question: text, answer: "", source: "", state: "generating", input_tokens: 0, output_tokens: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  const pending = reactive<AssistantTurn>({ id: `pending-${Date.now()}`, conversation_id: conversationID.value, turn_number: turns.value.length + 1, question: text, answer: "", source: "", state: "generating", input_tokens: 0, output_tokens: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
   turns.value.push(pending);
   controller = new AbortController();
   try {
@@ -143,35 +132,7 @@ onBeforeUnmount(() => { controller?.abort(); avatarController?.abort(); replaceA
       </div>
     </header>
     <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
-    <div v-loading="loading" class="assistant-conversation-thread" aria-live="polite">
-      <div v-if="conversation" class="assistant-conversation-message assistant-conversation-message--assistant assistant-conversation-message--welcome">
-        <div class="assistant-conversation-avatar">
-          <img v-if="avatarUrl" :src="avatarUrl" :alt="conversation.assistant_name" />
-          <MessageCircle v-else :size="20" aria-hidden="true" />
-        </div>
-        <div class="assistant-conversation-bubble">{{ conversation.welcome || t('aiApplications.chat.defaultWelcome') }}</div>
-      </div>
-      <div v-if="faqs.length" class="assistant-conversation-faqs">
-        <span class="assistant-conversation-faq-label"><CircleHelp :size="14" aria-hidden="true" />{{ t('aiApplications.faq.title') }}</span>
-        <button v-for="faq in faqs" :key="faq.id" type="button" class="assistant-conversation-faq" :disabled="busy" @click="send(faq.question, faq.id)">{{ faq.question }}</button>
-      </div>
-      <div v-for="turn in turns" :key="turn.id" class="assistant-conversation-turn">
-        <div class="assistant-conversation-message assistant-conversation-message--user">
-          <div class="assistant-conversation-bubble">{{ turn.question }}</div>
-        </div>
-        <div v-if="turn.answer || turn.state === 'generating' || turn.state === 'cancelled' || turn.state === 'failed'" class="assistant-conversation-message assistant-conversation-message--assistant" :class="{ 'assistant-conversation-message--failed': turn.state === 'failed' }">
-          <div class="assistant-conversation-avatar">
-            <img v-if="avatarUrl" :src="avatarUrl" :alt="conversation?.assistant_name || ''" />
-            <MessageCircle v-else :size="20" aria-hidden="true" />
-          </div>
-          <div class="assistant-conversation-bubble">
-            <div v-if="turn.state === 'failed'" class="assistant-conversation-failure" role="alert"><CircleAlert :size="17" aria-hidden="true" />{{ failureMessage(turn.failure_code) }}</div>
-            <div v-if="turn.answer" class="markdown-body" v-html="renderMarkdown(turn.answer)" />
-            <div v-else-if="turn.state !== 'failed'" class="assistant-conversation-thinking">{{ t(`aiApplications.chat.${turn.state === 'generating' ? 'thinking' : turn.state}`) }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AssistantConversationThread v-loading="loading" :name="conversation?.assistant_name || ''" :welcome="conversation?.welcome || ''" :avatar-url="avatarUrl" :faqs="faqs" :turns="turns" :busy="busy" @faq="send" />
     <div class="assistant-conversation-composer">
       <div class="assistant-conversation-composer-shell">
         <el-input v-model="draft" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" :maxlength="4000" :disabled="busy || loading" :placeholder="t('aiApplications.chat.placeholder')" :aria-label="t('aiApplications.chat.placeholder')" @keydown.enter.exact.prevent="send()" />

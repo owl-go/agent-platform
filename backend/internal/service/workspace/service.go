@@ -109,6 +109,8 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-apps/embedding-provider", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/public/assistants/{share_token}", http.HandlerFunc(service.publicAssistantHandler))
 	server.Handle("/api/v1/public/assistants/{share_token}/answer", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/turns", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/icon", http.HandlerFunc(service.publicAssistantHandler))
 	server.Handle("/api/v1/public/assistants/{share_token}/conversations/{conversation_id}/responses/{response_id}", http.HandlerFunc(service.publicAssistantHandler))
 	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
