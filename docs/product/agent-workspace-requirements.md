@@ -168,7 +168,7 @@ After a successful Run, the detail page offers quick configuration actions for S
 
 Settings contains six collapsed sections:
 
-- Basic: name, goal, optional Expert or Expert Team, and optional Knowledge Base selection
+- Basic: name, goal, optional Expert or Expert Team, and optional Knowledge Base selection through a searchable multiple-select input; selected bases appear as removable tags, and bases without Ready documents cannot be newly selected
 - Environment: ordinary and Secret environment variables
 - Schedule: hourly, daily, or weekly trigger with time and optional time-zone override; previewing returns the next three server-calculated trigger times before saving
 - API Credential: generate, safely rotate, or revoke API Key/API Secret and show the JWT exchange and Bearer invocation examples

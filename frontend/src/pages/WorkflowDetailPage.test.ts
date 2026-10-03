@@ -701,20 +701,28 @@ describe("WorkflowDetailPage", () => {
     await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
-    const choices = wrapper.get("#workflow-settings-basic").findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
+    const picker = wrapper.get("#workflow-settings-basic .knowledge-base-picker");
+    const select = picker.getComponent({ name: "ElSelect" });
+    expect(select.props("multiple")).toBe(true);
+    expect(select.props("filterable")).toBe(true);
+    expect(select.props("modelValue")).toEqual([]);
+    expect(picker.find("input[type='checkbox']").exists()).toBe(false);
+    const choices = select.findAllComponents({ name: "ElOption" });
     expect(choices).toHaveLength(2);
-    expect(choices.every((choice) => !choice.element.checked)).toBe(true);
-    expect(choices[0]!.element.disabled).toBe(false);
-    expect(choices[1]!.element.disabled).toBe(true);
-    expect(wrapper.get(".knowledge-base-options").text()).toContain("2 份文档可检索");
-    expect(wrapper.get(".knowledge-base-options").text()).toContain("暂无可检索文档");
+    expect(choices[0]!.props("disabled")).toBe(false);
+    expect(choices[1]!.props("disabled")).toBe(true);
+    expect(choices[0]!.text()).toContain("2 份文档可检索");
+    expect(choices[1]!.text()).toContain("暂无可检索文档");
+    await choices[1]!.trigger("click");
+    expect(select.props("modelValue")).toEqual([]);
 
-    await choices[0]!.setValue(true);
-    expect(choices[0]!.element.checked).toBe(true);
+    await choices[0]!.trigger("click");
+    expect(select.props("modelValue")).toEqual(["kb-1"]);
+    expect(select.findAll(".el-tag").map(tag => tag.text())).toEqual(["产品资料"]);
     await wrapper.get(".settings-form").trigger("submit");
     await flushPromises();
     expect(updateWorkflow).toHaveBeenCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: ["kb-1"] }), workflow.version);
-    await choices[0]!.setValue(false);
+    await choices[0]!.trigger("click");
     await wrapper.get(".settings-form").trigger("submit");
     await flushPromises();
     expect(updateWorkflow).toHaveBeenLastCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: [] }), workflow.version);
