@@ -168,7 +168,7 @@ WhatsApp 文档部分被 429 或登录重定向阻挡，本轮使用 Meta 发布
 
 ## 9. 部署配置与当前限制
 
-API 和 Worker 必须使用相同 `message_channels` 配置，并共享既有 Data Encryption Key。默认关闭；样例位于 `deploy/platform/config`。部署经 `main_temp` 执行，本轮没有部署或修改线上配置。
+API 和 Worker 必须使用相同 `message_channels` 配置，并共享既有 Data Encryption Key。默认关闭；样例位于 `deploy/platform/config`。2026-10-03 已经 `main_temp` 部署并开启平台级配置，Callback Origin 使用当前公开 HTTPS 入口；未配置真实渠道账号或批准 Bridge Endpoint。部署与验证边界见 [部署证据](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)。
 
 ```yaml
 message_channels:
@@ -200,7 +200,7 @@ SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go 
 
 平台的可靠恢复边界从 Inbox 提交开始：已持久化消息幂等创建 Run，发送 lease 过期进入 outcome_unknown。未持久化的 Gateway 消息不承诺跨进程补收，Discord resume 仅依赖进程内 SDK，未实现持久化 session cursor。钉钉官方协议说明机器人回调采用 fire-forgot 模式，不应把失败 ACK 或断线重连当作保证补发。真实账号的权限、掉线与补收窗口必须实测。
 
-首期不支持附件、卡片、流式回复、公开受众、群共享历史、跨渠道合并、自动审批、主动广播或剩余八个渠道。已经领取的网络发送可能在停用后到达；后续领取、入队和重发重新校验授权。连接健康不代表真实模型闭环已验收。
+当前不支持附件、卡片、流式回复、公开受众、群共享历史、跨渠道合并、自动审批或主动广播。全部 13 个渠道的实现边界见下一节。已经领取的网络发送可能在停用后到达；后续领取、入队和重发重新校验授权。连接健康不代表真实模型闭环已验收。
 
 
 ## 10. 新增八个渠道的实现边界

@@ -2,7 +2,7 @@
 
 需求与实施跟踪：[GitHub Issue #62](https://github.com/owl-go/agent-platform/issues/62)。
 
-状态：2026-10-03 全部 13 个渠道的文本 Adapter 和配置项已实现，待真实应用账号和生产验收。用户先实施五个渠道，随后要求其他八个一起实现。行为依据为 [产品规格 §5.7](../product/agent-workspace-requirements.md#57-workflow-message-channels)；协议、当前代码 seam、推荐默认值与一手来源见 [接入设计](../technical/workflow-message-channels.md)。
+状态：2026-10-03 全部 13 个渠道的文本 Adapter 和配置项已实现并经 `main_temp` 部署，平台级配置已开启；真实应用账号闭环和完整 Production Conformance 待验收。用户先实施五个渠道，随后要求其他八个一起实现。行为依据为 [产品规格 §5.7](../product/agent-workspace-requirements.md#57-workflow-message-channels)；协议、当前代码 seam、推荐默认值与一手来源见 [接入设计](../technical/workflow-message-channels.md)。
 
 ## 目标与范围
 
@@ -127,3 +127,9 @@ git diff --check
 ```
 
 本轮不改变 Proto 或 Runtime 镜像，没有重新生成契约或执行 Linux + runsc 的 Sandbox/Production Conformance。全部 IM 的真实账号收发→Runtime→原聊天连续问答、WhatsApp 账号政策资格、Signal/macOS Bridge 部署与重启恢复、各平台生产验收仍缺证据；没有上线部署。具体配置和拒绝能力见 [设计 §10](../technical/workflow-message-channels.md#10-新增八个渠道的实现边界)。
+
+## 部署证据（2026-10-03）
+
+用户要求部署后，将本会话功能分支合入最新 `main_temp`，解决四处冲突并保留现有知识库 Worker、OAuth Callback 与身份界面行为。重新执行 `make generate`、目标包测试、含真实 PostgreSQL 的 `make test`、`make build`、前端 52 个文件/532 个测试、类型检查和构建后，推送集成 Commit `0bf3810`。
+
+从该 Commit 正式执行 `make deploy`，未跳过部署门禁；发布 `workflow-channels-20261003-1`，数据库及配置备份校验、镜像 smoke、Migration、服务健康和公网 Web 产物一致性检查通过。开启 API/Worker 共同的 `message_channels.enabled`，四个渠道循环均 started=1、fatal=0。新增迁移校验和与源码一致，线上 provider 约束包含全部 13 种渠道。未配置任何真实渠道账号，批准 Endpoint 列表为空；完整 Production Conformance 预检缺少专用环境和凭证而失败，未运行完整套件或真实 IM 模型调用。详细证据与边界见 [部署记录](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)。
