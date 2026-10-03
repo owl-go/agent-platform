@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ArrowUp, RotateCcw, Square } from "@lucide/vue";
+import { ArrowUp, Square } from "@lucide/vue";
 import { ApiError } from "../api/client";
 import type { PublicAssistantApi, PublicAssistantProfile } from "../api/publicAssistant";
 import AssistantConversationThread, { type AssistantChatTurn } from "../components/AssistantConversationThread.vue";
@@ -59,15 +59,6 @@ function stop() {
   const turn = turns.value.at(-1);
   if (turn?.state === "generating") turn.state = "cancelled";
 }
-function clearConversation() {
-  stop();
-  controller = undefined;
-  busy.value = false;
-  conversationID = "";
-  turns.value = [];
-  draft.value = "";
-  error.value = "";
-}
 onMounted(async () => {
   try { profile.value = await props.api.profile(loadController.signal); }
   catch { error.value = t("aiApplications.share.unavailable"); }
@@ -78,10 +69,6 @@ onBeforeUnmount(() => { controller?.abort(); loadController.abort(); });
 
 <template>
   <section class="assistant-conversation-page assistant-embed-page" :style="dimensions" v-loading="loading">
-    <header class="assistant-conversation-header">
-      <h2>{{ profile?.name }}</h2>
-      <el-button :icon="RotateCcw" :disabled="!profile" @click="clearConversation">{{ t('aiApplications.chat.new') }}</el-button>
-    </header>
     <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
     <AssistantConversationThread :name="profile?.name || ''" :welcome="profile?.introduction || ''" :avatar-url="avatarFailed ? '' : api.iconURL" :faqs="profile?.faqs || []" :turns="turns" :busy="busy" @faq="send" @avatar-error="avatarFailed = true" />
     <div class="assistant-conversation-composer">

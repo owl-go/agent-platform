@@ -870,7 +870,6 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .assistant-conversation-composer-actions { display: flex; justify-content: flex-end; padding-top: 3px; }
 .assistant-conversation-send { min-width: 82px; border-radius: 10px; }
 .assistant-embed-page { max-width: 100%; max-height: 100dvh; padding: var(--aw-space-3) var(--aw-space-4); background: var(--aw-n2); }
-.assistant-embed-page .assistant-conversation-header { padding-bottom: var(--aw-space-3); }
 @media (max-width: 480px) { .assistant-embed-page { padding-inline: var(--aw-space-2); } .assistant-embed-page .assistant-conversation-bubble { max-width: calc(100% - 46px); } }
 @media (max-width: 1023px) { .ai-applications-page--conversation { height: calc(100vh - 56px); height: calc(100dvh - 56px); } }
 @media (max-width: 700px) { .assistant-conversation-header { flex-wrap: wrap; } .assistant-conversation-header h2 { order: -1; width: 100%; flex: auto; } .assistant-conversation-actions { margin-left: auto; } .assistant-conversation-history { width: 140px; } .assistant-conversation-composer { padding-bottom: 10px; } }
