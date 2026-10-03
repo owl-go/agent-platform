@@ -4,7 +4,9 @@ import type { InjectionKey } from "vue";
 export interface ChannelAudience { sender_ids: string[]; group_ids: string[]; allow_direct: boolean }
 export type MessageChannel = Omit<Required<components["schemas"]["v1MessageChannel"]>, "version" | "config_version" | "audience" | "validation_until"> & { version: number; config_version: number; audience: ChannelAudience; validation_until?: string };
 export type ChannelDelivery = Omit<Required<components["schemas"]["v1ChannelDelivery"]>, "attempts"> & { attempts: number };
-export interface MessageChannelInput { channel_id?: string; version: number; provider: string; name: string; region: string; audience: ChannelAudience; credentials: Record<string,string> }
+export interface ChannelLogin { id: string; provider: string; status: "waiting" | "scanned" | "verification_required" | "connected" | "expired" | "failed"; qr_content: string; account_id: string; account_name: string; suggested_sender_id: string; expires_at: string }
+export interface ChannelLoginInput { provider: string; region: string; method: "qr" | "credentials"; credentials: Record<string,string>; channel_id?: string; version: number }
+export interface MessageChannelInput { channel_id?: string; version: number; provider: string; name: string; region: string; audience: ChannelAudience; credentials: Record<string,string>; login_id?: string }
 
 export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean; group_budget?: { group_id: string; group_name: string; limit_hundredths: number; consumed_hundredths: number; reserved_hundredths: number; available_hundredths: number } }
 export interface CreditPolicy { default_daily_allocation_hundredths: number; warning_threshold_percent: number; redemption_codes_enabled: boolean; version: number; updated_at: string; updated_by_user_id?: string }
@@ -212,6 +214,9 @@ export interface PlatformApi {
   revokeWorkflowCredential(id: string, signal?: AbortSignal): Promise<void>;
   runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown>; plan_preference?: PlanPreference }, signal?: AbortSignal): Promise<Run>;
   listMessageChannels(workflowID: string, signal?: AbortSignal): Promise<{ items: MessageChannel[]; available: boolean }>;
+  startChannelLogin(workflowID: string, input: ChannelLoginInput, signal?: AbortSignal): Promise<ChannelLogin>;
+  pollChannelLogin(workflowID: string, loginID: string, verificationCode?: string, signal?: AbortSignal): Promise<ChannelLogin>;
+  cancelChannelLogin(workflowID: string, loginID: string, signal?: AbortSignal): Promise<void>;
   saveMessageChannel(workflowID: string, input: MessageChannelInput, signal?: AbortSignal): Promise<MessageChannel>;
   controlMessageChannel(workflowID: string, channelID: string, version: number, action: string, signal?: AbortSignal): Promise<MessageChannel>;
   listChannelDeliveries(workflowID: string, channelID: string, signal?: AbortSignal): Promise<ChannelDelivery[]>;
@@ -537,6 +542,9 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     revokeWorkflowCredential(id, signal) { return remove(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, signal); },
     async runWorkflow(id, input, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, json("POST", input ?? {}, signal))); },
     async listMessageChannels(workflowID, signal) { const result = await call<{ items?: MessageChannel[]; available?: boolean }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels`, { signal }); return { items:(result.items ?? []).map(normalizeChannel), available: Boolean(result.available) }; },
+    async startChannelLogin(workflowID, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-logins`, json("POST", input, signal)); },
+    async pollChannelLogin(workflowID, loginID, verificationCode = "", signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-logins/${encodeURIComponent(loginID)}/poll`, json("POST", {verification_code:verificationCode}, signal)); },
+    async cancelChannelLogin(workflowID, loginID, signal) { await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-logins/${encodeURIComponent(loginID)}`, {method:"DELETE", signal}); },
     async saveMessageChannel(workflowID, input, signal) { return normalizeChannel(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels`, json("POST", input, signal))); },
     async controlMessageChannel(workflowID, channelID, version, action, signal) { return normalizeChannel(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/actions`, json("POST", {version,action}, signal))); },
     async listChannelDeliveries(workflowID, channelID, signal) { const result = await call<{items?: ChannelDelivery[]}>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/deliveries`, {signal}); return result.items ?? []; },

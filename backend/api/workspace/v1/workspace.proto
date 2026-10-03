@@ -74,6 +74,9 @@ service AgentWorkspaceService {
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
   rpc ListMessageChannels(ListMessageChannelsRequest) returns (ListMessageChannelsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/message-channels"}; }
   rpc SaveMessageChannel(SaveMessageChannelRequest) returns (MessageChannel) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels" body: "*"}; }
+  rpc StartChannelLogin(StartChannelLoginRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-logins" body: "*"}; }
+  rpc PollChannelLogin(PollChannelLoginRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll" body: "*"}; }
+  rpc CancelChannelLogin(CancelChannelLoginRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}"}; }
   rpc ControlMessageChannel(ControlMessageChannelRequest) returns (MessageChannel) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions" body: "*"}; }
   rpc ListChannelDeliveries(ListChannelDeliveriesRequest) returns (ListChannelDeliveriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries"}; }
   rpc RetryChannelDelivery(RetryChannelDeliveryRequest) returns (DeleteResponse) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry" body: "*"}; }
@@ -679,6 +682,28 @@ message SaveMessageChannelRequest {
  string region = 6;
  ChannelAudience audience = 7;
  map<string,string> credentials = 8;
+ string login_id = 9;
+}
+message StartChannelLoginRequest {
+ string workflow_id = 1;
+ string provider = 2;
+ string region = 3;
+ string method = 4;
+ map<string,string> credentials = 5;
+ string channel_id = 6;
+ int64 version = 7;
+}
+message PollChannelLoginRequest { string workflow_id = 1; string login_id = 2; string verification_code = 3; }
+message CancelChannelLoginRequest { string workflow_id = 1; string login_id = 2; }
+message ChannelLogin {
+ string id = 1;
+ string provider = 2;
+ string status = 3;
+ string qr_content = 4;
+ string account_id = 5;
+ string account_name = 6;
+ string suggested_sender_id = 7;
+ google.protobuf.Timestamp expires_at = 8;
 }
 message ControlMessageChannelRequest {
  string workflow_id = 1;

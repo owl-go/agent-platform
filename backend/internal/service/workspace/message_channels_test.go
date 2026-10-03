@@ -30,6 +30,9 @@ func TestOnlyAuthenticatedProviderCallbackRoutesBypassOIDC(t *testing.T) {
 		{"POST", "/api/v1/message-channel-callbacks/discord/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 401},
 		{"POST", "/api/v1/message-channel-callbacks/telegram/not-a-uuid", 401},
 		{"POST", "/api/v1/workflows/workflow/message-channels", 401},
+		{"POST", "/api/v1/workflows/workflow/channel-logins", 401},
+		{"POST", "/api/v1/workflows/workflow/channel-logins/login/poll", 401},
+		{"DELETE", "/api/v1/workflows/workflow/channel-logins/login", 401},
 		{"POST", "/api/v1/message-channel-callbacks/slack/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c/actions", 401},
 	} {
 		recorder := httptest.NewRecorder()

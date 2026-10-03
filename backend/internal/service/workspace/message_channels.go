@@ -54,12 +54,68 @@ func (s *Service) SaveMessageChannel(ctx context.Context, request *workspacev1.S
 		return nil, publicError(domain.ErrInvalid)
 	}
 	input := domain.MessageChannel{Provider: request.Provider, Name: request.Name, Region: request.Region, Audience: domain.ChannelAudience{SenderIDs: request.Audience.SenderIds, GroupIDs: request.Audience.GroupIds, AllowDirect: request.Audience.AllowDirect}}
-	item, err := channels.Save(ctx, owner, request.WorkflowId, request.ChannelId, request.Version, input, request.Credentials)
+	var item domain.MessageChannel
+	if request.LoginId != "" {
+		if len(request.Credentials) != 0 {
+			return nil, publicError(domain.ErrInvalid)
+		}
+		item, err = channels.SaveWithLogin(ctx, owner, request.WorkflowId, request.ChannelId, request.Version, input, request.LoginId)
+	} else {
+		item, err = channels.Save(ctx, owner, request.WorkflowId, request.ChannelId, request.Version, input, request.Credentials)
+	}
 	if err != nil {
 		return nil, publicError(err)
 	}
 	return channelResponse(item), nil
 }
+func (s *Service) StartChannelLogin(ctx context.Context, r *workspacev1.StartChannelLoginRequest) (*workspacev1.ChannelLogin, error) {
+	owner, err := s.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := s.channelService()
+	if err != nil {
+		return nil, err
+	}
+	login, err := channels.StartLogin(ctx, owner, r.WorkflowId, r.Provider, r.Region, r.Method, r.ChannelId, r.Version, r.Credentials)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return loginResponse(login), nil
+}
+func (s *Service) PollChannelLogin(ctx context.Context, r *workspacev1.PollChannelLoginRequest) (*workspacev1.ChannelLogin, error) {
+	owner, err := s.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := s.channelService()
+	if err != nil {
+		return nil, err
+	}
+	login, err := channels.PollLogin(ctx, owner, r.WorkflowId, r.LoginId, r.VerificationCode)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return loginResponse(login), nil
+}
+func (s *Service) CancelChannelLogin(ctx context.Context, r *workspacev1.CancelChannelLoginRequest) (*workspacev1.DeleteResponse, error) {
+	owner, err := s.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := s.channelService()
+	if err != nil {
+		return nil, err
+	}
+	if err = channels.CancelLogin(ctx, owner, r.WorkflowId, r.LoginId); err != nil {
+		return nil, publicError(err)
+	}
+	return &workspacev1.DeleteResponse{Deleted: true}, nil
+}
+func loginResponse(l application.ChannelLogin) *workspacev1.ChannelLogin {
+	return &workspacev1.ChannelLogin{Id: l.ID, Provider: l.Provider, Status: l.Status, QrContent: l.QRContent, AccountId: l.AccountID, AccountName: l.AccountName, SuggestedSenderId: l.SuggestedSenderID, ExpiresAt: timestamppb.New(l.ExpiresAt)}
+}
+
 func (s *Service) ControlMessageChannel(ctx context.Context, request *workspacev1.ControlMessageChannelRequest) (*workspacev1.MessageChannel, error) {
 	owner, err := s.owner(ctx)
 	if err != nil {

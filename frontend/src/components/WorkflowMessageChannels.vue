@@ -4,8 +4,10 @@ import { ElForm, ElFormItem } from "element-plus";
 import "element-plus/theme-chalk/el-form.css";
 import "element-plus/theme-chalk/el-form-item.css";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type ChannelDelivery, type MessageChannel, type MessageChannelInput } from "../api/client";
+import { platformApiKey, type ChannelDelivery, type MessageChannel, type MessageChannelInput, type ChannelLogin } from "../api/client";
 import ConfirmDialog from "./ConfirmDialog.vue";
+import QRCode from "qrcode";
+import { channelSetups } from "./messageChannelSetup";
 import MessageChannelIcon from "./MessageChannelIcon.vue";
 
 const props = defineProps<{ workflowId: string }>();
@@ -22,17 +24,25 @@ const deliveries = ref<ChannelDelivery[]>([]);
 const deliveryChannel = ref<MessageChannel>();
 const confirmation = ref<{ channel: MessageChannel; action: string; delivery?: ChannelDelivery }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
-const providerFields: Record<string, string[]> = {
-  telegram:["bot_token"], discord:["bot_token"], slack:["bot_token","signing_secret"], dingtalk:["client_id","client_secret","corp_id"], feishu:["app_id","app_secret","tenant_key"],
-  matrix:["endpoint","access_token"], whatsapp:["access_token","app_secret","verify_token","phone_number_id","business_account_id","graph_version"], signal:["endpoint","bridge_token","account_id"],
-  wecom:["bot_id","bot_secret"], wechat:["bot_token","account_id","user_id"], qqbot:["app_id","app_secret"], bluebubbles:["endpoint","password"], yuanbao:["app_key","app_secret"],
-};
-const providers = Object.keys(providerFields);
-const fields = computed(() => providerFields[form.provider] ?? []);
-const directOnly = computed(() => ["whatsapp","wechat","bluebubbles"].includes(form.provider));
-const roomsOnly = computed(() => form.provider === "matrix");
+const providers = Object.keys(channelSetups);
+const setup = computed(() => channelSetups[form.provider]!);
+const fields = computed(() => setup.value.fields);
+const login = ref<ChannelLogin>();
+const qrImage = ref("");
+const polling = ref(false);
+const loginMethod = ref<"qr" | "credentials">("credentials");
+const verificationCode = ref("");
+const reconnecting = ref(false);
+const authenticated = computed(() => login.value?.status === "connected" || (Boolean(editing.value) && !reconnecting.value));
+const directOnly = computed(() => setup.value.audience === "direct");
+const roomsOnly = computed(() => setup.value.audience === "rooms");
+const credentialComplete = computed(() => fields.value.length > 0 && fields.value.every(field => form.credentials[field]?.trim()));
+let loginExpiryTimer: ReturnType<typeof setTimeout> | undefined;
+let loginTimer: ReturnType<typeof setTimeout> | undefined;
+let loginAbort: AbortController | undefined;
+let loginGeneration = 0;
 const ids = (text: string) => [...new Set(text.split(/[,\n]/).map(id => id.trim()).filter(Boolean))];
-const canSave = computed(() => form.name.trim() && ids(form.senders).length > 0 && (form.direct || ids(form.groups).length > 0));
+const canSave = computed(() => authenticated.value && form.name.trim() && ids(form.senders).length > 0 && (form.direct || ids(form.groups).length > 0));
 const abort = new AbortController();
 let timer: ReturnType<typeof setTimeout> | undefined;
 let disposed = false;
@@ -54,18 +64,73 @@ async function refresh() {
   }
 }
 function edit(channel?: MessageChannel, provider = "telegram") {
+  clearLogin(); reconnecting.value = false;
   editing.value = channel;
   provider = channel?.provider ?? provider;
   Object.assign(form, { name: channel?.name ?? t(`channels.providers.${provider}`), provider, region: channel?.region || "feishu", senders: channel?.audience.sender_ids.join("\n") ?? "", groups: channel?.audience.group_ids.join("\n") ?? "", direct: provider === "matrix" ? false : channel?.audience.allow_direct ?? true, credentials: {} });
+  loginMethod.value = channelSetups[provider]?.qr ? "qr" : "credentials";
   error.value = ""; dialog.value = true;
 }
 function clearSecrets() { form.credentials = {}; }
+function clearLogin() {
+  ++loginGeneration; clearTimeout(loginTimer); clearTimeout(loginExpiryTimer); polling.value = false; loginAbort?.abort();
+  const pending = login.value; login.value = undefined; qrImage.value = ""; verificationCode.value = "";
+  if (pending && !disposed) void api.cancelChannelLogin(props.workflowId, pending.id).catch(() => {});
+}
+function reconnect() { clearLogin(); reconnecting.value = true; clearSecrets(); }
+function chooseLoginMethod(method: "qr" | "credentials") { clearLogin(); clearSecrets(); loginMethod.value = method; }
+async function applyLogin(result: ChannelLogin, generation: number) {
+  if (disposed || generation !== loginGeneration || !dialog.value) return;
+  login.value = result;
+  clearTimeout(loginExpiryTimer);
+  loginExpiryTimer = setTimeout(() => {
+    if (generation === loginGeneration && login.value) { login.value = { ...login.value, status: "expired", qr_content: "" }; qrImage.value = ""; clearTimeout(loginTimer); }
+  }, Math.max(0, Date.parse(result.expires_at) - Date.now()));
+  if (result.status === "connected") {
+    qrImage.value = ""; verificationCode.value = ""; clearSecrets();
+    if (!form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
+    return;
+  }
+  if (["expired", "failed"].includes(result.status)) { qrImage.value = ""; return; }
+  if (result.qr_content && !qrImage.value) {
+    const image = await QRCode.toDataURL(result.qr_content, { width: 240, margin: 2 });
+    if (generation !== loginGeneration || !dialog.value) return;
+    qrImage.value = image;
+  }
+  if (result.status !== "verification_required") loginTimer = setTimeout(() => pollLogin(generation), 2000);
+}
+async function connectAccount() {
+  if (busy.value) return;
+  clearLogin(); const generation = loginGeneration; loginAbort = new AbortController();
+  busy.value = true; error.value = "";
+  try {
+    const result = await api.startChannelLogin(props.workflowId, { provider: form.provider, region: form.provider === "feishu" ? form.region : "", method: loginMethod.value, credentials: loginMethod.value === "qr" ? {} : { ...form.credentials }, channel_id: editing.value?.id, version: editing.value?.version ?? 0 }, loginAbort.signal);
+    if (generation !== loginGeneration || !dialog.value) { void api.cancelChannelLogin(props.workflowId, result.id).catch(() => {}); return; }
+    await applyLogin(result, generation);
+  } catch { if (!disposed && generation === loginGeneration) error.value = t("channels.loginFailed"); }
+  finally { if (generation === loginGeneration) busy.value = false; }
+}
+async function pollLogin(generation = loginGeneration) {
+  const current = login.value;
+  if (!current || generation !== loginGeneration || disposed || polling.value) return;
+  if (Date.now() >= Date.parse(current.expires_at)) { login.value = { ...current, status: "expired", qr_content: "" }; qrImage.value = ""; return; }
+  polling.value = true; const code = verificationCode.value.trim(); verificationCode.value = "";
+  try {
+    const result = await api.pollChannelLogin(props.workflowId, current.id, code, loginAbort?.signal);
+    if (generation === loginGeneration) error.value = "";
+    await applyLogin(result, generation);
+  } catch {
+    if (!disposed && generation === loginGeneration && dialog.value) { error.value = t("channels.loginRetry"); loginTimer = setTimeout(() => pollLogin(generation), 5000); }
+  } finally { if (generation === loginGeneration) polling.value = false; }
+}
+function closeConfiguration() { dialog.value = false; clearLogin(); clearSecrets(); }
+
 async function save() {
   if (!canSave.value || busy.value) return;
   busy.value = true;
   const credentials = Object.fromEntries(Object.entries(form.credentials).filter(([,v]) => v.trim() !== ""));
-  const input: MessageChannelInput = { channel_id: editing.value?.id, version: editing.value?.version ?? 0, provider: form.provider, name: form.name.trim(), region: form.provider === "feishu" ? form.region : "", audience: { sender_ids:ids(form.senders), group_ids:ids(form.groups), allow_direct:form.direct }, credentials };
-  try { await api.saveMessageChannel(props.workflowId, input, abort.signal); clearSecrets(); dialog.value = false; await refresh(); }
+  const input: MessageChannelInput = { channel_id: editing.value?.id, version: editing.value?.version ?? 0, provider: form.provider, name: form.name.trim(), region: form.provider === "feishu" ? form.region : "", audience: { sender_ids:ids(form.senders), group_ids:ids(form.groups), allow_direct:form.direct }, credentials, login_id: login.value?.status === "connected" ? login.value.id : undefined };
+  try { await api.saveMessageChannel(props.workflowId, input, abort.signal); clearSecrets(); login.value = undefined; closeConfiguration(); await refresh(); }
   catch { if (!disposed) error.value = t("channels.saveFailed"); }
   finally { busy.value = false; }
 }
@@ -91,7 +156,7 @@ async function confirm() {
 }
 const confirmText = computed(() => confirmation.value?.delivery ? t(confirmation.value.delivery.state === "outcome_unknown" ? "channels.unknownHint" : "channels.retryHint") : t(`channels.${confirmation.value?.action ?? "enable"}Hint`));
 onMounted(refresh);
-onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); clearSecrets(); });
+onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); clearLogin(); clearSecrets(); });
 </script>
 
 <template>
@@ -132,21 +197,52 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
       </div>
     </section>
   </section>
-  <el-dialog v-model="dialog" :title="t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) })" width="min(720px, calc(100vw - 32px))" align-center append-to-body :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @closed="clearSecrets">
+  <el-dialog v-model="dialog" :title="t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) })" width="min(720px, calc(100vw - 32px))" align-center append-to-body :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @close="clearLogin" @closed="clearSecrets">
     <template #header="{ titleId, titleClass }"><h2 :id="titleId" :class="[titleClass, 'channel-dialog-title']"><MessageChannelIcon :provider="form.provider" :size="24" />{{ t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) }) }}</h2></template>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-form class="channel-config-form" label-position="top" @submit.prevent="save">
-      <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
-      <el-form-item v-if="form.provider === 'feishu'" :label="t('channels.region')"><el-select v-model="form.region" :disabled="busy"><el-option value="feishu" :label="t('channels.providers.feishu')" /><el-option value="lark" label="Lark" /></el-select></el-form-item>
-      <p class="muted">{{ t(`channels.setup.${form.provider}`) }}</p>
-      <p v-if="editing" class="muted">{{ t('channels.keepCredentials') }}</p>
-      <el-form-item v-for="field in fields" :key="field" :label="t(`channels.fields.${field}`)"><el-input v-model="form.credentials[field]" :type="field.includes('secret') || field.includes('token') || field === 'password' ? 'password' : 'text'" :disabled="busy" autocomplete="off" /></el-form-item>
-      <el-form-item :label="t('channels.senders')"><el-input v-model="form.senders" type="textarea" :disabled="busy" :placeholder="t('channels.idsHint')" /></el-form-item>
-      <el-checkbox v-model="form.direct" :disabled="busy || directOnly || roomsOnly">{{ t('channels.allowDirect') }}</el-checkbox>
-      <el-form-item :label="t('channels.groups')"><el-input v-model="form.groups" type="textarea" :disabled="busy || directOnly" :placeholder="t('channels.idsHint')" /></el-form-item>
-      <p class="muted">{{ t('channels.audienceHint') }}</p>
+      <section class="channel-account-setup">
+        <h3>{{ t('channels.accountSetup') }}</h3>
+        <p class="muted">{{ t(`channels.setup.${form.provider}`) }}</p>
+        <a :href="setup.docs" target="_blank" rel="noopener noreferrer">{{ t('channels.setupGuide') }}</a>
+        <el-form-item v-if="form.provider === 'feishu'" :label="t('channels.region')"><el-select v-model="form.region" :disabled="busy || Boolean(login)" @change="reconnect"><el-option value="feishu" :label="t('channels.providers.feishu')" /><el-option value="lark" label="Lark" /></el-select></el-form-item>
+        <template v-if="authenticated">
+          <p role="status">{{ t(editing && !reconnecting ? 'channels.savedAccount' : 'channels.accountConnected') }} · {{ login?.account_name || editing?.account_name || login?.account_id || editing?.account_id }}</p>
+          <el-button :disabled="busy" @click="reconnect">{{ t('channels.reconnect') }}</el-button>
+        </template>
+        <template v-else>
+          <div v-if="setup.qr && fields.length" class="channel-actions">
+            <el-button :disabled="busy || loginMethod === 'qr'" @click="chooseLoginMethod('qr')">{{ t('channels.qrLogin') }}</el-button>
+            <el-button :disabled="busy || loginMethod === 'credentials'" @click="chooseLoginMethod('credentials')">{{ t('channels.manualLogin') }}</el-button>
+          </div>
+          <template v-if="loginMethod === 'credentials'">
+            <el-form-item v-for="field in fields" :key="field" :label="t(`channels.fields.${field}`)"><el-input v-model="form.credentials[field]" :type="field.includes('secret') || field.includes('token') || field === 'password' ? 'password' : 'text'" :disabled="busy" autocomplete="off" /></el-form-item>
+            <el-button type="primary" :loading="busy" :disabled="!credentialComplete" @click="connectAccount">{{ t('channels.connectAccount') }}</el-button>
+          </template>
+          <template v-else>
+            <div v-if="qrImage" class="channel-qr"><img :src="qrImage" :alt="t('channels.qrAlt', {provider:t(`channels.providers.${form.provider}`)})" width="240" height="240" /></div>
+            <p v-if="login" role="status">{{ t(`channels.loginStates.${login.status}`) }}</p>
+            <p v-else class="muted">{{ t('channels.qrInstruction', {provider:t(`channels.providers.${form.provider}`)}) }}</p>
+            <template v-if="login?.status === 'verification_required'">
+              <el-form-item :label="t('channels.verificationCode')"><el-input v-model="verificationCode" autocomplete="off" maxlength="32" /></el-form-item>
+              <el-button :disabled="polling || !verificationCode.trim()" @click="pollLogin()">{{ t('common.confirm') }}</el-button>
+            </template>
+            <el-button :loading="busy" :disabled="Boolean(login && !['expired','failed'].includes(login.status))" @click="connectAccount">{{ t(login ? 'channels.refreshQR' : 'channels.showQR') }}</el-button>
+          </template>
+        </template>
+      </section>
+      <section v-if="authenticated" class="channel-message-setup">
+        <h3>{{ t('channels.messageSetup') }}</h3>
+        <p class="muted">{{ t(`channels.receive.${setup.receive}`) }}</p>
+        <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
+        <el-form-item :label="t('channels.senderLabel', {kind:setup.sender})"><el-input v-model="form.senders" type="textarea" :disabled="busy" :placeholder="setup.sender" /></el-form-item>
+        <el-checkbox v-if="!directOnly && !roomsOnly" v-model="form.direct" :disabled="busy">{{ t('channels.allowDirect') }}</el-checkbox>
+        <p v-if="directOnly" class="muted">{{ t('channels.directOnly') }}</p>
+        <el-form-item v-if="!directOnly" :label="t(roomsOnly ? 'channels.roomLabel' : 'channels.groupLabel', {kind:setup.group})"><el-input v-model="form.groups" type="textarea" :disabled="busy" :placeholder="setup.group" /></el-form-item>
+        <p class="muted">{{ t(roomsOnly ? 'channels.roomAudience' : directOnly ? 'channels.directAudience' : 'channels.audienceHint') }}</p>
+      </section>
     </el-form>
-    <template #footer><el-button :disabled="busy" @click="dialog = false; clearSecrets()">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="busy" :disabled="!canSave" @click="save">{{ t('common.save') }}</el-button></template>
+    <template #footer><el-button :disabled="busy" @click="closeConfiguration">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="busy" :disabled="!canSave" @click="save">{{ t('common.save') }}</el-button></template>
   </el-dialog>
   <ConfirmDialog :open="Boolean(confirmation)" :title="t(confirmation?.delivery ? 'channels.retry' : `channels.${confirmation?.action ?? 'enable'}`)" :message="confirmText" :confirm-label="t('common.confirm')" :cancel-label="t('common.cancel')" :busy="busy" :danger="confirmation?.action === 'delete'" @confirm="confirm" @cancel="confirmation = undefined" />
 </template>
@@ -163,6 +259,10 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 .channel-provider-card:focus-visible { outline:2px solid var(--aw-primary); outline-offset:2px; }
 .channel-provider-card:disabled { cursor:not-allowed; opacity:.55; }
 .channel-config-form { max-height:min(65vh,640px); overflow-y:auto; padding-inline-end:var(--aw-space-2); }
+.channel-account-setup,.channel-message-setup { display:grid; gap:var(--aw-space-3); }
+.channel-message-setup { margin-top:var(--aw-space-4); padding-top:var(--aw-space-4); border-top:1px solid var(--aw-n4); }
+.channel-qr { width:240px; max-width:100%; }
+.channel-qr img { display:block; max-width:100%; height:auto; }
 .channel-actions,.channel-heading { display:flex; flex-wrap:wrap; align-items:center; gap:var(--aw-space-2); }
 .channel-card { padding:var(--aw-space-4); border:1px solid var(--aw-n4); border-radius:var(--aw-radius-card); }
 .channel-callback { overflow-wrap:anywhere; }

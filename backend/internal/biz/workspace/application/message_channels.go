@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
@@ -66,6 +67,8 @@ type MessageChannels struct {
 	enabled      bool
 	callbackBase string
 	limits       ChannelLimits
+	loginMu      sync.Mutex
+	logins       map[string]*channelLoginSession
 }
 
 func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCipher, transports map[string]ChannelTransport, enabled bool, callbackBase string, options ...ChannelLimits) *MessageChannels {
@@ -82,7 +85,7 @@ func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCiphe
 	for provider, transport := range transports {
 		registry[provider] = transport
 	}
-	return &MessageChannels{repository: repository, cipher: cipher, transports: registry, enabled: enabled, callbackBase: strings.TrimRight(callbackBase, "/"), limits: limits}
+	return &MessageChannels{repository: repository, cipher: cipher, transports: registry, enabled: enabled, callbackBase: strings.TrimRight(callbackBase, "/"), limits: limits, logins: map[string]*channelLoginSession{}}
 }
 func ChannelCredentialAAD(c domain.MessageChannel) string {
 	return "message-channel:" + c.OwnerID + ":" + c.ID + ":" + fmt.Sprint(c.ConfigVersion)
