@@ -135,7 +135,11 @@ type ModelCatalogResult struct {
 type Service struct {
 	repository Repository
 	catalog    ModelCatalog
+	channels   *MessageChannels
 }
+
+func (service *Service) EnableMessageChannels(channels *MessageChannels) { service.channels = channels }
+func (service *Service) MessageChannels() *MessageChannels               { return service.channels }
 
 func New(repository Repository, catalogs ...ModelCatalog) (*Service, error) {
 	if repository == nil {

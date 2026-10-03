@@ -21,15 +21,27 @@ const DefaultPath = "config/platform.yaml"
 var immutableImageDigest = regexp.MustCompile(`^[^\s@]+@sha256:[0-9a-f]{64}$`)
 
 type Config struct {
-	API            APIConfig            `yaml:"api"`
-	Authentication AuthenticationConfig `yaml:"authentication"`
-	Accounts       AccountsConfig       `yaml:"accounts"`
-	Workspace      WorkspaceConfig      `yaml:"workspace"`
-	Security       SecurityConfig       `yaml:"security"`
-	Worker         WorkerConfig         `yaml:"worker"`
-	Database       DatabaseConfig       `yaml:"database"`
-	ObjectStore    ObjectStoreConfig    `yaml:"object_store"`
-	Sandbox        SandboxConfig        `yaml:"sandbox"`
+	API             APIConfig             `yaml:"api"`
+	Authentication  AuthenticationConfig  `yaml:"authentication"`
+	Accounts        AccountsConfig        `yaml:"accounts"`
+	Workspace       WorkspaceConfig       `yaml:"workspace"`
+	Security        SecurityConfig        `yaml:"security"`
+	Worker          WorkerConfig          `yaml:"worker"`
+	Database        DatabaseConfig        `yaml:"database"`
+	ObjectStore     ObjectStoreConfig     `yaml:"object_store"`
+	Sandbox         SandboxConfig         `yaml:"sandbox"`
+	MessageChannels MessageChannelsConfig `yaml:"message_channels"`
+}
+
+type MessageChannelsConfig struct {
+	MaxPendingMessages         int      `yaml:"max_pending_messages"`
+	MaxSenderMessagesPerMinute int      `yaml:"max_sender_messages_per_minute"`
+	MaxTextBytes               int      `yaml:"max_text_bytes"`
+	MaxSendAttempts            int      `yaml:"max_send_attempts"`
+	SendInterval               Duration `yaml:"send_interval"`
+	Enabled                    bool     `yaml:"enabled"`
+	CallbackBaseURL            string   `yaml:"callback_base_url"`
+	MaxConnections             int      `yaml:"max_connections"`
 }
 
 type AccountsConfig struct {
@@ -427,6 +439,36 @@ func publicResolverIPv4(address netip.Addr) bool {
 }
 
 func (config Config) validateShared() error {
+	for _, limit := range []struct {
+		name            string
+		value, min, max int
+	}{
+		{"max_pending_messages", config.MessageChannels.MaxPendingMessages, 1, 10_000},
+		{"max_sender_messages_per_minute", config.MessageChannels.MaxSenderMessagesPerMinute, 1, 100},
+		{"max_text_bytes", config.MessageChannels.MaxTextBytes, 128, 10_000},
+		{"max_send_attempts", config.MessageChannels.MaxSendAttempts, 1, 32},
+	} {
+		if limit.value != 0 && (limit.value < limit.min || limit.value > limit.max) {
+			return fmt.Errorf("message_channels.%s is outside its allowed range", limit.name)
+		}
+	}
+	if interval := config.MessageChannels.SendInterval.Value(); interval != 0 && (interval < 3*time.Second || interval > time.Minute) {
+		return fmt.Errorf("message_channels.send_interval must be 3s..1m")
+	}
+
+	if config.MessageChannels.Enabled {
+		if err := validateHTTPSURL("message_channels.callback_base_url", config.MessageChannels.CallbackBaseURL, false); err != nil {
+			return err
+		}
+		callback, _ := url.Parse(config.MessageChannels.CallbackBaseURL)
+		if callback.Path != "" && callback.Path != "/" || callback.RawQuery != "" || callback.Fragment != "" || callback.User != nil {
+			return fmt.Errorf("message_channels.callback_base_url must be an HTTPS origin")
+		}
+		if config.MessageChannels.MaxConnections < 0 || config.MessageChannels.MaxConnections > 1000 {
+			return fmt.Errorf("message_channels.max_connections must be 1..1000 (0 uses 64)")
+		}
+	}
+
 	if err := config.Database.Validate(); err != nil {
 		return err
 	}

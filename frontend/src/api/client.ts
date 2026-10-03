@@ -1,4 +1,10 @@
+import type { components } from "./generated";
 import type { InjectionKey } from "vue";
+
+export interface ChannelAudience { sender_ids: string[]; group_ids: string[]; allow_direct: boolean }
+export type MessageChannel = Omit<Required<components["schemas"]["v1MessageChannel"]>, "version" | "config_version" | "audience" | "validation_until"> & { version: number; config_version: number; audience: ChannelAudience; validation_until?: string };
+export type ChannelDelivery = Omit<Required<components["schemas"]["v1ChannelDelivery"]>, "attempts"> & { attempts: number };
+export interface MessageChannelInput { channel_id?: string; version: number; provider: string; name: string; region: string; audience: ChannelAudience; credentials: Record<string,string> }
 
 export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean; group_budget?: { group_id: string; group_name: string; limit_hundredths: number; consumed_hundredths: number; reserved_hundredths: number; available_hundredths: number } }
 export interface CreditPolicy { default_daily_allocation_hundredths: number; warning_threshold_percent: number; redemption_codes_enabled: boolean; version: number; updated_at: string; updated_by_user_id?: string }
@@ -60,7 +66,7 @@ export interface SessionWorkflowDraft { suggested_name: string; suggested_goal: 
 export interface SessionWorkflowFileDecision { source_key: string; destination: "workspace" | "exclude" }
 export interface SessionWorkflowCreation { workflow: Workflow; validation_run: Run; link: SessionWorkflowLink; replayed: boolean }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; origin?: SessionWorkflowLink; next_scheduled_at?: string; upcoming_schedule_times?: string[]; last_run_state?: Run["state"]; last_run_at?: string; last_run_id?: string; run_count_30d?: number; succeeded_run_count_30d?: number; needs_attention?: boolean }
-export interface Run { id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
+export interface Run { message_channel_id?: string; message_channel_name?: string; id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion" | "message_channel"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
@@ -205,6 +211,11 @@ export interface PlatformApi {
   getWorkflowCredential(id: string, signal?: AbortSignal): Promise<{ api_key: string; api_secret: string; created_at?: string }>;
   revokeWorkflowCredential(id: string, signal?: AbortSignal): Promise<void>;
   runWorkflow(id: string, input?: { text_input?: string; json_input?: Record<string, unknown>; plan_preference?: PlanPreference }, signal?: AbortSignal): Promise<Run>;
+  listMessageChannels(workflowID: string, signal?: AbortSignal): Promise<{ items: MessageChannel[]; available: boolean }>;
+  saveMessageChannel(workflowID: string, input: MessageChannelInput, signal?: AbortSignal): Promise<MessageChannel>;
+  controlMessageChannel(workflowID: string, channelID: string, version: number, action: string, signal?: AbortSignal): Promise<MessageChannel>;
+  listChannelDeliveries(workflowID: string, channelID: string, signal?: AbortSignal): Promise<ChannelDelivery[]>;
+  retryChannelDelivery(workflowID: string, channelID: string, deliveryID: string, version: number, confirm: boolean, signal?: AbortSignal): Promise<void>;
   listRuns(id: string, signal?: AbortSignal): Promise<Run[]>;
   getRun(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run>;
   listRunTurns(workflowID: string, runID: string, signal?: AbortSignal): Promise<Run[]>;
@@ -523,6 +534,11 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     getWorkflowCredential(id, signal) { return call(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, { signal }); },
     revokeWorkflowCredential(id, signal) { return remove(`/api/v1/workflows/${encodeURIComponent(id)}/api-credential`, signal); },
     async runWorkflow(id, input, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, json("POST", input ?? {}, signal))); },
+    async listMessageChannels(workflowID, signal) { const result = await call<{ items?: MessageChannel[]; available?: boolean }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels`, { signal }); return { items:(result.items ?? []).map(normalizeChannel), available: Boolean(result.available) }; },
+    async saveMessageChannel(workflowID, input, signal) { return normalizeChannel(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels`, json("POST", input, signal))); },
+    async controlMessageChannel(workflowID, channelID, version, action, signal) { return normalizeChannel(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/actions`, json("POST", {version,action}, signal))); },
+    async listChannelDeliveries(workflowID, channelID, signal) { const result = await call<{items?: ChannelDelivery[]}>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/deliveries`, {signal}); return result.items ?? []; },
+    async retryChannelDelivery(workflowID, channelID, deliveryID, version, confirm, signal) { await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/deliveries/${encodeURIComponent(deliveryID)}/retry`, json("POST", {version,confirm_possible_duplicate:confirm}, signal)); },
     async listRuns(id, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(id)}/runs`, { signal })).items ?? []).map(normalizeRun); },
     async getRun(workflowID, runID, signal) { return normalizeRun(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}`, { signal })); },
     async listRunTurns(workflowID, runID, signal) { return ((await call<{ items: Run[] }>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/runs/${encodeURIComponent(runID)}/turns`, { signal })).items ?? []).map(normalizeRun); },
@@ -841,4 +857,8 @@ function timestampString(value: unknown): unknown {
 function normalizeRun(item: Run & { elapsed_ms?: number | string }): Run {
   const elapsed = Number(item.elapsed_ms ?? 0);
   return { ...item, attachments: item.attachments ?? [], expert_stages: item.expert_stages ?? [], elapsed_ms: Number.isFinite(elapsed) && elapsed >= 0 ? elapsed : 0 };
+}
+
+function normalizeChannel(item: MessageChannel): MessageChannel {
+ return {...item, version:Number(item.version), config_version:Number(item.config_version), audience:{sender_ids:item.audience?.sender_ids ?? [], group_ids:item.audience?.group_ids ?? [], allow_direct:Boolean(item.audience?.allow_direct)}, enabled:Boolean(item.enabled), validation_state:item.validation_state || "unverified", health:item.health || "disconnected"};
 }

@@ -16,6 +16,7 @@ import (
 	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	"agent-platform/backend/internal/data/aiapplication/modelchat"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
+	"agent-platform/backend/internal/data/messagechannel"
 	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/modeldiscovery"
@@ -87,12 +88,22 @@ func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analy
 	return analyticsrepo.New(database.ORM(), logger)
 }
 
-func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider) (*workspaceapplication.Service, error) {
+func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider, box *secretcrypto.Box, config platformconfig.Config) (*workspaceapplication.Service, error) {
 	repository := workspacerepo.New(database.ORM(), credits)
 	if err := repository.EnsureSystemSkills(ctx, objects); err != nil {
 		return nil, err
 	}
-	return workspaceapplication.New(repository, modeldiscovery.New(nil))
+	service, err := workspaceapplication.New(repository, modeldiscovery.New(nil))
+	if err == nil {
+		service.EnableMessageChannels(workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewAdapters(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+			MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
+			MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
+			MaxTextBytes:               config.MessageChannels.MaxTextBytes,
+			MaxSendAttempts:            config.MessageChannels.MaxSendAttempts,
+			SendInterval:               config.MessageChannels.SendInterval.Value(),
+		}))
+	}
+	return service, err
 }
 
 func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Service, error) {

@@ -2,7 +2,7 @@
 
 需求与实施跟踪：[GitHub Issue #62](https://github.com/owl-go/agent-platform/issues/62)。
 
-状态：2026-10-03 待实施。用户本轮选择“先完善需求、接入设计和渠道计划”；本轮交付文档，不实施渠道、不上线。行为依据为 [产品规格 §5.7](../product/agent-workspace-requirements.md#57-workflow-message-channels)；协议、当前代码 seam、推荐默认值与一手来源见 [接入设计](../technical/workflow-message-channels.md)。
+状态：2026-10-03 首期实现已完成本地验证，待真实应用账号和生产验收。用户在需求设计后要求开始实施，并明确本轮先完成 Telegram、Discord、Slack、钉钉和飞书/Lark。行为依据为 [产品规格 §5.7](../product/agent-workspace-requirements.md#57-workflow-message-channels)；协议、当前代码 seam、推荐默认值与一手来源见 [接入设计](../technical/workflow-message-channels.md)。
 
 ## 目标与范围
 
@@ -10,23 +10,23 @@ Workflow Settings 增加消息渠道配置，让获授权的外部参与者直�
 
 首期公共基线为文本问题和完成后的文本答复、private allowlist、群 @、sender 隔离上下文、Run History 溯源与回复失败恢复。媒体、群共享模型历史、流式卡片、公开匿名受众、跨 Workflow 自动路由、自动审批、广播和主动定时推送不属于此基线。底层不支持的群/线程/加密房间必须明确拒绝。
 
-## 推荐执行顺序
+## 批次进度
 
 | 批次 | 交付 | 验收与依赖 | 当前状态 |
 |---|---|---|---|
-| WMC-01 | 公共领域/Proto/追加 Migration、owner 管理、Audience、版本化凭证、接入 validation、fake Adapter 与幂等 Inbox | 明确速率/backlog/正文与 tombstone 期限；真实 PostgreSQL 并发、签名拒绝、事务回滚、停用竞态；先审定设计默认值 | 待实施 |
-| WMC-02 | channel 初始/追问事务、来源、队列、Credits、terminal Outbox 与回复 Worker | 同一问题只执行/结算一次；unknown 不盲重试；partial chunks/restart/期限；不破坏既有手动/API/Schedule | 依赖 WMC-01，待实施 |
-| WMC-03 | 设置页第六分组、测试指引、启停、失败恢复与 Run History 来源 | 中文/英文、移动/桌面、加载/空/错误态；配置与 health 分离；重发回答与重新执行的影响清楚 | 依赖 WMC-01/02，待实施 |
-| WMC-04（B1a） | Telegram Webhook Adapter，跑通第一条真实执行闭环 | 私聊、群 @、重复 Update、长答案、Credits、连接断开与 owner 停用；取得 API/Worker 到真实 IM 的证据 | 依赖 WMC-01/02/03，待实施 |
-| WMC-05（B1b） | Discord、Slack、钉钉、飞书/Lark | 四个供应商各自的权限、身份、线程、ACK、回复窗口与重连；飞书/Lark region 分别验收；每个 Adapter 独立合入和出证据 | 依赖 Telegram 公共链路验收，待实施 |
+| WMC-01 | 公共领域/Proto/追加 Migration、owner 管理、Audience、版本化凭证、接入 validation、fake Adapter 与幂等 Inbox | 明确速率/backlog/正文与 tombstone 期限；真实 PostgreSQL 并发、签名拒绝、事务回滚、停用竞态；默认配置与边界测试 | 已实现，本地 PostgreSQL/协议测试通过，真实账号验证待补 |
+| WMC-02 | channel 初始/追问事务、来源、队列、Credits、terminal Outbox 与回复 Worker | 同一问题只执行/结算一次；unknown 不盲重试；partial chunks/restart/期限；不破坏既有手动/API/Schedule | 已实现，事务回滚、队列、Credits、unknown 恢复通过 |
+| WMC-03 | 设置页第六分组、测试指引、启停、失败恢复与 Run History 来源 | 中文/英文、移动/桌面、加载/空/错误态；配置与 health 分离；重发回答与重新执行的影响清楚 | 已实现，前端 417 项测试、类型检查、构建通过；真实浏览器账号验收待补 |
+| WMC-04（B1a） | Telegram Webhook Adapter，跑通第一条真实执行闭环 | 私聊、群 @、重复 Update、长答案、Credits、连接断开与 owner 停用；取得 API/Worker 到真实 IM 的证据 | Adapter 和公共闭环已实现；真实 Bot 收发及 Runtime 证据待补 |
+| WMC-05（B1b） | Discord、Slack、钉钉、飞书/Lark | 四个供应商各自的权限、身份、线程、ACK、回复窗口与重连；飞书/Lark region 分别验收；每个 Adapter 独立验收并出证据 | 四个 Adapter 与 UI 已实现，recording 发送/接收归一化测试通过；各真实应用账号验收待补 |
 | WMC-06（B2 准入核查） | 并行于 B1 的 Matrix、WhatsApp、WeCom、WeChat、QQ Bot、Yuanbao 前置核查清单 | 只做接口/账号/权限检查；微信直连资格和 context_token、元宝固定包与协议、企微原始协议、WhatsApp 现行 AI 条款、QQ 现行被动窗口；不先承诺可用 | 待核查，不实施 Adapter |
 | WMC-07（B2 实施） | 前置核查通过的 Matrix、WhatsApp、WeCom、WeChat、QQ Bot、Yuanbao Adapter | 使用相同公共链路；每个渠道逐个通过真实收发验收。Matrix 加密房间为单独能力项；资格不满足的渠道保留阻塞记录 | 依赖 WMC-06 与公共链路，待实施 |
 | WMC-08（B3） | Signal 与 BlueBubbles 专用 Bridge 接入 | signal-cli 账号/协议恢复、Mac/iMessage/BlueBubbles、relay 认证、离线补收、密钥隔离、固定版本；需准备额外环境 | 待实施 |
-| WMC-09 | 跨渠道回归、严格配置、部署与运维 | 关闭默认值、Migration/恢复演练、限流、owner 私有投影、无凭证日志；适用门禁后经 main_temp 发布，独立生产证据 | 待实施 |
+| WMC-09 | 跨渠道回归、严格配置、部署与运维 | 关闭默认值、Migration/恢复演练、限流、owner 私有投影、无凭证日志；适用门禁后经 main_temp 发布，独立生产证据 | 严格关闭默认配置与本地回归已实现；部署与生产证据待补 |
 
 渠道前置核查可与 B1 实施同时推进。批次不附虚构工期；实际先后可按账号可用性调整，但全部 13 个渠道继续保留在目标范围。
 
-## 关键验收场景
+## 尚待真实环境验收的关键场景
 
 - [ ] owner 配置、真实固定回复 validation、启用；其他 User 与 Administrator 无权看凭证/私有聊天。
 - [ ] 同一私聊两次问题产生一个根 Run Conversation、两个有序 Run，答复有上下文且来自冻结的原始 goal。
@@ -47,8 +47,37 @@ Go 先跑变更包测试；公共契约、凭证或跨模块改动再跑 `make t
 
 完成代码批次后提交并推送会话开发分支；适用检查通过后合入 `main_temp`，从 `main_temp` 发布。每个上线渠道单独更新证据与能力状态，不能把整个目标名单一次性标记完成。
 
-## 本轮交付与缺失证据
+## 本轮实现与本地证据
 
-已完成：当前实现 seam 检查、13 渠道一手资料核查、统一闭环设计、产品规格与 CONTEXT 术语同步、推荐批次及验收清单。部分供应商页面访问受限已写入设计。
+开发分支 `codex/workflow-message-channels`，需求设计提交 `118085a`。本轮新增 Domain/Application port、五个 Data Adapter、Proto/Go/OpenAPI/TypeScript 生成契约、Migration 000066、owner 配置/验证/启停/reset、回调认证、持久化 Inbox/Conversation/Delivery、Worker 运输循环及设置页第六分组。所有接入默认关闭，配置和各平台设置步骤见 [设计 §9](../technical/workflow-message-channels.md#9-首期部署配置与当前限制)。
 
-未完成且未声称完成：任何 Adapter、公共渠道代码、数据库迁移、UI、真实 IM 账号验证、Runtime 执行闭环、生产部署。文档检查与提交/推送结果由本轮完成说明记录，代码测试与 Conformance 仅列为实施门禁。
+本地真实 PostgreSQL 使用临时 `postgres:17-alpine` 容器，每项集成测试建立独立数据库并执行完整 Migration 链；设置 `WORKSPACE_TEST_POSTGRES_DSN` 后运行，十个渠道集成用例没有因缺少数据库而 Skip。覆盖验证不执行模型、十二个并发重复事件只创建一个 Run、sender/owner 隔离、冻结 goal 与 reset、五槽队列和非正 Credits 拒绝、终态/Outbox/结算事务回滚、发送分块和 unknown 确认重发、过期 lease fencing、发送冷却、backlog、凭证轮换、账号停用和 retention。既有 Worker 使用 recording Executor 运行两个连续问题和独立 sender，验证前轮保存答复进入下一轮上下文。
+
+独立协议测试覆盖 Telegram Secret/Unicode mention/编辑与 Bot 忽略，Slack raw-body HMAC/时间窗口/tenant/thread，Discord/钉钉/飞书身份归一化与 tenant/Bot 拒绝，五种发送目标和安全错误、钉钉 Stream 成功 ACK 以 Inbox 提交为前提及网关限制、短期回复地址/过期拒绝。Runtime Executor 使用 recording Adapter 验证渠道 Secret 过滤结果、进度和 Workspace 文件，但不进入 Runtime Request 或凭证挂载；未调用真实模型。
+
+发送冷却、重试与租约使用数据库时钟，避免 API/Worker 与数据库宿主机时钟差使新任务短暂不可领取。Channel 控制锁使用 `NO KEY UPDATE`，与终态 Outbox 的 FK key-share 兼容；真实 PostgreSQL 测试覆盖该锁序边界。已生成契约通过 Buf lint 和 Wire，Buf breaking 与 verify-generated 检查通过。
+
+已实际执行的本地检查：
+
+```bash
+pnpm --dir frontend install
+make generate
+make breaking
+make verify-generated
+go -C backend test ./internal/biz/workspace/... ./internal/data/messagechannel/... ./internal/platformconfig/... ./internal/service/workspace/...
+# 下列数据库命令均设置了实际 WORKSPACE_TEST_POSTGRES_DSN：
+go -C backend test ./internal/data/workspace/gormrepo -run TestChannel -count=3
+go -C backend test -race ./internal/data/workspace/gormrepo -run TestChannel -count=1
+make test
+make build
+pnpm --dir frontend test
+make web-typecheck
+make web-build
+git diff --check
+```
+
+前端 47 个文件、417 项测试通过，覆盖中英文、配置为空/全局关闭、启用授权说明、unknown 重发确认和六个 Settings 分组。Adapter、配置与渠道 Secret Runtime 路径另以 `go test -race` 聚焦执行通过；未匹配测试的 Application 包不记为 race 场景通过。
+
+未取得：五个供应商真实账号/权限、真实接收→模型 Runtime→IM 答复及连续追问、真实 Gateway 掉线/重启补收、飞书与 Lark 分别验收、真实浏览器桌面/移动账号交互、Linux + runsc Sandbox/Production Conformance、新 Digest Runtime 镜像验收、远端 MinIO/OSS 集成以及生产部署。它们没有被本地 mock、Skip 或构建成功替代。本轮没有变更 Runtime CLI/Image/Sandbox 配置，不声称具有新的 Runtime Capability 证据。
+
+剩余八个渠道维持原目标与前置资格核查，不在本轮 UI 或服务器枚举中伪装为可用。恢复可靠性从 Inbox 提交开始；钉钉 fire-forgot 与 Discord 进程内 resume 的边界已单独记录。未知发送不自动重放，owner 可确认重发或等待发送期限收口。

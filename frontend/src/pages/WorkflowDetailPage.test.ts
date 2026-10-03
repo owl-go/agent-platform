@@ -73,6 +73,12 @@ async function mountPage(api = apiStub(), path = `/workflows/${workflow.id}?tab=
 }
 
 describe("WorkflowDetailPage", () => {
+  it("identifies the configured channel in Run History", async () => {
+    const channelRun: Run = { ...run, trigger: "message_channel", message_channel_id: "channel-1", message_channel_name: "Telegram 问答" };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [channelRun]) }));
+    expect(wrapper.get('.run-row[role="button"]').text()).toContain("消息渠道 · Telegram 问答");
+    wrapper.unmount();
+  });
   beforeEach(() => {
     window.localStorage.clear();
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
@@ -630,7 +636,8 @@ describe("WorkflowDetailPage", () => {
     await wrapper.vm.$nextTick();
 
     const sections = wrapper.findAll(".settings-section");
-    expect(sections).toHaveLength(5);
+    expect(sections).toHaveLength(6);
+    expect(wrapper.find("#workflow-settings-channels").text()).toContain("消息渠道");
     expect(sections.every((section) => section.attributes("open") === undefined)).toBe(true);
     expect(wrapper.text()).toContain("0 个知识库 · 0 个环境变量");
     expect(wrapper.find(".section-heading-actions").exists()).toBe(false);

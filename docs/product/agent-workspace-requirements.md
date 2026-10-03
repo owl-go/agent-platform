@@ -2,7 +2,7 @@
 
 Status: accepted for implementation on 2026-08-25; Expert Team amendment accepted on 2026-09-02; Credits amendment accepted on 2026-09-04; Expert, Skill, and Connector simplification accepted on 2026-09-05; AI Creation amendment accepted on 2026-09-08; AI Applications amendment accepted on 2026-09-19; Enterprise Governance amendment accepted on 2026-09-28.
 
-Workflow Message Channel scope added on 2026-10-03: the requested outcome is accepted as a product target; implementation defaults and rollout batches remain proposed in the linked design and plan. No channel implementation or end-to-end acceptance is claimed by this amendment.
+Workflow Message Channel scope added on 2026-10-03: the first implementation covers Telegram, Discord, Slack, DingTalk, and Feishu/Lark, with local tests for the shared receive-execute-reply pipeline. Real application credentials, live IM/Runtime closure, and production acceptance remain outstanding; the other eight channels remain later targets.
 
 ## 1. Product Outcome
 
@@ -230,7 +230,7 @@ Settings contains six collapsed sections:
 - The initial delivery contract is a complete text answer after execution, safely split where needed. Group replies remain visible to that group's audience; participant-isolated model context does not make a group answer private. Raw reasoning, Runtime events, internal errors, external credentials, private file links, and another conversation's content are never sent. Media, streaming, cards, and Artifact sending require separate capability acceptance.
 - Run History identifies message-channel origin and distinguishes execution success from answer delivery. Recovering an answer delivery retries the saved answer only; rerunning the Workflow creates a new independently charged Run. Full queues, unavailable dependencies, insufficient Credits, cancellation, approval waits, expired reply windows, and unknown send outcomes have bounded, safe recovery states.
 - Disabling or deleting a channel, deleting its Workflow, or disabling its owner stops new reception and new external delivery attempts. Already accepted channel-origin Runs are cancelled where non-terminal; other trigger types remain governed by their existing lifecycle. An already submitted external send may still arrive and is recorded without a new retry. Workflow deletion destroys channel credentials and preserves only the allowed read-only Run history.
-- Detailed design, source-backed channel constraints, proposed defaults, and acceptance cases are in [Workflow Message Channel design](../technical/workflow-message-channels.md); implementation batches and remaining evidence are in [the execution plan](../tickets/workflow-message-channels-execution.md).
+- Detailed design, source-backed channel constraints, implementation defaults, and acceptance cases are in [Workflow Message Channel design](../technical/workflow-message-channels.md); implementation batches and remaining evidence are in [the execution plan](../tickets/workflow-message-channels-execution.md).
 
 ## 6. Workspace
 

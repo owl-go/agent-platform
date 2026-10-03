@@ -59,6 +59,7 @@ type Service struct {
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
+	server.Handle("/api/v1/message-channel-callbacks/{provider}/{channel_id}", http.HandlerFunc(service.messageChannelCallback))
 	server.Handle(teambitionOAuthCallbackPath, http.HandlerFunc(service.teambitionOAuthCallback))
 	server.Handle("/api/v1/sessions/{session_id}/messages/{message_id}/events", http.HandlerFunc(service.streamSessionMessage))
 	server.Handle("/api/v1/resource-creation-actions/", http.HandlerFunc(service.decideResourceCreationAction))

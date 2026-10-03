@@ -4987,6 +4987,202 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/message-channels": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListMessageChannels",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListMessageChannelsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      },
+      "post": {
+        "operationId": "AgentWorkspaceService_SaveMessageChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MessageChannel"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceSaveMessageChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ControlMessageChannel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1MessageChannel"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceControlMessageChannelBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ListChannelDeliveries",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListChannelDeliveriesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry": {
+      "post": {
+        "operationId": "AgentWorkspaceService_RetryChannelDelivery",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "channel_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceRetryChannelDeliveryBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/runs": {
       "get": {
         "operationId": "AgentWorkspaceService_ListRuns",
@@ -5568,6 +5764,18 @@
         }
       }
     },
+    "AgentWorkspaceServiceControlMessageChannelBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "action": {
+          "type": "string"
+        }
+      }
+    },
     "AgentWorkspaceServiceCreateKnowledgeCategoryBody": {
       "type": "object",
       "properties": {
@@ -5754,6 +5962,18 @@
     "AgentWorkspaceServiceResetUserPasswordBody": {
       "type": "object"
     },
+    "AgentWorkspaceServiceRetryChannelDeliveryBody": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "confirm_possible_duplicate": {
+          "type": "boolean"
+        }
+      }
+    },
     "AgentWorkspaceServiceRetrySessionMessageBody": {
       "type": "object"
     },
@@ -5838,6 +6058,36 @@
         },
         "plan_preference": {
           "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceSaveMessageChannelBody": {
+      "type": "object",
+      "properties": {
+        "channel_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "audience": {
+          "$ref": "#/definitions/v1ChannelAudience"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -6612,6 +6862,65 @@
         },
         "git_ref": {
           "type": "string"
+        }
+      }
+    },
+    "v1ChannelAudience": {
+      "type": "object",
+      "properties": {
+        "sender_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "group_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allow_direct": {
+          "type": "boolean"
+        }
+      },
+      "description": "Message Channel management is owner-only. Credentials are write-only."
+    },
+    "v1ChannelDelivery": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "channel_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "chunk": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "state": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "provider_message_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -8916,6 +9225,18 @@
         }
       }
     },
+    "v1ListChannelDeliveriesResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ChannelDelivery"
+          }
+        }
+      }
+    },
     "v1ListCommandApprovalsResponse": {
       "type": "object",
       "properties": {
@@ -9151,6 +9472,21 @@
             "type": "object",
             "$ref": "#/definitions/v1MCPConnector"
           }
+        }
+      }
+    },
+    "v1ListMessageChannelsResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1MessageChannel"
+          }
+        },
+        "available": {
+          "type": "boolean"
         }
       }
     },
@@ -9472,6 +9808,68 @@
           }
         },
         "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "v1MessageChannel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workflow_id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "account_id": {
+          "type": "string"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "tenant_id": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "audience": {
+          "$ref": "#/definitions/v1ChannelAudience"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "config_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "validation_state": {
+          "type": "string"
+        },
+        "validation_code": {
+          "type": "string"
+        },
+        "validation_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "health": {
+          "type": "string"
+        },
+        "error_code": {
+          "type": "string"
+        },
+        "callback_url": {
           "type": "string"
         }
       }
@@ -10183,6 +10581,12 @@
         },
         "execution_plan": {
           "$ref": "#/definitions/v1ExecutionPlan"
+        },
+        "message_channel_id": {
+          "type": "string"
+        },
+        "message_channel_name": {
+          "type": "string"
         }
       }
     },

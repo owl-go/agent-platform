@@ -15,6 +15,7 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/cliconnector"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
+	"agent-platform/backend/internal/data/messagechannel"
 	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
@@ -37,8 +38,10 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 }
 
 type Worker struct {
-	workspace  *workspaceapplication.Worker
-	aicreation *aicreationapplication.Service
+	workspace          *workspaceapplication.Worker
+	aicreation         *aicreationapplication.Service
+	channels           *workspaceapplication.MessageChannels
+	channelConnections *workspaceapplication.ChannelConnections
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -111,7 +114,14 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return &Worker{workspace: workspaceWorker, aicreation: aicreation}, nil
+	channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewAdapters(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+		MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
+		MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
+		MaxTextBytes:               config.MessageChannels.MaxTextBytes,
+		MaxSendAttempts:            config.MessageChannels.MaxSendAttempts,
+		SendInterval:               config.MessageChannels.SendInterval.Value(),
+	})
+	return &Worker{workspace: workspaceWorker, aicreation: aicreation, channels: channels, channelConnections: workspaceapplication.NewChannelConnections(channels, config.MessageChannels.MaxConnections)}, nil
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {
@@ -227,6 +237,27 @@ func NewServers(database *gormdb.Database, worker *Worker, warm *containerproces
 	for _, loop := range loops {
 		servers = append(servers, loop)
 	}
+	if config.MessageChannels.Enabled {
+		for _, task := range []struct {
+			name    string
+			process workerserver.ProcessFunc
+		}{
+			{"message-channel-inbox", worker.channels.ProcessInbox},
+			{"message-channel-delivery", worker.channels.ProcessDelivery},
+			{"message-channel-connections", worker.channelConnections.ProcessNext},
+		} {
+			loop, err := workerserver.NewLoopWithState(task.name, interval, task.process, state)
+			if err != nil {
+				return nil, err
+			}
+			servers = append(servers, loop)
+		}
+	}
+	maintenance, err := workerserver.NewLoopWithState("message-channel-maintenance", 15*time.Minute, worker.channels.ProcessMaintenance, state)
+	if err != nil {
+		return nil, err
+	}
+	servers = append(servers, maintenance)
 	return append(servers, management, reaper, contentReaper), nil
 }
 
