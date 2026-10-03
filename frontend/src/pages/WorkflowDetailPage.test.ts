@@ -138,11 +138,28 @@ describe("WorkflowDetailPage", () => {
     expect(validated.get(".workflow-next-steps").text()).toContain("定时触发");
     expect(validated.get(".workflow-next-steps").text()).toContain("接入业务系统");
     expect(validated.get(".workflow-next-steps").text()).toContain("连接代码仓库");
+    expect(validated.get(".workflow-next-steps").text()).toContain("配置消息渠道");
     await validated.get(".workflow-next-steps .el-button").trigger("click");
     await flushPromises();
     expect(validated.findAll(".tabs button")[3]!.classes()).toContain("active");
     expect((validated.get("#workflow-settings-schedule").element as HTMLDetailsElement).open).toBe(true);
     validated.unmount();
+  });
+
+  it("opens Message Channel setup from the successful Run quick configuration", async () => {
+    const listMessageChannels = vi.fn(async () => ({ items: [], available: true }));
+    const wrapper = await mountPage(apiStub({ listMessageChannels }));
+    expect(listMessageChannels).not.toHaveBeenCalled();
+    const action = wrapper.findAll(".workflow-next-step-actions .el-button").find(button => button.text() === "配置消息渠道")!;
+    await action.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll(".tabs button")[3]!.classes()).toContain("active");
+    const section = wrapper.get("#workflow-settings-channels");
+    expect((section.element as HTMLDetailsElement).open).toBe(true);
+    expect(listMessageChannels).toHaveBeenCalledWith(workflow.id, expect.any(AbortSignal));
+    expect(section.get(".message-channels").text()).toContain("添加渠道");
+    wrapper.unmount();
   });
 
   it("opens the operational Overview by default", async () => {
@@ -639,7 +656,10 @@ describe("WorkflowDetailPage", () => {
     expect(sections).toHaveLength(6);
     expect(wrapper.find("#workflow-settings-channels").text()).toContain("消息渠道");
     expect(sections.every((section) => section.attributes("open") === undefined)).toBe(true);
-    expect(wrapper.text()).toContain("0 个知识库 · 0 个环境变量");
+    expect(wrapper.get("#workflow-settings-environment > summary").text()).toContain("0 个环境变量");
+    expect(wrapper.find("#workflow-settings-resources").exists()).toBe(false);
+    expect(wrapper.find("#workflow-settings-basic .knowledge-base-picker").exists()).toBe(true);
+    expect(wrapper.get("#workflow-settings-environment").find(".knowledge-base-picker").exists()).toBe(false);
     expect(wrapper.find(".section-heading-actions").exists()).toBe(false);
     expect(wrapper.find(".danger-zone").exists()).toBe(false);
     const bottomActions = wrapper.get(".settings-actions-bottom");
@@ -674,7 +694,7 @@ describe("WorkflowDetailPage", () => {
     await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
-    const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
+    const choices = wrapper.get("#workflow-settings-basic").findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
     expect(choices).toHaveLength(2);
     expect(choices.every((choice) => !choice.element.checked)).toBe(true);
     expect(choices[0]!.element.disabled).toBe(false);
@@ -687,6 +707,10 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".settings-form").trigger("submit");
     await flushPromises();
     expect(updateWorkflow).toHaveBeenCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: ["kb-1"] }), workflow.version);
+    await choices[0]!.setValue(false);
+    await wrapper.get(".settings-form").trigger("submit");
+    await flushPromises();
+    expect(updateWorkflow).toHaveBeenLastCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: [] }), workflow.version);
     wrapper.unmount();
   });
 
