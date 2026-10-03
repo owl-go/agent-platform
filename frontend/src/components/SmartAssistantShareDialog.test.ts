@@ -43,6 +43,64 @@ describe("SmartAssistantShareDialog", () => {
     } finally { wrapper.unmount(); }
   });
 
+  it("saves floating defaults and uploads its independent icon only when saving", async () => {
+    const api = apiStub();
+    api.uploadSmartAssistantWidgetIcon = vi.fn(async (_id, _file, input) => ({ ...assistant, ...input, share: { ...assistant.share, ...input.share, widget_icon: "uploaded-icon" }, version: 5 }));
+    const NativeURL = URL;
+    vi.stubGlobal("URL", class extends NativeURL { static createObjectURL() { return "blob:chat-preview"; } static revokeObjectURL() {} });
+    const saved = structuredClone(assistant);
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: saved },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const floating = document.body.querySelector('[data-testid="embed-type"] input[value="floating"]') as HTMLInputElement;
+      floating.click(); await flushPromises();
+      const open = document.body.querySelector('[data-testid="widget-default-open"] input') as HTMLInputElement;
+      open.click(); await flushPromises();
+      const file = new File(["png"], "chat.png", { type: "image/png" });
+      const input = document.body.querySelector('[data-testid="widget-icon-input"]') as HTMLInputElement;
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true })); await flushPromises();
+      expect(api.uploadSmartAssistantWidgetIcon).not.toHaveBeenCalled();
+      expect(document.body.querySelector('.share-widget-icon img')?.getAttribute("src")).toBe("blob:chat-preview");
+      expect(saved.share.embed_type).toBeUndefined();
+      (document.body.querySelector('[data-testid="share-save"]') as HTMLButtonElement).click(); await flushPromises();
+      expect(api.uploadSmartAssistantWidgetIcon).toHaveBeenCalledWith(saved.id, file, expect.objectContaining({ share: expect.objectContaining({ embed_type: "floating", widget_default_open: true }) }), saved.version);
+      expect(api.updateSmartAssistant).not.toHaveBeenCalled();
+      expect(saved.icon).toBe("sparkles");
+      expect(wrapper.emitted("update:modelValue")).toBeUndefined();
+      const updated = wrapper.emitted("updated")![0]![0] as SmartAssistant;
+      await wrapper.setProps({ assistant: updated });
+      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.trim() === "生成新的分享 Token") as HTMLButtonElement;
+      generate.click(); await flushPromises();
+      expect(api.regenerateAssistantShareToken).toHaveBeenCalledWith(saved.id, updated.version);
+      expect((document.body.querySelector(".share-snippet textarea") as HTMLTextAreaElement).value).toContain("/widget-icon");
+    } finally { wrapper.unmount(); vi.unstubAllGlobals(); }
+  });
+
+  it("cancels a selected widget icon without uploading or changing saved settings", async () => {
+    const api = apiStub(); api.uploadSmartAssistantWidgetIcon = vi.fn();
+    const NativeURL = URL;
+    vi.stubGlobal("URL", class extends NativeURL { static createObjectURL() { return "blob:preview"; } static revokeObjectURL() {} });
+    const saved = structuredClone(assistant); saved.share.embed_type = "floating";
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: saved },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const input = document.body.querySelector('[data-testid="widget-icon-input"]') as HTMLInputElement;
+      Object.defineProperty(input, "files", { value: [new File(["png"], "chat.png", { type: "image/png" })] });
+      input.dispatchEvent(new Event("change", { bubbles: true })); await flushPromises();
+      const cancel = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.trim() === "取消") as HTMLButtonElement;
+      cancel.click(); await flushPromises();
+      expect(api.uploadSmartAssistantWidgetIcon).not.toHaveBeenCalled();
+      expect(saved.share.widget_icon).toBeUndefined();
+    } finally { wrapper.unmount(); vi.unstubAllGlobals(); }
+  });
+
   it.each([
     "http://public.example.test", "https://example.test/page", "https://example.test?query=1",
     "https://example.test#section", "https://user:password@example.test", "https://*.example.test", "example.test",

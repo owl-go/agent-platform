@@ -152,16 +152,16 @@ func (service *Service) ConsumeExternalRate(ctx context.Context, scope, key stri
 func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
 	assistants, err := service.repository.ListAssistants(ctx, owner)
 	for i := range assistants {
-		assistants[i] = withFreeQuestions(assistants[i])
+		assistants[i] = withShareDefaults(assistants[i])
 	}
 	return assistants, err
 }
 func (service *Service) GetAssistant(ctx context.Context, owner, id string) (domain.SmartAssistant, error) {
 	assistant, err := service.repository.GetAssistant(ctx, owner, id)
-	return withFreeQuestions(assistant), err
+	return withShareDefaults(assistant), err
 }
 func (service *Service) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
-	assistant = withFreeQuestions(assistant)
+	assistant = withShareDefaults(assistant)
 	assistant.OwnerID = owner
 	if assistant.State == "" {
 		assistant.State = domain.StateDraft
@@ -262,7 +262,7 @@ func hashShareToken(token string) string {
 	return base64.RawURLEncoding.EncodeToString(digest[:])
 }
 func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
-	assistant = withFreeQuestions(assistant)
+	assistant = withShareDefaults(assistant)
 	assistant.OwnerID = owner
 	issuedShareToken := ""
 	current, err := service.repository.GetAssistant(ctx, owner, id)
@@ -366,13 +366,16 @@ func (service *Service) ResolveSharedAssistant(ctx context.Context, token string
 	if assistant.LastValidatedAt == nil || assistant.ValidatedVersion != assistant.Version {
 		return domain.SmartAssistant{}, domain.ErrNotFound
 	}
-	return withFreeQuestions(assistant), nil
+	return withShareDefaults(assistant), nil
 }
 
 // Keep the legacy JSON fields readable by older clients while ignoring their saved values.
-func withFreeQuestions(assistant domain.SmartAssistant) domain.SmartAssistant {
+func withShareDefaults(assistant domain.SmartAssistant) domain.SmartAssistant {
 	assistant.Share.FreeTextEnabled = true
 	assistant.Share.DailyCallLimit = 0
+	if assistant.Share.EmbedType == "" {
+		assistant.Share.EmbedType = "fullscreen"
+	}
 	return assistant
 }
 
@@ -382,7 +385,7 @@ func (service *Service) RecordPublicationValidation(ctx context.Context, owner, 
 		return domain.SmartAssistant{}, fmt.Errorf("publication repository is unavailable")
 	}
 	assistant, err := repository.RecordPublicationValidation(ctx, owner, id, version, checkedAt.UTC())
-	return withFreeQuestions(assistant), err
+	return withShareDefaults(assistant), err
 }
 
 func (service *Service) PublicationStats(ctx context.Context, owner, id string, windowDays int) (domain.PublicationStats, error) {

@@ -86,7 +86,7 @@ export interface ModelProviderConnection { id: string; name: string; provider_ty
 export interface ModelProviderPreset { provider_type: string; display_name: string; official_endpoint: string; protocols: string[] }
 export interface MCPServer { id: string; platform?: boolean; managed_installation?: boolean; name: string; icon?: string; transport: "stdio" | "streamable_http"; url?: string; runner?: "npx" | "uvx"; package?: string; package_version?: string; arguments: string[]; environment: EnvironmentVariable[]; tested: boolean; test_pending: boolean; test_error?: string; created_at: string; updated_at: string; version: number }
 export interface Skill { id: string; platform?: boolean; system_key?: string; immutable?: boolean; name: string; icon?: string; source: "git" | "upload"; git_url?: string; git_ref?: string; sha256: string; created_at: string; updated_at: string; version: number }
-export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; free_text_enabled?: boolean; daily_call_limit?: number; data_processing_acknowledged?: boolean }
+export interface AssistantShareConfiguration { enabled: boolean; token?: string; allowed_origins?: string[]; width: string; height: number; embed_type?: "fullscreen" | "floating"; widget_default_open?: boolean; widget_icon?: string; free_text_enabled?: boolean; daily_call_limit?: number; data_processing_acknowledged?: boolean }
 export interface AssistantPublicationCheck { code: string; ready: boolean; detail: string }
 export interface AssistantPublicationValidation { assistant_id: string; assistant_version: number; ready: boolean; checks: AssistantPublicationCheck[]; checked_at: string }
 export interface AssistantPublicationStats { window_days: number; external_conversations: number; free_text_calls: number; faq_answers: number; model_answers: number; failed_or_cancelled_answers: number; safety_refusals: number; credit_consumed_hundredths: number }
@@ -272,6 +272,8 @@ export interface PlatformApi {
   getSmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
   uploadSmartAssistantIcon(id: string, file: File, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
   getSmartAssistantIcon(id: string, signal?: AbortSignal): Promise<Blob>;
+  uploadSmartAssistantWidgetIcon(id: string, file: File, input: SmartAssistantInput, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
+  getSmartAssistantWidgetIcon(id: string, signal?: AbortSignal): Promise<Blob>;
   updateSmartAssistant(id: string, input: SmartAssistantInput, version: number, signal?: AbortSignal): Promise<SmartAssistant>;
   copySmartAssistant(id: string, signal?: AbortSignal): Promise<SmartAssistant>;
   setSmartAssistantState(id: string, state: SmartAssistant["state"], version: number, signal?: AbortSignal): Promise<SmartAssistant>;
@@ -663,6 +665,14 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } });
     },
     getSmartAssistantIcon(id, signal) { return download(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, signal); },
+    uploadSmartAssistantWidgetIcon(id, file, input, version, signal) {
+      const form = new FormData();
+      form.append("icon", file);
+      form.append("configuration", JSON.stringify(input));
+      form.append("version", String(version));
+      return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/widget-icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } });
+    },
+    getSmartAssistantWidgetIcon(id, signal) { return download(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/widget-icon`, signal); },
     updateSmartAssistant(id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     copySmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/copy`, json("POST", {}, signal)); },
     setSmartAssistantState(id, state, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal)); },

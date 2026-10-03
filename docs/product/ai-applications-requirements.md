@@ -128,7 +128,9 @@ FAQ answers are checked before enablement. Knowledge Documents are checked befor
 
 ### 4.6 Controlled Sharing And Iframe Embedding
 
-An owner may enable anonymous public use through a Share Configuration containing enabled state, an unpredictable Token and revision, a required non-empty HTTPS allowed-Origin list, explicit data-processing acknowledgement, iframe dimensions, generated snippet, and Token rotation or revocation actions.
+An owner may enable anonymous public use through a Share Configuration containing enabled state, an unpredictable Token and revision, a required non-empty HTTPS allowed-Origin list, explicit data-processing acknowledgement, embed type, iframe dimensions, generated snippet, and Token rotation or revocation actions.
+
+Embedding supports a fullscreen iframe that fills its host container and a floating widget fixed to the bottom-right of the host page. The floating widget starts either expanded or showing only a chat icon, as selected by the owner. Its independent chat icon accepts PNG, JPEG, WebP or GIF uploads up to 2 MiB; it does not replace the Assistant avatar. Collapsing and reopening the widget preserves the same iframe and visitor conversation. The widget adapts its configured dimensions to desktop and mobile viewports. Generated code includes the selected presentation and copies as one snippet; it does not expose private object-storage keys. Existing configurations default to fullscreen embedding.
 
 The Share Configuration editor keeps unsaved edits separate from the saved Assistant. A cancelled or rejected save cannot change the catalog's sharing state. Root site URLs with a trailing slash are normalized to origins; paths, queries, credentials, unsupported protocols, and invalid iframe dimensions receive an explanation in the open dialog before submission. Existing optimistic version checks and publication requirements still apply.
 

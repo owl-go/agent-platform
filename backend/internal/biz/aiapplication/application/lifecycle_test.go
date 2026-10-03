@@ -140,7 +140,7 @@ func TestAssistantSharingIgnoresLegacyQuestionRestrictions(t *testing.T) {
 	}
 	assertFree := func(assistant domain.SmartAssistant, err error) {
 		t.Helper()
-		if err != nil || !assistant.Share.FreeTextEnabled || assistant.Share.DailyCallLimit != 0 {
+		if err != nil || !assistant.Share.FreeTextEnabled || assistant.Share.DailyCallLimit != 0 || assistant.Share.EmbedType != "fullscreen" {
 			t.Fatalf("sharing=%#v err=%v", assistant.Share, err)
 		}
 	}
