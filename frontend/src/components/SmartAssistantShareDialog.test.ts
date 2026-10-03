@@ -15,12 +15,98 @@ function apiStub(): PlatformApi {
   return {
     listAssistantFAQs: vi.fn(async () => [{ id: "faq-1", assistant_id: "assistant-1", question: "如何退款？", answer_markdown: "在订单页申请。", display_order: 0, category: "", tag: "", icon: "", enabled: true, created_at: "2026-09-22T00:00:00Z", updated_at: "2026-09-22T00:00:00Z", version: 1 }]),
     getAssistantPublicationStats: vi.fn(async () => ({ window_days: 30, external_conversations: 2, free_text_calls: 3, faq_answers: 1, model_answers: 2, failed_or_cancelled_answers: 1, safety_refusals: 1, credit_consumed_hundredths: 125 })),
-    updateSmartAssistant: vi.fn(async (_id, input) => ({ ...assistant, ...input, share: { ...assistant.share, ...input.share }, version: 5 })),
+    updateSmartAssistant: vi.fn(async (_id, input, version) => ({ ...assistant, ...input, share: { ...assistant.share, ...input.share }, version: version + 1 })),
     regenerateAssistantShareToken: vi.fn(async () => ({ token: "new-token", assistant: { ...assistant, version: 5 } })),
   } as unknown as PlatformApi;
 }
 
 describe("SmartAssistantShareDialog", () => {
+  it("persists edited origins before generating a token for the saved version", async () => {
+    const api = apiStub();
+    const saved = structuredClone(assistant);
+    saved.share.allowed_origins = ["https://www.baidu.com"];
+    const calls: string[] = [];
+    api.updateSmartAssistant = vi.fn(async (_id, input, version) => {
+      calls.push("save");
+      return { ...saved, ...input, share: { ...saved.share, ...input.share }, version: version + 1 };
+    });
+    api.regenerateAssistantShareToken = vi.fn(async (_id, version) => {
+      calls.push("generate");
+      return { token: "new-token", assistant: { ...saved, version: version + 1 } };
+    });
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: saved },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const origins = document.body.querySelector('textarea[placeholder*="support.example.com"]') as HTMLTextAreaElement;
+      origins.value = "https://www.baidu.com\nhttp://localhost:4177";
+      origins.dispatchEvent(new Event("input", { bubbles: true }));
+      await flushPromises();
+      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.includes("分享 Token")) as HTMLButtonElement;
+      generate.click(); await flushPromises();
+      expect(api.updateSmartAssistant).toHaveBeenCalledWith(saved.id, expect.objectContaining({ share: expect.objectContaining({ allowed_origins: ["https://www.baidu.com", "http://localhost:4177"] }) }), saved.version);
+      expect(api.regenerateAssistantShareToken).toHaveBeenCalledWith(saved.id, saved.version + 1);
+      expect(calls).toEqual(["save", "generate"]);
+      expect(wrapper.emitted("updated")![0]![0]).toMatchObject({ share: { allowed_origins: ["https://www.baidu.com", "http://localhost:4177"] } });
+    } finally { wrapper.unmount(); }
+  });
+
+  it("does not generate a token when saving edited sharing fails", async () => {
+    const api = apiStub();
+    api.updateSmartAssistant = vi.fn(async () => { throw new ApiError("validation", 422, "invalid_input"); });
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.includes("分享 Token")) as HTMLButtonElement;
+      generate.click(); await flushPromises();
+      expect(api.updateSmartAssistant).toHaveBeenCalled();
+      expect(api.regenerateAssistantShareToken).not.toHaveBeenCalled();
+      expect(document.body.querySelector(".share-snippet")).toBeNull();
+      expect(wrapper.emitted("error")).toBeDefined();
+    } finally { wrapper.unmount(); }
+  });
+
+  it("reuses the token issued by first-time sharing without rotating it again", async () => {
+    const api = apiStub();
+    const saved = structuredClone(assistant); saved.share.enabled = false;
+    api.updateSmartAssistant = vi.fn(async (_id, input, version) => ({ ...saved, ...input, share: { ...saved.share, ...input.share, token: "first-token" }, version: version + 1 }));
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: saved },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      (document.body.querySelector('[role="switch"]') as HTMLElement).click(); await flushPromises();
+      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.includes("分享 Token")) as HTMLButtonElement;
+      generate.click(); await flushPromises();
+      expect(api.updateSmartAssistant).toHaveBeenCalledWith(saved.id, expect.objectContaining({ share: expect.objectContaining({ enabled: true }) }), saved.version);
+      expect(api.regenerateAssistantShareToken).not.toHaveBeenCalled();
+      expect((document.body.querySelector(".share-snippet textarea") as HTMLTextAreaElement).value).toContain("first-token");
+    } finally { wrapper.unmount(); }
+  });
+
+  it("retains the saved revision for retry when token rotation fails", async () => {
+    const api = apiStub();
+    api.regenerateAssistantShareToken = vi.fn(async () => { throw new ApiError("unknown", 503, "unavailable"); });
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.includes("分享 Token")) as HTMLButtonElement;
+      generate.click(); await flushPromises();
+      expect(wrapper.emitted("updated")![0]![0]).toMatchObject({ version: assistant.version + 1 });
+      expect(wrapper.emitted("error")).toBeDefined();
+      expect(document.body.querySelector(".share-snippet")).toBeNull();
+    } finally { wrapper.unmount(); }
+  });
+
   it("removes question restrictions and saves legacy sharing without a daily cap", async () => {
     const api = apiStub();
     const saved = structuredClone(assistant);
@@ -73,9 +159,9 @@ describe("SmartAssistantShareDialog", () => {
       expect(wrapper.emitted("update:modelValue")).toBeUndefined();
       const updated = wrapper.emitted("updated")![0]![0] as SmartAssistant;
       await wrapper.setProps({ assistant: updated });
-      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.trim() === "生成新的分享 Token") as HTMLButtonElement;
+      const generate = Array.from(document.body.querySelectorAll(".application-share-dialog button")).find((button) => button.textContent?.trim() === "保存并生成新的分享 Token") as HTMLButtonElement;
       generate.click(); await flushPromises();
-      expect(api.regenerateAssistantShareToken).toHaveBeenCalledWith(saved.id, updated.version);
+      expect(api.regenerateAssistantShareToken).toHaveBeenCalledWith(saved.id, updated.version + 1);
       expect((document.body.querySelector(".share-snippet textarea") as HTMLTextAreaElement).value).toContain("/widget-icon");
     } finally { wrapper.unmount(); vi.unstubAllGlobals(); }
   });

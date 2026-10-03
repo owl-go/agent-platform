@@ -94,7 +94,7 @@ function showError(message: string) {
   saveError.value = message;
   emit("error", message);
 }
-async function saveShare() {
+async function persistShare(regenerate: boolean) {
   if (saving.value) return;
   saveError.value = "";
   const assistant = props.assistant;
@@ -126,26 +126,22 @@ async function saveShare() {
     allowedOrigins.value = origins.join("\n");
     shareToken.value = updated.share.enabled ? updated.share.token ?? shareToken.value : "";
     if (!updated.share.enabled) open.value = false;
+    if (regenerate && updated.share.enabled && !updated.share.token) {
+      shareToken.value = "";
+      const result = await api.regenerateAssistantShareToken(updated.id, updated.version);
+      emit("updated", result.assistant);
+      shareToken.value = result.token;
+    }
   } catch (cause) {
     showError(errorMessage(cause));
   } finally {
     saving.value = false;
   }
 }
+async function saveShare() { await persistShare(false); }
 async function regenerateToken() {
-  const assistant = props.assistant;
-  if (!assistant?.share.enabled || !shareDraft.value.enabled || pendingIcon.value || saving.value) return;
-  saving.value = true;
-  saveError.value = "";
-  try {
-    const result = await api.regenerateAssistantShareToken(assistant.id, assistant.version);
-    emit("updated", result.assistant);
-    shareToken.value = result.token;
-  } catch (cause) {
-    showError(errorMessage(cause));
-  } finally {
-    saving.value = false;
-  }
+  if (!shareDraft.value.enabled) return;
+  await persistShare(true);
 }
 
 watch(() => props.modelValue, async (value) => {
@@ -210,7 +206,7 @@ onBeforeUnmount(() => { iconRequest++; replaceIconPreview(); });
       <el-checkbox v-if="shareDraft.enabled" v-model="shareDraft.data_processing_acknowledged" data-testid="share-acknowledgement">{{ t('aiApplications.share.acknowledge') }}</el-checkbox>
       <div class="share-dialog-actions">
         <el-button @click="previewOpen = !previewOpen">{{ t('aiApplications.share.visitorPreview') }}</el-button>
-        <el-button :disabled="!assistant.share.enabled || !shareDraft.enabled || !!pendingIcon || saving" @click="regenerateToken">{{ t('aiApplications.share.regenerate') }}</el-button>
+        <el-button :disabled="!shareDraft.enabled || saving" @click="regenerateToken">{{ t('aiApplications.share.regenerate') }}</el-button>
       </div>
       <div v-if="shareToken" class="share-code">
         <el-input class="share-snippet" :model-value="embedSnippet" readonly type="textarea" :rows="6" :aria-label="t('aiApplications.share.embedCode')" />
