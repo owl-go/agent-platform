@@ -791,7 +791,9 @@ const channelProtectionKey = "workspace.message-channel-protection"
 const channelEnabledKey = "workspace.message-channel-enabled"
 
 func (r *Repository) ConfigureChannelProtection(cipher application.ChannelCipher, enabled bool, limits application.ChannelLimits) {
-	r.db = r.db.Set(channelProtectionKey, cipher).Set(channelEnabledKey, enabled).Set(channelLimitsKey, limits.Effective())
+	// Set initializes a mutable Statement. Restore a reusable Session while
+	// preserving the settings so later subqueries cannot mutate the repository.
+	r.db = r.db.Set(channelProtectionKey, cipher).Set(channelEnabledKey, enabled).Set(channelLimitsKey, limits.Effective()).Session(&gorm.Session{})
 }
 
 func channelRedactionValues(tx *gorm.DB, runID string) ([][]byte, error) {

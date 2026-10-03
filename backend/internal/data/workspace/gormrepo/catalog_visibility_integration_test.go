@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/google/uuid"
@@ -16,6 +17,12 @@ func TestCatalogVisibilityIncludesPlatformAndOwnResources(t *testing.T) {
 	db := conversationTestDatabase(t)
 	ctx := context.Background()
 	repository := New(db, nil)
+	repository.ConfigureChannelProtection(nil, true, application.ChannelLimits{})
+	// The configuration page requests CLI enablements before reusing this
+	// repository for other catalogs; its Definition subquery must stay isolated.
+	if _, err := repository.ListCLIConnectorEnablements(ctx, uuid.NewString()); err != nil {
+		t.Fatal(err)
+	}
 	exec := func(query string, args ...any) {
 		t.Helper()
 		if err := db.Exec(query, args...).Error; err != nil {
@@ -62,6 +69,18 @@ func TestCatalogVisibilityIncludesPlatformAndOwnResources(t *testing.T) {
 	}
 	if len(servers) != 2 || !catalogContainsMCP(servers, platformMCP, true) || !catalogContainsMCP(servers, ownMCP, false) || catalogContainsMCP(servers, privateMCP, false) {
 		t.Fatalf("MCP catalog = %#v", servers)
+	}
+	if _, err := repository.ListCLIConnectorDefinitions(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.ListConnectorPublications(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.ListConnectorInstallations(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.ListCommandApprovals(ctx, owner, time.Now()); err != nil {
+		t.Fatal(err)
 	}
 
 	created, err := repository.CreateExpert(ctx, owner, domain.ExpertInput{Name: "Uses platform resources", Introduction: "Intro", CoreCapability: "Capability", OperatingProcedure: "Procedure", OutputStandard: "Standard", SkillIDs: []string{platformSkill}, MCPServerIDs: []string{platformMCP}})
