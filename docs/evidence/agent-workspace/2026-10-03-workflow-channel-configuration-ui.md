@@ -16,3 +16,15 @@
 ## 验证边界
 
 本次仅修改 Web 配置入口和表单展示，没有修改 API、Worker、Migration 或 Runtime。未新增真实渠道凭证，未执行供应商消息收发闭环或新的 Linux Sandbox/Production Conformance。
+
+## 发布与公网核对
+
+- 功能提交：`b35d62c`；集成发布源：`main_temp` 的 `cac94dda53a49db125d20d1558da3ac576dd59b5`。
+- 集成后再次运行 52 个前端文件、549 项测试及 `make web-typecheck`，全部通过。
+- 使用服务器当前公开 OIDC 配置执行 `WEB_DEPLOY_HOST=agent-platform WEB_RELEASE_ID=workflow-channel-config-20261003-1 make web-deploy`，正式生产构建与发布通过，约 11:33 UTC 完成公网验证。
+- 当前 Web：`/opt/agent-platform/web/releases/workflow-channel-config-20261003-1`；前版 `releases/workflow-settings-20261003-1` 指针记录在服务器 evidence 目录，原发布目录保留。
+- 公开入口：`https://47-237-108-63.sslip.io`。公网下载的 `index.html` 和全部 80 个 JS/CSS 文件均与本地发布构建 SHA-256 一致。页面 SHA-256 为 `0f753aa90ca0e18464cd2cfce724999db0032e61552ce2a2ad81a8794a41bca2`；工作流页面 JS 为 `b72c1924a753231970c18841dee22de8426339b6056318711778d58ac395baa8`，CSS 为 `55fbe5d0af2feea5d160dd9c41edd8c1a58c3c8f1312738e7b96f9c76d402e53`。
+- 公网 `/api/healthz` 返回 `ok`，`/api/readyz` 返回 `ready`；API、Worker、Egress Controller 均 healthy。本次没有重新创建后端容器或发布 Runtime 镜像。服务器磁盘为 71% 使用、12 GiB 可用。
+- 本机日志：`/tmp/agent-platform-wmc-ui-deploy.log`、`/tmp/agent-platform-wmc-integrated-test.log`、`/tmp/agent-platform-wmc-ui-public-verification.log`、`/tmp/agent-platform-wmc-ui-server-verification.log`。资源 Hash 和截图保存在服务器 `/opt/agent-platform/evidence/workflow-channel-config-20261003-1`。
+
+浏览器交互验收针对本地生产构建及只读 API fake；线上本次核对发布资源与服务健康，没有使用真实用户身份进行渠道配置，也没有将公网健康检查等同于真实 IM 验收。
