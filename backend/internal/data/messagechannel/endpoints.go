@@ -71,8 +71,9 @@ func (h *HTTP) endpoint(base, path string) (string, error) {
 	return base + path, nil
 }
 func (h *HTTP) clientFor(target *url.URL) (*http.Client, error) {
-	fixed := map[string]bool{"api.telegram.org": true, "slack.com": true, "discord.com": true, "api.dingtalk.com": true, "oapi.dingtalk.com": true, "open.feishu.cn": true, "open.larksuite.com": true, "graph.facebook.com": true, "bots.qq.com": true, "api.sgroup.qq.com": true, "ilinkai.weixin.qq.com": true, "bot.yuanbao.tencent.com": true}
-	if fixed[target.Host] {
+	fixed := map[string]bool{"api.telegram.org": true, "slack.com": true, "discord.com": true, "api.dingtalk.com": true, "oapi.dingtalk.com": true, "open.feishu.cn": true, "open.larksuite.com": true, "graph.facebook.com": true, "bots.qq.com": true, "q.qq.com": true, "api.sgroup.qq.com": true, "ilinkai.weixin.qq.com": true, "bot.yuanbao.tencent.com": true}
+	_, wechatErr := wechatAPIBase("https://" + target.Host)
+	if fixed[target.Host] || wechatErr == nil {
 		return h.client, nil
 	}
 	for base, client := range h.approved {

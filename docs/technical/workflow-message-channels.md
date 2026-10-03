@@ -88,7 +88,16 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 - `GET .../{channel_id}/deliveries`、`POST .../{channel_id}/deliveries/{delivery_id}/retry`：最多展示最近 100 个发送记录；只恢复已保存的回答，unknown 重发要求 `confirm_possible_duplicate=true`。
 - `POST /api/v1/message-channel-callbacks/{provider}/{channel_id}`：只开放 Telegram、Slack、WhatsApp 与 QQ 的供应商认证，不能用 OIDC/Workflow JWT 代替；路径不可预测性不替代签名。Body 上限 64 KiB，认证失败返回 401，持久化/处理失败返回 503，超过上限返回 413。
 
-本轮未实现二维码/设备授权界面；微信凭证先通过腾讯官方扫码流程取得，再由 owner 输入。若后续提供平台二维码接口，必须独立管理短期状态且仅 owner 可查看；二维码及临时 Token 不进入普通日志。Callback challenge 不创建 Run。管理错误与未知资源保持 owner-scoped Not Found 语义。
+账号接入与受众/收发验证分开。`ChannelAccount` 可选实现 `ChannelQRLogin`，扫码能力不混入接收/发送接口。微信使用 [腾讯 iLink QR 协议](https://github.com/Tencent/openclaw-weixin/blob/main/docs/protocol.md)；QQ 使用腾讯发布的 [`@tencent-connect/qqbot-connector` 1.2.0](https://www.npmjs.com/package/@tencent-connect/qqbot-connector) 的绑定协议，创建任务时生成 32 字节随机 AES-GCM Key，确认时验证并解密 App Secret。QQ 当前仍用 HTTP 回调接收，扫码绑定不自动配置供应商事件回调，也不等同于个人 QQ 账号登录。
+
+- `POST /api/v1/workflows/{workflow_id}/channel-logins`：固定 provider/region/编辑 channel/version，以 `qr` 或 `credentials` 开始。非扫码渠道仅调用已有 Account Identify；未注册 QR 的 Account 不接受 `qr`。编辑先校验 owner、provider、version 与 disabled 状态。
+- `POST .../channel-logins/{login_id}/poll`：返回 waiting/scanned/verification_required/connected/expired/failed；微信可提交短期配对码。二维码本地编码成 PNG，供应商内容不作为远程图片或可执行 HTML。
+- `DELETE .../channel-logins/{login_id}`：取消授权并销毁临时密文。
+- `POST .../message-channels` 可提交一次性 `login_id` 代替 credentials。服务端再次检查 owner/workflow/provider/region/channel/version 与期限，真实 Identify 后按既有渠道凭证 AAD 加密保存；成功即销毁登录状态。两者不能同时提交，未确认、过期、跨作用域或重放的登录不得保存。
+
+临时状态仅在当前 API 进程内保留 5 分钟，敏感供应商 ticket、绑定 Key 和取得的凭证以独立 owner/workflow/login AAD 加密；全局最多 512 个、每 owner 最多 4 个。到期 Timer、取消和成功保存均销毁临时状态；API 重启后需要重新授权。多 API 副本需要粘性路由，未来共享存储必须维持同一密文与期限边界。二维码、临时 Token、配对码及密钥不进入普通日志或产品审计，只有 owner 可查询。iLink 返回的 redirect_host/baseurl 仅允许受信任 HTTPS `ilink*.weixin.qq.com` 主机，端口、用户信息、查询和非根路径均拒绝；公共地址 DNS/Dial 校验与禁止 HTTP 重定向继续生效，后续收发使用已校验的 baseurl。Callback challenge 不创建 Run。管理错误与未知资源保持 owner-scoped Not Found 语义。
+
+前端为 13 个渠道分别声明凭证字段、消息接收方式、身份标签和接入指南。WeChat 默认只显示扫码；QQ 默认扫码，可切换已有应用凭证。账号确认后才配置受众：微信/WhatsApp/BlueBubbles 只显示发送者，Matrix 明确要求 Room ID；其他渠道保留私聊与群/频道范围。微信和 QQ 扫码返回的稳定 User ID 仅建议为发送者，owner 可编辑。已有配置修改受众可保留凭证，重新授权必须重新完成真实 Identify。保存始终关闭、未验证，启用仍要求真实测试消息与回复证据；未实现的 OAuth、Socket Mode、个人 WhatsApp 扫码或 Signal 设备绑定不显示为平台操作。
 
 ## 4. 准入、连续性与隔离
 

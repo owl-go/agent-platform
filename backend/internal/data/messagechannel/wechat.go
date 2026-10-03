@@ -29,9 +29,16 @@ func (a *WeChat) call(ctx context.Context, c application.ChannelCredentials, pat
 	if _, err := rand.Read(random); err != nil {
 		return nil, 0, 0, providerError("provider_request_invalid")
 	}
+	base, err := wechatAPIBase(c["baseurl"])
+	if err != nil {
+		return nil, 0, 0, err
+	}
 	body["base_info"] = map[string]string{"channel_version": wechatProtocolVersion, "bot_agent": "AgentWorkspace"}
-	headers := http.Header{"AuthorizationType": {"ilink_bot_token"}, "X-WECHAT-UIN": {base64.StdEncoding.EncodeToString([]byte(strconv.FormatUint(uint64(binary.BigEndian.Uint32(random)), 10)))}, "iLink-App-Id": {"bot"}, "iLink-App-ClientVersion": {"132104"}}
-	return a.requestHeaders(ctx, http.MethodPost, "https://ilinkai.weixin.qq.com"+path, "Bearer "+c["bot_token"], body, headers)
+	headers := http.Header{"AuthorizationType": {"ilink_bot_token"}, "X-WECHAT-UIN": {wechatUIN(random)}, "iLink-App-Id": {"bot"}, "iLink-App-ClientVersion": {"132104"}}
+	return a.requestHeaders(ctx, http.MethodPost, base+path, "Bearer "+c["bot_token"], body, headers)
+}
+func wechatUIN(random []byte) string {
+	return base64.StdEncoding.EncodeToString([]byte(strconv.FormatUint(uint64(binary.BigEndian.Uint32(random)), 10)))
 }
 func (a *WeChat) Identify(ctx context.Context, c application.ChannelCredentials, _ string) (application.ChannelIdentity, error) {
 	if c["bot_token"] == "" || c["account_id"] == "" || c["user_id"] == "" {

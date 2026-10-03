@@ -1828,6 +1828,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/channel-logins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StartChannelLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_CancelChannelLogin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_PollChannelLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/git-source": {
         parameters: {
             query?: never;
@@ -2181,6 +2229,9 @@ export interface components {
         AgentWorkspaceServiceExchangeWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceInstallPublishedConnectorBody: Record<string, never>;
+        AgentWorkspaceServicePollChannelLoginBody: {
+            verification_code?: string;
+        };
         AgentWorkspaceServicePublishCLIConnectorDefinitionBody: {
             /** Format: int64 */
             expected_version?: number;
@@ -2239,6 +2290,7 @@ export interface components {
             credentials?: {
                 [key: string]: string;
             };
+            login_id?: string;
         };
         AgentWorkspaceServiceSelectConnectorAuthorizationBody: {
             /** Format: int64 */
@@ -2277,6 +2329,17 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
             reason?: string;
+        };
+        AgentWorkspaceServiceStartChannelLoginBody: {
+            provider?: string;
+            region?: string;
+            method?: string;
+            credentials?: {
+                [key: string]: string;
+            };
+            channel_id?: string;
+            /** Format: int64 */
+            version?: number;
         };
         AgentWorkspaceServiceStopImageGenerationBody: Record<string, never>;
         AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
@@ -2543,6 +2606,17 @@ export interface components {
             provider_message_id?: string;
             /** Format: date-time */
             created_at?: string;
+        };
+        v1ChannelLogin: {
+            id?: string;
+            provider?: string;
+            status?: string;
+            qr_content?: string;
+            account_id?: string;
+            account_name?: string;
+            suggested_sender_id?: string;
+            /** Format: date-time */
+            expires_at?: string;
         };
         v1CommandApproval: {
             id?: string;
@@ -9011,6 +9085,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1ListArtifactsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_StartChannelLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceStartChannelLoginBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ChannelLogin"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CancelChannelLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                login_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_PollChannelLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                login_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServicePollChannelLoginBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ChannelLogin"];
                 };
             };
             /** @description An unexpected error response. */

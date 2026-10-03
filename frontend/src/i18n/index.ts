@@ -639,3 +639,22 @@ Object.assign(en, { embedPreview: { title: "Assistant embed preview", introducti
 
 Object.assign((zh as unknown as { channels: Record<string, unknown> }).channels, { configure: "配置", configureProvider: "配置 {provider}" });
 Object.assign((en as unknown as { channels: Record<string, unknown> }).channels, { configure: "Configure", configureProvider: "Configure {provider}" });
+
+Object.assign((zh as unknown as { channels: Record<string, unknown> }).channels, {
+  accountSetup: "账号接入", messageSetup: "消息接收", setupGuide: "查看此渠道接入指南", connectAccount: "连接账号", accountConnected: "账号授权成功", savedAccount: "已保存的账号", reconnect: "重新授权", qrLogin: "扫码授权", manualLogin: "应用凭证", showQR: "生成二维码", refreshQR: "重新生成二维码", qrAlt: "{provider} 授权二维码", qrInstruction: "使用手机 {provider} 扫码，并在手机上确认授权。", verificationCode: "配对验证码", loginFailed: "账号接入失败，请检查此渠道的接入条件和凭证后重试。", loginRetry: "暂时无法查询授权状态，请稍候或重新生成二维码。", senderLabel: "允许的发送者（{kind}）", groupLabel: "允许的群或频道（{kind}，可选）", roomLabel: "允许的房间（{kind}，必填）", directOnly: "此接入方式仅支持私聊。", directAudience: "只接收以上发送者的私聊消息。", roomAudience: "只接收以上发送者在允许的未加密房间中提及机器人的消息；私聊房间也需填写 Room ID。",
+  loginStates: { waiting: "等待扫码，请在手机上确认授权。", scanned: "已扫码，等待手机确认。", verification_required: "请填写手机上显示的配对验证码。", connected: "账号授权成功", expired: "二维码或授权已过期，请重新生成。", failed: "授权未完成，请重新生成二维码。" },
+  receive: { webhook: "保存后配置事件回调，再发送测试消息验证收发。", connection: "保存后启动接收连接，再发送测试消息验证收发。", polling: "保存后开始接收新消息，再发送测试消息验证收发。" },
+});
+Object.assign((en as unknown as { channels: Record<string, unknown> }).channels, {
+  accountSetup: "Account connection", messageSetup: "Message reception", setupGuide: "Open channel setup guide", connectAccount: "Connect account", accountConnected: "Account authorized", savedAccount: "Saved account", reconnect: "Authorize again", qrLogin: "Scan QR code", manualLogin: "Application credentials", showQR: "Generate QR code", refreshQR: "Generate a new QR code", qrAlt: "{provider} authorization QR code", qrInstruction: "Scan with {provider} on your phone and confirm authorization.", verificationCode: "Pairing code", loginFailed: "Connection failed. Check this channel's prerequisites and credentials, then retry.", loginRetry: "Authorization status is temporarily unavailable. Wait or generate a new QR code.", senderLabel: "Allowed senders ({kind})", groupLabel: "Allowed groups or channels ({kind}, optional)", roomLabel: "Allowed rooms ({kind}, required)", directOnly: "This connection supports direct messages only.", directAudience: "Only direct messages from these senders are accepted.", roomAudience: "Only mentions from these senders in allowed unencrypted rooms are accepted. Include Room IDs for direct rooms too.",
+  loginStates: { waiting: "Waiting for scan and phone confirmation.", scanned: "Scanned. Confirm on your phone.", verification_required: "Enter the pairing code shown on your phone.", connected: "Account authorized", expired: "QR code or authorization expired. Generate a new one.", failed: "Authorization was not completed. Generate a new QR code." },
+  receive: { webhook: "After saving, configure event callbacks and send a test message to verify reception and replies.", connection: "After saving, start the receiving connection and send a test message to verify reception and replies.", polling: "After saving, receive new messages and send a test message to verify reception and replies." },
+});
+Object.assign((zh as unknown as { channels: { setup: Record<string, string> } }).channels.setup, {
+  wechat: "使用腾讯微信 iLink 扫码授权，平台自动保存 Bot 凭证。仅支持私聊；扫码账号的 iLink User ID 会自动填入允许的发送者，可在保存前调整。",
+  qqbot: "使用手机 QQ 扫码绑定官方机器人，或填写已有 App ID 与 App Secret。此接入使用 HTTP 回调，保存后需在 QQ 开放平台设置回调和消息订阅；授权成功后仍需测试真实收发。",
+});
+Object.assign((en as unknown as { channels: { setup: Record<string, string> } }).channels.setup, {
+  wechat: "Authorize through Tencent WeChat iLink QR login. Bot credentials are saved automatically. Direct chats only; the scanning account's iLink User ID is suggested as an allowed sender and can be edited before saving.",
+  qqbot: "Scan with QQ to bind an official bot, or enter an existing App ID and App Secret. This connection uses HTTP callbacks. Configure callbacks and subscriptions on the QQ platform after saving, then verify real reception and replies.",
+});

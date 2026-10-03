@@ -4949,6 +4949,124 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/channel-logins": {
+      "post": {
+        "operationId": "AgentWorkspaceService_StartChannelLogin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ChannelLogin"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceStartChannelLoginBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}": {
+      "delete": {
+        "operationId": "AgentWorkspaceService_CancelChannelLogin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "login_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll": {
+      "post": {
+        "operationId": "AgentWorkspaceService_PollChannelLogin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ChannelLogin"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "login_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServicePollChannelLoginBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/git-source": {
       "put": {
         "operationId": "AgentWorkspaceService_ConfigureWorkflowGitSource",
@@ -5918,6 +6036,14 @@
     "AgentWorkspaceServiceInstallPublishedConnectorBody": {
       "type": "object"
     },
+    "AgentWorkspaceServicePollChannelLoginBody": {
+      "type": "object",
+      "properties": {
+        "verification_code": {
+          "type": "string"
+        }
+      }
+    },
     "AgentWorkspaceServicePublishCLIConnectorDefinitionBody": {
       "type": "object",
       "properties": {
@@ -6088,6 +6214,9 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "login_id": {
+          "type": "string"
         }
       }
     },
@@ -6192,6 +6321,33 @@
         },
         "reason": {
           "type": "string"
+        }
+      }
+    },
+    "AgentWorkspaceServiceStartChannelLoginBody": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "channel_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -6919,6 +7075,36 @@
           "type": "string"
         },
         "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ChannelLogin": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "qr_content": {
+          "type": "string"
+        },
+        "account_id": {
+          "type": "string"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "suggested_sender_id": {
+          "type": "string"
+        },
+        "expires_at": {
           "type": "string",
           "format": "date-time"
         }
