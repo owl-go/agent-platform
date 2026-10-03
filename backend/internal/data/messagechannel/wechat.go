@@ -15,6 +15,7 @@ import (
 )
 
 const wechatProtocolVersion = "2.4.8"
+const wechatQRAccountIdentityKey = application.ChannelCredentialMetadataPrefix + "wechat_qr_account_id"
 
 type WeChat struct {
 	*HTTP
@@ -43,6 +44,20 @@ func wechatUIN(random []byte) string {
 func (a *WeChat) Identify(ctx context.Context, c application.ChannelCredentials, _ string) (application.ChannelIdentity, error) {
 	if c["bot_token"] == "" || c["account_id"] == "" || c["user_id"] == "" {
 		return application.ChannelIdentity{}, providerError("wechat_credentials_invalid")
+	}
+	if err := ctx.Err(); err != nil {
+		return application.ChannelIdentity{}, err
+	}
+	if bound := c[wechatQRAccountIdentityKey]; bound != "" {
+		if bound != c["account_id"] {
+			return application.ChannelIdentity{}, providerError("provider_identity_changed")
+		}
+		if _, err := wechatAPIBase(c["baseurl"]); err != nil {
+			return application.ChannelIdentity{}, err
+		}
+		// QR confirmed is the account identity authority. getconfig is conversation
+		// configuration and can return ret=-4 after successful QR confirmation.
+		return application.ChannelIdentity{ID: bound, Name: bound, BindingID: bound}, nil
 	}
 	result, status, _, err := a.call(ctx, c, "/ilink/bot/getconfig", map[string]any{"ilink_user_id": c["user_id"]})
 	if err != nil || status != 200 || result["ret"] == nil || rawNumber(result["ret"]) != 0 {

@@ -119,6 +119,14 @@ func (s *MessageChannels) decorate(c *domain.MessageChannel) {
 }
 
 func (s *MessageChannels) Save(ctx context.Context, owner, workflow, id string, version int64, c domain.MessageChannel, credentials ChannelCredentials) (domain.MessageChannel, error) {
+	if !clientChannelCredentials(credentials) {
+		return c, domain.ErrInvalid
+	}
+	return s.save(ctx, owner, workflow, id, version, c, credentials)
+}
+
+// Only decrypted login or retained channel credentials may contain metadata.
+func (s *MessageChannels) save(ctx context.Context, owner, workflow, id string, version int64, c domain.MessageChannel, credentials ChannelCredentials) (domain.MessageChannel, error) {
 	if !s.enabled {
 		return c, fmt.Errorf("%w: message channels are disabled by the administrator", domain.ErrInvalid)
 	}

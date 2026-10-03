@@ -62,6 +62,19 @@ func (s *MessageChannels) openLogin(l *channelLoginSession) (channelLoginPrivate
 	}
 	return state, nil
 }
+
+// This namespace is enriched only by trusted Account adapters, then encrypted.
+// Neither raw account connection nor raw channel save accepts it from clients.
+const ChannelCredentialMetadataPrefix = "_platform_"
+
+func clientChannelCredentials(c ChannelCredentials) bool {
+	for key := range c {
+		if strings.HasPrefix(key, ChannelCredentialMetadataPrefix) {
+			return false
+		}
+	}
+	return true
+}
 func validLoginCredentials(c ChannelCredentials) bool {
 	if len(c) > 24 {
 		return false
@@ -85,7 +98,7 @@ func (s *MessageChannels) StartLogin(ctx context.Context, owner, workflow, provi
 		return ChannelLogin{}, err
 	}
 	transport, ok := s.transports[provider]
-	if !ok || !transport.complete() || !validLoginCredentials(credentials) || (region != "" && region != "feishu" && region != "lark") || (provider != "feishu" && region != "") {
+	if !ok || !transport.complete() || !validLoginCredentials(credentials) || !clientChannelCredentials(credentials) || (region != "" && region != "feishu" && region != "lark") || (provider != "feishu" && region != "") {
 		return ChannelLogin{}, domain.ErrInvalid
 	}
 	if channel != "" {
@@ -282,7 +295,7 @@ func (s *MessageChannels) SaveWithLogin(ctx context.Context, owner, workflow, id
 	if err != nil {
 		return c, err
 	}
-	result, err := s.Save(ctx, owner, workflow, id, version, c, state.Credentials)
+	result, err := s.save(ctx, owner, workflow, id, version, c, state.Credentials)
 	if err == nil {
 		s.removeLogin(l)
 	}
