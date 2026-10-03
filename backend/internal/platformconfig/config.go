@@ -33,15 +33,21 @@ type Config struct {
 	MessageChannels MessageChannelsConfig `yaml:"message_channels"`
 }
 
+type MessageChannelEndpoint struct {
+	URL                 string `yaml:"url"`
+	AllowPrivateNetwork bool   `yaml:"allow_private_network"`
+}
+
 type MessageChannelsConfig struct {
-	MaxPendingMessages         int      `yaml:"max_pending_messages"`
-	MaxSenderMessagesPerMinute int      `yaml:"max_sender_messages_per_minute"`
-	MaxTextBytes               int      `yaml:"max_text_bytes"`
-	MaxSendAttempts            int      `yaml:"max_send_attempts"`
-	SendInterval               Duration `yaml:"send_interval"`
-	Enabled                    bool     `yaml:"enabled"`
-	CallbackBaseURL            string   `yaml:"callback_base_url"`
-	MaxConnections             int      `yaml:"max_connections"`
+	ApprovedEndpoints          []MessageChannelEndpoint `yaml:"approved_endpoints"`
+	MaxPendingMessages         int                      `yaml:"max_pending_messages"`
+	MaxSenderMessagesPerMinute int                      `yaml:"max_sender_messages_per_minute"`
+	MaxTextBytes               int                      `yaml:"max_text_bytes"`
+	MaxSendAttempts            int                      `yaml:"max_send_attempts"`
+	SendInterval               Duration                 `yaml:"send_interval"`
+	Enabled                    bool                     `yaml:"enabled"`
+	CallbackBaseURL            string                   `yaml:"callback_base_url"`
+	MaxConnections             int                      `yaml:"max_connections"`
 }
 
 type AccountsConfig struct {
@@ -439,6 +445,17 @@ func publicResolverIPv4(address netip.Addr) bool {
 }
 
 func (config Config) validateShared() error {
+	seen := map[string]bool{}
+	if len(config.MessageChannels.ApprovedEndpoints) > 100 {
+		return fmt.Errorf("too many message_channels.approved_endpoints")
+	}
+	for _, endpoint := range config.MessageChannels.ApprovedEndpoints {
+		u, err := url.Parse(endpoint.URL)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.RawPath != "" || strings.Contains(u.Path, "..") || strings.HasSuffix(endpoint.URL, "/") || strings.Contains(u.Host, "*") || seen[endpoint.URL] {
+			return fmt.Errorf("message_channels.approved_endpoints must be unique exact HTTPS base URLs")
+		}
+		seen[endpoint.URL] = true
+	}
 	for _, limit := range []struct {
 		name            string
 		value, min, max int

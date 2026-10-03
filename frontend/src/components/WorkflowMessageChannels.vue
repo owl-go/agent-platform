@@ -18,8 +18,15 @@ const deliveries = ref<ChannelDelivery[]>([]);
 const deliveryChannel = ref<MessageChannel>();
 const confirmation = ref<{ channel: MessageChannel; action: string; delivery?: ChannelDelivery }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
-const providers = ["telegram", "discord", "slack", "dingtalk", "feishu"];
-const fields = computed(() => form.provider === "dingtalk" ? ["client_id", "client_secret", "corp_id"] : form.provider === "feishu" ? ["app_id", "app_secret", "tenant_key"] : form.provider === "slack" ? ["bot_token", "signing_secret"] : ["bot_token"]);
+const providerFields: Record<string, string[]> = {
+  telegram:["bot_token"], discord:["bot_token"], slack:["bot_token","signing_secret"], dingtalk:["client_id","client_secret","corp_id"], feishu:["app_id","app_secret","tenant_key"],
+  matrix:["endpoint","access_token"], whatsapp:["access_token","app_secret","verify_token","phone_number_id","business_account_id","graph_version"], signal:["endpoint","bridge_token","account_id"],
+  wecom:["bot_id","bot_secret"], wechat:["bot_token","account_id","user_id"], qqbot:["app_id","app_secret"], bluebubbles:["endpoint","password"], yuanbao:["app_key","app_secret"],
+};
+const providers = Object.keys(providerFields);
+const fields = computed(() => providerFields[form.provider] ?? []);
+const directOnly = computed(() => ["whatsapp","wechat","bluebubbles"].includes(form.provider));
+const roomsOnly = computed(() => form.provider === "matrix");
 const ids = (text: string) => [...new Set(text.split(/[,\n]/).map(id => id.trim()).filter(Boolean))];
 const canSave = computed(() => form.name.trim() && ids(form.senders).length > 0 && (form.direct || ids(form.groups).length > 0));
 const abort = new AbortController();
@@ -47,7 +54,7 @@ function edit(channel?: MessageChannel) {
   Object.assign(form, { name: channel?.name ?? "", provider: channel?.provider ?? "telegram", region: channel?.region || "feishu", senders: channel?.audience.sender_ids.join("\n") ?? "", groups: channel?.audience.group_ids.join("\n") ?? "", direct: channel?.audience.allow_direct ?? true, credentials: {} });
   error.value = ""; dialog.value = true;
 }
-watch(() => form.provider, () => { form.credentials = {}; });
+watch(() => form.provider, () => { form.credentials = {}; if (directOnly.value) { form.direct = true; form.groups = ""; } if (roomsOnly.value) form.direct = false; });
 function clearSecrets() { form.credentials = {}; }
 async function save() {
   if (!canSave.value || busy.value) return;
@@ -124,10 +131,10 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
       <el-form-item v-if="form.provider === 'feishu'" :label="t('channels.region')"><el-select v-model="form.region" :disabled="busy"><el-option value="feishu" :label="t('channels.providers.feishu')" /><el-option value="lark" label="Lark" /></el-select></el-form-item>
       <p class="muted">{{ t(`channels.setup.${form.provider}`) }}</p>
       <p v-if="editing" class="muted">{{ t('channels.keepCredentials') }}</p>
-      <el-form-item v-for="field in fields" :key="field" :label="t(`channels.fields.${field}`)"><el-input v-model="form.credentials[field]" :type="field.includes('secret') || field.includes('token') ? 'password' : 'text'" :disabled="busy" autocomplete="off" /></el-form-item>
+      <el-form-item v-for="field in fields" :key="field" :label="t(`channels.fields.${field}`)"><el-input v-model="form.credentials[field]" :type="field.includes('secret') || field.includes('token') || field === 'password' ? 'password' : 'text'" :disabled="busy" autocomplete="off" /></el-form-item>
       <el-form-item :label="t('channels.senders')"><el-input v-model="form.senders" type="textarea" :disabled="busy" :placeholder="t('channels.idsHint')" /></el-form-item>
-      <el-checkbox v-model="form.direct" :disabled="busy">{{ t('channels.allowDirect') }}</el-checkbox>
-      <el-form-item :label="t('channels.groups')"><el-input v-model="form.groups" type="textarea" :disabled="busy" :placeholder="t('channels.idsHint')" /></el-form-item>
+      <el-checkbox v-model="form.direct" :disabled="busy || directOnly || roomsOnly">{{ t('channels.allowDirect') }}</el-checkbox>
+      <el-form-item :label="t('channels.groups')"><el-input v-model="form.groups" type="textarea" :disabled="busy || directOnly" :placeholder="t('channels.idsHint')" /></el-form-item>
       <p class="muted">{{ t('channels.audienceHint') }}</p>
     </el-form>
     <template #footer><el-button :disabled="busy" @click="dialog = false; clearSecrets()">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="busy" :disabled="!canSave" @click="save">{{ t('common.save') }}</el-button></template>

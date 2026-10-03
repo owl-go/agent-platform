@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
 )
@@ -62,4 +63,9 @@ func (t ChannelTransport) receiver() ChannelReceiver {
 
 func (t ChannelTransport) complete() bool {
 	return t.Account != nil && t.Sender != nil && t.receiver() != nil
+}
+
+// GET subscription verification is separate from authenticated incoming messages.
+type ChannelWebhookChallengeVerifier interface {
+	Challenge(context.Context, ChannelStored, ChannelCredentials, url.Values) (string, error)
 }

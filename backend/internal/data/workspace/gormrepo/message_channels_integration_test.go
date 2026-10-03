@@ -111,7 +111,7 @@ func (f *channelFixture) enable(t *testing.T) {
 	}
 	f.channel = c
 	stored := f.stored(t)
-	message := f.message("validation", "alice", c.ValidationCode)
+	message := f.message("validation-"+c.ValidationCode, "alice", c.ValidationCode)
 	if err = f.app.Receive(ctx, stored, message); err != nil {
 		t.Fatal(err)
 	}
@@ -621,5 +621,96 @@ func TestChannelFreshValidationRecoversUnknownFixedReply(t *testing.T) {
 	f.db.Model(&runRecord{}).Count(&runs)
 	if runs != 0 {
 		t.Fatal("validation created a model Run")
+	}
+}
+
+func TestChannelReceiveCursorFencingRotationAndDeletion(t *testing.T) {
+	for _, workflowDelete := range []bool{false, true} {
+		t.Run(map[bool]string{false: "channel", true: "workflow"}[workflowDelete], func(t *testing.T) {
+			f := newChannelFixture(t)
+			f.enable(t)
+			ctx := context.Background()
+			stored := f.stored(t)
+			if err := f.repo.StoreChannelReceiveCursor(ctx, stored, []byte("ciphertext")); err != nil {
+				t.Fatal(err)
+			}
+			data, err := f.repo.LoadChannelReceiveCursor(ctx, stored)
+			if err != nil || string(data) != "ciphertext" {
+				t.Fatal("lost cursor")
+			}
+			stale := stored
+			stale.Channel.Version--
+			if err := f.repo.StoreChannelReceiveCursor(ctx, stale, []byte("stale")); !errors.Is(err, domain.ErrConflict) {
+				t.Fatal("stale writer accepted")
+			}
+			f.channel, err = f.app.Control(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, "disable")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := f.repo.StoreChannelReceiveCursor(ctx, stored, []byte("disabled")); !errors.Is(err, domain.ErrConflict) {
+				t.Fatal("disabled writer accepted")
+			}
+			f.channel, err = f.app.Save(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, f.channel, application.ChannelCredentials{"bot_token": "rotated-secret"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var count int64
+			if err := f.db.Model(&channelReceiveCursorRecord{}).Where("channel_id=?", f.channel.ID).Count(&count).Error; err != nil || count != 0 {
+				t.Fatal("rotation retained cursor")
+			}
+			f.enable(t)
+			stored = f.stored(t)
+			if err := f.repo.StoreChannelReceiveCursor(ctx, stored, []byte("new ciphertext")); err != nil {
+				t.Fatal(err)
+			}
+			if workflowDelete {
+				err = f.repo.DeleteWorkflow(ctx, f.owner, f.workflow)
+			} else {
+				_, err = f.app.Control(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, "delete")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := f.db.Model(&channelReceiveCursorRecord{}).Where("channel_id=?", f.channel.ID).Count(&count).Error; err != nil || count != 0 {
+				t.Fatal("deleted cursor retained")
+			}
+		})
+	}
+}
+func TestChannelMigrationAllowsAllThirteenProviders(t *testing.T) {
+	f := newChannelFixture(t)
+	for _, provider := range []string{"telegram", "discord", "slack", "dingtalk", "feishu", "matrix", "whatsapp", "signal", "wecom", "wechat", "qqbot", "bluebubbles", "yuanbao"} {
+		if err := f.db.Model(&channelRecord{}).Where("id=?", f.channel.ID).Update("provider", provider).Error; err != nil {
+			t.Fatalf("provider %s: %v", provider, err)
+		}
+	}
+	if err := f.db.Model(&channelRecord{}).Where("id=?", f.channel.ID).Update("provider", "unknown").Error; err == nil {
+		t.Fatal("unknown provider persisted")
+	}
+}
+
+func TestChannelWorkflowCanConfigureEntireRequestedSetWithinBound(t *testing.T) {
+	f := newChannelFixture(t)
+	ctx := context.Background()
+	providers := []string{"discord", "slack", "dingtalk", "feishu", "matrix", "whatsapp", "signal", "wecom", "wechat", "qqbot", "bluebubbles", "yuanbao", "telegram", "telegram", "telegram"}
+	for i, provider := range providers {
+		c := f.channel
+		c.ID = uuid.NewString()
+		c.Provider = provider
+		c.BindingID = c.ID
+		c.AccountID = c.ID
+		c.Name = provider
+		c.Version = 1
+		c.ConfigVersion = 1
+		if _, err := f.repo.SaveMessageChannel(ctx, application.ChannelStored{Channel: c, Ciphertext: []byte("test-ciphertext")}, 0); err != nil {
+			t.Fatalf("configuration %d (%s): %v", i+2, provider, err)
+		}
+	}
+	c := f.channel
+	c.ID = uuid.NewString()
+	c.BindingID = c.ID
+	c.AccountID = c.ID
+	if _, err := f.repo.SaveMessageChannel(ctx, application.ChannelStored{Channel: c, Ciphertext: []byte("test-ciphertext")}, 0); !errors.Is(err, domain.ErrInvalid) {
+		t.Fatal("unbounded channel configurations")
 	}
 }

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestOnlyProviderPOSTCallbacksBypassOIDC(t *testing.T) {
+func TestOnlyAuthenticatedProviderCallbackRoutesBypassOIDC(t *testing.T) {
 	filter, err := NewAuthenticationFilter(&accountapplication.Service{}, &workspaceapplication.Service{}, productanalytics.Nop{})
 	if err != nil {
 		t.Fatal(err)
@@ -21,6 +21,11 @@ func TestOnlyProviderPOSTCallbacksBypassOIDC(t *testing.T) {
 	}{
 		{"POST", "/api/v1/message-channel-callbacks/telegram/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 204},
 		{"POST", "/api/v1/message-channel-callbacks/slack/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 204},
+		{"POST", "/api/v1/message-channel-callbacks/whatsapp/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 204},
+		{"GET", "/api/v1/message-channel-callbacks/whatsapp/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 204},
+		{"POST", "/api/v1/message-channel-callbacks/qqbot/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 204},
+		{"GET", "/api/v1/message-channel-callbacks/qqbot/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 401},
+		{"PUT", "/api/v1/message-channel-callbacks/whatsapp/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 401},
 		{"GET", "/api/v1/message-channel-callbacks/slack/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 401},
 		{"POST", "/api/v1/message-channel-callbacks/discord/06e1cec8-e4e3-4f75-98cd-5a3222d2b80c", 401},
 		{"POST", "/api/v1/message-channel-callbacks/telegram/not-a-uuid", 401},

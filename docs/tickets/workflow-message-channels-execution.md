@@ -2,7 +2,7 @@
 
 需求与实施跟踪：[GitHub Issue #62](https://github.com/owl-go/agent-platform/issues/62)。
 
-状态：2026-10-03 首期实现已完成本地验证，待真实应用账号和生产验收。用户在需求设计后要求开始实施，并明确本轮先完成 Telegram、Discord、Slack、钉钉和飞书/Lark。行为依据为 [产品规格 §5.7](../product/agent-workspace-requirements.md#57-workflow-message-channels)；协议、当前代码 seam、推荐默认值与一手来源见 [接入设计](../technical/workflow-message-channels.md)。
+状态：2026-10-03 全部 13 个渠道的文本 Adapter 和配置项已实现，待真实应用账号和生产验收。用户先实施五个渠道，随后要求其他八个一起实现。行为依据为 [产品规格 §5.7](../product/agent-workspace-requirements.md#57-workflow-message-channels)；协议、当前代码 seam、推荐默认值与一手来源见 [接入设计](../technical/workflow-message-channels.md)。
 
 ## 目标与范围
 
@@ -19,9 +19,9 @@ Workflow Settings 增加消息渠道配置，让获授权的外部参与者直�
 | WMC-03 | 设置页第六分组、测试指引、启停、失败恢复与 Run History 来源 | 中文/英文、移动/桌面、加载/空/错误态；配置与 health 分离；重发回答与重新执行的影响清楚 | 已实现，前端 417 项测试、类型检查、构建通过；真实浏览器账号验收待补 |
 | WMC-04（B1a） | Telegram Webhook Adapter，跑通第一条真实执行闭环 | 私聊、群 @、重复 Update、长答案、Credits、连接断开与 owner 停用；取得 API/Worker 到真实 IM 的证据 | Adapter 和公共闭环已实现；真实 Bot 收发及 Runtime 证据待补 |
 | WMC-05（B1b） | Discord、Slack、钉钉、飞书/Lark | 四个供应商各自的权限、身份、线程、ACK、回复窗口与重连；飞书/Lark region 分别验收；每个 Adapter 独立验收并出证据 | 四个 Adapter 与 UI 已实现，recording 发送/接收归一化测试通过；各真实应用账号验收待补 |
-| WMC-06（B2 准入核查） | 并行于 B1 的 Matrix、WhatsApp、WeCom、WeChat、QQ Bot、Yuanbao 前置核查清单 | 只做接口/账号/权限检查；微信直连资格和 context_token、元宝固定包与协议、企微原始协议、WhatsApp 现行 AI 条款、QQ 现行被动窗口；不先承诺可用 | 待核查，不实施 Adapter |
-| WMC-07（B2 实施） | 前置核查通过的 Matrix、WhatsApp、WeCom、WeChat、QQ Bot、Yuanbao Adapter | 使用相同公共链路；每个渠道逐个通过真实收发验收。Matrix 加密房间为单独能力项；资格不满足的渠道保留阻塞记录 | 依赖 WMC-06 与公共链路，待实施 |
-| WMC-08（B3） | Signal 与 BlueBubbles 专用 Bridge 接入 | signal-cli 账号/协议恢复、Mac/iMessage/BlueBubbles、relay 认证、离线补收、密钥隔离、固定版本；需准备额外环境 | 待实施 |
+| WMC-06（B2 准入核查） | 并行于 B1 的 Matrix、WhatsApp、WeCom、WeChat、QQ Bot、Yuanbao 前置核查清单 | 只做接口/账号/权限检查；微信直连资格和 context_token、元宝固定包与协议、企微原始协议、WhatsApp 现行 AI 条款、QQ 现行被动窗口；不先承诺可用 | 官方协议核查并落地实现；实际账号资格与 WhatsApp 部署政策仍待确认 |
+| WMC-07（B2 实施） | 前置核查通过的 Matrix、WhatsApp、WeCom、WeChat、QQ Bot、Yuanbao Adapter | 使用相同公共链路；每个渠道逐个通过真实收发验收。Matrix 加密房间为单独能力项；资格不满足的渠道保留阻塞记录 | 六个 Adapter 与配置项已实现，真实账号端到端验收待补 |
+| WMC-08（B3） | Signal 与 BlueBubbles 专用 Bridge 接入 | signal-cli 账号/协议恢复、Mac/iMessage/BlueBubbles、relay 认证、离线补收、密钥隔离、固定版本；需准备额外环境 | 两个 Bridge Client 与配置项已实现，真实 Bridge 环境验收待补 |
 | WMC-09 | 跨渠道回归、严格配置、部署与运维 | 关闭默认值、Migration/恢复演练、限流、owner 私有投影、无凭证日志；适用门禁后经 main_temp 发布，独立生产证据 | 严格关闭默认配置与本地回归已实现；部署与生产证据待补 |
 
 渠道前置核查可与 B1 实施同时推进。批次不附虚构工期；实际先后可按账号可用性调整，但全部 13 个渠道继续保留在目标范围。
@@ -39,7 +39,7 @@ Workflow Settings 增加消息渠道配置，让获授权的外部参与者直�
 - [ ] 停用、撤销受众、轮换凭证/换号、Workflow 删除、owner disable 立即阻止新领取，并对在途发送记录其无法撤回的边界。
 - [ ] Connector User Action Wait 仅 owner 在认证浏览器处理，IM“同意”无效；超时与取消不泄露操作细节。
 - [ ] 共享 Workspace 影响明确，私有 Artifact 下载地址不自动外发，允许域/Bridge 网络与精确脱敏拒绝绕过。
-- [ ] 每个渠道至少有真实接收→Runtime→原聊天答复与连续追问证据；不支持能力实际拒绝，尚未验收的能力不展示为可用。
+- [ ] 每个渠道至少有真实接收→Runtime→原聊天答复与连续追问证据；不支持能力实际拒绝，尚未验收的账号不允许跳过验证启用。
 
 ## 实施时的门禁
 
@@ -101,3 +101,29 @@ git diff --check
 ```
 
 十个渠道 PostgreSQL 集成用例实际执行通过。此次未修改 Proto、Migration、前端或 Runtime 镜像；之前的生成契约与前端证据见上一节。本次本地检查仍不能替代五个 IM 的真实账号联调或 Linux Production Conformance，也未进行部署。
+
+## 全部渠道扩展与本地证据（2026-10-03）
+
+用户追加要求其他渠道一起实现。本次新增 Matrix、WhatsApp、Signal、WeCom、WeChat iLink、QQ Bot、BlueBubbles、Yuanbao 共八个文本收发 Adapter，保持独立 Receiver/Sender port 和现有 Inbox→Run→Outbox 链路。配置界面提供全部 13 个渠道的字段与中英文部署说明；每个 Workflow 的配置上限调整为 16，容纳全部目标渠道。未安装第三方 Bridge 或申请真实 IM 账号。
+
+Migration 000067 扩展 provider 约束并追加加密接收游标；API/Worker 装配同一游标与 Administrator HTTPS Endpoint 批准列表。配置轮换、渠道删除和 Workflow 删除清理游标。新增 Secret/短期 context_token 使用公共脱敏集合；私聊限定、Matrix 明文拒绝、QQ 被动回复额度和各供应商身份边界由渠道实现负责。
+
+本地协议测试覆盖新增渠道的原始回调签名/挑战、tenant/账号匹配、稳定回复目标与 key、Matrix 初次历史过滤/limited gap/发送前加密检查、Signal SSE 重放与提交后游标、iLink cursor/context_token、BlueBubbles 插入游标/同时间戳跨页与账号变化拒绝、WeCom 长连接握手/回执关联/取消、Yuanbao 官方 Protobuf 字段/签名/原群引用/Inbox 成功后 ACK，以及批准 Endpoint 的私网/metadata/redirect/path 拒绝。加密游标测试使用实际 AES-GCM 校验 AAD，新增凭证与回复能力覆盖入站和最终外发脱敏。
+
+实际使用临时 `postgres:17-alpine` 执行完整 Migration 链。全部 13 个 `TestChannel...` 集成用例通过，包括原有十个用例、游标版本栅栏/停用/轮换/两种删除、十三种 provider 约束和同一 Workflow 全部渠道的容量边界；没有因数据库缺失而 Skip。前端完整 47 个文件、418 项测试通过。
+
+已实际执行的检查（数据库命令均设置真实 `WORKSPACE_TEST_POSTGRES_DSN`）：
+
+```bash
+go -C backend test ./internal/biz/workspace/application ./internal/data/messagechannel ./internal/service/workspace ./internal/platformconfig
+go -C backend test -race ./internal/data/messagechannel ./internal/biz/workspace/application ./internal/platformconfig ./internal/service/workspace
+go -C backend test -race ./internal/data/workspace/gormrepo -run TestChannel -count=1
+make test
+make build
+pnpm --dir frontend test -- WorkflowMessageChannels.test.ts
+make web-typecheck
+make web-build
+git diff --check
+```
+
+本轮不改变 Proto 或 Runtime 镜像，没有重新生成契约或执行 Linux + runsc 的 Sandbox/Production Conformance。全部 IM 的真实账号收发→Runtime→原聊天连续问答、WhatsApp 账号政策资格、Signal/macOS Bridge 部署与重启恢复、各平台生产验收仍缺证据；没有上线部署。具体配置和拒绝能力见 [设计 §10](../technical/workflow-message-channels.md#10-新增八个渠道的实现边界)。

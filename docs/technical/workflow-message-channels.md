@@ -1,6 +1,6 @@
 # Workflow Message Channel 接入设计
 
-状态：2026-10-03 首期代码已实现，待真实账号与生产验收。用户将本轮实施范围确定为 Telegram、Discord、Slack、钉钉和飞书/Lark；其公共闭环、配置界面与 Adapter 已落地，其他八个渠道仍为后续目标。开发分支为 `codex/workflow-message-channels`，原始实现基线为 `fe5c8bb`。本地 recording Adapter、PostgreSQL 和构建证据不能作为真实 IM 可用证据。
+状态：2026-10-03 全部 13 个渠道的文本收发 Adapter 与配置界面已实现，待真实账号与生产验收。用户在完成首批五个渠道后要求其他渠道一起实施。开发分支为 `codex/workflow-message-channels`；本地 recording Adapter、PostgreSQL 和构建证据不能作为真实 IM 可用证据。
 
 需求跟踪：[Issue #62](https://github.com/owl-go/agent-platform/issues/62)；实施顺序见 [执行计划](../tickets/workflow-message-channels-execution.md)。
 
@@ -19,7 +19,7 @@
 | `backend/cmd/worker`、`backend/internal/data/workspace` | 持久化领取、Runtime 执行、终态落库 | 有界渠道连接与发送任务、恢复、停用对账 |
 | `frontend/src/pages/WorkflowDetailPage.vue` | 设置、历史、Run Conversation | 消息渠道分组、接入验证与回复失败恢复 |
 
-上述 seam 已增补消息渠道实现、Proto/生成类型、Migration `000066` 和第六个 Settings 分组。已有 CLI Connector 与 Workflow API 仍是独立能力；本轮未取得真实应用、Runtime 和 IM 的端到端验收。
+上述 seam 已增补消息渠道实现、Proto/生成类型、Migration `000066` / `000067` 和第六个 Settings 分组。已有 CLI Connector 与 Workflow API 仍是独立能力；本轮未取得真实应用、Runtime 和 IM 的端到端验收。
 
 ## 2. 平台处理链路
 
@@ -61,7 +61,7 @@ Workspace Domain 定义归一化消息；Application 的 `message_channel_transp
 | `ChannelStreamReceiver` | `Connect` 管理受 `context.Context` 控制的长连接，通过 `ChannelMessageSink` 提交归一化消息；sink 失败不得成功 ACK，消息 deadline 必须传播到持久化 |
 | `ChannelSender` | `Send` 使用保存的答案、原聊天目标和稳定 Delivery key，返回安全发送状态；不执行模型或调用接收器 |
 
-Telegram/Slack 注册 Webhook 接收器，Discord/钉钉/飞书注册长连接接收器；五个渠道各自实现发送 Interface，不再需要实现不支持的 Webhook 方法。公共接收和发送循环仅依赖自己的角色；保存/验证配置要求账号、发送器和唯一接收方式齐备，缺少或同时注册两种接收方式的配置不开放。注册在进程启动时固定，Application 持有注册表副本；它是静态运输装配，不是产品动态 Capability 注册表。HTTP 认证绕过仍由 Service 的精确 Telegram/Slack POST 路由限制，新渠道不能仅靠注册自动开放公开入口。
+Telegram/Slack/WhatsApp/QQ 注册 Webhook 接收器，其余渠道注册长连接或轮询接收器；13 个渠道各自实现发送 Interface，不再需要实现不支持的 Webhook 方法。公共接收和发送循环仅依赖自己的角色；保存/验证配置要求账号、发送器和唯一接收方式齐备，缺少或同时注册两种接收方式的配置不开放。注册在进程启动时固定，Application 持有注册表副本；它是静态运输装配，不是产品动态 Capability 注册表。HTTP 认证绕过仍由 Service 的精确 Telegram/Slack/WhatsApp/QQ POST 及 WhatsApp GET 验证路由限制，新渠道不能仅靠注册自动开放公开入口。
 
 供应商认证、消息解析与归一化由各自 Receiver 完成，入站准入、限流、脱敏、工作流执行和 Delivery 恢复复用公共链路。不要给 `agentruntime.Adapter` 增加 IM 方法，也不要让渠道 Adapter 管理 Docker、Credits 或直接创建 Run。
 
@@ -78,7 +78,7 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 | 入站记录 | dedup key、归一化消息、received/admitted/rejected/ignored 状态、原因、Run ID、Config Version、generation |
 | Message Channel Delivery | channel、Run 或入站记录、kind（answer/status/validation/waiting）、destination reference、config/audience revision、不可变已脱敏 payload、chunk 顺序、state、attempt、retry_at、deadline、provider message ID |
 
-完整目标的 provider 枚举：`telegram`、`discord`、`slack`、`matrix`、`whatsapp`、`signal`、`dingtalk`、`feishu`（region 为 feishu/lark）、`wecom`、`wechat`、`qqbot`、`bluebubbles`、`yuanbao`。首期枚举只开放 telegram/discord/slack/dingtalk/feishu，支持文本与可信群 @，运输边界见下表。未实现通用动态 Capability 注册表；其他渠道、媒体、加密房间与编辑均不开放。
+完整目标的 provider 枚举：`telegram`、`discord`、`slack`、`matrix`、`whatsapp`、`signal`、`dingtalk`、`feishu`（region 为 feishu/lark）、`wecom`、`wechat`、`qqbot`、`bluebubbles`、`yuanbao`。全部枚举均有文本 Adapter，具体私聊、群 @ 与运输边界见下表；保存后仍须当前账号真实收发验证才能启用。未实现通用动态 Capability 注册表；媒体、加密房间与编辑执行均不开放。
 
 数据库使用新增不可变 Migration，不改写旧 Run Snapshot 或历史 trigger。管理 JSON API 仍以 `backend/api/workspace/v1/workspace.proto` 为权威来源；第三方签名回调是有意的自定义 Handler。当前 owner-only API：
 
@@ -86,9 +86,9 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 - `POST` 同一路径：新建关闭状态配置；传 `channel_id` 和 `version` 更新已有配置。启用时禁止编辑，凭证写入不回显；全部留空沿用已有凭证，替换时提供完整凭证。
 - `POST .../{channel_id}/actions`：Version CAS 控制 `validate`、`enable`、`disable`、`delete`、`reset`。reset 切换整个渠道的 generation，已接收消息保留原 generation。
 - `GET .../{channel_id}/deliveries`、`POST .../{channel_id}/deliveries/{delivery_id}/retry`：最多展示最近 100 个发送记录；只恢复已保存的回答，unknown 重发要求 `confirm_possible_duplicate=true`。
-- `POST /api/v1/message-channel-callbacks/{provider}/{channel_id}`：只开放 Telegram 与 Slack 的供应商认证，不能用 OIDC/Workflow JWT 代替；路径不可预测性不替代签名。Body 上限 64 KiB，认证失败返回 401，持久化/处理失败返回 503，超过上限返回 413。
+- `POST /api/v1/message-channel-callbacks/{provider}/{channel_id}`：只开放 Telegram、Slack、WhatsApp 与 QQ 的供应商认证，不能用 OIDC/Workflow JWT 代替；路径不可预测性不替代签名。Body 上限 64 KiB，认证失败返回 401，持久化/处理失败返回 503，超过上限返回 413。
 
-二维码/设备授权需要单独短期状态接口，只有 owner 可查看；二维码及临时 Token 不进入普通日志。Callback challenge 不创建 Run。管理错误与未知资源保持 owner-scoped Not Found 语义。
+本轮未实现二维码/设备授权界面；微信凭证先通过腾讯官方扫码流程取得，再由 owner 输入。若后续提供平台二维码接口，必须独立管理短期状态且仅 owner 可查看；二维码及临时 Token 不进入普通日志。Callback challenge 不创建 Run。管理错误与未知资源保持 owner-scoped Not Found 语义。
 
 ## 4. 准入、连续性与隔离
 
@@ -137,7 +137,7 @@ pending / retry_wait → cancelled
 
 ## 7. 渠道核查与推荐批次
 
-下表是一手资料和完整目标范围。B1 的五个 Adapter 已实现并通过 recording 测试，但全表均未取得真实账号收发验收；B2/B3 尚未实施。批次不是发布日期或对所有账号可用的承诺。
+下表所有渠道已有文本 Adapter 与配置项，全表均未取得真实账号收发验收。B1/B2/B3 为实施分组，不是发布日期或对所有账号可用的承诺。
 
 | 渠道 | 建议接收 / 回复方式 | 前置条件与边界 | 批次 / 一手依据 |
 |---|---|---|---|
@@ -145,17 +145,17 @@ pending / retry_wait → cancelled
 | Discord | Gateway MESSAGE_CREATE / REST 消息回复 | Bot token、DM/Guild intents、权限；普通群消息内容涉及 Message Content privileged intent，不能用普通 Incoming Webhook 接收聊天 | B1；[Gateway](https://docs.discord.com/developers/events/gateway) |
 | Slack | Events API / chat.postMessage；Socket Mode 为后续 transport | Bot OAuth scopes、Signing Secret、tenant/thread；签名 body 保留，3 秒 ACK 与重复 event_id；不能仅配置 Incoming Webhook | B1；[Events API](https://docs.slack.dev/apis/events-api/)、[签名](https://docs.slack.dev/authentication/verifying-requests-from-slack/)、[发送](https://docs.slack.dev/reference/methods/chat.postMessage/) |
 | Matrix | Client-Server /sync / room send（txnId） | 独立账号、homeserver、access token；首次 sync 不回灌历史成新问题；加密房间须独立实现设备密钥与验证，否则拒绝 | B2；[Client-Server API](https://spec.matrix.org/latest/client-server-api/)、[E2EE](https://matrix.org/docs/matrix-concepts/end-to-end-encryption/) |
-| WhatsApp | Business Platform Cloud API Webhook / messages | Business 账号、发送身份与应用权限；24 小时窗口与模板、人工升级路径、地区及账号资格和现行 AI 接入条款须核查；不把个人账号自动化当官方 Cloud API | B2，资格先于开发；[Meta Webhooks](https://www.postman.com/meta/whatsapp-business-platform/folder/lboq68h/webhooks)、[消息政策](https://whatsappbusiness.com/policy/)、[现行条款入口](https://www.whatsapp.com/legal/meta-terms-whatsapp-business) |
+| WhatsApp | Business Platform Cloud API Webhook / messages | Business 账号、发送身份与应用权限；24 小时窗口与模板、人工升级路径、地区及账号资格和现行 AI 接入条款须核查；不把个人账号自动化当官方 Cloud API | B2，本地协议实现；账号资格待确认；[Meta Webhooks](https://www.postman.com/meta/whatsapp-business-platform/folder/lboq68h/webhooks)、[消息政策](https://whatsappbusiness.com/policy/)、[现行条款入口](https://www.whatsapp.com/legal/meta-terms-whatsapp-business) |
 | Signal | signal-cli JSON-RPC receive / send，独立 Bridge | 第三方非官方工具；注册/linked device、定期接收、账号密钥持久化与版本维护；桥接掉线/重启丢失通知窗口需验证 | B3；[项目说明](https://github.com/AsamK/signal-cli)、[JSON-RPC](https://github.com/AsamK/signal-cli/blob/master/man/signal-cli-jsonrpc.5.adoc) |
 | DingTalk（钉钉） | 应用机器人 Stream / session webhook 或官方发送 API | App Client ID/Secret、应用可用范围；区分应用机器人与单向自定义群机器人，短期回复地址期限与主动发送权限需核查 | B1；[Stream](https://open-dingtalk.github.io/developerpedia/docs/explore/tutorials/stream/overview/)、[Stream 协议](https://open-dingtalk.github.io/developerpedia/docs/learn/stream/protocol/)、[回复](https://open-dingtalk.github.io/developerpedia/docs/learn/bot/appbot/reply/) |
 | Feishu/Lark（飞书） | 官方 SDK 长连接 im.message.receive_v1 / im message/reply API | 应用机器人、App ID/Secret、事件与群 @/私聊权限；显式 region，外部群和可用范围需单独验证 | B1；[官方 Go SDK](https://github.com/larksuite/oapi-sdk-go)、[消息权限与场景](https://open.feishu.cn/solutions/detail/ticket?lang=zh-CN)、[接收事件](https://open.feishu.cn/document/server-docs/im-v1/message/events/receive) |
 | WeCom（企业微信） | API 模式智能机器人 WebSocket / 对应答复协议 | Bot ID/Secret、企业功能入口、连接独占与回复期限；与传统发送型群 webhook、自建企业应用回调区分 | B2；[腾讯官方长连接接入说明](https://cloud.tencent.com/document/product/1831/137051) |
-| WeChat（微信） | 腾讯 iLink Bot QR 授权、getupdates 长轮询 / sendmessage | 从腾讯公开插件与协议核查直连资格；Bot token、context_token、返回 baseurl 的可信域校验；先验证支持的私聊范围，不凭 group_id 字段承诺群聊；公众号不是同一账号入口 | B2，资格与协议验证先行；[腾讯插件](https://github.com/Tencent/openclaw-weixin)、[协议](https://github.com/Tencent/openclaw-weixin/blob/main/docs/protocol_zh_CN.md) |
+| WeChat（微信） | 腾讯 iLink Bot QR 授权、getupdates 长轮询 / sendmessage | 从腾讯公开插件与协议核查直连资格；Bot token、context_token、返回 baseurl 的可信域校验；先验证支持的私聊范围，不凭 group_id 字段承诺群聊；公众号不是同一账号入口 | B2，本地协议实现；真实扫码账号待验收；[腾讯插件](https://github.com/Tencent/openclaw-weixin)、[协议](https://github.com/Tencent/openclaw-weixin/blob/main/docs/protocol.md) |
 | QQ Bot | 官方机器人消息订阅 / API v2 被动回复 | AppID/AppSecret、Access Token、审核与可用范围；单聊/群聊/频道分别验证，官方发送文档对旧主动额度与停用公告存在并列描述，按现行被动回复窗口验收，不承诺主动推送 | B2；[接入](https://bot.q.qq.com/wiki/develop/api-v2/)、[官方发送源文档](https://github.com/tencent-connect/bot-docs/blob/main/docs/develop/api-v2/server-inter/message/send-receive/send.md) |
-| BlueBubbles（iMessage） | BlueBubbles new-message webhook / REST，独立 Bridge | 常驻 macOS、已登录 iMessage、系统权限、Server Secret；第三方桥接，非 Apple 通用 Bot API；无必要不启用 Private API | B3；[Server](https://docs.bluebubbles.app/server)、[REST/Webhooks](https://docs.bluebubbles.app/server/developer-guides/rest-api-and-webhooks) |
-| Yuanbao（元宝） | 元宝 Bot WebSocket 收发；先核查直连协议或独立 Bridge | OpenClaw 官方渠道资料把 openclaw-plugin-yuanbao 归为腾讯元宝团队维护的外部插件；AppKey/AppSecret、Bot 开通资格、私聊/群 @、固定包完整性与重连需核查。该资料明确未按核心源码验证插件行为，不能照抄其 production-ready 为本平台证据 | B2，协议验证先行；[渠道资料](https://docs.openclaw.ai/channels/yuanbao)、[官方外部插件目录源](https://github.com/openclaw/openclaw/blob/main/scripts/lib/official-external-channel-seed.json) |
+| BlueBubbles（iMessage） | BlueBubbles REST 新消息轮询 / REST，独立 Bridge | 常驻 macOS、已登录 iMessage、系统权限、Server Secret；第三方桥接，非 Apple 通用 Bot API；无必要不启用 Private API | B3；[Server](https://docs.bluebubbles.app/server)、[REST/Webhooks](https://docs.bluebubbles.app/server/developer-guides/rest-api-and-webhooks) |
+| Yuanbao（元宝） | 官方 sign-token、Protobuf WebSocket 收发 | App Key/Secret、Bot 开通资格；签名 Token、auth-bind、心跳、push ACK 和请求回执；群原生 mention 与原消息引用；无需在 Runtime 安装 OpenClaw | B2；[腾讯官方插件与 Schema](https://github.com/Tencent/yuanbao-openclaw-plugin) |
 
-WhatsApp 文档部分被 429 或登录重定向阻挡，本轮只验证到 Meta 发布的 Webhook 说明与当前消息政策；未确认登录后的完整现行 AI 接入条款，不引用旧新闻作当前许可结论。飞书接收事件页为动态页面，具体实现须结合官方 SDK 与可读取的事件 Schema 再核查。企业微信采用腾讯官方产品接入说明作为可读取依据；底层原始协议、超时与重连仍列为开发前验证项。
+WhatsApp 文档部分被 429 或登录重定向阻挡，本轮使用 Meta 发布的 Cloud API 与 Webhook 资料实现账号检查、HMAC 与用户发起回复窗口；未确认登录后的完整现行 AI 接入条款，不引用旧新闻作当前许可结论。飞书接收事件页为动态页面，具体实现须结合官方 SDK 与可读取的事件 Schema 再核查。企业微信采用腾讯官方产品接入说明作为可读取依据；底层实现依据 [WeCom 官方 SDK 协议](https://github.com/WecomTeam/aibot-node-sdk)，本地测试覆盖握手、原聊天回执与取消；真实企业账号重连仍待验收。
 
 ## 8. 验收边界
 
@@ -166,7 +166,7 @@ WhatsApp 文档部分被 429 或登录重定向阻挡，本轮只验证到 Meta 
 每条证据记录 channel/provider、adapter revision、应用范围和权限、接收 transport、非敏感测试步骤、真实结果、执行/发送/结算记录、已验证及拒绝能力。真实外部 ID 只保留在 owner 私有记录，仓库证据使用一致别名；不记录 Bot token、App Secret、context_token、手机号、原始 webhook、私人问题、签名 URL 或二维码。Runtime Capability 仍须其既有 Digest Conformance，不能用渠道验收替代。
 
 
-## 9. 首期部署配置与当前限制
+## 9. 部署配置与当前限制
 
 API 和 Worker 必须使用相同 `message_channels` 配置，并共享既有 Data Encryption Key。默认关闭；样例位于 `deploy/platform/config`。部署经 `main_temp` 执行，本轮没有部署或修改线上配置。
 
@@ -180,9 +180,15 @@ message_channels:
   max_text_bytes: 10000
   max_send_attempts: 8
   send_interval: 3s
+  approved_endpoints:
+    - url: "https://matrix.example.com"
+    - url: "https://signal-bridge.internal.example.com:8443"
+      allow_private_network: true
+    - url: "https://imessage-bridge.internal.example.com:8443"
+      allow_private_network: true
 ```
 
-省略数值或设置为 0 使用上述默认值。连接数上限 1000；backlog 1..10000、sender/minute 1..100、正文 128..10000 bytes、次数 1..32、发送间隔 3s..1m。一个 Workflow 最多十个未删除配置；相同接收身份（包括关闭配置）只允许一条绑定。飞书通过 region+App ID、钉钉通过 Client ID 约束，不允许修改自报企业 ID 绕过重复绑定。
+省略数值或设置为 0 使用上述默认值。连接数上限 1000；backlog 1..10000、sender/minute 1..100、正文 128..10000 bytes、次数 1..32、发送间隔 3s..1m。一个 Workflow 最多十六个未删除配置，能够同时容纳全部 13 种渠道；相同接收身份（包括关闭配置）只允许一条绑定。飞书通过 region+App ID、钉钉通过 Client ID 约束，不允许修改自报企业 ID 绕过重复绑定。
 
 1. 在供应商控制台建立应用机器人、启用正确事件与权限。平台不支持仅有发送能力的群 Webhook。
 2. 在 Workflow Settings → 消息渠道填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书填写 Open ID、Chat ID、Tenant Key 并选择飞书/Lark；钉钉填写 Staff ID、Conversation ID、Corp ID。配置不带模型执行凭证到外部。
@@ -195,3 +201,27 @@ SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go 
 平台的可靠恢复边界从 Inbox 提交开始：已持久化消息幂等创建 Run，发送 lease 过期进入 outcome_unknown。未持久化的 Gateway 消息不承诺跨进程补收，Discord resume 仅依赖进程内 SDK，未实现持久化 session cursor。钉钉官方协议说明机器人回调采用 fire-forgot 模式，不应把失败 ACK 或断线重连当作保证补发。真实账号的权限、掉线与补收窗口必须实测。
 
 首期不支持附件、卡片、流式回复、公开受众、群共享历史、跨渠道合并、自动审批、主动广播或剩余八个渠道。已经领取的网络发送可能在停用后到达；后续领取、入队和重发重新校验授权。连接健康不代表真实模型闭环已验收。
+
+
+## 10. 新增八个渠道的实现边界
+
+收发继续依赖独立 `ChannelStreamReceiver`/`ChannelWebhookReceiver` 和 `ChannelSender`。Matrix、微信、BlueBubbles 的轮询及 Signal SSE 共用 `ChannelReceiveCursor`，游标经既有加密盒与不同于凭证的 AAD（owner/channel/config version + receive-cursor）加密，由 Migration 000067 追加的表保存。整个批次的 Inbox sink 成功后才推进游标；重连重放依赖既有入站去重。写游标事务锁定当前 Channel Version/Config Version，停用和过期验证窗口拒绝写入；配置轮换、渠道删除和 Workflow 删除清除游标。游标不进入 Runtime。
+
+`approved_endpoints` 是 Administrator YAML 的精确 HTTPS base URL（无末尾斜杠），Matrix、Signal、BlueBubbles 配置只能引用其中已批准的地址。禁止通配域、userinfo、query、fragment、编码路径和重定向；解析后检查所有 IP 并拨号到数值地址。默认只允许公网；明确 `allow_private_network: true` 才允许 RFC1918/ULA/loopback，仍拒绝 metadata/link-local/reserved 地址。API 与 Worker 必须配置一致。该访问仅属于 host 渠道运输，不扩大 Sandbox 网络权限。
+
+| 渠道 | 已实现行为与操作条件 |
+|---|---|
+| Matrix | `whoami` 验证专用账号；所有消息包括 DM 均必须明确 Room ID，allow_direct=false；`m.mentions.user_ids` 识别 @。初次 `/sync` 保存基线并跳过旧 timeline。后续 limited timeline 报 history_gap 并保留游标，尚未实现历史 backfill。加密状态/消息拒绝，发送前再次检查房间加密状态；txnId 使用稳定 Delivery UUID，保留原生 thread 和 reply event。 |
+| WhatsApp | access_token、App Secret、Verify Token、Phone Number ID、WABA ID、明确 Graph API version；查询 phone 与 WABA 归属。GET challenge 核验 verify token，POST 以原始 body HMAC-SHA256 验签并匹配 WABA/phone。只处理用户发起的文本私聊，在原消息 24 小时窗口内回复。没有模板、群聊、主动广播或自动人工升级；部署前须核实实际账号资格、地区、权限与现行平台政策，本轮不作许可结论。 |
+| Signal | 管理员批准的专用 signal-cli HTTP daemon，要求多账号模式及认证 HTTPS reverse proxy；Bridge Token 由代理验证，原生 daemon 无平台 Token 验证。`listAccounts` 取得 ACI，在连接建立和发送前重查身份，JSON-RPC 原账号发送；SSE 接收、Last-Event-ID 提交后恢复。按 ACI 隔离，原生 mentions 识别群 @；忽略 sync、view-once、disappearing 消息。上游 SSE 缓存为有限内存记录（当前文档 1000 个），桥接重启或超出缓存的离线间隔不能保证补收。平台不部署 Bridge，也不管理其账号密钥。 |
+| WeCom | 企业微信 API 模式智能机器人 Bot ID/Secret；官方固定 WSS `aibot_subscribe` 鉴权、心跳、原生文本 callback；私聊 userid，群 chatid。群 callback 为机器人 @ 事件。独立 Sender 使用 `aibot_send_msg` 和 req_id 回执，失联等待重连；写后未确认进入 unknown。协议没有独立持久化 Inbox ACK，不声称服务断线一定补收。 |
+| WeChat | 腾讯 iLink 2.4.8 公共协议；owner 在官方 QR 流程取得 bot_token、ilink_bot_id（account_id）、ilink_user_id（user_id），仅固定官方 API 域；不使用返回的任意 base URL。getconfig 验证 Token 可用，但协议无 whoami，因此实际收到的 to_user_id 必须匹配声明的 bot ID 才能完成验证。getupdates 长轮询、get_updates_buf 加密恢复；只接收完成的私聊文本，忽略生成中/删除消息，同 ID 更新由 Inbox 去重。原消息 context_token 加密持久化并用于 sendmessage，client_id 使用 Delivery UUID；缺失 context_token 拒绝发送。没有平台内 QR 界面或群聊承诺。 |
+| QQ Bot | App ID/Secret 获取 Access Token，官方用户接口绑定 Bot。HTTP callback 按官方 seed 规则以 Ed25519 验证 timestamp + raw body，支持签名 challenge/heartbeat；只接收 C2C_MESSAGE_CREATE 与 GROUP_AT_MESSAGE_CREATE，暂不支持频道/Guild DM。原 user_openid/member_openid/group_openid 路由，5 分钟被动窗口。msg_seq=1 留给 validation/waiting，终态 rejection/failure 的 status 使用 2（与 answer 互斥），answer 第 1..4 段使用 2..5，重试保持序号；超过预算明确失败，不改成主动发送。 |
+| BlueBubbles | 管理员批准 HTTPS 专用 macOS 服务，Server Password 只用于认证请求；`server/info` 返回 computer_id 与 detected_imessage，并在轮询/发送前重查账号，账号变化拒绝。消息查询以官方返回的 originalROWID 建立插入游标，固定 MAX(ROWID) 上界分页并使用 Inbox 去重；不依赖主机时钟或消息发送时间，初次只保存当前最大行基线。查询结构为代码内固定 SQL 与绑定数值参数，不接受外部消息输入；行号回退报 history_reset 并保留游标。每批最多 1000 条，超过容量保留游标并报 backlog。只接受单一 participant 的文本；发送用 apple-script + 稳定 tempGuid，不访问宿主机数据库或启用 Private API。桥接不可用/换号与 Mac 环境仍需真实验收。 |
+| Yuanbao | 腾讯官方插件公开的 sign-token HMAC、ConnMsg/Head 与文本业务 Protobuf Schema；固定 HTTPS/WSS。auth-bind 验证返回 bot_id，定期心跳、Token 到期前释放连接并重新鉴权；不设置自动抢占确认。push 只有 Inbox sink 成功后 ACK；独立 Sender 关联 msg_id 回执，私聊原 sender，群使用 group_code/ref_msg_id/to_account，TIMCustomElem 1002 提及才触发。没有 Runtime 引擎或 OpenClaw 安装依赖。 |
+
+BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com/BlueBubblesApp/bluebubbles-server/blob/master/packages/server/src/server/api/http/api/v1/routers/messageRouter.ts) 和 [MessageSerializer](https://github.com/BlueBubblesApp/bluebubbles-server/blob/master/packages/server/src/server/api/serializers/MessageSerializer.ts)；部署时必须固定兼容这些接口的 Bridge 版本并做真实补收验收。
+
+所有新增 credential Secret 与 context_token 使用同一精确字节脱敏集合，覆盖入站文本、Runtime 事件/文件/结果持久化和最终外发答案。`delivery_chunk`/`delivery_kind` 为 Application 写入的内部元数据，覆盖外部自报值；QQ 用它们保留稳定回复预算。Webhook challenge 不创建 Inbox/Run，公开 OIDC 绕过仅覆盖明确的供应商方法与 UUID 路径。
+
+本地协议测试是实现验证。真实接收→Runtime→原聊天回答、各平台账号资格、Bridge 版本及重启恢复、Linux Sandbox/Production Conformance 仍需要独立现场证据；启用仍须 owner 实际收发验证。

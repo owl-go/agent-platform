@@ -37,6 +37,12 @@ func TestMessageChannelsConfigurationIsOptInAndBounded(t *testing.T) {
 		valid       bool
 	}{
 		{"enabled HTTPS origin", "enabled: true\n  callback_base_url: https://workspace.example.test\n  max_connections: 64\n  max_pending_messages: 1000\n  max_sender_messages_per_minute: 10\n  max_text_bytes: 10000\n  max_send_attempts: 8\n  send_interval: 3s", true},
+		{"approved private bridge", "approved_endpoints:\n    - url: https://bridge.internal:8443/signal\n      allow_private_network: true", true},
+		{"unapproved HTTP bridge", "approved_endpoints:\n    - url: http://bridge.internal", false},
+		{"wildcard bridge", "approved_endpoints:\n    - url: https://*.internal", false},
+		{"userinfo bridge", "approved_endpoints:\n    - url: https://user@bridge.internal", false},
+		{"query bridge", "approved_endpoints:\n    - url: https://bridge.internal?token=secret", false},
+		{"duplicate bridge", "approved_endpoints:\n    - url: https://bridge.internal\n    - url: https://bridge.internal", false},
 		{"HTTP", "enabled: true\n  callback_base_url: http://workspace.example.test", false},
 		{"callback path", "enabled: true\n  callback_base_url: https://workspace.example.test/path", false},
 		{"connection budget", "enabled: true\n  callback_base_url: https://workspace.example.test\n  max_connections: 1001", false},

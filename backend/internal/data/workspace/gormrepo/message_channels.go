@@ -142,7 +142,7 @@ func (r *Repository) SaveMessageChannel(ctx context.Context, stored application.
 		if err := tx.Model(&channelRecord{}).Where("workflow_id=? AND deleted_at IS NULL", c.WorkflowID).Count(&count).Error; err != nil {
 			return err
 		}
-		if version == 0 && count >= 10 {
+		if version == 0 && count >= 16 {
 			return domain.ErrInvalid
 		}
 		if version == 0 {
@@ -156,6 +156,9 @@ func (r *Repository) SaveMessageChannel(ctx context.Context, stored application.
 			return domain.ErrConflict
 		}
 		if err := stopChannelTasks(tx, old.ID); err != nil {
+			return err
+		}
+		if err := tx.Where("channel_id=?", old.ID).Delete(&channelReceiveCursorRecord{}).Error; err != nil {
 			return err
 		}
 		row.Generation = old.Generation + 1
@@ -215,6 +218,9 @@ func (r *Repository) ControlMessageChannel(ctx context.Context, owner, workflow,
 			if action == "delete" {
 				updates["deleted_at"] = now
 				updates["credential_ciphertext"] = nil
+				if err := tx.Where("channel_id=?", id).Delete(&channelReceiveCursorRecord{}).Error; err != nil {
+					return err
+				}
 				if err := tx.Model(&channelInboxRecord{}).Where("channel_id=?", id).Update("reply_ciphertext", []byte{}).Error; err != nil {
 					return err
 				}
@@ -820,7 +826,7 @@ func channelRedactionValues(tx *gorm.DB, runID string) ([][]byte, error) {
 		return nil, fmt.Errorf("channel_credentials_unavailable")
 	}
 	values := [][]byte{}
-	for _, key := range []string{"bot_token", "signing_secret", "client_secret", "app_secret", "callback_secret"} {
+	for _, key := range application.ChannelSecretKeys() {
 		if c[key] != "" {
 			values = append(values, []byte(c[key]))
 		}
@@ -835,9 +841,7 @@ func channelRedactionValues(tx *gorm.DB, runID string) ([][]byte, error) {
 		if err != nil || json.Unmarshal(plain, &reply) != nil {
 			return nil, fmt.Errorf("channel_reply_unavailable")
 		}
-		if reply["session_webhook"] != "" {
-			values = append(values, []byte(reply["session_webhook"]))
-		}
+		values = append(values, application.ChannelReplySecrets(reply)...)
 	}
 	return values, nil
 }

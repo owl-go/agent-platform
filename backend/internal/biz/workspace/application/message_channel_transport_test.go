@@ -282,3 +282,30 @@ func TestChannelRegistrationRejectsMissingOrAmbiguousRoles(t *testing.T) {
 		})
 	}
 }
+
+func TestChannelNewCredentialsAndReplyCapabilitiesAreRedacted(t *testing.T) {
+	for _, key := range []string{"access_token", "verify_token", "bridge_token", "password", "bot_secret"} {
+		t.Run(key, func(t *testing.T) {
+			repo, receiver, sender, transport := transportTestFixture()
+			repo.stored.Ciphertext, _ = json.Marshal(ChannelCredentials{key: "protected-value"})
+			message := receiver.callback.Messages[0]
+			message.Text = "question protected-value private-context"
+			message.Reply = map[string]string{"context_token": "private-context", "delivery_chunk": "forged"}
+			receiver.callback.Messages = []domain.ChannelMessage{message}
+			app := NewMessageChannels(repo, transportTestCipher{}, map[string]ChannelTransport{"test-webhook": transport}, true, "")
+			if _, err := app.Callback(context.Background(), "test-webhook", "channel", nil, nil); err != nil {
+				t.Fatal(err)
+			}
+			if repo.received[0].Text != "question [REDACTED] [REDACTED]" || repo.received[0].Reply != nil {
+				t.Fatal("inbound secret entered model input")
+			}
+			repo.job = &ChannelSendJob{Stored: repo.stored, ReplyCiphertext: repo.reply, Delivery: domain.ChannelDelivery{ID: "delivery", Chunk: 2, Kind: "answer"}, Message: message, Text: "answer protected-value private-context"}
+			if _, err := app.ProcessDelivery(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			if sender.text != "answer [REDACTED] [REDACTED]" || sender.message.Reply["delivery_chunk"] != "2" || sender.message.Reply["delivery_kind"] != "answer" || sender.message.Reply["context_token"] != "private-context" {
+				t.Fatal("send redaction or reserved metadata lost")
+			}
+		})
+	}
+}

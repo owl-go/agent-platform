@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -123,6 +125,11 @@ func (s *MessageChannels) Save(ctx context.Context, owner, workflow, id string, 
 	}
 	if err := c.Audience.Validate(); err != nil {
 		return c, err
+	}
+	if validator, ok := transport.Account.(ChannelAudienceValidator); ok {
+		if err := validator.ValidateAudience(c.Audience); err != nil {
+			return c, err
+		}
 	}
 	if id != "" {
 		old, err := s.repository.GetMessageChannel(ctx, owner, workflow, id)
@@ -252,14 +259,14 @@ func (s *MessageChannels) Receive(ctx context.Context, stored ChannelStored, mes
 	if err != nil {
 		return err
 	}
-	for _, key := range []string{"bot_token", "signing_secret", "client_secret", "app_secret", "callback_secret"} {
+	for _, key := range ChannelSecretKeys() {
 		v := credentials[key]
 		if v != "" {
 			message.Text = strings.ReplaceAll(message.Text, v, "[REDACTED]")
 		}
 	}
-	if target := message.Reply["session_webhook"]; target != "" {
-		message.Text = strings.ReplaceAll(message.Text, target, "[REDACTED]")
+	for _, value := range ChannelReplySecrets(message.Reply) {
+		message.Text = strings.ReplaceAll(message.Text, string(value), "[REDACTED]")
 	}
 	b, err := json.Marshal(message.Reply)
 	if err != nil {
@@ -300,6 +307,25 @@ func (s *MessageChannels) Callback(ctx context.Context, provider, id string, hea
 	}
 	return parsed.Response, nil
 }
+func (s *MessageChannels) Challenge(ctx context.Context, provider, id string, query url.Values) (string, error) {
+	if !s.enabled || len(query.Encode()) > 16384 {
+		return "", domain.ErrInvalid
+	}
+	transport := s.transports[provider]
+	verifier, ok := transport.WebhookReceiver.(ChannelWebhookChallengeVerifier)
+	if !ok || transport.receiver() == nil {
+		return "", domain.ErrInvalid
+	}
+	stored, err := s.repository.GetMessageChannel(ctx, "", "", id)
+	if err != nil || stored.Channel.Provider != provider {
+		return "", domain.ErrNotFound
+	}
+	credentials, err := s.credentials(stored)
+	if err != nil {
+		return "", err
+	}
+	return verifier.Challenge(ctx, stored, credentials, query)
+}
 func (s *MessageChannels) ProcessInbox(ctx context.Context) (bool, error) {
 	if !s.enabled {
 		return false, nil
@@ -327,15 +353,20 @@ func (s *MessageChannels) ProcessDelivery(ctx context.Context) (bool, error) {
 		return true, s.repository.FinishChannelDelivery(ctx, job, ChannelSendResult{State: "failed", Code: "reply_unavailable"})
 	}
 	text := job.Text
-	for _, key := range []string{"bot_token", "signing_secret", "client_secret", "app_secret", "callback_secret"} {
+	for _, key := range ChannelSecretKeys() {
 		v := c[key]
 		if v != "" {
 			text = strings.ReplaceAll(text, v, "[REDACTED]")
 		}
 	}
-	if target := job.Message.Reply["session_webhook"]; target != "" {
-		text = strings.ReplaceAll(text, target, "[REDACTED]")
+	for _, value := range ChannelReplySecrets(job.Message.Reply) {
+		text = strings.ReplaceAll(text, string(value), "[REDACTED]")
 	}
+	if job.Message.Reply == nil {
+		job.Message.Reply = map[string]string{}
+	}
+	job.Message.Reply["delivery_chunk"] = strconv.Itoa(job.Delivery.Chunk)
+	job.Message.Reply["delivery_kind"] = job.Delivery.Kind
 	sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	result := sender.Send(sendCtx, job.Stored, c, job.Message, text, job.Delivery.ID)

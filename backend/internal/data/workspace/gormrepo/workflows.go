@@ -295,6 +295,9 @@ func (repository *Repository) DeleteWorkflow(ctx context.Context, ownerID, workf
 			return err
 		}
 		for _, channel := range channels {
+			if err := tx.Where("channel_id=?", channel.ID).Delete(&channelReceiveCursorRecord{}).Error; err != nil {
+				return err
+			}
 			if err := tx.Model(&channelInboxRecord{}).Where("channel_id=?", channel.ID).Update("reply_ciphertext", []byte{}).Error; err != nil {
 				return err
 			}

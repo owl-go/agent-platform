@@ -118,7 +118,10 @@ func channelResponse(c domain.MessageChannel) *workspacev1.MessageChannel {
 
 func channelCallbackRoute(method, path string) (string, string, bool) {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if method != http.MethodPost || len(parts) != 5 || parts[0] != "api" || parts[1] != "v1" || parts[2] != "message-channel-callbacks" || (parts[3] != "telegram" && parts[3] != "slack") {
+	if len(parts) != 5 || parts[0] != "api" || parts[1] != "v1" || parts[2] != "message-channel-callbacks" || (parts[3] != "telegram" && parts[3] != "slack" && parts[3] != "whatsapp" && parts[3] != "qqbot") {
+		return "", "", false
+	}
+	if method != http.MethodPost && !(method == http.MethodGet && parts[3] == "whatsapp") {
 		return "", "", false
 	}
 	if _, err := uuid.Parse(parts[4]); err != nil {
@@ -138,6 +141,16 @@ func (s *Service) messageChannelCallback(w http.ResponseWriter, r *http.Request)
 	channels, err := s.channelService()
 	if err != nil {
 		http.Error(w, "channel_unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if r.Method == http.MethodGet {
+		result, err := channels.Challenge(r.Context(), provider, id, r.URL.Query())
+		if err != nil {
+			http.Error(w, "callback_rejected", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = io.WriteString(w, result)
 		return
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, 64*1024+1))

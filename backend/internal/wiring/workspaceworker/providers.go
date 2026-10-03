@@ -114,7 +114,11 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewTransports(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+	channelEndpoints := make([]messagechannel.ApprovedEndpoint, 0, len(config.MessageChannels.ApprovedEndpoints))
+	for _, endpoint := range config.MessageChannels.ApprovedEndpoints {
+		channelEndpoints = append(channelEndpoints, messagechannel.ApprovedEndpoint{URL: endpoint.URL, AllowPrivateNetwork: endpoint.AllowPrivateNetwork})
+	}
+	channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewTransports(nil, messagechannel.TransportOptions{ApprovedEndpoints: channelEndpoints, Cursor: workspaceapplication.NewChannelReceiveCursor(repository, box)}), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
 		MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
 		MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
 		MaxTextBytes:               config.MessageChannels.MaxTextBytes,

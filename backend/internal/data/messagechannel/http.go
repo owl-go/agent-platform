@@ -18,15 +18,19 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 )
 
-type HTTP struct{ client *http.Client }
+type HTTP struct {
+	client   *http.Client
+	approved map[string]*http.Client
+}
 
 func NewHTTP(transport http.RoundTripper) *HTTP {
 	if transport == nil {
 		secured := http.DefaultTransport.(*http.Transport).Clone()
 		secured.DialContext = dialPublicProvider
+		secured.Proxy = nil
 		transport = secured
 	}
-	return &HTTP{client: &http.Client{Transport: transport, Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	return &HTTP{client: &http.Client{Transport: transport, Timeout: 45 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 }
 
 func dialPublicProvider(ctx context.Context, network, address string) (net.Conn, error) {
@@ -71,13 +75,16 @@ func providerError(code string) error {
 	return fmt.Errorf("%w: %s", domain.ErrInvalid, code)
 }
 func (h *HTTP) request(ctx context.Context, method, target, token string, body any) (map[string]json.RawMessage, int, time.Duration, error) {
+	return h.requestHeaders(ctx, method, target, token, body, nil)
+}
+func (h *HTTP) requestHeaders(ctx context.Context, method, target, token string, body any, headers http.Header) (map[string]json.RawMessage, int, time.Duration, error) {
 	u, err := url.Parse(target)
 	if err != nil || u.Scheme != "https" || u.User != nil {
 		return nil, 0, 0, providerError("provider_endpoint_invalid")
 	}
-	allowed := map[string]bool{"api.telegram.org": true, "slack.com": true, "discord.com": true, "api.dingtalk.com": true, "oapi.dingtalk.com": true, "open.feishu.cn": true, "open.larksuite.com": true}
-	if !allowed[u.Host] {
-		return nil, 0, 0, providerError("provider_endpoint_invalid")
+	client, err := h.clientFor(u)
+	if err != nil {
+		return nil, 0, 0, err
 	}
 	var payload []byte
 	if body != nil {
@@ -94,7 +101,12 @@ func (h *HTTP) request(ctx context.Context, method, target, token string, body a
 	if token != "" {
 		req.Header.Set("Authorization", token)
 	}
-	response, err := h.client.Do(req)
+	for key, values := range headers {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
+	}
+	response, err := client.Do(req)
 	if err != nil {
 		return nil, 0, 0, providerError("provider_network_error")
 	}
