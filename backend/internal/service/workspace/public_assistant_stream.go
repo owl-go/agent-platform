@@ -55,10 +55,6 @@ func (service *Service) streamPublicAssistantTurn(writer http.ResponseWriter, re
 	if matched {
 		input.FAQID = faq.ID
 	}
-	if !matched && !assistant.Share.FreeTextEnabled {
-		writeAuthError(writer, http.StatusForbidden, "free_text_disabled")
-		return
-	}
 	var conversation aiappdomain.AssistantConversation
 	if input.ConversationID != "" {
 		conversation, err = service.aiapplications.GetPublicAssistantConversation(request.Context(), assistant.OwnerID, assistant.ID, input.ConversationID, visitorHash, assistant.Share.TokenRevision)
@@ -69,17 +65,6 @@ func (service *Service) streamPublicAssistantTurn(writer http.ResponseWriter, re
 	}
 	if !service.consumePublicRate(writer, request, token, visitorHash) {
 		return
-	}
-	if !matched {
-		allowed, usageErr := service.aiapplications.ConsumeSharedAssistantCall(request.Context(), assistant.ID, assistant.Share.DailyCallLimit)
-		if usageErr != nil {
-			service.writeAIResult(writer, nil, usageErr)
-			return
-		}
-		if !allowed {
-			writeAuthError(writer, http.StatusTooManyRequests, "daily_call_limit_exceeded")
-			return
-		}
 	}
 	if input.ConversationID == "" {
 		model, modelErr := service.resolveAssistantModel(request.Context(), assistant.OwnerID, assistant.ProviderModelID)

@@ -32,7 +32,7 @@ func TestSmartAssistantSharingRequiresControlledPublicationSettings(t *testing.T
 		t.Fatalf("Validate() error = %v, want ErrInvalid for unrestricted sharing", err)
 	}
 	assistant.Share.AllowedOrigins = []string{"https://support.example.test"}
-	assistant.Share.DailyCallLimit = 100
+	assistant.Share.DailyCallLimit = 0
 	assistant.Share.DataProcessingAcknowledged = true
 	if err := assistant.Validate(); err != nil {
 		t.Fatalf("Validate() controlled sharing error = %v", err)

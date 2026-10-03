@@ -126,20 +126,6 @@ func (r *Repository) BindAssistantSession(ctx context.Context, owner, assistantI
 	return r.db.WithContext(ctx).Create(&assistantSessionRecord{SessionID: sessionID, AssistantID: assistantID, OwnerID: owner, AssistantSnapshot: snapshot, CreatedAt: time.Now().UTC()}).Error
 }
 
-func (r *Repository) ConsumeShareCall(ctx context.Context, assistantID string, now time.Time, dailyLimit int) (bool, error) {
-	var allowed bool
-	row := r.db.WithContext(ctx).Raw(`
-		WITH consumed AS (
-			INSERT INTO smart_assistant_share_usage (assistant_id, usage_day, calls, updated_at)
-			VALUES (?, ?, 1, ?)
-			ON CONFLICT (assistant_id, usage_day) DO UPDATE
-		SET calls = smart_assistant_share_usage.calls + 1, updated_at = EXCLUDED.updated_at
-		WHERE smart_assistant_share_usage.calls < ?
-		RETURNING assistant_id
-		)
-		SELECT EXISTS (SELECT 1 FROM consumed)`, assistantID, now.UTC().Format("2006-01-02"), now.UTC(), dailyLimit).Row().Scan(&allowed)
-	return allowed, row
-}
 func (r *Repository) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
 	now := time.Now().UTC()
 	assistant.ID = uuid.NewString()

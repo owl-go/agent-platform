@@ -69,7 +69,7 @@ func (service *Service) assistantPublicationCheck(ctx context.Context, owner str
 
 	var shareErr error
 	if assistant.Share.Enabled {
-		if len(assistant.Share.AllowedOrigins) == 0 || assistant.Share.DailyCallLimit < 1 || !assistant.Share.DataProcessingAcknowledged {
+		if len(assistant.Share.AllowedOrigins) == 0 || !assistant.Share.DataProcessingAcknowledged {
 			shareErr = fmt.Errorf("controlled sharing settings are incomplete")
 		}
 		for _, origin := range assistant.Share.AllowedOrigins {
@@ -78,7 +78,7 @@ func (service *Service) assistantPublicationCheck(ctx context.Context, owner str
 			}
 		}
 	}
-	add("share_controls", shareErr, "Sharing is off or has explicit origins, a daily cap, and data acknowledgement.", "Sharing requires explicit origins, a positive daily cap, and data acknowledgement.")
+	add("share_controls", shareErr, "Sharing is off or has explicit origins and data acknowledgement.", "Sharing requires explicit origins and data acknowledgement.")
 
 	validation.Ready = true
 	for _, check := range validation.Checks {

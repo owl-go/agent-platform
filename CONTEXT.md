@@ -195,7 +195,7 @@ The ordered, platform-enforced and Assistant-configurable boundary that decides 
 _Avoid_: Prompt instruction, content filter toggle, moderation note
 
 **Share Configuration**:
-The per-Smart-Assistant public-use configuration containing an unpredictable share Token, an explicit non-empty HTTPS allowed-Origin list, iframe dimensions, a positive daily free-text limit, a data-processing acknowledgement, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
+The per-Smart-Assistant public-use configuration containing an unpredictable share Token, an explicit non-empty HTTPS allowed-Origin list, iframe dimensions, a data-processing acknowledgement, and revocation state. It allows free-text questions by default without a per-Assistant daily call cap and grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
 _Avoid_: Public Session, API Key, User Access Token
 
 **Publication Validation**:

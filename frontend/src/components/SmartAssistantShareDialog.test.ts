@@ -21,6 +21,28 @@ function apiStub(): PlatformApi {
 }
 
 describe("SmartAssistantShareDialog", () => {
+  it("removes question restrictions and saves legacy sharing without a daily cap", async () => {
+    const api = apiStub();
+    const saved = structuredClone(assistant);
+    saved.share.free_text_enabled = false;
+    saved.share.daily_call_limit = 0;
+    const wrapper = mount(SmartAssistantShareDialog, {
+      attachTo: document.body, props: { modelValue: true, assistant: saved },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } },
+    });
+    try {
+      await flushPromises();
+      const dialog = document.body.querySelector(".application-share-dialog") as HTMLElement;
+      expect(dialog.textContent).not.toContain("每日自由提问上限");
+      expect(dialog.textContent).not.toContain("允许自由提问");
+      (dialog.querySelector("[data-testid=share-save]") as HTMLButtonElement).click();
+      await flushPromises();
+      expect(api.updateSmartAssistant).toHaveBeenCalledWith(saved.id, expect.objectContaining({ share: expect.objectContaining({ free_text_enabled: true, daily_call_limit: 0 }) }), saved.version);
+      expect(wrapper.emitted("error")).toBeUndefined();
+      expect(saved.share.free_text_enabled).toBe(false);
+    } finally { wrapper.unmount(); }
+  });
+
   it.each([
     "http://public.example.test", "https://example.test/page", "https://example.test?query=1",
     "https://example.test#section", "https://user:password@example.test", "https://*.example.test", "example.test",
@@ -108,7 +130,7 @@ describe("SmartAssistantShareDialog", () => {
     wrapper.unmount();
   });
 
-  it("refuses unrestricted sharing before calling the API", async () => {
+  it("requires allowed origins and data acknowledgement before sharing", async () => {
     const api = apiStub();
     const unsafe = structuredClone(assistant);
     unsafe.share.allowed_origins = [];

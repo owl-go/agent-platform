@@ -71,16 +71,20 @@ describe("PublicAssistantConversationPage", () => {
     await flushPromises();
   });
 
-  it("allows FAQ buttons when visitor free text is disabled", async () => {
+  it("allows free questions and FAQs even when legacy metadata disables free text", async () => {
     const api = stub();
     api.profile = vi.fn(async () => ({ name: "助手", introduction: "欢迎", faqs: [{ id: "faq", question: "是什么？" }], free_text_enabled: false, width: "100%", height: 600 }));
     api.stream = vi.fn(async (_q, _c, _f, emit) => { emit({ type: "done", answer: "固定答案", state: "completed" }); });
     const wrapper = mountPage(api);
     await flushPromises();
-    expect(wrapper.get("textarea").attributes("disabled")).toBeDefined();
+    expect(wrapper.get("textarea").attributes("disabled")).toBeUndefined();
+    await wrapper.get("textarea").setValue("这个客户的电话");
+    await wrapper.get("textarea").trigger("keydown", { key: "Enter" });
+    await flushPromises();
+    expect(api.stream).toHaveBeenCalledWith("这个客户的电话", "", undefined, expect.any(Function), expect.any(AbortSignal));
     await wrapper.get(".assistant-conversation-faq").trigger("click");
     await flushPromises();
-    expect(wrapper.get(".markdown-body").text()).toBe("固定答案");
+    expect(wrapper.findAll(".markdown-body").at(-1)?.text()).toBe("固定答案");
     wrapper.unmount();
   });
 });
