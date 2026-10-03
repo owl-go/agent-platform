@@ -170,6 +170,8 @@ WhatsApp 文档部分被 429 或登录重定向阻挡，本轮使用 Meta 发布
 
 API 和 Worker 必须使用相同 `message_channels` 配置，并共享既有 Data Encryption Key。默认关闭；样例位于 `deploy/platform/config`。2026-10-03 已经 `main_temp` 部署并开启平台级配置，Callback Origin 使用当前公开 HTTPS 入口；未配置真实渠道账号或批准 Bridge Endpoint。部署与验证边界见 [部署证据](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)。
 
+Repository 将渠道加密盒、启用标记和限额传入事务时，必须保留可复用的 GORM Session；保存 Settings 后不能把已初始化的可变 Statement 作为共享查询入口。渠道配置不得让 CLI 子查询的 Model、Select 或软删除条件进入后续 Expert、Skill、MCP 与 Connector 查询。回归检查覆盖实际渠道装配后先查 CLI Enablement、再查询其他目录的顺序，并保留平台资源可见性与私有资源隔离。
+
 ```yaml
 message_channels:
   enabled: true
