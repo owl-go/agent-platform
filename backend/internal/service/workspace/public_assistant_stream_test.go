@@ -16,6 +16,7 @@ import (
 	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	workspaceapp "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
 )
 
@@ -376,5 +377,40 @@ func TestAssistantPublicationDoesNotRequireQuestionRestrictions(t *testing.T) {
 			}
 			t.Fatal("publication omitted the share check")
 		})
+	}
+}
+
+// The edge terminates HTTPS; the API sees an HTTP request. An embedded browser
+// only sends a cross-site visitor cookie with the compatible secure attributes.
+func TestPublicAssistantContinuesAcrossHTTPSProxyWithPartitionedVisitorCookie(t *testing.T) {
+	service, repository, model := publicStreamService(t)
+	service.config.Authentication = platformconfig.AuthenticationConfig{RedirectURI: "https://platform.example.test/auth/callback"}
+	first := publicStreamRequest("你好呀", "", "")
+	first.Header.Del("Cookie")
+	first.Header.Set("X-Forwarded-Proto", "https")
+	writer := httptest.NewRecorder()
+	service.publicAssistantHandler(writer, first)
+	if writer.Code != http.StatusOK || repository.turn.State != "completed" {
+		t.Fatal("first greeting failed")
+	}
+	cookies := writer.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatal("visitor cookie missing")
+	}
+	cookie := cookies[0]
+	next := publicStreamRequest("运行引擎是什么？", repository.conversation.ID, "faq")
+	next.Header.Del("Cookie")
+	// Simulate the browser's cross-site cookie acceptance, including partitioned
+	// storage when third-party unpartitioned cookies are unavailable.
+	if cookie.Secure && cookie.SameSite == http.SameSiteNoneMode && cookie.Partitioned {
+		next.AddCookie(cookie)
+	}
+	result := httptest.NewRecorder()
+	service.publicAssistantHandler(result, next)
+	if result.Code != http.StatusOK || repository.turn.TurnNumber != 2 || repository.turn.Answer != "固定答案" || model.calls != 0 {
+		t.Fatalf("cross-site continuation failed: status=%d secure=%t sameSite=%d partitioned=%t", result.Code, cookie.Secure, cookie.SameSite, cookie.Partitioned)
+	}
+	if !cookie.HttpOnly || cookie.Domain != "" || cookie.Path != "/" || cookie.MaxAge != 86400 {
+		t.Fatal("visitor cookie isolation changed")
 	}
 }
