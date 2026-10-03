@@ -6,6 +6,7 @@ import "element-plus/theme-chalk/el-form-item.css";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type ChannelDelivery, type MessageChannel, type MessageChannelInput } from "../api/client";
 import ConfirmDialog from "./ConfirmDialog.vue";
+import MessageChannelIcon from "./MessageChannelIcon.vue";
 
 const props = defineProps<{ workflowId: string }>();
 const api = inject(platformApiKey)!;
@@ -101,13 +102,13 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
     <div class="channel-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">{{ t('common.refresh') }}</el-button></div>
     <div class="channel-provider-grid">
       <button v-for="provider in providers" :key="provider" type="button" class="channel-provider-card" :data-provider="provider" :disabled="!available || busy || loading" :aria-label="t('channels.configureProvider', { provider: t(`channels.providers.${provider}`) })" @click="edit(undefined, provider)">
-        <strong>{{ t(`channels.providers.${provider}`) }}</strong>
-        <span>{{ t('channels.configure') }}</span>
+        <span class="channel-provider-identity"><MessageChannelIcon :provider="provider" /><strong>{{ t(`channels.providers.${provider}`) }}</strong></span>
+        <span class="channel-provider-action">{{ t('channels.configure') }}</span>
       </button>
     </div>
     <p v-if="loading && !items.length" role="status">{{ t('common.loading') }}</p>
     <article v-for="channel in items" :key="channel.id" class="channel-card">
-      <div class="channel-heading"><strong>{{ channel.name }}</strong><span>{{ t(`channels.providers.${channel.provider}`) }} · {{ channel.account_name }}</span><el-tag>{{ t(channel.enabled ? 'common.enabled' : 'common.disabled') }}</el-tag></div>
+      <div class="channel-heading"><MessageChannelIcon :provider="channel.provider" :size="24" /><strong>{{ channel.name }}</strong><span>{{ t(`channels.providers.${channel.provider}`) }} · {{ channel.account_name }}</span><el-tag>{{ t(channel.enabled ? 'common.enabled' : 'common.disabled') }}</el-tag></div>
       <p>{{ t(`channels.states.${channel.validation_state}`) }} · {{ t(`channels.health.${channel.health}`) }}</p>
       <p v-if="channel.error_code" class="muted">{{ t('channels.connectionError') }}</p>
       <p v-if="channel.callback_url" class="channel-callback">{{ t('channels.callback') }} <code>{{ channel.callback_url }}</code></p>
@@ -132,6 +133,7 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
     </section>
   </section>
   <el-dialog v-model="dialog" :title="t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) })" width="min(720px, calc(100vw - 32px))" align-center append-to-body :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @closed="clearSecrets">
+    <template #header="{ titleId, titleClass }"><h2 :id="titleId" :class="[titleClass, 'channel-dialog-title']"><MessageChannelIcon :provider="form.provider" :size="24" />{{ t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) }) }}</h2></template>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-form class="channel-config-form" label-position="top" @submit.prevent="save">
       <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
@@ -154,7 +156,9 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 .channel-provider-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:var(--aw-space-3); }
 .channel-provider-card { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:var(--aw-space-3); padding:var(--aw-space-4); border:1px solid var(--aw-n4); border-radius:var(--aw-radius-input); background:var(--aw-n0); color:var(--aw-n10); text-align:left; font:inherit; cursor:pointer; }
 .channel-provider-card strong { overflow-wrap:anywhere; }
-.channel-provider-card span { flex-shrink:0; color:var(--aw-primary); font-size:var(--aw-font-size-body); }
+.channel-provider-identity { display:flex; align-items:center; gap:var(--aw-space-2); min-width:0; }
+.channel-provider-action { flex-shrink:0; color:var(--aw-primary); font-size:var(--aw-font-size-body); }
+.channel-dialog-title { display:flex; align-items:center; gap:var(--aw-space-2); margin:0; }
 .channel-provider-card:hover:not(:disabled) { background:var(--aw-n2); border-color:var(--aw-primary); }
 .channel-provider-card:focus-visible { outline:2px solid var(--aw-primary); outline-offset:2px; }
 .channel-provider-card:disabled { cursor:not-allowed; opacity:.55; }
