@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"agent-platform/backend/internal/biz/workspace/application"
 )
@@ -53,7 +54,15 @@ func (a *WeChat) PollLogin(ctx context.Context, state map[string]string, code st
 	if code != "" {
 		target += "&verify_code=" + url.QueryEscape(code)
 	}
-	result, status, _, err := a.requestHeaders(ctx, http.MethodGet, target, "", nil, wechatLoginHeaders())
+	// iLink holds an unscanned QR request for about 30 seconds. Keep the
+	// provider poll below the API's 30-second unary deadline; a local polling
+	// deadline means still waiting, while cancellation of the caller propagates.
+	pollCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	result, status, _, err := a.requestHeaders(pollCtx, http.MethodGet, target, "", nil, wechatLoginHeaders())
+	if pollCtx.Err() != nil && ctx.Err() == nil {
+		return application.ChannelLoginStep{Status: "waiting", State: state}, nil
+	}
 	if err != nil || status != 200 {
 		return application.ChannelLoginStep{}, providerError("provider_login_failed")
 	}

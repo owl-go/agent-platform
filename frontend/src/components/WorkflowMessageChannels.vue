@@ -222,7 +222,7 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
           <template v-else>
             <div v-if="qrImage" class="channel-qr"><img :src="qrImage" :alt="t('channels.qrAlt', {provider:t(`channels.providers.${form.provider}`)})" width="240" height="240" /></div>
             <p v-if="login" role="status">{{ t(`channels.loginStates.${login.status}`) }}</p>
-            <p v-else class="muted">{{ t('channels.qrInstruction', {provider:t(`channels.providers.${form.provider}`)}) }}</p>
+            <p v-else class="muted">{{ t('channels.qrInstruction', {provider:form.provider === 'qqbot' ? 'QQ' : t(`channels.providers.${form.provider}`)}) }}</p>
             <template v-if="login?.status === 'verification_required'">
               <el-form-item :label="t('channels.verificationCode')"><el-input v-model="verificationCode" autocomplete="off" maxlength="32" /></el-form-item>
               <el-button :disabled="polling || !verificationCode.trim()" @click="pollLogin()">{{ t('common.confirm') }}</el-button>
