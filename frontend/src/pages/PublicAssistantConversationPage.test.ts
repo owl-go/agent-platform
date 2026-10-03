@@ -24,6 +24,8 @@ describe("PublicAssistantConversationPage", () => {
     try {
       await flushPromises();
       expect(wrapper.attributes("style")).toContain("width: 640px; height: 600px");
+      expect(wrapper.find(".assistant-conversation-header").exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("清空并新建对话");
       expect(wrapper.get(".assistant-conversation-message--welcome").text()).toContain("欢迎提问");
       expect(wrapper.get(".assistant-conversation-avatar img").attributes("src")).toBe(api.iconURL);
       expect(wrapper.get(".assistant-conversation-faq-label").text()).toBe("常见问题");
@@ -45,7 +47,7 @@ describe("PublicAssistantConversationPage", () => {
     } finally { finish?.(); await flushPromises(); wrapper.unmount(); }
   });
 
-  it("keeps partial output on stop and starts a fresh visitor conversation on clear", async () => {
+  it("keeps partial output on stop and continues the visitor conversation without a header", async () => {
     const api = stub();
     let emit!: (event: PublicAssistantEvent) => void;
     api.stream = vi.fn((_q, _c, _f, onEvent, signal) => {
@@ -55,6 +57,7 @@ describe("PublicAssistantConversationPage", () => {
     const wrapper = mountPage(api, true);
     await flushPromises();
     expect(wrapper.attributes("style")).toContain("width: 100%; height: 100dvh");
+    expect(wrapper.find(".assistant-conversation-header").exists()).toBe(false);
     await wrapper.get("textarea").setValue("分析客户");
     await wrapper.get(".assistant-conversation-send").trigger("click");
     emit({ type: "thinking", turn_id: "turn", conversation_id: "visitor-conversation" });
@@ -63,10 +66,8 @@ describe("PublicAssistantConversationPage", () => {
     await wrapper.get(".assistant-conversation-send").trigger("click");
     await flushPromises();
     expect(wrapper.get(".markdown-body").text()).toBe("部分回答");
-    await wrapper.get("header button").trigger("click");
-    expect(wrapper.findAll(".assistant-conversation-turn")).toHaveLength(0);
     await wrapper.get(".assistant-conversation-faq").trigger("click");
-    expect(api.stream).toHaveBeenLastCalledWith("运行引擎是什么？", "", "faq-1", expect.any(Function), expect.any(AbortSignal));
+    expect(api.stream).toHaveBeenLastCalledWith("运行引擎是什么？", "visitor-conversation", "faq-1", expect.any(Function), expect.any(AbortSignal));
     wrapper.unmount();
     await flushPromises();
   });
