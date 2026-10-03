@@ -97,6 +97,8 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 
 临时状态仅在当前 API 进程内保留 5 分钟，敏感供应商 ticket、绑定 Key 和取得的凭证以独立 owner/workflow/login AAD 加密；全局最多 512 个、每 owner 最多 4 个。到期 Timer、取消和成功保存均销毁临时状态；API 重启后需要重新授权。多 API 副本需要粘性路由，未来共享存储必须维持同一密文与期限边界。二维码、临时 Token、配对码及密钥不进入普通日志或产品审计，只有 owner 可查询。iLink 返回的 redirect_host/baseurl 仅允许受信任 HTTPS `ilink*.weixin.qq.com` 主机，端口、用户信息、查询和非根路径均拒绝；公共地址 DNS/Dial 校验与禁止 HTTP 重定向继续生效，后续收发使用已校验的 baseurl。Callback challenge 不创建 Run。管理错误与未知资源保持 owner-scoped Not Found 语义。
 
+微信官方 QR `confirmed` 响应确认 Bot 身份；`getconfig` 是会话配置接口，真实扫码后也可能返回 `ret=-4`，不能把它作为 QR 授权的附加身份门禁。Adapter 仅在可信 HTTPS QR 返回成功、完整凭证且 baseurl 合法时写入 `_platform_wechat_qr_account_id`，与临时凭证及保存凭证一起加密。Account Identify 对该服务端证明校验 account_id 和可信 baseurl，保存、保留凭证编辑及收发 Configure 使用同一身份，不调用 getconfig。所有原始账号接入和渠道保存入口拒绝客户端提交 `_platform_` 命名空间；只有 owner/Workflow/login 绑定的服务端密文可以携带它。旧有无证明凭证仍需原身份校验。保存仍关闭且未验证，真实入站 `to_user_id` 与已保存账号匹配、允许的测试消息与回复通过后才可启用。
+
 前端为 13 个渠道分别声明凭证字段、消息接收方式、身份标签和接入指南。WeChat 默认只显示扫码；QQ 默认扫码，可切换已有应用凭证。账号确认后才配置受众：微信/WhatsApp/BlueBubbles 只显示发送者，Matrix 明确要求 Room ID；其他渠道保留私聊与群/频道范围。微信和 QQ 扫码返回的稳定 User ID 仅建议为发送者，owner 可编辑。已有配置修改受众可保留凭证，重新授权必须重新完成真实 Identify。保存始终关闭、未验证，启用仍要求真实测试消息与回复证据；未实现的 OAuth、Socket Mode、个人 WhatsApp 扫码或 Signal 设备绑定不显示为平台操作。
 
 ## 4. 准入、连续性与隔离

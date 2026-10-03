@@ -66,6 +66,9 @@ func (a *WeChat) PollLogin(ctx context.Context, state map[string]string, code st
 	if err != nil || status != 200 {
 		return application.ChannelLoginStep{}, providerError("provider_login_failed")
 	}
+	if (result["ret"] != nil && rawNumber(result["ret"]) != 0) || (result["errcode"] != nil && rawNumber(result["errcode"]) != 0) {
+		return application.ChannelLoginStep{}, providerError("provider_login_failed")
+	}
 	step := application.ChannelLoginStep{State: state}
 	switch rawString(result["status"]) {
 	case "wait":
@@ -94,6 +97,9 @@ func (a *WeChat) PollLogin(ctx context.Context, state map[string]string, code st
 		if c["bot_token"] == "" || c["account_id"] == "" || c["user_id"] == "" {
 			return step, providerError("provider_login_failed")
 		}
+		// The fixed/validated HTTPS QR endpoint already authenticated this account.
+		// Keep its binding in encrypted, server-only credential metadata.
+		c[wechatQRAccountIdentityKey] = c["account_id"]
 		step.Status, step.Credentials, step.SuggestedSenderID = "connected", c, c["user_id"]
 	default:
 		return step, providerError("provider_response_invalid")
