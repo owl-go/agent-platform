@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ArrowUp, RotateCcw, Square } from "@lucide/vue";
 import { ApiError } from "../api/client";
@@ -15,18 +15,12 @@ const loading = ref(true);
 const busy = ref(false);
 const error = ref("");
 const avatarFailed = ref(false);
-const thread = ref<InstanceType<typeof AssistantConversationThread>>();
 const dimensions = computed(() => ({ width: props.embedded ? "100%" : props.width, height: props.embedded ? "100dvh" : `${props.height}px` }));
 let conversationID = "";
 let controller: AbortController | undefined;
 const loadController = new AbortController();
 let sequence = 0;
 
-async function scrollToAnswer() {
-  await nextTick();
-  const element = thread.value?.$el as HTMLElement | undefined;
-  if (element) element.scrollTop = element.scrollHeight;
-}
 async function send(question = draft.value, faqID?: string) {
   const text = question.trim();
   if (!text || busy.value || !profile.value) return;
@@ -37,7 +31,6 @@ async function send(question = draft.value, faqID?: string) {
   turns.value.push(turn);
   const request = new AbortController();
   controller = request;
-  await scrollToAnswer();
   try {
     await props.api.stream(text, conversationID, faqID, (event) => {
       if (request.signal.aborted) return;
@@ -50,7 +43,6 @@ async function send(question = draft.value, faqID?: string) {
         if (event.conversation_id) conversationID = event.conversation_id;
       }
       if (event.type === "error") turn.failure_code = event.code;
-      void scrollToAnswer();
     }, request.signal);
   } catch (cause) {
     if (request.signal.aborted) turn.state = "cancelled";
@@ -91,7 +83,7 @@ onBeforeUnmount(() => { controller?.abort(); loadController.abort(); });
       <el-button :icon="RotateCcw" :disabled="!profile" @click="clearConversation">{{ t('aiApplications.chat.new') }}</el-button>
     </header>
     <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
-    <AssistantConversationThread ref="thread" :name="profile?.name || ''" :welcome="profile?.introduction || ''" :avatar-url="avatarFailed ? '' : api.iconURL" :faqs="profile?.faqs || []" :turns="turns" :busy="busy" @faq="send" @avatar-error="avatarFailed = true" />
+    <AssistantConversationThread :name="profile?.name || ''" :welcome="profile?.introduction || ''" :avatar-url="avatarFailed ? '' : api.iconURL" :faqs="profile?.faqs || []" :turns="turns" :busy="busy" @faq="send" @avatar-error="avatarFailed = true" />
     <div class="assistant-conversation-composer">
       <div class="assistant-conversation-composer-shell">
         <el-input v-model="draft" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" :maxlength="4000" :disabled="busy || !profile" :placeholder="t('aiApplications.chat.placeholder')" :aria-label="t('aiApplications.chat.placeholder')" @keydown.enter.exact.prevent="send()" />

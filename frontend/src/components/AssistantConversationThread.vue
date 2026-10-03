@@ -1,13 +1,36 @@
 <script setup lang="ts">
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { CircleAlert, CircleHelp, MessageCircle } from "@lucide/vue";
 import type { AssistantTurn } from "../api/client";
 import { renderMarkdown } from "../markdown";
 
 export type AssistantChatTurn = Pick<AssistantTurn, "id" | "question" | "answer" | "state" | "failure_code">;
-defineProps<{ name: string; welcome: string; avatarUrl?: string; faqs: { id: string; question: string }[]; turns: AssistantChatTurn[]; busy: boolean }>();
+const props = defineProps<{ name: string; welcome: string; avatarUrl?: string; faqs: { id: string; question: string }[]; turns: AssistantChatTurn[]; busy: boolean }>();
 const emit = defineEmits<{ faq: [question: string, id: string]; "avatar-error": [] }>();
 const { t } = useI18n();
+const scrollContainer = ref<HTMLElement>();
+let followingLatest = true;
+let resizeObserver: ResizeObserver | undefined;
+async function revealLatest() {
+  await nextTick();
+  if (followingLatest && scrollContainer.value) scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
+}
+function trackScroll() {
+  const element = scrollContainer.value;
+  if (element) followingLatest = element.scrollHeight - element.scrollTop - element.clientHeight <= 24;
+}
+watch(() => props.turns.map(turn => [turn.id, turn.question, turn.answer, turn.state]), (turns, previous) => {
+  if (turns.length !== previous?.length || turns.at(-1)?.[0] !== previous?.at(-1)?.[0]) followingLatest = true;
+  void revealLatest();
+}, { flush: "post", immediate: true });
+onMounted(() => {
+  if (typeof ResizeObserver !== "undefined" && scrollContainer.value) {
+    resizeObserver = new ResizeObserver(() => { void revealLatest(); });
+    resizeObserver.observe(scrollContainer.value);
+  }
+});
+onBeforeUnmount(() => resizeObserver?.disconnect());
 function failureMessage(code = "") {
   const keys: Record<string, string> = {
     model_authentication: "failureAuthentication", model_rate_limited: "failureRateLimited",
@@ -19,7 +42,7 @@ function failureMessage(code = "") {
 </script>
 
 <template>
-    <div class="assistant-conversation-thread" aria-live="polite">
+    <div ref="scrollContainer" class="assistant-conversation-thread" aria-live="polite" @scroll="trackScroll" @load.capture="revealLatest">
       <div v-if="name" class="assistant-conversation-message assistant-conversation-message--assistant assistant-conversation-message--welcome">
         <div class="assistant-conversation-avatar">
           <img v-if="avatarUrl" :src="avatarUrl" :alt="name" @error="emit('avatar-error')" />
