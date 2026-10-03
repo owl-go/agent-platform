@@ -29,7 +29,7 @@ async function scrollToAnswer() {
 }
 async function send(question = draft.value, faqID?: string) {
   const text = question.trim();
-  if (!text || busy.value || !profile.value || (!faqID && !profile.value.free_text_enabled)) return;
+  if (!text || busy.value || !profile.value) return;
   error.value = "";
   draft.value = "";
   busy.value = true;
@@ -94,10 +94,10 @@ onBeforeUnmount(() => { controller?.abort(); loadController.abort(); });
     <AssistantConversationThread ref="thread" :name="profile?.name || ''" :welcome="profile?.introduction || ''" :avatar-url="avatarFailed ? '' : api.iconURL" :faqs="profile?.faqs || []" :turns="turns" :busy="busy" @faq="send" @avatar-error="avatarFailed = true" />
     <div class="assistant-conversation-composer">
       <div class="assistant-conversation-composer-shell">
-        <el-input v-model="draft" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" :maxlength="4000" :disabled="busy || !profile?.free_text_enabled" :placeholder="profile && !profile.free_text_enabled ? t('aiApplications.share.faqOnly') : t('aiApplications.chat.placeholder')" :aria-label="t('aiApplications.chat.placeholder')" @keydown.enter.exact.prevent="send()" />
+        <el-input v-model="draft" type="textarea" :autosize="{ minRows: 2, maxRows: 6 }" :maxlength="4000" :disabled="busy || !profile" :placeholder="t('aiApplications.chat.placeholder')" :aria-label="t('aiApplications.chat.placeholder')" @keydown.enter.exact.prevent="send()" />
         <div class="assistant-conversation-composer-actions">
           <el-button v-if="busy" type="danger" class="assistant-conversation-send" :icon="Square" @click="stop">{{ t('aiApplications.chat.stop') }}</el-button>
-          <el-button v-else type="primary" class="assistant-conversation-send" :icon="ArrowUp" :disabled="!draft.trim() || !profile?.free_text_enabled" @click="send()">{{ t('aiApplications.chat.send') }}</el-button>
+          <el-button v-else type="primary" class="assistant-conversation-send" :icon="ArrowUp" :disabled="!draft.trim() || !profile" @click="send()">{{ t('aiApplications.chat.send') }}</el-button>
         </div>
       </div>
     </div>

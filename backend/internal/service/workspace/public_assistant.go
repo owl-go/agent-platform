@@ -114,10 +114,6 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		return
 	}
 	if len(parts) == 6 && parts[5] == "answer" && request.Method == http.MethodPost {
-		if !assistant.Share.FreeTextEnabled {
-			writePublicJSON(writer, map[string]string{"kind": "unavailable", "answer": "暂时无法回答此类问题"}, http.StatusForbidden)
-			return
-		}
 		var input struct {
 			Question       string `json:"question"`
 			ConversationID string `json:"conversation_id"`
@@ -143,15 +139,6 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		if matched {
 			_ = service.aiapplications.RecordSafetyAudit(request.Context(), assistant.OwnerID, assistant.ID, "public", aiapplicationdomain.SafetyAllow, "not_charged")
 			writePublicJSON(writer, map[string]any{"kind": "faq", "answer_markdown": match.FAQ.AnswerMarkdown, "faq_id": match.FAQ.ID, "confidence": match.Confidence}, http.StatusOK)
-			return
-		}
-		allowed, usageErr := service.aiapplications.ConsumeSharedAssistantCall(request.Context(), assistant.ID, assistant.Share.DailyCallLimit)
-		if usageErr != nil {
-			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
-			return
-		}
-		if !allowed {
-			writeAuthError(writer, http.StatusTooManyRequests, "daily_call_limit_exceeded")
 			return
 		}
 		response, createErr := service.publicAnswer(request.Context(), assistant, visitorHash, input.ConversationID, input.Question)

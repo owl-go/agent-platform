@@ -86,9 +86,11 @@ type ShareConfiguration struct {
 	AllowedOrigins             []string `json:"allowed_origins,omitempty"`
 	Width                      string   `json:"width"`
 	Height                     int      `json:"height"`
-	FreeTextEnabled            bool     `json:"free_text_enabled"`
-	DailyCallLimit             int      `json:"daily_call_limit"`
 	DataProcessingAcknowledged bool     `json:"data_processing_acknowledged"`
+
+	// Deprecated compatibility fields: free questions are always enabled, without a daily cap.
+	FreeTextEnabled bool `json:"free_text_enabled"`
+	DailyCallLimit  int  `json:"daily_call_limit"`
 }
 
 type PublicationCheck struct {
@@ -167,15 +169,9 @@ func (assistant SmartAssistant) Validate() error {
 	if assistant.Share.Height != 0 && (assistant.Share.Height < 400 || assistant.Share.Height > 1600) {
 		return fmt.Errorf("%w: share height is outside 400-1600px", ErrInvalid)
 	}
-	if assistant.Share.DailyCallLimit < 0 {
-		return fmt.Errorf("%w: daily call limit cannot be negative", ErrInvalid)
-	}
 	if assistant.Share.Enabled {
 		if len(assistant.Share.AllowedOrigins) == 0 {
 			return fmt.Errorf("%w: sharing requires at least one allowed origin", ErrInvalid)
-		}
-		if assistant.Share.DailyCallLimit < 1 {
-			return fmt.Errorf("%w: sharing requires a positive daily call limit", ErrInvalid)
 		}
 		if !assistant.Share.DataProcessingAcknowledged {
 			return fmt.Errorf("%w: sharing requires data-processing acknowledgement", ErrInvalid)

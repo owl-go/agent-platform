@@ -48,7 +48,7 @@ function input(origins: string[]): SmartAssistantInput | undefined {
     expert_id: assistant.expert_id,
     expert_team_id: assistant.expert_team_id,
     state: assistant.state,
-    share: { enabled: shareDraft.value.enabled, allowed_origins: origins, width: shareDraft.value.width.trim() || "100%", height: shareDraft.value.height, free_text_enabled: shareDraft.value.free_text_enabled ?? false, daily_call_limit: shareDraft.value.daily_call_limit ?? 0, data_processing_acknowledged: shareDraft.value.data_processing_acknowledged ?? false },
+    share: { enabled: shareDraft.value.enabled, allowed_origins: origins, width: shareDraft.value.width.trim() || "100%", height: shareDraft.value.height, free_text_enabled: true, daily_call_limit: 0, data_processing_acknowledged: shareDraft.value.data_processing_acknowledged ?? false },
   };
 }
 function errorMessage(cause: unknown) {
@@ -70,7 +70,7 @@ async function saveShare() {
   catch (cause) { showError((cause as Error).message); return; }
   const payload = input(origins);
   if (!assistant || !payload) return;
-  if (payload.share?.enabled && (!payload.share.allowed_origins?.length || !payload.share.daily_call_limit || !payload.share.data_processing_acknowledged)) {
+  if (payload.share?.enabled && (!payload.share.allowed_origins?.length || !payload.share.data_processing_acknowledged)) {
     showError(t("aiApplications.share.controlsRequired"));
     return;
   }
@@ -81,9 +81,6 @@ async function saveShare() {
   }
   if (!Number.isInteger(shareDraft.value.height) || shareDraft.value.height < 400 || shareDraft.value.height > 1600) {
     showError(t("aiApplications.share.invalidHeight")); return;
-  }
-  if (!Number.isInteger(shareDraft.value.daily_call_limit ?? 0) || (shareDraft.value.daily_call_limit ?? 0) < 0) {
-    showError(t("aiApplications.share.controlsRequired")); return;
   }
   saving.value = true;
   try {
@@ -142,8 +139,6 @@ watch(() => props.modelValue, async (value) => {
       <el-form-item :label="t('aiApplications.share.width')"><el-input v-model="shareDraft.width" placeholder="100% / 640px" /></el-form-item>
       <el-form-item :label="t('aiApplications.share.height')"><el-input-number v-model="shareDraft.height" :min="400" :max="1600" /></el-form-item>
       <el-form-item :label="t('aiApplications.share.allowedOrigins')"><el-input v-model="allowedOrigins" type="textarea" :rows="3" :placeholder="t('aiApplications.share.allowedOriginsPlaceholder')" /></el-form-item>
-      <el-form-item :label="t('aiApplications.share.dailyLimit')"><el-input-number v-model="shareDraft.daily_call_limit" :min="1" :max="100000" /></el-form-item>
-      <el-form-item :label="t('aiApplications.share.freeText')"><el-switch v-model="shareDraft.free_text_enabled" /></el-form-item>
       <el-alert v-if="shareDraft.enabled" type="warning" :closable="false" :title="t('aiApplications.share.impactTitle')" :description="t('aiApplications.share.impactDescription')" show-icon />
       <el-checkbox v-if="shareDraft.enabled" v-model="shareDraft.data_processing_acknowledged" data-testid="share-acknowledgement">{{ t('aiApplications.share.acknowledge') }}</el-checkbox>
       <div class="share-dialog-actions">

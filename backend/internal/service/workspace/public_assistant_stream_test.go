@@ -13,6 +13,7 @@ import (
 	aiapp "agent-platform/backend/internal/biz/aiapplication/application"
 	domain "agent-platform/backend/internal/biz/aiapplication/domain"
 	creditsapp "agent-platform/backend/internal/biz/credits/application"
+	creditsdomain "agent-platform/backend/internal/biz/credits/domain"
 	workspaceapp "agent-platform/backend/internal/biz/workspace/application"
 	workspacedomain "agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/secretcrypto"
@@ -170,7 +171,7 @@ func TestPublicAssistantStreamsBeforeCompletion(t *testing.T) {
 	if writer.Code != http.StatusOK || !strings.Contains(writer.Body.String(), "event: done") {
 		t.Fatalf("stream=%d %s", writer.Code, writer.Body.String())
 	}
-	if repository.turn.State != "completed" || repository.turn.Answer != "**继续跟进**，维护关系。" || repository.dailyCalls != 1 {
+	if repository.turn.State != "completed" || repository.turn.Answer != "**继续跟进**，维护关系。" || repository.dailyCalls != 0 {
 		t.Fatalf("turn=%#v calls=%d", repository.turn, repository.dailyCalls)
 	}
 	for _, private := range []string{"test-secret", "model_id", "connection_id", "input_tokens", "owner_id", "prompt"} {
@@ -191,8 +192,6 @@ func TestPublicAssistantStreamControls(t *testing.T) {
 		{"unlisted origin", func(_ *publicStreamRepository, q *http.Request) {
 			q.Header.Set("Origin", "https://unrelated.example.test")
 		}, 403},
-		{"free text disabled", func(r *publicStreamRepository, _ *http.Request) { r.assistant.Share.FreeTextEnabled = false }, 403},
-		{"daily cap", func(r *publicStreamRepository, _ *http.Request) { r.dailyAllowed = false }, 429},
 		{"visitor rate", func(r *publicStreamRepository, _ *http.Request) { r.rateAllowed = false }, 429},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -208,7 +207,7 @@ func TestPublicAssistantStreamControls(t *testing.T) {
 	}
 }
 
-func TestPublicAssistantFAQWorksWithoutFreeTextOrModelCalls(t *testing.T) {
+func TestPublicAssistantFAQWorksWithoutModelCalls(t *testing.T) {
 	service, r, model := publicStreamService(t)
 	r.assistant.Share.FreeTextEnabled = false
 	writer := httptest.NewRecorder()
@@ -218,24 +217,50 @@ func TestPublicAssistantFAQWorksWithoutFreeTextOrModelCalls(t *testing.T) {
 	}
 }
 
-func TestPublicAssistantGreetingHonorsFreeTextEnablement(t *testing.T) {
-	for _, enabled := range []bool{false, true} {
-		t.Run(map[bool]string{false: "disabled", true: "enabled"}[enabled], func(t *testing.T) {
+func TestPublicAssistantAlwaysAllowsFreeQuestionsWithLegacySharingSettings(t *testing.T) {
+	for _, question := range []string{"你好呀", "分析客户"} {
+		t.Run(question, func(t *testing.T) {
 			service, r, model := publicStreamService(t)
-			r.assistant.Share.FreeTextEnabled = enabled
-			writer := httptest.NewRecorder()
-			service.publicAssistantHandler(writer, publicStreamRequest("你好呀", "", ""))
-			if model.calls != 0 {
-				t.Fatal("greeting invoked the model")
-			}
-			if !enabled {
-				if writer.Code != 403 || r.turn.ID != "" || r.dailyCalls != 0 {
-					t.Fatalf("free text disabled: status=%d turn=%#v daily=%d", writer.Code, r.turn, r.dailyCalls)
+			r.assistant.Share.FreeTextEnabled = false
+			r.assistant.Share.DailyCallLimit = 2
+			r.dailyAllowed = false // A previously exhausted daily counter must not be consulted.
+			for i := 0; i < 3; i++ {
+				conversation := ""
+				if i > 0 {
+					conversation = r.conversation.ID
 				}
-			} else if writer.Code != 200 || r.turn.Answer != "欢迎提问" || r.turn.Source != "configuration" || r.turn.State != "completed" || r.dailyCalls != 1 || !strings.Contains(writer.Body.String(), "event: done") {
-				t.Fatalf("greeting stream: status=%d turn=%#v daily=%d", writer.Code, r.turn, r.dailyCalls)
+				writer := httptest.NewRecorder()
+				service.publicAssistantHandler(writer, publicStreamRequest(question, conversation, ""))
+				if writer.Code != 200 || r.turn.State != "completed" || r.turn.TurnNumber != i+1 || r.dailyCalls != 0 || !strings.Contains(writer.Body.String(), "event: done") {
+					t.Fatalf("free question %d: status=%d turn=%#v daily=%d", i, writer.Code, r.turn, r.dailyCalls)
+				}
+				if question == "你好呀" && (r.turn.Answer != "欢迎提问" || r.turn.Source != "configuration" || model.calls != 0) {
+					t.Fatal("greeting did not use the configured welcome without model calls")
+				}
 			}
 		})
+	}
+}
+
+func TestPublicAssistantLegacyMetadataAndAnswerAllowFreeQuestions(t *testing.T) {
+	service, r, model := publicStreamService(t)
+	r.assistant.Share.FreeTextEnabled = false
+	r.assistant.Share.DailyCallLimit = 2
+	r.dailyAllowed = false
+	metadata := httptest.NewRecorder()
+	service.publicAssistantHandler(metadata, httptest.NewRequest(http.MethodGet, "http://platform.example.test/api/v1/public/assistants/"+publicTestToken, nil))
+	var profile struct {
+		FreeTextEnabled bool `json:"free_text_enabled"`
+	}
+	if err := json.Unmarshal(metadata.Body.Bytes(), &profile); err != nil || metadata.Code != 200 || !profile.FreeTextEnabled {
+		t.Fatalf("metadata=%d %s err=%v", metadata.Code, metadata.Body.String(), err)
+	}
+	request := publicStreamRequest("运行引擎是什么？", "", "")
+	request.URL.Path = "/api/v1/public/assistants/" + publicTestToken + "/answer"
+	writer := httptest.NewRecorder()
+	service.publicAssistantHandler(writer, request)
+	if writer.Code != 200 || !strings.Contains(writer.Body.String(), "faq") || model.calls != 0 || r.dailyCalls != 0 {
+		t.Fatalf("legacy answer=%d %s calls=%d daily=%d", writer.Code, writer.Body.String(), model.calls, r.dailyCalls)
 	}
 }
 
@@ -263,12 +288,12 @@ func TestPublicAssistantContinuesVisitorConversation(t *testing.T) {
 	first := r.turn
 	writer := httptest.NewRecorder()
 	service.publicAssistantHandler(writer, publicStreamRequest("继续分析", r.conversation.ID, ""))
-	if writer.Code != 200 || r.turn.State != "completed" || r.turn.TurnNumber != 2 || len(r.history) != 1 || r.history[0].Answer != first.Answer || r.dailyCalls != 2 {
+	if writer.Code != 200 || r.turn.State != "completed" || r.turn.TurnNumber != 2 || len(r.history) != 1 || r.history[0].Answer != first.Answer || r.dailyCalls != 0 {
 		t.Fatalf("continuation status=%d turn=%#v history=%#v daily=%d", writer.Code, r.turn, r.history, r.dailyCalls)
 	}
 }
 
-func TestPublicAssistantCannotUseFAQIDToBypassFreeTextControls(t *testing.T) {
+func TestPublicAssistantRejectsMismatchedFAQID(t *testing.T) {
 	service, r, model := publicStreamService(t)
 	r.assistant.Share.FreeTextEnabled = false
 	writer := httptest.NewRecorder()
@@ -312,5 +337,44 @@ func TestPublicAssistantEmbedLoadsSharedChatEntryWithConfiguredDimensions(t *tes
 	}
 	if !strings.Contains(writer.Header().Get("Content-Security-Policy"), "frame-ancestors https://customer.example.test") {
 		t.Fatal("configured frame restrictions missing")
+	}
+}
+
+type publicationCreditRepository struct{ creditsapp.Repository }
+
+func (publicationCreditRepository) Balance(context.Context, string, string, time.Time) (creditsdomain.Balance, error) {
+	return creditsdomain.Balance{Available: 100}, nil
+}
+
+func TestAssistantPublicationDoesNotRequireQuestionRestrictions(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*domain.ShareConfiguration)
+		ready  bool
+	}{
+		{"no daily cap", func(s *domain.ShareConfiguration) { s.DailyCallLimit = 0 }, true},
+		{"legacy restrictions", func(s *domain.ShareConfiguration) { s.FreeTextEnabled = false; s.DailyCallLimit = 2 }, true},
+		{"missing origins", func(s *domain.ShareConfiguration) { s.AllowedOrigins = nil }, false},
+		{"missing acknowledgement", func(s *domain.ShareConfiguration) { s.DataProcessingAcknowledged = false }, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			service, r, _ := publicStreamService(t)
+			test.change(&r.assistant.Share)
+			credits, err := creditsapp.New(publicationCreditRepository{}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			service.credits = credits
+			validation := service.assistantPublicationCheck(context.Background(), "owner", r.assistant)
+			for _, check := range validation.Checks {
+				if check.Code == "share_controls" {
+					if check.Ready != test.ready {
+						t.Fatalf("share check=%#v", check)
+					}
+					return
+				}
+			}
+			t.Fatal("publication omitted the share check")
+		})
 	}
 }
