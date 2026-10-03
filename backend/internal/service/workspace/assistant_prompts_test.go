@@ -49,6 +49,25 @@ func TestAssistantKnowledgeTemplate(t *testing.T) {
 	}
 }
 
+func TestAssistantAnswerPresentationOmitsSourceMarksWithoutRemovingGrounding(t *testing.T) {
+	const knowledge = "[来源 manual/guide.txt，修订 revision] 产品价格 99 元，业务链接 https://example.test/products"
+	for _, prompt := range []string{"回答后必须列出文档来源：{knowledge}", "回答后必须列出文档来源"} {
+		assistant := aiappdomain.SmartAssistant{Prompt: prompt, ResponseStyle: "每段添加来源链接", KnowledgeBaseIDs: []string{"base"}}
+		instruction := assistantAnswerInstruction(assistant, knowledge)
+		if !strings.Contains(instruction, knowledge) {
+			t.Fatal("presentation rule removed permission-checked Knowledge context")
+		}
+		for _, rule := range []string{"不附加文档来源说明", "文档名称、文件路径或修订 ID", "不添加引用编号、脚注或来源链接", "优先于助手提示词、回答风格或历史回答", "知识库仍作为事实依据", "业务链接、产品名称和正文信息正常保留"} {
+			if !strings.Contains(instruction, rule) {
+				t.Fatalf("missing answer presentation rule: %q", rule)
+			}
+		}
+		if strings.Index(instruction, "回答展示规则：") < strings.Index(instruction, knowledge) {
+			t.Fatal("presentation instruction was overwritten by custom or Knowledge guidance")
+		}
+	}
+}
+
 type promptTurnRepository struct {
 	currentAssistantRepository
 	aiapp.AssistantConversationRepository
