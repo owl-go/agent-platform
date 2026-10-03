@@ -96,3 +96,27 @@ func (service *Service) recordAssistantPublicationValidation(ctx context.Context
 	}
 	return service.aiapplications.RecordPublicationValidation(ctx, owner, validation.AssistantID, validation.AssistantVersion, validation.CheckedAt)
 }
+
+// saveAssistantConfiguration uses the same publication checks for JSON and icon uploads.
+func (service *Service) saveAssistantConfiguration(ctx context.Context, owner, id string, candidate aiapplicationdomain.SmartAssistant, version int64) (aiapplicationdomain.SmartAssistant, error) {
+	var validation aiapplicationdomain.PublicationValidation
+	if candidate.State == aiapplicationdomain.StateEnabled {
+		validation = service.assistantPublicationCheck(ctx, owner, candidate)
+		if !validation.Ready {
+			return aiapplicationdomain.SmartAssistant{}, fmt.Errorf("%w: assistant publication check failed", aiapplicationdomain.ErrInvalid)
+		}
+	}
+	value, err := service.aiapplications.UpdateAssistant(ctx, owner, id, candidate, version)
+	if err == nil && candidate.State == aiapplicationdomain.StateEnabled {
+		issuedShareToken := value.Share.Token
+		validation.AssistantVersion = value.Version
+		validation.CheckedAt = time.Now().UTC()
+		validated, validationErr := service.recordAssistantPublicationValidation(ctx, owner, validation)
+		if validationErr != nil {
+			return value, validationErr
+		}
+		value = validated
+		value.Share.Token = issuedShareToken
+	}
+	return value, err
+}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -40,14 +41,34 @@ func (service *Service) handleAssistantIcon(writer http.ResponseWriter, request 
 	}
 }
 
+func (service *Service) handleAssistantWidgetIcon(writer http.ResponseWriter, request *http.Request, owner, assistantID string) {
+	switch request.Method {
+	case http.MethodGet:
+		service.downloadAssistantImage(writer, request, owner, assistantID, true)
+	case http.MethodPost:
+		service.uploadAssistantImage(writer, request, owner, assistantID, true)
+	default:
+		writer.Header().Set("Allow", "GET, POST")
+		http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func (service *Service) uploadAssistantIcon(writer http.ResponseWriter, request *http.Request, owner, assistantID string) {
+	service.uploadAssistantImage(writer, request, owner, assistantID, false)
+}
+
+func (service *Service) uploadAssistantImage(writer http.ResponseWriter, request *http.Request, owner, assistantID string, widget bool) {
 	current, err := service.aiapplications.GetAssistant(request.Context(), owner, assistantID)
 	if err != nil {
 		service.writeAIResult(writer, nil, err)
 		return
 	}
-	request.Body = http.MaxBytesReader(writer, request.Body, assistantIconMaxBytes+64*1024)
-	if err := request.ParseMultipartForm(assistantIconMaxBytes + 64*1024); err != nil {
+	envelopeLimit := int64(assistantIconMaxBytes + 64*1024)
+	if widget {
+		envelopeLimit += 64 * 1024 // Configuration plus multipart headers; image limit remains 2 MiB.
+	}
+	request.Body = http.MaxBytesReader(writer, request.Body, envelopeLimit)
+	if err := request.ParseMultipartForm(envelopeLimit); err != nil {
 		writeAuthError(writer, http.StatusRequestEntityTooLarge, "assistant_icon_too_large")
 		return
 	}
@@ -60,6 +81,24 @@ func (service *Service) uploadAssistantIcon(writer http.ResponseWriter, request 
 	if version != current.Version {
 		service.writeAIResult(writer, nil, fmt.Errorf("%w: assistant version changed", aiapplicationdomain.ErrVersionConflict))
 		return
+	}
+	if widget {
+		var payload assistantPayload
+		configuration := request.FormValue("configuration")
+		if len(configuration) > 64*1024 || json.Unmarshal([]byte(configuration), &payload) != nil {
+			writeAuthError(writer, http.StatusBadRequest, "invalid_assistant_configuration")
+			return
+		}
+		candidate := assistantFromPayload(payload)
+		candidate.ID, candidate.OwnerID, candidate.Version = current.ID, owner, current.Version
+		if candidate.State == "" {
+			candidate.State = current.State
+		}
+		if err := service.validateAssistantModel(request.Context(), owner, candidate.ProviderModelID); err != nil {
+			service.writeAssistantModelError(writer, err)
+			return
+		}
+		current = candidate
 	}
 	file, header, err := request.FormFile("icon")
 	if err != nil {
@@ -88,10 +127,18 @@ func (service *Service) uploadAssistantIcon(writer http.ResponseWriter, request 
 		writeAuthError(writer, http.StatusInternalServerError, "assistant_icon_upload_failed")
 		return
 	}
-	current.Icon = stored.Key
-	updated, err := service.aiapplications.UpdateAssistant(request.Context(), owner, assistantID, current, version)
+	var updated aiapplicationdomain.SmartAssistant
+	if widget {
+		current.Share.WidgetIcon = stored.Key
+		updated, err = service.saveAssistantConfiguration(request.Context(), owner, assistantID, current, version)
+	} else {
+		current.Icon = stored.Key
+		updated, err = service.aiapplications.UpdateAssistant(request.Context(), owner, assistantID, current, version)
+	}
 	if err != nil {
-		_ = service.objects.Delete(context.WithoutCancel(request.Context()), stored.Key)
+		if updated.Version == 0 {
+			_ = service.objects.Delete(context.WithoutCancel(request.Context()), stored.Key)
+		}
 		service.writeAIResult(writer, nil, err)
 		return
 	}
@@ -99,16 +146,24 @@ func (service *Service) uploadAssistantIcon(writer http.ResponseWriter, request 
 }
 
 func (service *Service) downloadAssistantIcon(writer http.ResponseWriter, request *http.Request, owner, assistantID string) {
+	service.downloadAssistantImage(writer, request, owner, assistantID, false)
+}
+
+func (service *Service) downloadAssistantImage(writer http.ResponseWriter, request *http.Request, owner, assistantID string, widget bool) {
 	assistant, err := service.aiapplications.GetAssistant(request.Context(), owner, assistantID)
 	if err != nil {
 		service.writeAIResult(writer, nil, err)
 		return
 	}
-	if !isAssistantIconObjectKey(assistant.Icon, owner) {
+	key := assistant.Icon
+	if widget {
+		key = assistant.Share.WidgetIcon
+	}
+	if !isAssistantIconObjectKey(key, owner) {
 		http.NotFound(writer, request)
 		return
 	}
-	reader, object, err := service.objects.Get(request.Context(), assistant.Icon)
+	reader, object, err := service.objects.Get(request.Context(), key)
 	if err != nil {
 		http.NotFound(writer, request)
 		return

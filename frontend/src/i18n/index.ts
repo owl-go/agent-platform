@@ -546,6 +546,11 @@ Object.assign((en as unknown as { knowledgeBases: Record<string, unknown> }).kno
 const zhAIApplications = (zh as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
 const enAIApplications = (en as unknown as { aiApplications: { share: Record<string, unknown> } & Record<string, unknown> }).aiApplications;
 Object.assign(zhAIApplications.share, {
+  embedType: "嵌入类型", fullscreen: "全屏插入", floating: "浮动窗口插入",
+  initialDisplay: "默认展示", defaultOpen: "打开聊天窗口", defaultIcon: "展示聊天图标",
+  chatIcon: "聊天图标", uploadIcon: "上传图标", resetIcon: "使用默认图标",
+  invalidIcon: "请上传不超过 2 MB 的 PNG、JPEG、WebP 或 GIF 图片。", iconLoadFailed: "聊天图标加载失败。",
+  openChat: "打开聊天窗口", closeChat: "收起聊天窗口", embedCode: "嵌入代码", copyCode: "复制嵌入代码", copyFailed: "复制失败，请手动复制嵌入代码。",
   unavailable: "分享链接不可用或已失效。",
   callLimited: "调用次数已达上限，请稍后重试。",
   invalidOrigins: "允许嵌入来源应为 HTTPS 域名，可包含端口，不能包含页面路径、查询参数或登录信息。HTTP 仅允许本地开发地址。",
@@ -564,6 +569,11 @@ Object.assign(zhAIApplications.share, {
   statConversations: "匿名会话 {count}", statCalls: "自由提问 {count}", statErrors: "失败或取消 {count}", statCredits: "消耗积分 {count}"
 });
 Object.assign(enAIApplications.share, {
+  embedType: "Embed type", fullscreen: "Fullscreen chat", floating: "Floating window",
+  initialDisplay: "Initial display", defaultOpen: "Open chat window", defaultIcon: "Show chat icon",
+  chatIcon: "Chat icon", uploadIcon: "Upload icon", resetIcon: "Use default icon",
+  invalidIcon: "Upload a PNG, JPEG, WebP, or GIF image no larger than 2 MB.", iconLoadFailed: "Unable to load the chat icon.",
+  openChat: "Open chat window", closeChat: "Collapse chat window", embedCode: "Embed code", copyCode: "Copy embed code", copyFailed: "Copy failed. Copy the embed code manually.",
   unavailable: "This share link is unavailable or has expired.",
   callLimited: "The call limit has been reached. Try again later.",
   invalidOrigins: "Enter an HTTPS origin, optionally with a port, without a page path, query, or credentials. HTTP is allowed only for local development.",

@@ -40,6 +40,9 @@ type sharePayload struct {
 	AllowedOrigins             []string `json:"allowed_origins"`
 	Width                      string   `json:"width"`
 	Height                     int      `json:"height"`
+	EmbedType                  string   `json:"embed_type"`
+	WidgetDefaultOpen          bool     `json:"widget_default_open"`
+	WidgetIcon                 string   `json:"widget_icon"`
 	FreeTextEnabled            bool     `json:"free_text_enabled"`
 	DailyCallLimit             int      `json:"daily_call_limit"`
 	DataProcessingAcknowledged bool     `json:"data_processing_acknowledged"`
@@ -194,6 +197,10 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 	}
 	if len(rest) >= 2 && rest[1] == "conversations" {
 		service.handleAssistantConversations(writer, request, owner, rest[0], rest[2:])
+		return
+	}
+	if len(rest) == 2 && rest[1] == "widget-icon" {
+		service.handleAssistantWidgetIcon(writer, request, owner, rest[0])
 		return
 	}
 	if len(rest) == 2 && rest[1] == "icon" {
@@ -358,22 +365,7 @@ func (service *Service) handleAssistants(writer http.ResponseWriter, request *ht
 		if candidate.State == "" {
 			candidate.State = current.State
 		}
-		var validation aiapplicationdomain.PublicationValidation
-		if candidate.State == aiapplicationdomain.StateEnabled {
-			validation = service.assistantPublicationCheck(request.Context(), owner, candidate)
-			if !validation.Ready {
-				service.writeAIResult(writer, nil, fmt.Errorf("%w: assistant publication check failed", aiapplicationdomain.ErrInvalid))
-				return
-			}
-		}
-		value, err := service.aiapplications.UpdateAssistant(request.Context(), owner, rest[0], candidate, payload.Version)
-		if err == nil && candidate.State == aiapplicationdomain.StateEnabled {
-			issuedShareToken := value.Share.Token
-			validation.AssistantVersion = value.Version
-			validation.CheckedAt = time.Now().UTC()
-			value, err = service.recordAssistantPublicationValidation(request.Context(), owner, validation)
-			value.Share.Token = issuedShareToken
-		}
+		value, err := service.saveAssistantConfiguration(request.Context(), owner, rest[0], candidate, payload.Version)
 		service.writeAIResult(writer, value, err)
 	case http.MethodDelete:
 		service.writeAIResult(writer, nil, service.aiapplications.DeleteAssistant(request.Context(), owner, rest[0]))
@@ -510,7 +502,7 @@ func (service *Service) writeAIResult(writer http.ResponseWriter, value any, err
 }
 
 func assistantFromPayload(value assistantPayload) aiapplicationdomain.SmartAssistant {
-	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit, DataProcessingAcknowledged: value.Share.DataProcessingAcknowledged}}
+	return aiapplicationdomain.SmartAssistant{Name: value.Name, Icon: value.Icon, Description: value.Description, Introduction: value.Introduction, Scenario: value.Scenario, Prompt: value.Prompt, PreprocessPrompt: value.PreprocessPrompt, ProviderModelID: value.ProviderModelID, ServiceGoal: value.ServiceGoal, AnswerScope: value.AnswerScope, OperatingRules: value.OperatingRules, ResponseStyle: value.ResponseStyle, KnowledgeBaseIDs: value.KnowledgeBaseIDs, ExpertID: value.ExpertID, ExpertTeamID: value.ExpertTeamID, State: aiapplicationdomain.ApplicationState(value.State), Share: aiapplicationdomain.ShareConfiguration{Enabled: value.Share.Enabled, Token: value.Share.Token, AllowedOrigins: value.Share.AllowedOrigins, Width: value.Share.Width, Height: value.Share.Height, EmbedType: value.Share.EmbedType, WidgetDefaultOpen: value.Share.WidgetDefaultOpen, WidgetIcon: value.Share.WidgetIcon, FreeTextEnabled: value.Share.FreeTextEnabled, DailyCallLimit: value.Share.DailyCallLimit, DataProcessingAcknowledged: value.Share.DataProcessingAcknowledged}}
 }
 
 func (service *Service) validateAssistantModel(ctx context.Context, owner, modelID string) error {

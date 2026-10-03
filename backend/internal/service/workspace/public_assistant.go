@@ -71,6 +71,10 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		service.streamPublicAssistantTurn(writer, request, assistant, token, visitorHash)
 		return
 	}
+	if len(parts) == 6 && parts[5] == "widget-icon" && request.Method == http.MethodGet {
+		service.downloadAssistantImage(writer, request, assistant.OwnerID, assistant.ID, true)
+		return
+	}
 	if len(parts) == 6 && parts[5] == "icon" && request.Method == http.MethodGet {
 		service.downloadAssistantIcon(writer, request, assistant.OwnerID, assistant.ID)
 		return
