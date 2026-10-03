@@ -80,7 +80,7 @@ func newChannelFixture(t *testing.T) *channelFixture {
 		t.Fatal(err)
 	}
 	adapter := &channelRecordingAdapter{result: application.ChannelSendResult{State: "sent", MessageID: "receipt"}}
-	app := application.NewMessageChannels(repo, box, map[string]application.ChannelAdapter{"telegram": adapter}, true, "https://workspace.example.test")
+	app := application.NewMessageChannels(repo, box, map[string]application.ChannelTransport{"telegram": {Account: adapter, WebhookReceiver: adapter, Sender: adapter}}, true, "https://workspace.example.test")
 	channel, err := app.Save(context.Background(), owner, workflow, "", 0, domain.MessageChannel{Provider: "telegram", Name: "Test bot", Audience: domain.ChannelAudience{SenderIDs: []string{"alice", "bob"}, AllowDirect: true}}, application.ChannelCredentials{"bot_token": "protected-test-token"})
 	if err != nil {
 		t.Fatal(err)

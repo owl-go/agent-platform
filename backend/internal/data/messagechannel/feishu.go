@@ -60,9 +60,7 @@ func (a *Feishu) Configure(ctx context.Context, s application.ChannelStored, c a
 	}
 	return nil
 }
-func (a *Feishu) Callback(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, h http.Header, b []byte) (application.ChannelCallback, error) {
-	return noCallback(ctx, s, c, h, b)
-}
+
 func value(v *string) string {
 	if v == nil {
 		return ""
@@ -101,7 +99,7 @@ func (silentLogger) Debug(context.Context, ...interface{}) {}
 func (silentLogger) Info(context.Context, ...interface{})  {}
 func (silentLogger) Warn(context.Context, ...interface{})  {}
 func (silentLogger) Error(context.Context, ...interface{}) {}
-func (a *Feishu) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive func(context.Context, domain.ChannelMessage) error) error {
+func (a *Feishu) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink) error {
 	handler := dispatcher.NewEventDispatcher("", "").OnP2MessageReceiveV1(func(callbackCtx context.Context, e *larkim.P2MessageReceiveV1) error {
 		if e != nil && e.EventV2Base != nil && e.EventV2Base.Header != nil && e.EventV2Base.Header.AppID != c["app_id"] {
 			return nil

@@ -37,9 +37,6 @@ func (a *Discord) Configure(ctx context.Context, s application.ChannelStored, c 
 	}
 	return nil
 }
-func (a *Discord) Callback(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, h http.Header, b []byte) (application.ChannelCallback, error) {
-	return noCallback(ctx, s, c, h, b)
-}
 
 func normalizeDiscord(s application.ChannelStored, event *discordgo.MessageCreate) (domain.ChannelMessage, bool) {
 	if event == nil || event.Message == nil || event.Author == nil || event.Author.Bot || event.WebhookID != "" || event.Author.ID == s.Channel.AccountID || event.Content == "" || (event.Type != discordgo.MessageTypeDefault && event.Type != discordgo.MessageTypeReply) {
@@ -57,7 +54,7 @@ func normalizeDiscord(s application.ChannelStored, event *discordgo.MessageCreat
 	m := domain.ChannelMessage{EventID: event.ID, MessageID: event.ID, SenderID: event.Author.ID, ChatID: event.ChannelID, Group: event.GuildID != "", Mentioned: mentioned, Text: strings.TrimSpace(text), OccurredAt: event.Timestamp, Reply: map[string]string{}}
 	return m, true
 }
-func (a *Discord) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive func(context.Context, domain.ChannelMessage) error) error {
+func (a *Discord) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink) error {
 	session, err := discordgo.New("Bot " + c["bot_token"])
 	if err != nil {
 		return providerError("provider_connection_failed")

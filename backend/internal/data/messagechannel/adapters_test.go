@@ -194,7 +194,7 @@ func TestProviderSendPreservesTargetsAndUsesSafeFailures(t *testing.T) {
 				}
 				return jsonResponse(test.reply, 200), nil
 			})
-			adapter := NewAdapters(transport)[test.provider]
+			adapter := NewTransports(transport)[test.provider].Sender
 			s := application.ChannelStored{Channel: domain.MessageChannel{Region: "feishu"}}
 			c := application.ChannelCredentials{"bot_token": "test-token", "app_id": "app", "app_secret": "secret", "tenant_key": "tenant"}
 			m := domain.ChannelMessage{ChatID: "123", MessageID: "456", ThreadID: "789", SenderID: "sender", Reply: map[string]string{"session_webhook": "https://oapi.dingtalk.com/robot/sendBySession?session=protected", "expires_at": strconv.FormatInt(time.Now().Add(time.Hour).UnixMilli(), 10)}}

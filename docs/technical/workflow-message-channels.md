@@ -26,27 +26,44 @@
 ```mermaid
 sequenceDiagram
     participant IM as 外部 IM
-    participant Adapter as Channel Adapter
+    participant Receiver as Channel Receiver
     participant App as Workspace Application
     participant DB as PostgreSQL
     participant Worker as Worker
-    IM->>Adapter: 回调 / WebSocket / 长轮询消息
-    Adapter->>App: 验证后归一化的消息
+    participant Sender as Channel Sender
+    IM->>Receiver: 回调 / WebSocket 消息
+    Receiver->>App: 验证后归一化的消息
     App->>DB: 持久化入站记录
-    DB-->>Adapter: 提交成功或已存在
-    Adapter-->>IM: 协议 ACK / 提交同步游标
+    DB-->>App: 提交成功或已存在
+    App-->>Receiver: 接收结果
+    Receiver-->>IM: 协议 ACK
     Worker->>App: 领取持久化入站记录
     App->>DB: 准入 + 对话映射 + Run + 入队（同一事务）
     Worker->>Worker: 既有 Workflow Queue 与 Runtime 执行
     Worker->>DB: Run 终态 + Event + Credits + 回复任务（同一事务）
-    Worker->>Adapter: 领取并发送已保存回答
-    Adapter->>IM: 回复原聊天 / 线程
-    Adapter->>DB: 记录发送结果
+    Worker->>App: 处理持久化回复任务
+    App->>DB: 领取 Delivery
+    App->>Sender: 已保存回答 + 原聊天目标 + 稳定 Delivery key
+    Sender->>IM: 回复原聊天 / 线程
+    Sender-->>App: 发送结果
+    App->>DB: 记录发送结果
 ```
 
 API 只认证、验证、持久化和快速 ACK，不在回调期限内等待模型。长连接与轮询由 Worker 下的独立有界循环维护，不能占据某个 Run 的执行生命周期。首期沿用当前 Worker 的进程级 PostgreSQL Advisory Lock，不另建每渠道连接租约。Supervisor 按 Channel Version 取消过期连接，数据库准入与发送重查 Config Version；只有发送任务持有持久化 UUID lease。长连接随循环的 `context.Context` 关闭，所有权查询失败也取消现有连接。SDK 内部重连不能绕过停用：钉钉采用平台管理的 Stream 连接与官方 frame 类型；Discord/飞书使用固定 SDK 的受控生命周期。
 
-Workspace Domain/Application 定义消息与发送 port；供应商 HTTP/WebSocket/JSON-RPC 实现在 Data Adapter。实现位于 `backend/internal/data/messagechannel`，公共归一化、限流和脱敏只做一份。不要给 `agentruntime.Adapter` 增加 IM 方法，也不要让渠道 Adapter 管理 Docker、Credits 或直接创建 Run。
+Workspace Domain 定义归一化消息；Application 的 `message_channel_transport.go` 分别定义账号识别、消息接收和消息发送 port，供应商实现在 `backend/internal/data/messagechannel`。每个渠道通过 `ChannelTransport` 显式注册以下角色，可以由同一实现或不同实现提供：
+
+| Interface | 职责与约束 |
+|---|---|
+| `ChannelAccount` | `Identify` 认证配置凭证并取得稳定账号/tenant identity，不接收或发送消息 |
+| `ChannelReceiver` | `Configure` 校验接收身份并准备运输设置；实际接收选择下面一种 Interface |
+| `ChannelWebhookReceiver` | 认证原始 HTTP 请求并返回归一化消息/协议响应；Application 完成 Inbox 持久化后才返回响应 |
+| `ChannelStreamReceiver` | `Connect` 管理受 `context.Context` 控制的长连接，通过 `ChannelMessageSink` 提交归一化消息；sink 失败不得成功 ACK，消息 deadline 必须传播到持久化 |
+| `ChannelSender` | `Send` 使用保存的答案、原聊天目标和稳定 Delivery key，返回安全发送状态；不执行模型或调用接收器 |
+
+Telegram/Slack 注册 Webhook 接收器，Discord/钉钉/飞书注册长连接接收器；五个渠道各自实现发送 Interface，不再需要实现不支持的 Webhook 方法。公共接收和发送循环仅依赖自己的角色；保存/验证配置要求账号、发送器和唯一接收方式齐备，缺少或同时注册两种接收方式的配置不开放。注册在进程启动时固定，Application 持有注册表副本；它是静态运输装配，不是产品动态 Capability 注册表。HTTP 认证绕过仍由 Service 的精确 Telegram/Slack POST 路由限制，新渠道不能仅靠注册自动开放公开入口。
+
+供应商认证、消息解析与归一化由各自 Receiver 完成，入站准入、限流、脱敏、工作流执行和 Delivery 恢复复用公共链路。不要给 `agentruntime.Adapter` 增加 IM 方法，也不要让渠道 Adapter 管理 Docker、Credits 或直接创建 Run。
 
 Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 端点。Signal 账号密钥和 iMessage/Mac 环境不进入 Runtime 镜像；平台 Worker 不扫描宿主机聊天数据库。OpenClaw 插件可作协议核查来源或受控 Bridge 候选，不能成为“必须选 OpenClaw 才能收消息”的产品约束。
 

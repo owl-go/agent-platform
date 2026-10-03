@@ -95,7 +95,7 @@ func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits
 	}
 	service, err := workspaceapplication.New(repository, modeldiscovery.New(nil))
 	if err == nil {
-		service.EnableMessageChannels(workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewAdapters(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+		service.EnableMessageChannels(workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewTransports(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
 			MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
 			MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
 			MaxTextBytes:               config.MessageChannels.MaxTextBytes,

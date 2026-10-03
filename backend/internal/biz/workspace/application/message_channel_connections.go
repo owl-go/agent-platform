@@ -47,8 +47,9 @@ func (m *ChannelConnections) ProcessNext(ctx context.Context) (bool, error) {
 	defer m.mu.Unlock()
 	live := map[string]bool{}
 	for _, stored := range items {
-		connector, ok := m.channels.adapters[stored.Channel.Provider].(ChannelConnector)
-		if !ok {
+		transport := m.channels.transports[stored.Channel.Provider]
+		receiver := transport.StreamReceiver
+		if transport.receiver() == nil || receiver == nil {
 			continue
 		}
 		id := stored.Channel.ID
@@ -81,29 +82,29 @@ func (m *ChannelConnections) ProcessNext(ctx context.Context) (bool, error) {
 		child, cancel := context.WithCancel(ctx)
 		connection := &channelConnection{version: stored.Channel.Version, cancel: cancel, done: make(chan struct{}), retryAt: time.Now().Add(30 * time.Second)}
 		m.active[id] = connection
-		go func(stored ChannelStored, connector ChannelConnector) {
+		go func(stored ChannelStored, receiver ChannelStreamReceiver) {
 			defer func() { connection.retryAt = time.Now().Add(30 * time.Second); close(connection.done) }()
 			defer cancel()
 			c, err := m.channels.credentials(stored)
 			if err == nil {
-				err = m.channels.adapters[stored.Channel.Provider].Configure(child, stored, c, "")
+				err = receiver.Configure(child, stored, c, "")
 			}
 			if err == nil {
 				_ = m.channels.repository.SetChannelHealth(child, stored.Channel.ID, stored.Channel.ConfigVersion, "connecting", "")
-				err = connector.Connect(child, stored, c, func(_ context.Context, message domain.ChannelMessage) error {
+				err = receiver.Connect(child, stored, c, func(receiveCtx context.Context, message domain.ChannelMessage) error {
 					if child.Err() != nil {
 						return child.Err()
 					}
-					if err := m.channels.Receive(child, stored, message); err != nil {
+					if err := m.channels.Receive(receiveCtx, stored, message); err != nil {
 						return err
 					}
-					return m.channels.repository.SetChannelHealth(child, stored.Channel.ID, stored.Channel.ConfigVersion, "connected", "")
+					return m.channels.repository.SetChannelHealth(receiveCtx, stored.Channel.ID, stored.Channel.ConfigVersion, "connected", "")
 				})
 			}
 			if child.Err() == nil {
 				_ = m.channels.repository.SetChannelHealth(child, stored.Channel.ID, stored.Channel.ConfigVersion, "disconnected", "provider_connection_failed")
 			}
-		}(stored, connector)
+		}(stored, receiver)
 	}
 	for id, current := range m.active {
 		if !live[id] {

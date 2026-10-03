@@ -64,10 +64,6 @@ func publicProviderAddress(ip netip.Addr) bool {
 	}
 	return true
 }
-func NewAdapters(transport http.RoundTripper) map[string]application.ChannelAdapter {
-	h := NewHTTP(transport)
-	return map[string]application.ChannelAdapter{"telegram": &Telegram{h}, "slack": &Slack{h}, "discord": &Discord{h}, "dingtalk": &DingTalk{h}, "feishu": &Feishu{h}}
-}
 func providerError(code string) error {
 	if code == "callback_authentication_failed" {
 		return fmt.Errorf("%w: %w", domain.ErrInvalid, domain.ErrChannelCallbackAuthentication)
@@ -128,8 +124,4 @@ func failedSend(status int, retry time.Duration, err error) application.ChannelS
 		return application.ChannelSendResult{State: "failed", Code: "provider_rejected"}
 	}
 	return application.ChannelSendResult{State: "outcome_unknown", Code: "provider_send_unconfirmed"}
-}
-
-func noCallback(context.Context, application.ChannelStored, application.ChannelCredentials, http.Header, []byte) (application.ChannelCallback, error) {
-	return application.ChannelCallback{}, providerError("callback_unsupported")
 }

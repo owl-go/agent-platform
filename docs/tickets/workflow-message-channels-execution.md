@@ -81,3 +81,23 @@ git diff --check
 未取得：五个供应商真实账号/权限、真实接收→模型 Runtime→IM 答复及连续追问、真实 Gateway 掉线/重启补收、飞书与 Lark 分别验收、真实浏览器桌面/移动账号交互、Linux + runsc Sandbox/Production Conformance、新 Digest Runtime 镜像验收、远端 MinIO/OSS 集成以及生产部署。它们没有被本地 mock、Skip 或构建成功替代。本轮没有变更 Runtime CLI/Image/Sandbox 配置，不声称具有新的 Runtime Capability 证据。
 
 剩余八个渠道维持原目标与前置资格核查，不在本轮 UI 或服务器枚举中伪装为可用。恢复可靠性从 Inbox 提交开始；钉钉 fire-forgot 与 Discord 进程内 resume 的边界已单独记录。未知发送不自动重放，owner 可确认重发或等待发送期限收口。
+
+## 收发 Interface 拆分与证据
+
+2026-10-03 根据用户补充要求，将原先包含账号识别、Webhook 和发送的单一 `ChannelAdapter` 替换为 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver`、`ChannelSender`，通过 `ChannelTransport` 分别注入。五个供应商按实际接收方式注册，长连接渠道删除不支持的 Callback 方法；公共 Callback、连接 Supervisor 与 Delivery 循环分别使用接收或发送 Interface。配置仍要求完整角色与唯一接收方式，公开 HTTP 路由仍限定当前批准的两个供应商。
+
+新增 Application 契约测试使用互相独立的 receiver/sender fake，验证接收器可独立注入、Inbox 失败不成功 ACK、发送不触发接收或 Run 准入、稳定 Delivery key/原线程/受保护 Reply 保持、缺失发送器安全失败、注册缺失/歧义拒绝、长连接移除时取消。Supervisor 现在传播接收器提供的单条消息 context/deadline，过期 context 的入库失败也通过 sink 返回。
+
+本次实际通过：
+
+```bash
+go -C backend test ./internal/biz/workspace/application ./internal/data/messagechannel ./internal/service/workspace ./internal/wiring/...
+go -C backend test -race ./internal/biz/workspace/application ./internal/data/messagechannel ./internal/service/workspace ./internal/wiring/workspaceworker
+# 以下两条设置了临时 postgres:17-alpine 实例的 WORKSPACE_TEST_POSTGRES_DSN：
+go -C backend test -race ./internal/data/workspace/gormrepo -run TestChannel -count=1
+make test
+make build
+git diff --check
+```
+
+十个渠道 PostgreSQL 集成用例实际执行通过。此次未修改 Proto、Migration、前端或 Runtime 镜像；之前的生成契约与前端证据见上一节。本次本地检查仍不能替代五个 IM 的真实账号联调或 Linux Production Conformance，也未进行部署。

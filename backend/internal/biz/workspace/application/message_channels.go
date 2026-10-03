@@ -42,17 +42,6 @@ type ChannelCallback struct {
 	Response any
 }
 
-// Transport implementations must return bounded, credential-free diagnostics.
-type ChannelAdapter interface {
-	Identify(context.Context, ChannelCredentials, string) (ChannelIdentity, error)
-	Configure(context.Context, ChannelStored, ChannelCredentials, string) error
-	Callback(context.Context, ChannelStored, ChannelCredentials, http.Header, []byte) (ChannelCallback, error)
-	Send(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, string) ChannelSendResult
-}
-type ChannelConnector interface {
-	Connect(context.Context, ChannelStored, ChannelCredentials, func(context.Context, domain.ChannelMessage) error) error
-}
-
 type MessageChannelRepository interface {
 	ListMessageChannels(context.Context, string, string) ([]domain.MessageChannel, error)
 	GetMessageChannel(context.Context, string, string, string) (ChannelStored, error)
@@ -71,13 +60,13 @@ type MessageChannelRepository interface {
 type MessageChannels struct {
 	repository   MessageChannelRepository
 	cipher       ChannelCipher
-	adapters     map[string]ChannelAdapter
+	transports   map[string]ChannelTransport
 	enabled      bool
 	callbackBase string
 	limits       ChannelLimits
 }
 
-func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCipher, adapters map[string]ChannelAdapter, enabled bool, callbackBase string, options ...ChannelLimits) *MessageChannels {
+func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCipher, transports map[string]ChannelTransport, enabled bool, callbackBase string, options ...ChannelLimits) *MessageChannels {
 	limits := ChannelLimits{}.Effective()
 	if len(options) > 0 {
 		limits = options[0].Effective()
@@ -87,7 +76,11 @@ func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCiphe
 	}); ok {
 		protected.ConfigureChannelProtection(cipher, enabled, limits)
 	}
-	return &MessageChannels{repository: repository, cipher: cipher, adapters: adapters, enabled: enabled, callbackBase: strings.TrimRight(callbackBase, "/"), limits: limits}
+	registry := make(map[string]ChannelTransport, len(transports))
+	for provider, transport := range transports {
+		registry[provider] = transport
+	}
+	return &MessageChannels{repository: repository, cipher: cipher, transports: registry, enabled: enabled, callbackBase: strings.TrimRight(callbackBase, "/"), limits: limits}
 }
 func ChannelCredentialAAD(c domain.MessageChannel) string {
 	return "message-channel:" + c.OwnerID + ":" + c.ID + ":" + fmt.Sprint(c.ConfigVersion)
@@ -115,7 +108,7 @@ func (s *MessageChannels) List(ctx context.Context, owner, workflow string) ([]d
 	return items, err
 }
 func (s *MessageChannels) decorate(c *domain.MessageChannel) {
-	if c.Provider == "telegram" || c.Provider == "slack" {
+	if transport := s.transports[c.Provider]; transport.receiver() != nil && transport.WebhookReceiver != nil {
 		c.CallbackURL = s.callbackBase + "/api/v1/message-channel-callbacks/" + c.Provider + "/" + c.ID
 	}
 }
@@ -124,8 +117,8 @@ func (s *MessageChannels) Save(ctx context.Context, owner, workflow, id string, 
 	if !s.enabled {
 		return c, fmt.Errorf("%w: message channels are disabled by the administrator", domain.ErrInvalid)
 	}
-	adapter, ok := s.adapters[c.Provider]
-	if !ok || len(c.Name) > 100 || strings.TrimSpace(c.Name) == "" || (c.Region != "" && c.Region != "feishu" && c.Region != "lark") || (c.Provider != "feishu" && c.Region != "") {
+	transport, ok := s.transports[c.Provider]
+	if !ok || !transport.complete() || len(c.Name) > 100 || strings.TrimSpace(c.Name) == "" || (c.Region != "" && c.Region != "feishu" && c.Region != "lark") || (c.Provider != "feishu" && c.Region != "") {
 		return c, domain.ErrInvalid
 	}
 	if err := c.Audience.Validate(); err != nil {
@@ -156,7 +149,7 @@ func (s *MessageChannels) Save(ctx context.Context, owner, workflow, id string, 
 			return c, domain.ErrInvalid
 		}
 	}
-	identity, err := adapter.Identify(ctx, credentials, c.Region)
+	identity, err := transport.Account.Identify(ctx, credentials, c.Region)
 	if err != nil {
 		return c, err
 	}
@@ -231,7 +224,11 @@ func (s *MessageChannels) Control(ctx context.Context, owner, workflow, id strin
 			return old.Channel, err
 		}
 		s.decorate(&old.Channel)
-		if err = s.adapters[old.Channel.Provider].Configure(ctx, old, credentials, old.Channel.CallbackURL); err != nil {
+		transport := s.transports[old.Channel.Provider]
+		if !transport.complete() {
+			return old.Channel, domain.ErrInvalid
+		}
+		if err = transport.receiver().Configure(ctx, old, credentials, old.Channel.CallbackURL); err != nil {
 			return old.Channel, err
 		}
 	}
@@ -280,8 +277,8 @@ func (s *MessageChannels) Callback(ctx context.Context, provider, id string, hea
 	if !s.enabled || len(body) > 64*1024 {
 		return nil, domain.ErrInvalid
 	}
-	adapter, ok := s.adapters[provider]
-	if !ok || (provider != "telegram" && provider != "slack") {
+	transport, ok := s.transports[provider]
+	if !ok || transport.receiver() == nil || transport.WebhookReceiver == nil {
 		return nil, domain.ErrInvalid
 	}
 	stored, err := s.repository.GetMessageChannel(ctx, "", "", id)
@@ -292,7 +289,7 @@ func (s *MessageChannels) Callback(ctx context.Context, provider, id string, hea
 	if err != nil {
 		return nil, err
 	}
-	parsed, err := adapter.Callback(ctx, stored, credentials, headers, body)
+	parsed, err := transport.WebhookReceiver.Callback(ctx, stored, credentials, headers, body)
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +314,10 @@ func (s *MessageChannels) ProcessDelivery(ctx context.Context) (bool, error) {
 	if err != nil || job == nil {
 		return false, err
 	}
+	sender := s.transports[job.Stored.Channel.Provider].Sender
+	if sender == nil {
+		return true, s.repository.FinishChannelDelivery(ctx, job, ChannelSendResult{State: "failed", Code: "provider_unavailable"})
+	}
 	c, err := s.credentials(job.Stored)
 	if err != nil {
 		return true, s.repository.FinishChannelDelivery(ctx, job, ChannelSendResult{State: "failed", Code: "credentials_unavailable"})
@@ -337,7 +338,7 @@ func (s *MessageChannels) ProcessDelivery(ctx context.Context) (bool, error) {
 	}
 	sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	result := s.adapters[job.Stored.Channel.Provider].Send(sendCtx, job.Stored, c, job.Message, text, job.Delivery.ID)
+	result := sender.Send(sendCtx, job.Stored, c, job.Message, text, job.Delivery.ID)
 	return true, s.repository.FinishChannelDelivery(ctx, job, result)
 }
 func (s *MessageChannels) Deliveries(ctx context.Context, owner, workflow, id string) ([]domain.ChannelDelivery, error) {

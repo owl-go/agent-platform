@@ -38,9 +38,7 @@ func (a *DingTalk) Configure(ctx context.Context, s application.ChannelStored, c
 	}
 	return nil
 }
-func (a *DingTalk) Callback(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, h http.Header, b []byte) (application.ChannelCallback, error) {
-	return noCallback(ctx, s, c, h, b)
-}
+
 func validDingTalkReply(target string) bool {
 	u, err := url.Parse(target)
 	return err == nil && u.Scheme == "https" && u.Host == "oapi.dingtalk.com" && u.User == nil && u.Path == "/robot/sendBySession" && u.Fragment == "" && len(target) <= 4096
@@ -55,7 +53,7 @@ func normalizeDingTalk(s application.ChannelStored, e *chatbot.BotCallbackDataMo
 
 // The SDK's StreamClient reconnects with context.Background, even after Close.
 // Keep the official frame types, but own the connection and its cancellation.
-func (a *DingTalk) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive func(context.Context, domain.ChannelMessage) error) error {
+func (a *DingTalk) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink) error {
 	result, status, _, err := a.request(ctx, http.MethodPost, "https://api.dingtalk.com/v1.0/gateway/connections/open", "", map[string]any{
 		"clientId": c["client_id"], "clientSecret": c["client_secret"], "ua": "agent-workspace/1.0",
 		"subscriptions": []map[string]string{{"type": "CALLBACK", "topic": payload.BotMessageCallbackTopic}},
@@ -118,7 +116,7 @@ func dingTalkStreamURL(endpoint, ticket string) (string, error) {
 	u.RawQuery = query.Encode()
 	return u.String(), nil
 }
-func dingTalkFrame(ctx context.Context, s application.ChannelStored, frame *payload.DataFrame, receive func(context.Context, domain.ChannelMessage) error) (*payload.DataFrameResponse, bool, error) {
+func dingTalkFrame(ctx context.Context, s application.ChannelStored, frame *payload.DataFrame, receive application.ChannelMessageSink) (*payload.DataFrameResponse, bool, error) {
 	ack := payload.NewSuccessDataFrameResponse()
 	if frame.Type == "SYSTEM" {
 		switch frame.GetTopic() {

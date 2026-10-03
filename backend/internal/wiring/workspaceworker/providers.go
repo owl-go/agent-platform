@@ -114,7 +114,7 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewAdapters(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+	channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewTransports(nil), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
 		MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
 		MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
 		MaxTextBytes:               config.MessageChannels.MaxTextBytes,
