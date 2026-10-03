@@ -45,6 +45,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 ## API
 
+Workflow Message Channel 已实现全部 13 个目标渠道的文本收发；owner 管理使用 Proto API，Telegram/Slack/WhatsApp/QQ 回调是独立供应商认证的自定义 HTTP Handler。Workspace Application 分别定义 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver` 和 `ChannelSender` port，`ChannelTransport` 静态注册每个渠道的唯一接收方式与独立发送器；Data Adapter 各自实现供应商协议，Migration 000066 保存配置/Inbox/Conversation/Delivery，000067 扩展 provider 并追加加密接收游标。Matrix、Signal、BlueBubbles 使用 Administrator 批准的精确 HTTPS Endpoint；显式私网访问不扩展 Sandbox Egress。Inbox 准入复用 Workflow Queue 与 Credits，终态 Event/Credits/Outbox 同事务提交；Worker 持有进程级 Advisory Lock，连接与发送使用独立有界循环。渠道凭证只供 host 运输与执行脱敏，不进入 Runtime env/Snapshot。配置默认关闭，实际账号与生产证据尚未取得；部署配置和限制见 [接入设计](workflow-message-channels.md)。
+
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
 Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、预留汇总和 Credit Ledger，并允许 Administrator 管理企业默认额度、提醒阈值、账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订和带原因的 Credit Adjustment。Redemption Code 是默认关闭的可选渠道；关闭时普通用户和管理员 API 都 fail closed。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；准入按所有余额桶减去活动预留后的净 Available Credit 判定，返回当前 Available Credit 与下一次每日额度时间，不返回其他 User 或内部费率数据。

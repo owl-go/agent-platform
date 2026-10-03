@@ -76,3 +76,15 @@ sandbox:
   egress_controller_socket: /run/agent-platform/egress-controller.sock
   resolver_config: /etc/agent-platform/sandbox-resolv.conf
   resolver_addresses: [223.5.5.5, 1.1.1.1]
+
+# Opt in on both API and Worker after configuring real application credentials.
+# callback_base_url must be the public HTTPS origin (Telegram and Slack).
+message_channels:
+  enabled: false
+  callback_base_url: ""
+  max_connections: 64
+  max_pending_messages: 1000
+  max_sender_messages_per_minute: 10
+  max_text_bytes: 10000
+  max_send_attempts: 8
+  send_interval: 3s

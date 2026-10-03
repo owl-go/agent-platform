@@ -50,6 +50,10 @@ func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *wo
 				next.ServeHTTP(writer, request)
 				return
 			}
+			if _, _, callback := channelCallbackRoute(request.Method, request.URL.Path); callback {
+				next.ServeHTTP(writer, request)
+				return
+			}
 			scheme, token, found := strings.Cut(request.Header.Get("Authorization"), " ")
 			if found && strings.EqualFold(scheme, "Basic") {
 				workflowID, allowed := workflowCredentialRoute(request.Method, request.URL.Path)

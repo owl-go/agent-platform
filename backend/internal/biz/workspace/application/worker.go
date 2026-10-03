@@ -22,24 +22,27 @@ const (
 )
 
 type ExecutionJob struct {
-	Kind                JobKind
-	ID                  string
-	OwnerID             string
-	Timezone            string
-	WorkflowID          string
-	ConversationID      string
-	SessionID           string
-	AssistantMessageID  int64
-	MCPServerID         string
-	ExpertID            string
-	StageIdentity       string
-	MCPServer           domain.MCPServerSnapshot
-	Instruction         string
-	Attachments         []domain.Attachment
-	CheckpointRef       string
-	StageCheckpointRefs map[int]string
-	Snapshot            domain.ExecutionSnapshot
-	CLIConnector        cliconnector.Definition
+	// AdditionalRedactionValues are host-side filters only: never persist them
+	// in a Snapshot or pass them to the Runtime environment or command line.
+	AdditionalRedactionValues [][]byte `json:"-"`
+	Kind                      JobKind
+	ID                        string
+	OwnerID                   string
+	Timezone                  string
+	WorkflowID                string
+	ConversationID            string
+	SessionID                 string
+	AssistantMessageID        int64
+	MCPServerID               string
+	ExpertID                  string
+	StageIdentity             string
+	MCPServer                 domain.MCPServerSnapshot
+	Instruction               string
+	Attachments               []domain.Attachment
+	CheckpointRef             string
+	StageCheckpointRefs       map[int]string
+	Snapshot                  domain.ExecutionSnapshot
+	CLIConnector              cliconnector.Definition
 }
 
 type ExecutionResult struct {

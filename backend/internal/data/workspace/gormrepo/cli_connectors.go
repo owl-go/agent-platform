@@ -1007,5 +1007,11 @@ func transitionApprovalExecution(tx *gorm.DB, request cliconnector.ApprovalReque
 	if err := tx.Table("run_events").Select("COALESCE(MAX(sequence), 0)").Where("run_id = ?", request.ExecutionID).Scan(&sequence).Error; err != nil {
 		return err
 	}
-	return tx.Table("run_events").Create(map[string]any{"run_id": request.ExecutionID, "sequence": sequence + 1, "event_type": eventType, "payload": payload, "occurred_at": time.Now().UTC()}).Error
+	if err := tx.Table("run_events").Create(map[string]any{"run_id": request.ExecutionID, "sequence": sequence + 1, "event_type": eventType, "payload": payload, "occurred_at": time.Now().UTC()}).Error; err != nil {
+		return err
+	}
+	if !resume {
+		return enqueueChannelWaiting(tx, request.ExecutionID)
+	}
+	return nil
 }

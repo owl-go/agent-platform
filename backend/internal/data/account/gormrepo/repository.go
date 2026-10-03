@@ -164,6 +164,23 @@ func (repository *Repository) SetEnabled(ctx context.Context, actorUserID, userI
 		if result.RowsAffected != 1 {
 			return domain.ErrConflict
 		}
+		// Offboarding and the channel fence commit with the account mutation.
+		// Re-enabling the account never reactivates its old message transports.
+		if !enabled {
+			if err := tx.Exec(`UPDATE workflow_message_channels SET enabled=false, validation_state='unverified', validation_code='', validation_until=NULL, health='disconnected', version=version+1 WHERE owner_user_id=? AND deleted_at IS NULL`, userID).Error; err != nil {
+				return err
+			}
+			if err := tx.Exec(`UPDATE message_channel_inbox SET state='ignored',reason='owner_disabled' WHERE state='received' AND channel_id IN (SELECT id FROM workflow_message_channels WHERE owner_user_id=?)`, userID).Error; err != nil {
+				return err
+			}
+			if err := tx.Exec(`UPDATE message_channel_deliveries SET state='cancelled' WHERE state IN ('pending','retry_wait') AND channel_id IN (SELECT id FROM workflow_message_channels WHERE owner_user_id=?)`, userID).Error; err != nil {
+				return err
+			}
+			if err := tx.Exec(`UPDATE runs SET cancel_requested_at=now(),version=version+1 WHERE state IN ('queued','running','waiting_for_user') AND id IN (SELECT run_id FROM message_channel_inbox WHERE channel_id IN (SELECT id FROM workflow_message_channels WHERE owner_user_id=?))`, userID).Error; err != nil {
+				return err
+			}
+		}
+
 		enabledMetric := int64(0)
 		if enabled {
 			enabledMetric = 1

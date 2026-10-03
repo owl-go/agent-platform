@@ -399,6 +399,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(prepareErr)
 		}
+		redactValues = append(redactValues, job.AdditionalRedactionValues...)
 		for _, value := range variables {
 			allRedactValues = append(allRedactValues, []byte(value))
 		}

@@ -543,6 +543,71 @@ func TestExecuteMakesImageAttachmentReadableAndKeepsWorkspaceWritable(t *testing
 	}
 }
 
+func TestExecuteChannelSecretsFilterOutputWithoutEnteringRuntime(t *testing.T) {
+	executor, job, persistent := newTeamTestExecutor(t)
+	job.Snapshot.ExpertTeam = nil
+	secret := "channel-only-secret-value"
+	job.AdditionalRedactionValues = [][]byte{[]byte(secret)}
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, config cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			encoded, _ := json.Marshal(request)
+			if strings.Contains(string(encoded), secret) {
+				t.Fatal("channel credential entered Runtime request")
+			}
+			_, slot, err := executor.warmSlot(job, executor.config.Worker.Runtimes[string(domain.RuntimeCodex)])
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = filepath.WalkDir(slot.credentials, func(path string, entry os.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if !entry.IsDir() {
+					data, err := os.ReadFile(path)
+					if err != nil {
+						return err
+					}
+					if bytes.Contains(data, []byte(secret)) {
+						t.Fatal("channel credential entered credential mount")
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(request.WorkspacePath, "report.txt"), []byte(secret), 0600); err != nil {
+				t.Fatal(err)
+			}
+			publishSuccessfulRuntime(t, events, request.RunID, secret)
+			return agentruntime.Result{FinalMessage: secret}, nil
+		}}, nil
+	}
+	progress := &recordingProgress{}
+	result, err := executor.Execute(context.Background(), job, progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.FinalMessage, secret) || !strings.Contains(result.FinalMessage, "[REDACTED]") {
+		t.Fatalf("final result not filtered: %q", result.FinalMessage)
+	}
+	for _, event := range progress.events {
+		encoded, _ := json.Marshal(event)
+		if bytes.Contains(encoded, []byte(secret)) {
+			t.Fatal("progress leaked channel secret")
+		}
+	}
+	commitSuccessfulResult(t, result)
+	data, err := os.ReadFile(filepath.Join(persistent, "report.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte(secret)) {
+		t.Fatal("promoted Workspace leaked channel secret")
+	}
+}
+
 func TestBuildInstructionAppliesPresetAndCustomPersonality(t *testing.T) {
 	tests := []struct {
 		name        string

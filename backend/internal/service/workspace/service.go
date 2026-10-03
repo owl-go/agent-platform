@@ -63,6 +63,7 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle(tianyanchaOAuthCallbackPath, http.HandlerFunc(service.tianyanchaOAuthCallback))
 	server.Handle(linearOAuthCallbackPath, http.HandlerFunc(service.linearOAuthCallback))
 	server.Handle(xiaoeOAuthCallbackPath, http.HandlerFunc(service.xiaoeOAuthCallback))
+	server.Handle("/api/v1/message-channel-callbacks/{provider}/{channel_id}", http.HandlerFunc(service.messageChannelCallback))
 	server.Handle(teambitionOAuthCallbackPath, http.HandlerFunc(service.teambitionOAuthCallback))
 	server.Handle(klingOAuthCallbackPath, http.HandlerFunc(service.klingOAuthCallback))
 	server.Handle("/api/v1/sessions/{session_id}/messages/{message_id}/events", http.HandlerFunc(service.streamSessionMessage))

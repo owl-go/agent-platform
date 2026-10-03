@@ -24,6 +24,46 @@ func TestLoadExpandsEnvironmentAndValidatesAPI(t *testing.T) {
 	}
 }
 
+func TestMessageChannelsConfigurationIsOptInAndBounded(t *testing.T) {
+	config, err := Load(writeConfig(t, validYAML("postgres://database/platform")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.MessageChannels.Enabled {
+		t.Fatal("channels enabled by default")
+	}
+	for _, test := range []struct {
+		name, extra string
+		valid       bool
+	}{
+		{"enabled HTTPS origin", "enabled: true\n  callback_base_url: https://workspace.example.test\n  max_connections: 64\n  max_pending_messages: 1000\n  max_sender_messages_per_minute: 10\n  max_text_bytes: 10000\n  max_send_attempts: 8\n  send_interval: 3s", true},
+		{"approved private bridge", "approved_endpoints:\n    - url: https://bridge.internal:8443/signal\n      allow_private_network: true", true},
+		{"unapproved HTTP bridge", "approved_endpoints:\n    - url: http://bridge.internal", false},
+		{"wildcard bridge", "approved_endpoints:\n    - url: https://*.internal", false},
+		{"userinfo bridge", "approved_endpoints:\n    - url: https://user@bridge.internal", false},
+		{"query bridge", "approved_endpoints:\n    - url: https://bridge.internal?token=secret", false},
+		{"duplicate bridge", "approved_endpoints:\n    - url: https://bridge.internal\n    - url: https://bridge.internal", false},
+		{"HTTP", "enabled: true\n  callback_base_url: http://workspace.example.test", false},
+		{"callback path", "enabled: true\n  callback_base_url: https://workspace.example.test/path", false},
+		{"connection budget", "enabled: true\n  callback_base_url: https://workspace.example.test\n  max_connections: 1001", false},
+		{"backlog budget", "max_pending_messages: -1", false},
+		{"sender budget", "max_sender_messages_per_minute: 101", false},
+		{"body budget", "max_text_bytes: 10001", false},
+		{"attempt budget", "max_send_attempts: 33", false},
+		{"send interval", "send_interval: 1s", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			loaded, err := Load(writeConfig(t, validYAML("postgres://database/platform")+"message_channels:\n  "+test.extra+"\n"))
+			if err == nil {
+				err = loaded.ValidateAPI()
+			}
+			if (err == nil) != test.valid {
+				t.Fatalf("valid=%v, error=%v", test.valid, err)
+			}
+		})
+	}
+}
+
 func TestLoadExpandsEnvironmentInsideRuntimeMap(t *testing.T) {
 	t.Setenv("TEST_RUNTIME_IMAGE", "registry.example/agent-platform/claude@sha256:"+strings.Repeat("a", 64))
 	fixture := strings.Replace(validYAML("postgres://database/platform"), "  sandbox_gid: 65532", `  sandbox_gid: 65532

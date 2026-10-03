@@ -123,7 +123,7 @@ _Avoid_: Agent Memory, user-authored note, Runtime checkpoint
 ## Workflows And Execution
 
 **Workflow**:
-A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, an optional Knowledge Selection, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
+A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, optional Workflow Message Channels, an optional Knowledge Selection, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
 _Avoid_: Pipeline, visual DAG
 
 **Workflow Queue**:
@@ -150,8 +150,20 @@ _Avoid_: User Token, Idempotency Key, model credential
 An optional hourly, daily, or weekly schedule that starts a Workflow from its fixed goal in a selected time zone.
 _Avoid_: API call, Webhook, file watcher
 
+**Workflow Message Channel**:
+A User-owned configuration bound to one Workflow that accepts authorized external chat messages and returns that Workflow's answers to their originating chat. It identifies one messaging service account and its permitted audience without granting external participants a product User identity.
+_Avoid_: Connector Authorization, Workflow API Credential, notification-only Webhook
+
+**Message Channel Conversation**:
+The link between one Workflow Message Channel's external conversation scope and one Run Conversation. It preserves continuity for the same participant and chat without sharing history with another participant or channel.
+_Avoid_: External Conversation, Session, Native Session
+
+**Message Channel Delivery**:
+The record of returning one Run's answer or bounded status message to its originating external chat. Its delivery outcome is independent of the Run's execution outcome.
+_Avoid_: Runtime Event, Run retry, Artifact
+
 **Run Conversation**:
-A continuing conversation started by one manual, scheduled, or API Workflow trigger. It keeps the initiating Workflow Snapshot and contains one or more ordered Runs, so the User can follow up without losing the original goal, prior messages, or Workspace context.
+A continuing conversation started by one manual, scheduled, API, Session conversion, or Workflow Message Channel trigger. It keeps the initiating Workflow Snapshot and contains one or more ordered Runs, so the User or an authorized external participant can follow up without losing the original goal, prior messages, or Workspace context.
 _Avoid_: Session, one Runtime process, Run Event stream
 
 **Run**:
