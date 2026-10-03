@@ -218,6 +218,27 @@ func TestPublicAssistantFAQWorksWithoutFreeTextOrModelCalls(t *testing.T) {
 	}
 }
 
+func TestPublicAssistantGreetingHonorsFreeTextEnablement(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		t.Run(map[bool]string{false: "disabled", true: "enabled"}[enabled], func(t *testing.T) {
+			service, r, model := publicStreamService(t)
+			r.assistant.Share.FreeTextEnabled = enabled
+			writer := httptest.NewRecorder()
+			service.publicAssistantHandler(writer, publicStreamRequest("你好呀", "", ""))
+			if model.calls != 0 {
+				t.Fatal("greeting invoked the model")
+			}
+			if !enabled {
+				if writer.Code != 403 || r.turn.ID != "" || r.dailyCalls != 0 {
+					t.Fatalf("free text disabled: status=%d turn=%#v daily=%d", writer.Code, r.turn, r.dailyCalls)
+				}
+			} else if writer.Code != 200 || r.turn.Answer != "欢迎提问" || r.turn.Source != "configuration" || r.turn.State != "completed" || r.dailyCalls != 1 || !strings.Contains(writer.Body.String(), "event: done") {
+				t.Fatalf("greeting stream: status=%d turn=%#v daily=%d", writer.Code, r.turn, r.dailyCalls)
+			}
+		})
+	}
+}
+
 func TestPublicAssistantCannotResumeAnotherVisitorOrTokenRevision(t *testing.T) {
 	for _, revision := range []int64{1, 2} {
 		t.Run(map[int64]string{1: "old token revision", 2: "another visitor"}[revision], func(t *testing.T) {

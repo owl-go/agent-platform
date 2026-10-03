@@ -182,6 +182,10 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
 		return result, nil
 	}
+	if isAssistantGreeting(turn.Question) {
+		result.text, result.source = assistantGreetingAnswer(assistant), "configuration"
+		return result, nil
+	}
 	if faq, ok := matchAssistantScopeFAQ(enabled, turn.Question); ok {
 		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
 		return result, nil
