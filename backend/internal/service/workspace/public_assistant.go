@@ -59,7 +59,7 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			return
 		}
 	}
-	visitorHash, visitorCookie, visitorErr := publicVisitor(request)
+	visitorHash, visitorCookie, visitorErr := service.publicVisitor(request)
 	if visitorErr != nil {
 		writeAuthError(writer, http.StatusInternalServerError, "request_failed")
 		return
@@ -252,7 +252,7 @@ func responseKind(state string) string {
 	return "generating"
 }
 
-func publicVisitor(request *http.Request) (string, *http.Cookie, error) {
+func (service *Service) publicVisitor(request *http.Request) (string, *http.Cookie, error) {
 	visitor := ""
 	if cookie, err := request.Cookie(visitorCookieName); err == nil {
 		visitor = cookie.Value
@@ -264,12 +264,15 @@ func publicVisitor(request *http.Request) (string, *http.Cookie, error) {
 			return "", nil, err
 		}
 		visitor = base64.RawURLEncoding.EncodeToString(value)
-		secure := request.TLS != nil
+		// HTTPS terminates at the edge. Use the configured platform origin,
+		// never client-controlled forwarding headers, to select cookie policy.
+		publicURL, _ := url.Parse(service.config.Authentication.RedirectURI)
+		secure := request.TLS != nil || (publicURL != nil && publicURL.Scheme == "https" && publicURL.Host != "" && publicURL.User == nil)
 		sameSite := http.SameSiteLaxMode
 		if secure {
 			sameSite = http.SameSiteNoneMode
 		}
-		cookie = &http.Cookie{Name: visitorCookieName, Value: visitor, Path: "/", HttpOnly: true, SameSite: sameSite, Secure: secure, MaxAge: 86400}
+		cookie = &http.Cookie{Name: visitorCookieName, Value: visitor, Path: "/", HttpOnly: true, SameSite: sameSite, Secure: secure, Partitioned: secure, MaxAge: 86400}
 	}
 	digest := sha256.Sum256([]byte(visitor))
 	return base64.RawURLEncoding.EncodeToString(digest[:]), cookie, nil
