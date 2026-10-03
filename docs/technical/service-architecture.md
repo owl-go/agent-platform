@@ -45,6 +45,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 ## API
 
+Workflow Message Channel 是新增的待实施产品目标。其 owner 管理、供应商回调、持久化入站、Run 准入、终态回复任务与 Worker 连接/发送边界见 [接入设计](workflow-message-channels.md)。该设计中的 port、Schema 和 API 尚未实现；不能把下列已有 Workflow API、CLI Connector 或 Runtime 能力当作 IM 收发证据。
+
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
 Credits 契约允许 User 读取自己的 Credit Balance、Available Credit、预留汇总和 Credit Ledger，并允许 Administrator 管理企业默认额度、提醒阈值、账号每日额度、Model Credit Rate 修订、Image Credit Rate 修订和带原因的 Credit Adjustment。Redemption Code 是默认关闭的可选渠道；关闭时普通用户和管理员 API 都 fail closed。余额不足统一映射为 `insufficient_credits` 和 HTTP `429 Too Many Requests`；准入按所有余额桶减去活动预留后的净 Available Credit 判定，返回当前 Available Credit 与下一次每日额度时间，不返回其他 User 或内部费率数据。
