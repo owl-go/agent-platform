@@ -31,3 +31,7 @@ make web-build
 ```
 
 gVisor validation requires a Linux Worker with `runsc`; it cannot run on the macOS development host.
+
+## Local Assistant embed preview
+
+Run `pnpm --dir frontend dev --host 127.0.0.1 --port 4177 --strictPort`, then open `http://localhost:4177/assistant-embed-preview.html`. Paste the full iframe or floating-widget code from Share and Embed and select Run preview. Each run replaces the preview document; editing the code alone does not execute it. The Assistant's allowed origins must include `http://localhost:4177`. The local preview does not store the pasted Share Token or code. This development entry is not included in the production build.
