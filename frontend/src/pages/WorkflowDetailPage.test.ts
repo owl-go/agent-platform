@@ -158,7 +158,14 @@ describe("WorkflowDetailPage", () => {
     const section = wrapper.get("#workflow-settings-channels");
     expect((section.element as HTMLDetailsElement).open).toBe(true);
     expect(listMessageChannels).toHaveBeenCalledWith(workflow.id, expect.any(AbortSignal));
-    expect(section.get(".message-channels").text()).toContain("添加渠道");
+    expect(section.findAll(".channel-provider-card")).toHaveLength(13);
+    await section.get('[data-provider="slack"]').trigger("click");
+    await flushPromises();
+    const dialog = Array.from(document.body.querySelectorAll('[role="dialog"]')).find((item) => item.textContent?.includes("配置 Slack"))!;
+    expect(dialog).toBeDefined();
+    expect(dialog.textContent).toContain("配置 Slack");
+    expect(dialog.textContent).toContain("Signing Secret");
+    expect(dialog.querySelectorAll('input[type="password"]')).toHaveLength(2);
     wrapper.unmount();
   });
 

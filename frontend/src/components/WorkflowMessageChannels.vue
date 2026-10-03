@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { ElForm, ElFormItem } from "element-plus";
+import "element-plus/theme-chalk/el-form.css";
+import "element-plus/theme-chalk/el-form-item.css";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type ChannelDelivery, type MessageChannel, type MessageChannelInput } from "../api/client";
 import ConfirmDialog from "./ConfirmDialog.vue";
@@ -49,12 +52,12 @@ async function refresh() {
     if (!disposed && items.value.some(c => c.validation_state === "testing")) timer = setTimeout(refresh, 5000);
   }
 }
-function edit(channel?: MessageChannel) {
+function edit(channel?: MessageChannel, provider = "telegram") {
   editing.value = channel;
-  Object.assign(form, { name: channel?.name ?? "", provider: channel?.provider ?? "telegram", region: channel?.region || "feishu", senders: channel?.audience.sender_ids.join("\n") ?? "", groups: channel?.audience.group_ids.join("\n") ?? "", direct: channel?.audience.allow_direct ?? true, credentials: {} });
+  provider = channel?.provider ?? provider;
+  Object.assign(form, { name: channel?.name ?? t(`channels.providers.${provider}`), provider, region: channel?.region || "feishu", senders: channel?.audience.sender_ids.join("\n") ?? "", groups: channel?.audience.group_ids.join("\n") ?? "", direct: provider === "matrix" ? false : channel?.audience.allow_direct ?? true, credentials: {} });
   error.value = ""; dialog.value = true;
 }
-watch(() => form.provider, () => { form.credentials = {}; if (directOnly.value) { form.direct = true; form.groups = ""; } if (roomsOnly.value) form.direct = false; });
 function clearSecrets() { form.credentials = {}; }
 async function save() {
   if (!canSave.value || busy.value) return;
@@ -94,10 +97,15 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
   <section class="message-channels" :aria-label="t('channels.title')">
     <p class="muted">{{ t('channels.description') }}</p>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
-    <el-alert v-if="!loading && !available" :title="t('channels.platformDisabled')" type="info" :closable="false" />
-    <div class="channel-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">{{ t('common.refresh') }}</el-button><el-button type="primary" :disabled="!available || busy || loading" @click="edit()">{{ t('channels.add') }}</el-button></div>
+    <el-alert v-if="!loading && !available && !error" :title="t('channels.platformDisabled')" type="info" :closable="false" />
+    <div class="channel-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">{{ t('common.refresh') }}</el-button></div>
+    <div class="channel-provider-grid">
+      <button v-for="provider in providers" :key="provider" type="button" class="channel-provider-card" :data-provider="provider" :disabled="!available || busy || loading" :aria-label="t('channels.configureProvider', { provider: t(`channels.providers.${provider}`) })" @click="edit(undefined, provider)">
+        <strong>{{ t(`channels.providers.${provider}`) }}</strong>
+        <span>{{ t('channels.configure') }}</span>
+      </button>
+    </div>
     <p v-if="loading && !items.length" role="status">{{ t('common.loading') }}</p>
-    <el-empty v-else-if="!items.length" :description="t('channels.empty')" />
     <article v-for="channel in items" :key="channel.id" class="channel-card">
       <div class="channel-heading"><strong>{{ channel.name }}</strong><span>{{ t(`channels.providers.${channel.provider}`) }} · {{ channel.account_name }}</span><el-tag>{{ t(channel.enabled ? 'common.enabled' : 'common.disabled') }}</el-tag></div>
       <p>{{ t(`channels.states.${channel.validation_state}`) }} · {{ t(`channels.health.${channel.health}`) }}</p>
@@ -123,11 +131,10 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
       </div>
     </section>
   </section>
-  <el-dialog v-model="dialog" :title="t(editing ? 'channels.edit' : 'channels.add')" append-to-body :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @closed="clearSecrets">
+  <el-dialog v-model="dialog" :title="t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) })" width="min(720px, calc(100vw - 32px))" align-center append-to-body :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @closed="clearSecrets">
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
-    <el-form label-position="top" @submit.prevent="save">
+    <el-form class="channel-config-form" label-position="top" @submit.prevent="save">
       <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
-      <el-form-item :label="t('channels.provider')"><el-select v-model="form.provider" :disabled="busy || Boolean(editing)"><el-option v-for="provider in providers" :key="provider" :value="provider" :label="t(`channels.providers.${provider}`)" /></el-select></el-form-item>
       <el-form-item v-if="form.provider === 'feishu'" :label="t('channels.region')"><el-select v-model="form.region" :disabled="busy"><el-option value="feishu" :label="t('channels.providers.feishu')" /><el-option value="lark" label="Lark" /></el-select></el-form-item>
       <p class="muted">{{ t(`channels.setup.${form.provider}`) }}</p>
       <p v-if="editing" class="muted">{{ t('channels.keepCredentials') }}</p>
@@ -143,7 +150,15 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 </template>
 
 <style scoped>
-.message-channels { display:grid; gap:var(--aw-space-3); }
+.message-channels { display:grid; gap:var(--aw-space-3); padding:var(--aw-space-4); min-width:0; }
+.channel-provider-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:var(--aw-space-3); }
+.channel-provider-card { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:var(--aw-space-3); padding:var(--aw-space-4); border:1px solid var(--aw-n4); border-radius:var(--aw-radius-input); background:var(--aw-n0); color:var(--aw-n10); text-align:left; font:inherit; cursor:pointer; }
+.channel-provider-card strong { overflow-wrap:anywhere; }
+.channel-provider-card span { flex-shrink:0; color:var(--aw-primary); font-size:var(--aw-font-size-body); }
+.channel-provider-card:hover:not(:disabled) { background:var(--aw-n2); border-color:var(--aw-primary); }
+.channel-provider-card:focus-visible { outline:2px solid var(--aw-primary); outline-offset:2px; }
+.channel-provider-card:disabled { cursor:not-allowed; opacity:.55; }
+.channel-config-form { max-height:min(65vh,640px); overflow-y:auto; padding-inline-end:var(--aw-space-2); }
 .channel-actions,.channel-heading { display:flex; flex-wrap:wrap; align-items:center; gap:var(--aw-space-2); }
 .channel-card { padding:var(--aw-space-4); border:1px solid var(--aw-n4); border-radius:var(--aw-radius-card); }
 .channel-callback { overflow-wrap:anywhere; }

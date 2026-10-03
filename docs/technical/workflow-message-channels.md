@@ -191,7 +191,7 @@ message_channels:
 省略数值或设置为 0 使用上述默认值。连接数上限 1000；backlog 1..10000、sender/minute 1..100、正文 128..10000 bytes、次数 1..32、发送间隔 3s..1m。一个 Workflow 最多十六个未删除配置，能够同时容纳全部 13 种渠道；相同接收身份（包括关闭配置）只允许一条绑定。飞书通过 region+App ID、钉钉通过 Client ID 约束，不允许修改自报企业 ID 绕过重复绑定。
 
 1. 在供应商控制台建立应用机器人、启用正确事件与权限。平台不支持仅有发送能力的群 Webhook。
-2. 在 Workflow Settings → 消息渠道填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书填写 Open ID、Chat ID、Tenant Key 并选择飞书/Lark；钉钉填写 Staff ID、Conversation ID、Corp ID。配置不带模型执行凭证到外部。
+2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书填写 Open ID、Chat ID、Tenant Key 并选择飞书/Lark；钉钉填写 Staff ID、Conversation ID、Corp ID。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
 3. 保存。Telegram 验证时注册当前回调并拒绝已有其他 Webhook 的 Bot；Slack 需将展示的回调填入 Events API，并订阅 `app_mention`、`message.im`，至少具有接收对应范围与 `chat:write` 权限。Discord Bot 需启用适用的 Message Content Intent；钉钉选择 Stream；飞书选择长连接 `im.message.receive_v1`。
 4. 点击验证，从允许的发送者/聊天发送展示的 `verify ...`，群聊需 @ Bot。仅固定回复成功发送后标记 passing，不创建 Run、不读 Workspace、不消耗 Credits；窗口十分钟。
 5. 启用后发送两次真实问题，在 Run History 检查来源与连续回合，再验证回复和 Credits。断线、unknown、停用、删除与重启应按执行计划逐个供应商记录证据。发送 history 仅显示投递元数据；重发不调用模型。
