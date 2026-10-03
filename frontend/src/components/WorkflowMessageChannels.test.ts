@@ -20,6 +20,21 @@ function widget(api: Partial<PlatformApi>, locale: "zh-CN" | "en-US" = "zh-CN") 
   }}});
 }
 describe("Workflow message channels",()=>{
+  it("shows all thirteen provider configuration entries before any account is saved", async () => {
+    const wrapper = mount(WorkflowMessageChannels, {
+      props: { workflowId: "workflow" },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: { listMessageChannels: vi.fn(async () => ({ available: true, items: [] })) } } },
+    });
+    try {
+      await flushPromises();
+      expect(wrapper.findAll(".channel-provider-card")).toHaveLength(13);
+      expect(wrapper.text()).not.toContain("common.refresh");
+      await wrapper.get('[data-provider="telegram"]').trigger("click");
+      await flushPromises();
+      expect(document.body.querySelector('[role="dialog"] input[type="password"]')).not.toBeNull();
+      expect(document.body.textContent).toContain("Bot Token");
+    } finally { wrapper.unmount(); }
+  });
   it("keeps configuration disabled until verification and confirms shared Workspace access",async()=>{
     const control = vi.fn(async()=>({...channel,enabled:true,version:4}));
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[channel]})),controlMessageChannel:control}); await flushPromises();
@@ -28,20 +43,21 @@ describe("Workflow message channels",()=>{
   it("warns about duplicate sends for an unconfirmed delivery and never reruns",async()=>{
     const retry=vi.fn(async()=>{}); const active={...channel,enabled:true}; const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[active]})),listChannelDeliveries:vi.fn(async()=>[{id:"delivery",state:"outcome_unknown",chunk:1,created_at:"2026-10-03T00:00:00Z"} as never]),retryChannelDelivery:retry});await flushPromises();await wrapper.findAll("button").find(b=>b.text()==="回复记录")!.trigger("click");await flushPromises();await wrapper.findAll("button").find(b=>b.text()==="重新发送")!.trigger("click");expect(wrapper.find(".confirmation").text()).toContain("可能产生重复回复");expect(retry).not.toHaveBeenCalled();await wrapper.get(".confirm").trigger("click");await flushPromises();expect(retry).toHaveBeenCalledWith("workflow","channel","delivery",3,true,expect.any(AbortSignal));wrapper.unmount();
   });
-  it("shows disabled service and an English empty state without offering unavailable configuration",async()=>{
-    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:false,items:[]}))},"en-US");await flushPromises();expect(wrapper.text()).toContain("The administrator has not enabled");expect(wrapper.text()).toContain("No message channels configured");const add=wrapper.findAll("button").find(b=>b.text()==="Add channel")!;expect(add.attributes("disabled")).toBeDefined();wrapper.unmount();
+  it("shows all providers but disables their configuration when the service is unavailable",async()=>{
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:false,items:[]}))},"en-US");await flushPromises();expect(wrapper.text()).toContain("The administrator has not enabled");expect(wrapper.findAll(".channel-provider-card")).toHaveLength(13);for(const button of wrapper.findAll(".channel-provider-card"))expect(button.attributes("disabled")).toBeDefined();expect(wrapper.text()).not.toContain("channels.configure");wrapper.unmount();
   });
   it("offers all thirteen channels and enforces provider audience constraints",async()=>{
     const save=vi.fn(async()=>channel);
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),saveMessageChannel:save});await flushPromises();
-    await wrapper.findAll("button").find(b=>b.text()==="添加渠道")!.trigger("click");
-    const provider=wrapper.get("select");expect(provider.findAll("option")).toHaveLength(13);
-    expect(provider.text()).toContain("BlueBubbles");expect(provider.text()).toContain("元宝");
-    await provider.setValue("bluebubbles");await flushPromises();
+    expect(wrapper.findAll(".channel-provider-card")).toHaveLength(13);
+    expect(wrapper.text()).toContain("BlueBubbles");expect(wrapper.text()).toContain("元宝");
+    await wrapper.get('[data-provider="bluebubbles"]').trigger("click");await flushPromises();
     const labels=wrapper.findAll("label");const password=labels.find(l=>l.text()==="Server Password")!.get("input");expect(password.attributes("type")).toBe("password");
     expect(wrapper.get('input[type="checkbox"]').attributes("disabled")).toBeDefined();expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true);
-    await wrapper.findAll("label").find(l=>l.text().startsWith("允许的群"))!.get("input").setValue("group");
-    await provider.setValue("matrix");await flushPromises();expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
+    await password.setValue("private-draft");
+    await wrapper.findAll("button").find(b=>b.text()==="取消")!.trigger("click");
+    await wrapper.get('[data-provider="matrix"]').trigger("click");await flushPromises();expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
+    expect(wrapper.html()).not.toContain("private-draft");
     await wrapper.findAll("label").find(l=>l.text().startsWith("名称"))!.get("input").setValue("Matrix bot");
     await wrapper.findAll("label").find(l=>l.text().startsWith("允许的发送者"))!.get("input").setValue("@alice:example.test");
     await wrapper.findAll("label").find(l=>l.text().startsWith("允许的群"))!.get("input").setValue("");
@@ -49,6 +65,34 @@ describe("Workflow message channels",()=>{
     await wrapper.findAll("label").find(l=>l.text().startsWith("允许的群"))!.get("input").setValue("!room:example.test");
     await wrapper.findAll("button").find(b=>b.text()==="保存")!.trigger("click");await flushPromises();
     expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({provider:"matrix",audience:{sender_ids:["@alice:example.test"],group_ids:["!room:example.test"],allow_direct:false}}),expect.any(AbortSignal));wrapper.unmount();
+  });
+
+  it.each([
+    ["telegram", "Telegram", ["Bot Token"]], ["discord", "Discord", ["Bot Token"]], ["slack", "Slack", ["Bot Token", "Signing Secret"]],
+    ["dingtalk", "DingTalk", ["Client ID", "Client Secret", "Enterprise Corp ID"]], ["feishu", "Feishu", ["App ID", "App Secret", "Tenant Key"]],
+    ["matrix", "Matrix", ["HTTPS endpoint", "Access Token"]], ["whatsapp", "WhatsApp", ["Access Token", "App Secret", "Verify Token", "Phone Number ID", "Business Account ID"]],
+    ["signal", "Signal", ["HTTPS endpoint", "Bridge Token", "Account ID"]], ["wecom", "WeCom", ["Bot ID", "Bot Secret"]],
+    ["wechat", "WeChat", ["Bot Token", "Account ID", "User ID"]], ["qqbot", "QQ Bot", ["App ID", "App Secret"]],
+    ["bluebubbles", "BlueBubbles (iMessage)", ["HTTPS endpoint", "Server Password"]], ["yuanbao", "Yuanbao", ["App Key", "App Secret"]],
+  ])("renders the actual %s form and clears secret drafts on close", async (provider, name, labels) => {
+    const wrapper = mount(WorkflowMessageChannels, {
+      props: { workflowId: "workflow" },
+      global: { plugins: [createAppI18n({ getItem: () => "en-US" }, "en-US")], provide: { [platformApiKey as symbol]: { listMessageChannels: vi.fn(async () => ({ available: true, items: [] })) } } },
+    });
+    try {
+      await flushPromises();
+      await wrapper.get(`[data-provider="${provider}"]`).trigger("click"); await flushPromises();
+      const dialog = document.body.querySelector('[role="dialog"]')!;
+      expect(dialog).not.toBeNull();
+      expect(dialog.textContent).toContain(`Configure ${name}`);
+      for (const label of labels) expect(dialog.textContent).toContain(label);
+      const secret = dialog.querySelector<HTMLInputElement>('input[type="password"]')!;
+      expect(secret).not.toBeNull();
+      secret.value = "secret-draft";secret.dispatchEvent(new Event("input", { bubbles: true }));await flushPromises();
+      wrapper.findComponent({ name: "ElDialog" }).vm.$emit("update:modelValue", false);await flushPromises();
+      await wrapper.get(`[data-provider="${provider}"]`).trigger("click");await flushPromises();
+      expect(document.body.querySelector<HTMLInputElement>('[role="dialog"] input[type="password"]')!.value).toBe("");
+    } finally { wrapper.unmount(); }
   });
 
 });
