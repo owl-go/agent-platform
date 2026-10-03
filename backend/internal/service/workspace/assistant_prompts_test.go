@@ -222,12 +222,38 @@ func TestAssistantEngineParaphrasePrioritizesConfiguredFAQ(t *testing.T) {
 	if !strings.Contains(messages[1].Content, "用户问题：引擎是什么") || !strings.Contains(messages[1].Content, `"id":"engine"`) {
 		t.Fatal("screenshot question or enabled FAQ is absent from classifier input")
 	}
-	for _, requirement := range []string{"先匹配已启用常见问题", "已启用常见问题是明确配置的可回答范围", "FAQ 匹配优先于用户配置的范围限制", "仅对未匹配常见问题的问题"} {
+	for _, requirement := range []string{"先匹配已启用常见问题", "已启用常见问题是明确配置的可回答范围", "FAQ 匹配优先于用户配置的范围限制", "仅对未匹配常见问题且不是纯礼貌表达的问题"} {
 		if !strings.Contains(messages[0].Content, requirement) {
 			t.Fatalf("configured engine FAQ can still be rejected by scope rules: missing %q", requirement)
 		}
 	}
 	if strings.Contains(messages[0].Content, "先判断范围，再匹配常见问题") || strings.Contains(messages[0].Content, "不能将范围外问题判定为 continue 或 faq") {
 		t.Fatal("conflicting scope-first instruction retained")
+	}
+}
+
+func TestAssistantCourtesyPromptOverridesLegacyScopeAndKnowledgeRestrictions(t *testing.T) {
+	for _, custom := range []string{"", "与服务范围无关的闲聊必须 out_of_scope。常见问题：{faqs}"} {
+		assistant := aiappdomain.SmartAssistant{
+			PreprocessPrompt: custom,
+			Prompt:           "仅依据知识库回答，没有相关资料必须回复：{knowledge}",
+			KnowledgeBaseIDs: []string{"base"},
+		}
+		messages := assistantPreprocessMessages(assistant, nil, "哦 谢谢您")
+		instruction := messages[0].Content
+		for _, rule := range []string{"纯礼貌表达", "哦 谢谢您", "判定为 continue", "保留用户原意", "附带业务问题、其他任务或索取内部信息", "优先于用户配置中笼统的闲聊拒绝规则"} {
+			if !strings.Contains(instruction, rule) {
+				t.Fatalf("courtesy remains rejected: missing %q", rule)
+			}
+		}
+		if !strings.HasSuffix(messages[1].Content, "用户问题：哦 谢谢您") {
+			t.Fatal("courtesy question was changed before classification")
+		}
+		for _, knowledge := range []string{"", "业务资料"} {
+			answerInstruction := assistantAnswerInstruction(assistant, knowledge)
+			if !strings.Contains(answerInstruction, "纯礼貌表达") || !strings.Contains(answerInstruction, "简短、自然、礼貌地回应") || !strings.Contains(answerInstruction, "不要求知识库依据") || !strings.Contains(answerInstruction, "不输出知识库未找到的提示") {
+				t.Fatal("admitted courtesy still subject to Knowledge-only refusal")
+			}
+		}
 	}
 }
