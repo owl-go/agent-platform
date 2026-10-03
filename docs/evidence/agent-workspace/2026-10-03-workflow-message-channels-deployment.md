@@ -9,7 +9,7 @@
 - 源目录：`/opt/agent-platform/src.release-workflow-channels-20261003-1`。
 - Web 目录：`/opt/agent-platform/web/releases/workflow-channels-20261003-1`。
 - 发布前备份：`/opt/agent-platform/backups/pre-workflow-channels-20261003-1`。
-- 原源目录：`src.release-assistant-visitor-cookie-20261003-1`；原 Web：`assistant-scroll-20261003-1`。
+- 备份记录的原源目录：`src.release-assistant-courtesy-20261003-1`；原 Web：`assistant-headerless-20261003-1`。
 
 ## 集成与部署门禁
 
