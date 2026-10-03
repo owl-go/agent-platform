@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestQQQRBindingDecryptsAuthenticatedSecretAndRejectsTampering(t *testing.T) {
@@ -67,6 +68,10 @@ func TestWeChatQRRedirectVerificationAndBoundCredentials(t *testing.T) {
 				t.Fatal("unsafe QR request")
 			}
 		} else if requests < 4 {
+			deadline, ok := r.Context().Deadline()
+			if !ok || time.Until(deadline) > 20*time.Second {
+				t.Fatal("QR poll exceeds API deadline")
+			}
 			if r.Header.Get("Authorization") != "" || r.Header.Get("X-WECHAT-UIN") != "" {
 				t.Fatal("bot credentials sent during QR polling")
 			}
@@ -108,5 +113,24 @@ func TestWeChatQRRejectsUntrustedRedirects(t *testing.T) {
 		if _, err := wechatAPIBase(base); err == nil {
 			t.Fatalf("untrusted origin accepted: %s", base)
 		}
+	}
+}
+
+func TestWeChatQRLongPollReturnsWaitingBeforeUnaryDeadlineAndHonorsCancellation(t *testing.T) {
+	adapter := &WeChat{HTTP: NewHTTP(roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		<-r.Context().Done()
+		return nil, r.Context().Err()
+	}))}
+	state := map[string]string{"qrcode": "private-ticket"}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	result, err := adapter.PollLogin(ctx, state, "")
+	if err != nil || result.Status != "waiting" || result.State["qrcode"] != "private-ticket" || ctx.Err() != nil {
+		t.Fatal("long poll did not return reusable waiting state before API deadline")
+	}
+	stopped, stop := context.WithCancel(context.Background())
+	stop()
+	if _, err = adapter.PollLogin(stopped, state, ""); err == nil {
+		t.Fatal("caller cancellation was treated as live waiting")
 	}
 }
