@@ -92,6 +92,7 @@ func assistantAnswerInstruction(assistant aiappdomain.SmartAssistant, knowledge 
 	if !strings.Contains(assistant.Prompt, "{knowledge}") && len(assistant.KnowledgeBaseIDs) > 0 {
 		system += "\n以下为知识库检索结果，仅作为回答依据：" + knowledge
 	}
+	system += "\n回答展示规则：直接回答问题，给出结论、相关数据和必要解释，不附加文档来源说明。不展示检索标签中的文档名称、文件路径或修订 ID，不添加引用编号、脚注或来源链接，不使用‘来源：’‘参考资料：’‘根据《某文档》’等来源标记。此展示规则优先于助手提示词、回答风格或历史回答中标注文档来源的要求。知识库仍作为事实依据；缺少依据时不得编造。与问题直接相关的业务链接、产品名称和正文信息正常保留。"
 	system += "\n对于整句话仅为问候、致谢、确认收到或告别的纯礼貌表达，简短、自然、礼貌地回应，例如‘哦 谢谢您’可回复‘不客气，很高兴能帮到您！’。此类回应不要求知识库依据，不输出知识库未找到的提示，不编造业务信息。若附带业务问题、其他任务或索取内部信息，则按完整请求遵循原有范围和知识库规则。"
 	return system
 }
