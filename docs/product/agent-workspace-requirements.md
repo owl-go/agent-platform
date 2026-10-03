@@ -162,10 +162,12 @@ The Workflow detail page defaults to an operational Overview and contains four t
 
 Run polling is limited to visible Run Conversations, Overview, and Run History. Settings and Workspace browsing do not repeatedly request Runs or Artifacts. Visible active execution refreshes Run state every 1.5 seconds; idle operational views check every 30 seconds for scheduled or API Runs. Artifacts remain attached to their producing Run Conversation and refresh when execution changes, rather than on every idle poll. Historical links to the removed Artifacts tab open Run History. Hidden browser tabs pause polling and refresh when visible again; requests do not overlap.
 
+After a successful Run, the detail page offers quick configuration actions for Schedule, API integration, Message Channels, and Git Source. Each action opens Settings, expands its section, and brings it into view.
+
 Settings contains six collapsed sections:
 
-- Basic: name, goal, optional Expert or Expert Team
-- Execution Resources: Knowledge Bases and environment variables
+- Basic: name, goal, optional Expert or Expert Team, and optional Knowledge Base selection
+- Environment: ordinary and Secret environment variables
 - Schedule: hourly, daily, or weekly trigger with time and optional time-zone override; previewing returns the next three server-calculated trigger times before saving
 - API Credential: generate, safely rotate, or revoke API Key/API Secret and show the JWT exchange and Bearer invocation examples
 - Message Channels: configure external chat reception and answers, permitted audience, connection validation, enable/disable, and delivery recovery; detailed target behavior is defined in Section 5.7
