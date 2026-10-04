@@ -22,22 +22,41 @@ func (s *MessageChannels) receiveFeedback(ctx context.Context, stored ChannelSto
 		return
 	}
 	// Feedback must not consume the provider's event acknowledgement window.
-	requestCtx, cancel := context.WithTimeout(ctx, time.Second)
+	reaction, reacts := response.(ChannelReactionSender)
+	timeout := time.Second
+	if !reacts {
+		timeout = channelTypingRequestTimeout
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	current, err := repository.GetChannelResponseReceipt(requestCtx, stored, message)
 	if err != nil || current == nil || current.Response.Phase != "" {
 		return
 	}
 	state := ChannelResponseState{Phase: "reacting"}
+	if !reacts {
+		state.Phase = "creating"
+		state.CreatingAt = time.Now().UnixMilli()
+	}
 	c, err := s.credentials(current.Stored)
 	if err != nil {
 		return
 	}
+	defer clear(c)
 	if repository.SaveChannelResponse(requestCtx, current, state) != nil {
 		return
 	}
-	state.ReactionID, _ = response.React(requestCtx, current.Stored, c, current.Message)
-	state.Phase = "received"
+	if reacts {
+		state.ReactionID, _ = reaction.React(requestCtx, current.Stored, c, current.Message)
+		state.Phase = "received"
+	} else {
+		result := response.CreateResponse(requestCtx, current.Stored, c, current.Message, current.InboxID, ChannelResponsePreview{Status: "已收到，正在准备执行"}, false)
+		state.MessageID, state.Phase = result.MessageID, "ready"
+		if result.State != "sent" {
+			state.Phase = result.State
+		}
+		state.CreatingAt = 0
+	}
 	saveCtx, saveCancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
 	defer saveCancel()
 	saveErr := repository.SaveChannelResponse(saveCtx, current, state)
@@ -45,7 +64,7 @@ func (s *MessageChannels) receiveFeedback(ctx context.Context, stored ChannelSto
 	// reaction request is in flight. Do not leave that late feedback behind.
 	eligible, readErr := repository.GetChannelResponseReceipt(saveCtx, current.Stored, current.Message)
 	if state.ReactionID != "" && (saveErr != nil || readErr != nil || eligible == nil) {
-		if response.ClearReaction(saveCtx, current.Stored, c, current.Message, state.ReactionID) == nil && saveErr == nil {
+		if reacts && reaction.ClearReaction(saveCtx, current.Stored, c, current.Message, state.ReactionID) == nil && saveErr == nil {
 			state.ReactionID = ""
 			_ = repository.SaveChannelResponse(saveCtx, current, state)
 		}
@@ -138,6 +157,16 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 			}
 			if !current.Running {
 				s.clearResponseReaction(requestCtx, repository, current)
+				preview := ChannelResponsePreview{Status: "等待工作流拥有者处理", Summary: current.Response.Summary}
+				if current.Response.Phase == "ready" && preview != lastPreview {
+					if c, err := s.credentials(current.Stored); err == nil {
+						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Response.MessageID, preview, false)
+						clear(c)
+						if result.State == "sent" {
+							lastPreview = preview
+						}
+					}
+				}
 			} else {
 				c, credentialErr := s.credentials(current.Stored)
 				if credentialErr != nil {
@@ -147,12 +176,14 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 				state := current.Response
 				if state.Phase == "" || state.Phase == "received" {
 					state.Phase = "creating"
+					state.CreatingAt = time.Now().UnixMilli()
 					if repository.SaveChannelResponse(requestCtx, current, state) == nil {
 						result := transport.CreateResponse(requestCtx, current.Stored, c, current.Message, current.InboxID, recorder.latest(), false)
 						state.MessageID, state.Phase = result.MessageID, "ready"
 						if result.State != "sent" {
 							state.Phase = result.State
 						}
+						state.CreatingAt = 0
 						saveCtx, saveCancel := context.WithTimeout(context.WithoutCancel(ctx), channelTypingRequestTimeout)
 						_ = repository.SaveChannelResponse(saveCtx, current, state)
 						saveCancel()
@@ -194,8 +225,8 @@ func (s *MessageChannels) clearResponseReaction(ctx context.Context, repository 
 		return
 	}
 	c, err := s.credentials(current.Stored)
-	response := s.transports[current.Stored.Channel.Provider].Response
-	if err != nil || response == nil {
+	response, ok := s.transports[current.Stored.Channel.Provider].Response.(ChannelReactionSender)
+	if err != nil || !ok {
 		return
 	}
 	if response.ClearReaction(ctx, current.Stored, c, current.Message, current.Response.ReactionID) == nil {
@@ -221,11 +252,25 @@ func (s *MessageChannels) sendResponse(ctx context.Context, job *ChannelSendJob,
 	if job.Delivery.Kind == "answer" {
 		preview.Summary = state.Summary
 	}
+	var result ChannelSendResult
 	if state.MessageID == "" {
+		if state.Phase == "creating" && state.CreatingAt > 0 {
+			elapsed := time.Now().Sub(time.UnixMilli(state.CreatingAt))
+			if elapsed >= 0 && elapsed < 15*time.Second {
+				// A fast Run can finish during receipt creation. Re-read the
+				// persisted handle after a bounded wait, without sending again.
+				return ChannelSendResult{State: "retry_wait", Code: "provider_send_pending", RetryAfter: time.Second}
+			}
+		}
 		if state.Phase == "creating" || state.Phase == "outcome_unknown" {
 			return ChannelSendResult{State: "outcome_unknown", Code: "provider_send_unconfirmed"}
 		}
-		return response.CreateResponse(ctx, job.Stored, c, job.Message, job.Delivery.ID, preview, true)
+		result = response.CreateResponse(ctx, job.Stored, c, job.Message, job.Delivery.ID, preview, true)
+	} else {
+		result = response.UpdateResponse(ctx, job.Stored, c, state.MessageID, preview, true)
 	}
-	return response.UpdateResponse(ctx, job.Stored, c, state.MessageID, preview, true)
+	if fallback := s.transports[job.Stored.Channel.Provider].ResponseFallback; result.State == "failed" && result.Code == "provider_rejected" && fallback != nil {
+		return fallback.Send(ctx, job.Stored, c, job.Message, text, job.Delivery.ID)
+	}
+	return result
 }

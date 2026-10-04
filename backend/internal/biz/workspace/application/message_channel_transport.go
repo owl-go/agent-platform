@@ -68,10 +68,15 @@ type ChannelResponseState struct {
 	MessageID  string `json:"message_id,omitempty"`
 	ReactionID string `json:"reaction_id,omitempty"`
 	Summary    string `json:"summary,omitempty"`
+	CreatingAt int64  `json:"creating_at,omitempty"`
 }
-type ChannelResponseSender interface {
+
+// Reactions are optional; a provider without them can use a receipt card.
+type ChannelReactionSender interface {
 	React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error)
 	ClearReaction(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) error
+}
+type ChannelResponseSender interface {
 	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, ChannelResponsePreview, bool) ChannelSendResult
 	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, string, ChannelResponsePreview, bool) ChannelSendResult
 }
@@ -101,6 +106,8 @@ type ChannelTransport struct {
 	Sender          ChannelSender
 	Typing          ChannelTypingSender
 	Response        ChannelResponseSender
+	// Used only after a definite card rejection, never after an unknown send.
+	ResponseFallback ChannelSender
 }
 
 func (t ChannelTransport) receiver() ChannelReceiver {

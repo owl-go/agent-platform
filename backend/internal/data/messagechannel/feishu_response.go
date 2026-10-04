@@ -73,13 +73,13 @@ func feishuCardPreview(preview application.ChannelResponsePreview, final bool) s
 		}
 		title = status
 		progress := fmt.Sprintf("当前进度：%s · 本步骤已完成 %d 次工具调用 · 已运行 %d 分 %d 秒", status, preview.ToolsCompleted, preview.ElapsedSeconds/60, preview.ElapsedSeconds%60)
-		elements = append(elements, markdown(feishuMarkdown(progress)))
+		elements = append(elements, markdown(safeCardMarkdown(progress)))
 	}
 	if summary != "" {
-		elements = append(elements, markdown("**思考摘要**\n\n"+feishuMarkdown(summary)))
+		elements = append(elements, markdown("**思考摘要**\n\n"+safeCardMarkdown(summary)))
 	}
 	if text != "" {
-		answer := feishuMarkdown(text)
+		answer := safeCardMarkdown(text)
 		if summary != "" {
 			answer = "**回答**\n\n" + answer
 		}

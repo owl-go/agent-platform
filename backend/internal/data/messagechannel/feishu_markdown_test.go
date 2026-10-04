@@ -12,7 +12,7 @@ import (
 
 func TestFeishuMarkdownPreservesFormattingAndCodeLiterals(t *testing.T) {
 	source := "# 标题\n\n**重点** *斜体* ~~删除~~\n\n- 第一项\n- 第二项\n\n> 引用\n\n| 名称 | 状态 |\n| --- | --- |\n| 测试 | 成功 |\n\n行内 `a < b && c > d`\n\n```go\nif a < b && c > d {\n  println(\"![literal](image_key)\")\n}\n```\n\n[链接](https://example.test/?a=1&b=2)"
-	got := feishuMarkdown(source)
+	got := safeCardMarkdown(source)
 	if got != strings.ReplaceAll(source, "?a=1&b=2", "?a=1&amp;b=2") {
 		t.Fatal("Markdown or code literals were rewritten", got)
 	}
@@ -39,7 +39,7 @@ func TestFeishuMarkdownMakesHTMLAndImagesInert(t *testing.T) {
 	} {
 		var rendered bytes.Buffer
 		markdown := goldmark.New(goldmark.WithRendererOptions(html.WithUnsafe()))
-		if err := markdown.Convert([]byte(feishuMarkdown(source)), &rendered); err != nil {
+		if err := markdown.Convert([]byte(safeCardMarkdown(source)), &rendered); err != nil {
 			t.Fatal(err)
 		}
 		for _, forbidden := range []string{"<at ", "<AT ", "<person ", "<img "} {
@@ -59,7 +59,7 @@ func TestFeishuMarkdownPreservesNestedAndUnfinishedCode(t *testing.T) {
 		"```go\na < b && c > d\n", // Streaming preview has no closing fence yet.
 		"    <at id=all></at> & ![image](key)\n",
 	} {
-		if got := feishuMarkdown(source); got != source {
+		if got := safeCardMarkdown(source); got != source {
 			t.Fatal("code literal changed", got)
 		}
 	}
