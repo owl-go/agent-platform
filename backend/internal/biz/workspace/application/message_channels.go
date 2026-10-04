@@ -61,14 +61,15 @@ type MessageChannelRepository interface {
 }
 
 type MessageChannels struct {
-	repository   MessageChannelRepository
-	cipher       ChannelCipher
-	transports   map[string]ChannelTransport
-	enabled      bool
-	callbackBase string
-	limits       ChannelLimits
-	loginMu      sync.Mutex
-	logins       map[string]*channelLoginSession
+	repository     MessageChannelRepository
+	cipher         ChannelCipher
+	transports     map[string]ChannelTransport
+	enabled        bool
+	callbackBase   string
+	limits         ChannelLimits
+	loginMu        sync.Mutex
+	logins         map[string]*channelLoginSession
+	typingObserver func(string, string)
 }
 
 func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCipher, transports map[string]ChannelTransport, enabled bool, callbackBase string, options ...ChannelLimits) *MessageChannels {

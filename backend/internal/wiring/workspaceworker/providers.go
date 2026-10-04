@@ -183,6 +183,14 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 		MaxSendAttempts:            config.MessageChannels.MaxSendAttempts,
 		SendInterval:               config.MessageChannels.SendInterval.Value(),
 	})
+	channels.EnableTypingObserver(func(provider, event string) {
+		if event == "started" || event == "stopped" {
+			logger.Info("message channel typing", "provider", provider, "event", event)
+		} else {
+			logger.Warn("message channel typing", "provider", provider, "event", event)
+		}
+	})
+	workspaceWorker.EnableMessageChannels(channels)
 	worker.channels = channels
 	worker.channelConnections = workspaceapplication.NewChannelConnections(channels, config.MessageChannels.MaxConnections)
 	return worker, nil
