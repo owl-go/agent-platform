@@ -24,6 +24,7 @@ const confirmation = ref<{ channel: MessageChannel; action: string }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
 const providers = Object.keys(channelSetups);
 const setup = computed(() => channelSetups[form.provider]!);
+const senderPairingAvailable = computed(() => ["feishu", "dingtalk"].includes(form.provider));
 const fields = computed(() => setup.value.fields);
 const login = ref<ChannelLogin>();
 const qrImage = ref("");
@@ -92,7 +93,7 @@ async function applyLogin(result: ChannelLogin, generation: number) {
   }, Math.max(0, Date.parse(result.expires_at) - Date.now()));
   if (result.status === "connected") {
     qrImage.value = ""; verificationCode.value = ""; clearSecrets();
-    if (result.provider !== "feishu" && !form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
+    if (!senderPairingAvailable.value && !form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
     if (["connecting", "waiting"].includes(result.pairing_status ?? "")) loginTimer = setTimeout(() => pollLogin(generation), 2000);
     return;
   }
@@ -105,7 +106,7 @@ async function applyLogin(result: ChannelLogin, generation: number) {
   if (result.status !== "verification_required") loginTimer = setTimeout(() => pollLogin(generation), 2000);
 }
 async function startSenderPairing() {
-  if (busy.value || polling.value || !authenticated.value || form.provider !== "feishu") return;
+  if (busy.value || polling.value || !authenticated.value || !senderPairingAvailable.value) return;
   const current = login.value?.status === "connected" && Date.now() < Date.parse(login.value.expires_at) ? login.value : undefined;
   if (!current && !editing.value) return;
   if (!current) clearLogin();
@@ -255,9 +256,9 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
         <p class="muted">{{ t(`channels.receive.${setup.receive}`) }}</p>
         <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
         <el-form-item :label="t('channels.senderLabel', {kind:setup.sender})"><el-input v-model="form.senders" type="textarea" :disabled="busy" :placeholder="setup.sender" /></el-form-item>
-        <div v-if="form.provider === 'feishu'" class="channel-sender-pairing">
+        <div v-if="senderPairingAvailable" class="channel-sender-pairing">
           <el-button v-if="!['connecting','waiting'].includes(login?.pairing_status ?? '')" :loading="busy" :disabled="busy || polling" @click="startSenderPairing">{{ t('channels.pairing.generate') }}</el-button>
-          <p v-if="login?.pairing_status" role="status">{{ t(`channels.pairing.${login.pairing_status}`) }}</p>
+          <p v-if="login?.pairing_status" role="status">{{ t(`channels.pairing.${login.pairing_status}`, {provider:t(`channels.providers.${form.provider}`)}) }}</p>
           <template v-if="login?.pairing_status === 'waiting' && login.pairing_code">
             <p>{{ t('channels.pairing.instruction') }}</p>
             <code class="channel-pairing-code">{{ login.pairing_code }}</code>
