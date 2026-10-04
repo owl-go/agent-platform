@@ -2,7 +2,7 @@
 
 用户报告连接失败。线上对应 `POST /api/v1/workflows/{id}/channel-logins` 返回 422，原日志和界面只有通用错误，不能判断失败步骤。用户确认企业自建应用已启用机器人、已开通并发布获取企业信息权限；没有证据可直接归因于缺权限。
 
-失败提交的凭证不会保存，截图中的应用也没有可复用的已保存应用凭证，未能对该账号建立无人值守的真实复现。临时只读诊断程序已删除，未输出密钥。下面验证的是错误分类与提示链路，不能据此声称该账号已经恢复连接。
+失败提交的凭证不会保存，截图中的应用也没有可复用的已保存应用凭证，未能对该账号建立无人值守的真实复现。临时只读诊断程序已删除，未输出密钥。自动化验证覆盖错误分类与提示链路；发布后用户刷新并重试，明确回复「已经ok了」，确认账号连接成功。该人工确认不提供此前失败步骤与供应商错误码，原始失败原因仍未确定。
 
 ## 修改与回归
 
@@ -41,6 +41,6 @@ git diff --check
 - 公网 Health、Readiness、OIDC Discovery 为 HTTP 200。HTML 与入口、API Client、工作流详情、i18n 五项产物逐字节匹配本地生产构建；工作流详情含具体错误分类，i18n 含权限提示及飞书错误码标签，没有 Tenant Key 输入标签。
 - HTML SHA-256：`21722e2711f84c16a2cdddd0ec2fa2d94d4b9057b8d50f6843817728a6c7aa3e`。公网核对详情保存在 `/opt/agent-platform/evidence/feishu-account-errors-20261004-1/public-evidence.json`。
 
-未执行真实账号的连接/收发验收，仍等待用户在新版本重试取得具体失败步骤与错误码。没有新增 Runtime Capability；未执行完整 Linux Sandbox/Production Conformance，专用环境缺口见此前飞书凭证简化发布记录。PostgreSQL/远端对象存储的环境依赖测试 Skip 不计为集成验收。
+用户在新版本重试已人工确认真实账号连接成功；Agent 未使用该账号凭证执行无人值守连接测试，也未执行真实消息收发验收。没有新增 Runtime Capability；未执行完整 Linux Sandbox/Production Conformance，专用环境缺口见此前飞书凭证简化发布记录。PostgreSQL/远端对象存储的环境依赖测试 Skip 不计为集成验收。
 
 回退使用备份记录的旧源码/Web 指针和保留的 `agent-platform-{api,worker}:pre-feishu-account-errors-20261004-1` 镜像；上一版 Web 为 `qq-gateway-20261004-2`。
