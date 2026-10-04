@@ -70,7 +70,7 @@ function selectIcon(file: File) {
 }
 function invalidIcon() { error.value = t("aiApplications.iconInvalid"); }
 function openShare(item: SmartAssistant) { shareAssistant.value = item; shareDialogOpen.value = true; }
-function updateSharedAssistant(updated: SmartAssistant) { items.value = items.value.map((item) => item.id === updated.id ? updated : item); shareAssistant.value = updated; }
+function updateSharedAssistant(updated: SmartAssistant) { items.value = items.value.map((item) => item.id === updated.id ? updated : item); shareAssistant.value = updated; error.value = ""; }
 function showShareError(message: string) { error.value = message; }
 async function startConversation(item: SmartAssistant) {
   try {

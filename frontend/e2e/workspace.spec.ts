@@ -8,7 +8,7 @@ const expertInput = (name: string) => ({ name, icon: 'sparkles', icon_background
 const workflowInput = (name: string) => ({ name, goal: 'Validate current workspace', environment: [] });
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/');
-  await page.getByRole('button', { name: /^(登录|Sign in)/ }).click();
+  await expect(page.locator('#username')).toBeVisible();
   await page.locator('#username').fill(username);
   await page.locator('#password').fill(password);
   await page.locator('#kc-login').click();
@@ -63,6 +63,26 @@ test('E2E-001 | ACC | Browser: OIDC login persists across reload', async () => {
   const page = await user.newPage(); await page.goto('/sessions'); await page.reload();
   await expect(page.locator('.new-session')).toBeVisible();
   expect(new URL(page.url()).searchParams.has('code')).toBe(false); await page.close();
+});
+test('E2E-001b | ACC | Browser: expired session redirects directly to Keycloak login', async ({ browser }) => {
+  const storage = await user.storageState();
+  for (const origin of storage.origins) {
+    for (const entry of origin.localStorage) {
+      if (!entry.name.startsWith('oidc.user:')) continue;
+      const storedUser = JSON.parse(entry.value);
+      storedUser.expires_at = Math.floor(Date.now() / 1000) - 60;
+      storedUser.refresh_token = 'invalid-e2e-refresh-token';
+      entry.value = JSON.stringify(storedUser);
+    }
+  }
+  const expired = await browser.newContext({ baseURL, storageState: { cookies: [], origins: storage.origins } });
+  try {
+    const page = await expired.newPage();
+    await page.goto('/');
+    await expect(page.locator('#username')).toBeVisible();
+    expect(new URL(page.url()).pathname).toContain('/protocol/openid-connect/auth');
+    expect(await page.locator('.auth-card').count()).toBe(0);
+  } finally { await expired.close(); }
 });
 test('E2E-002 | ACC | Anonymous protected API is rejected', async ({ request }) => {
   expect((await request.get('/api/v1/sessions')).status()).toBe(401);

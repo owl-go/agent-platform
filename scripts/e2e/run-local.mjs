@@ -64,9 +64,10 @@ try {
   writeFileSync(resolve(temp, 'realm.json'), JSON.stringify(seed), { mode: 0o644 });
   writeFileSync(resolve(temp, 'db.env'), `POSTGRES_USER=e2e\nPOSTGRES_PASSWORD=${secret}\nPOSTGRES_DB=e2e\n`, { mode: 0o600 });
   writeFileSync(resolve(temp, 'minio.env'), `MINIO_ROOT_USER=e2e\nMINIO_ROOT_PASSWORD=${secret}\n`, { mode: 0o600 });
+  run('python3', ['scripts/build-identity-theme.py', resolve(temp, 'themes')]);
   console.log('Starting isolated PostgreSQL, Keycloak and MinIO...');
   const db = docker('db', ['--env-file', resolve(temp, 'db.env'), '-p', `127.0.0.1:${ports.db}:5432`, 'postgres:17-alpine']);
-  docker('identity', ['-p', `127.0.0.1:${ports.identity}:8080`, '-v', `${temp}/realm.json:/opt/keycloak/data/import/realm.json:ro`, process.env.E2E_KEYCLOAK_IMAGE || 'quay.io/keycloak/keycloak@sha256:f1f1f01e472c8a78df40d8f2a49a925274eda4d3d80d5f6edbb5c880ee3c01c6', 'start-dev', '--import-realm']);
+  docker('identity', ['-p', `127.0.0.1:${ports.identity}:8080`, '-v', `${temp}/realm.json:/opt/keycloak/data/import/realm.json:ro`, '-v', `${temp}/themes:/opt/keycloak/themes:ro`, process.env.E2E_KEYCLOAK_IMAGE || 'quay.io/keycloak/keycloak@sha256:f1f1f01e472c8a78df40d8f2a49a925274eda4d3d80d5f6edbb5c880ee3c01c6', 'start-dev', '--import-realm']);
   docker('minio', ['--env-file', resolve(temp, 'minio.env'), '-p', `127.0.0.1:${ports.minio}:9000`, 'minio/minio:latest', 'server', '/data']);
   await Promise.all([ready(`${identity}/realms/${realm}/.well-known/openid-configuration`), ready(`http://127.0.0.1:${ports.minio}/minio/health/ready`)]);
   run('docker', ['exec', db, 'pg_isready', '-U', 'e2e']);

@@ -399,6 +399,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(prepareErr)
 		}
+		redactValues = append(redactValues, job.AdditionalRedactionValues...)
 		for _, value := range variables {
 			allRedactValues = append(allRedactValues, []byte(value))
 		}
@@ -1281,6 +1282,20 @@ type nativeStateCommit struct {
 
 func (commit *nativeStateCommit) Commit() error {
 	for _, promotion := range commit.promotions {
+		info, err := os.Stat(promotion.temporary)
+		if err != nil {
+			_ = commit.Rollback()
+			return fmt.Errorf("inspect staged Runtime state: %w", err)
+		}
+		owner, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			_ = commit.Rollback()
+			return fmt.Errorf("staged Runtime state ownership is unavailable")
+		}
+		if err := createOwnedStateParent(filepath.Dir(promotion.persistent), int(owner.Uid), int(owner.Gid)); err != nil {
+			_ = commit.Rollback()
+			return fmt.Errorf("create persistent Runtime state parent: %w", err)
+		}
 		backup := promotion.persistent + ".previous"
 		if err := os.RemoveAll(backup); err != nil {
 			_ = commit.Rollback()
@@ -1298,6 +1313,29 @@ func (commit *nativeStateCommit) Commit() error {
 		commit.promoted = append(commit.promoted, promotion)
 	}
 	return nil
+}
+
+func createOwnedStateParent(path string, uid, gid int) error {
+	info, err := os.Lstat(path)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("persistent Runtime state parent is not a directory")
+		}
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := createOwnedStateParent(filepath.Dir(path), uid, gid); err != nil {
+		return err
+	}
+	if err := os.Mkdir(path, 0o700); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return createOwnedStateParent(path, uid, gid)
+		}
+		return err
+	}
+	return os.Chown(path, uid, gid)
 }
 
 func (commit *nativeStateCommit) Rollback() error {
@@ -1538,7 +1576,20 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 			files[filepath.ToSlash(filepath.Join("skills", skill.ID, name))] = content
 		}
 	}
+	type connectorSkillPackage struct {
+		ID, Name, PackageObjectKey, PackageSHA256, AuthenticationDriver string
+		Mode                                                            connectorpackage.Type
+	}
+	packages := make([]connectorSkillPackage, 0, len(job.Snapshot.CLIConnectors)+len(job.Snapshot.MCPServers))
 	for _, connector := range job.Snapshot.CLIConnectors {
+		packages = append(packages, connectorSkillPackage{connector.ID, connector.Name, connector.PackageObjectKey, connector.PackageSHA256, connector.AuthenticationDriver, connectorpackage.TypeCLI})
+	}
+	for _, connector := range job.Snapshot.MCPServers {
+		if connector.PackageObjectKey != "" {
+			packages = append(packages, connectorSkillPackage{connector.ID, connector.Name, connector.PackageObjectKey, connector.PackageSHA256, "", connectorpackage.TypeMCP})
+		}
+	}
+	for _, connector := range packages {
 		if connector.PackageObjectKey == "" {
 			if connector.AuthenticationDriver == "feishu" {
 				resources, err := connectorpackage.OfficialFeishuSkillResources("1.0.93")
@@ -1571,8 +1622,8 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is invalid: %w", connector.Name, err)
 		}
-		if pkg.CLI == nil {
-			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is not a CLI Connector", connector.Name)
+		if pkg.Metadata.Type != connector.Mode {
+			return nil, nil, nil, fmt.Errorf("Connector %q Skill package mode differs from its snapshot", connector.Name)
 		}
 		reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
 		if err != nil {
@@ -1836,6 +1887,11 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 			names = append(names, skill.Name+"@"+skill.SHA256[:12]+" (/run/agent-credentials/skills/"+skill.ID+")")
 		}
 		sections = append(sections, "Available isolated Skills: "+strings.Join(names, ", "))
+	}
+	for _, connector := range job.Snapshot.MCPServers {
+		if connector.PackageObjectKey != "" {
+			sections = append(sections, fmt.Sprintf("MCP Connector %s: first read /run/agent-credentials/connector-skills/%s/SKILL.md before invoking a tool.", connector.Name, connector.ID))
+		}
 	}
 	if len(job.Snapshot.CLIConnectors) > 0 {
 		commands := make([]string, 0)

@@ -1,6 +1,6 @@
 # 服务端架构
 
-状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe 与 Knowledge Base 文档已接入。当前没有活动的 Knowledge Retrieval Provider，新的知识库摄取任务不处理，搜索及绑定知识库的执行 fail closed；历史 Embedding Provider 设置和 pgvector 召回也不是活动产品路径。AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
+状态：Expert、Skill 与 Connector 简化的控制面、执行快照、CLI bundle 生命周期、User Action Wait、飞书 User 授权、Worker 重启恢复和管理员聚合健康、AI Creation 图片生成控制面与 Worker 已实现；AI Applications 目录、FAQ、分享 iframe 与 Knowledge Base 文档已接入。Knowledge Retrieval 通过可选 RAGFlow Adapter 接入受信任 API/Worker：异步解析确认后提交 Ready 状态和不可变 Generation Manifest，检索在当前权限下读取冻结版本；未配置或不可用时 fail closed。历史 Embedding Provider 设置和 pgvector 召回不是活动产品路径；真实部署验收以日期化证据为准。AI Creation 真实供应商验证、Token 刷新、Bot 权限恢复和 Linux + gVisor 生产证据仍待完成
 
 AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/image-generation.md`。
 
@@ -44,6 +44,8 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 - Worker 使用 PostgreSQL `FOR UPDATE SKIP LOCKED` 领取任务，并在专用数据库连接上持有进程级 Advisory Lock，保证同一数据库只有一个执行 Worker 能够领取和恢复任务；连接或进程退出会自动释放该锁。每个 Worker 进程的第一次领取会在同一 PostgreSQL 事务中对账上一个进程遗留的 `generating`、`running` 和 `waiting_for_user`：已请求取消或所属资源已停用的执行直接收口为 `cancelled`，其余执行清除未完成输出后重新进入对应 Workflow Queue。对账同时释放该执行遗留的 Execution Credit Reservation，并关闭尚未消费的 Connector Approval；已经消费 Approval 的外部命令结果无法安全确认，因此对应执行 fail closed 而不盲目重放。恢复只改变非终态执行，不重开或改写终态 Session response 或 Run。
 
 ## API
+
+Workflow Message Channel 已实现全部 13 个目标渠道的文本收发；owner 管理使用 Proto API，Telegram/Slack/WhatsApp 回调是独立供应商认证的自定义 HTTP Handler。Workspace Application 分别定义 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver` 和 `ChannelSender` port，`ChannelTransport` 静态注册每个渠道的唯一接收方式与独立发送器，QQ WebSocket 通过可选 `ChannelStreamHealthReceiver` 报告真实握手健康，不创建用户消息；可选 `ChannelTypingSender`/`ChannelTypingSession` 只处理执行期的瞬态输入状态，失败不影响 Run 或 Delivery；Data Adapter 各自实现供应商协议，Migration 000066 保存配置/Inbox/Conversation/Delivery，000067 扩展 provider 并追加加密接收游标。Matrix、Signal、BlueBubbles 使用 Administrator 批准的精确 HTTPS Endpoint；显式私网访问不扩展 Sandbox Egress。Inbox 准入复用 Workflow Queue 与 Credits，终态 Event/Credits/Outbox 同事务提交；Worker 持有进程级 Advisory Lock，连接与发送使用独立有界循环。渠道凭证只供 host 运输与执行脱敏，不进入 Runtime env/Snapshot。配置默认关闭，2026-10-03 已部署并开启平台级配置，迁移和渠道循环通过部署检查；真实账号闭环与完整 Production Conformance 尚未取得。部署证据见 [验证记录](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)，配置和限制见 [接入设计](workflow-message-channels.md)。
 
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 
@@ -93,4 +95,8 @@ Product Analytics 使用追加式 Migration `000057_product_analytics.sql`。事
 
 企业治理使用追加式 Migration `000064_enterprise_governance.sql`：移除单一 Administrator 索引，增加唯一 Bootstrap Administrator、Resource Publisher、Identity Group/Membership、Governance Audit Event，以及 Knowledge Base scope/group 外键。Migration 将既有最早 Administrator 标为 Bootstrap Administrator，把既有 public Platform Knowledge Base 回填为 platform scope，并把旧的 Administrator-private Platform Knowledge Base 收敛为 owner-private scope；不会猜测 Department 或成员关系。完整 Migration 链与治理边界已在一次性 PostgreSQL 17 验证，生产 Migration 和真实 Keycloak 同步仍需单独证据。
 
-Smart Assistant 受控发布使用追加式 Migration `000065_smart_assistant_controlled_publication.sql`：为 Assistant 保存当前版本的 Publication Validation，并将旧版不满足严格 Origin、正数每日上限和数据处理确认的 Share Configuration 全部撤销。Application 层只把当前版本的 passing validation 视为可服务状态；任何配置更新先使旧验证失效，开启和更新路径通过同一 Publication Check 检查配置、模型、FAQ、安全可检索知识、引用资源、Credits 和分享控制。Token 轮换只更换访问 secret，并把刚验证的配置结果绑定到新版本。Repository 的三十天发布统计只聚合 visitor conversation/turn 状态和 Credit Ledger，不读取或返回对话内容、FAQ、检索片段或访客身份。
+Smart Assistant 受控发布使用追加式 Migration `000065_smart_assistant_controlled_publication.sql`：为 Assistant 保存当前版本的 Publication Validation，并将旧版不满足严格 Origin、正数每日上限和数据处理确认的 Share Configuration 全部撤销。Application 层只把当前版本的 passing validation 视为可服务状态；任何配置更新先使旧验证失效，开启和更新路径通过同一 Publication Check 检查配置、模型、FAQ、安全可检索知识、引用资源、Credits 和分享控制。Token 轮换只更换访问 secret，并把刚验证的配置结果绑定到新版本。当前分享默认允许自由提问，不提供自由提问开关或每日次数上限；历史配置字段仅兼容为 true/0，不参与发布校验或请求准入，已启用的分享无需重存或轮换 Token。Migration 000065 的历史撤销结果不自动恢复。Repository 的三十天发布统计只聚合 visitor conversation/turn 状态和 Credit Ledger，不读取或返回对话内容、FAQ、检索片段或访客身份。
+
+## Connector Authorization 续期
+
+Application 的 `ConnectorAuthorizationRenewal` 使用窄 Repository、Cipher 和供应商 Refresh port；Worker 装配当前飞书 OAuth Adapter，并通过独立分钟循环和渠道 Inbox 准入前检查调用。HTTP 不进入 GORM 事务，凭证明文只在 host 调用期间存在。Repository 负责 selected grant/owner/Installation/Publication 校验、会话 advisory lock、版本化保存及 Audit 原子性；API 手动刷新共享该锁，并在供应商调用前拒绝过期的 expected_version。没有自动扫码、账号切换或审批权限扩大。

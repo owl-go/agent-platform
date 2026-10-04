@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { flushPromises, mount } from "@vue/test-utils";
+import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, ref } from "vue";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type KnowledgeBase, type KnowledgeDocument, type PlatformApi } from "../api/client";
+import { platformApiKey, type KnowledgeBase, type KnowledgeDocument, type KnowledgeCategory, type PlatformApi } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import KnowledgeBasesPage from "./KnowledgeBasesPage.vue";
@@ -17,20 +17,44 @@ const inputStub = defineComponent({
   },
 });
 
-function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], document?: KnowledgeDocument | KnowledgeDocument[], regenerate?: PlatformApi["regenerateKnowledgeDocument"], retry?: PlatformApi["retryKnowledgeDocument"], knowledgeBases: KnowledgeBase[] = [base], props?: { availableOnly?: boolean }) {
+function mountPage(searchKnowledgeBase: PlatformApi["searchKnowledgeBase"], document?: KnowledgeDocument | KnowledgeDocument[], regenerate?: PlatformApi["regenerateKnowledgeDocument"], retry?: PlatformApi["retryKnowledgeDocument"], knowledgeBases: KnowledgeBase[] = [base], props?: { availableOnly?: boolean }, categories: KnowledgeCategory[] = [], upload?: PlatformApi["uploadKnowledgeDocument"]) {
   const api = {
     listKnowledgeBases: vi.fn(async () => knowledgeBases),
-    listKnowledgeCategories: vi.fn(async () => []),
+    listKnowledgeCategories: vi.fn(async () => categories),
     listKnowledgeDocuments: vi.fn(async () => document ? (Array.isArray(document) ? document : [document]) : []),
     searchKnowledgeBase,
     regenerateKnowledgeDocument: regenerate,
     retryKnowledgeDocument: retry,
+    uploadKnowledgeDocument: upload,
   } as unknown as PlatformApi;
   const auth: AuthContext = { isCallback: false, session: { state: ref({ kind: "authenticated", currentUser: { id: "user-1", username: "user", email: "u@example.test", display_name: "User", administrator: false, settings_ready: true } }), accessToken: () => "token", initialize: vi.fn(async () => {}), signIn: vi.fn(async () => {}), signOut: vi.fn(async () => {}), dispose: vi.fn() } };
-  return mount(KnowledgeBasesPage, { props, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
+  return mount(KnowledgeBasesPage, { attachTo: globalThis.document.body, props, global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: auth }, stubs: { ElInput: inputStub } } });
 }
 
 describe("KnowledgeBasesPage search", () => {
+  it("filters documents with the compact category navigation", async () => {
+    const docs: KnowledgeDocument[] = [
+      { id: "doc-guide", knowledge_base_id: base.id, name: "分类内文档.txt", category_id: "guide", source_type: "upload", state: "ready", deleted: false, created_at: base.created_at, updated_at: base.updated_at, version: 1 },
+      { id: "doc-other", knowledge_base_id: base.id, name: "未分类文档.txt", source_type: "upload", state: "ready", deleted: false, created_at: base.created_at, updated_at: base.updated_at, version: 1 },
+    ];
+    const wrapper = mountPage(vi.fn(), docs, undefined, undefined, [base], undefined, [{ id: "guide", knowledge_base_id: base.id, name: "指南", deleted: false, created_at: base.created_at, updated_at: base.updated_at, version: 1 }]);
+    await flushPromises();
+    await wrapper.get(".knowledge-card").trigger("click");
+    await flushPromises();
+    const filters = wrapper.findAll(".category-navigation button");
+    expect(filters.map((filter) => filter.text())).toEqual(["全部文档2", "指南1", "未分类1"]);
+    await filters[1]!.trigger("click");
+    expect(filters[1]!.attributes("aria-pressed")).toBe("true");
+    expect(wrapper.get(".document-table").text()).toContain("分类内文档.txt");
+    expect(wrapper.get(".document-table").text()).not.toContain("未分类文档.txt");
+    await filters[2]!.trigger("click");
+    expect(wrapper.get(".document-table").text()).toContain("未分类文档.txt");
+    expect(wrapper.get(".document-table").text()).not.toContain("分类内文档.txt");
+    await filters[0]!.trigger("click");
+    expect(wrapper.findAll(".document-table tbody tr")).toHaveLength(2);
+    wrapper.unmount();
+  });
+
   it("separates Department Knowledge Bases from personal content and keeps non-Publishers read-only", async () => {
     const department: KnowledgeBase = { ...base, id: "base-group", owner_id: "publisher-1", name: "财务制度", scope: "group", group_id: "group-1", group_name: "财务部" };
     const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [department, base]);
@@ -38,6 +62,14 @@ describe("KnowledgeBasesPage search", () => {
     expect(wrapper.text()).toContain("部门知识库");
     expect(wrapper.text()).toContain("财务部");
     expect(wrapper.findAll(".knowledge-card")[0]!.find(".card-more").exists()).toBe(false);
+    await wrapper.findAll(".knowledge-card")[0]!.trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".detail-actions").text()).toBe("检索");
+    expect(wrapper.find(".source-controls").exists()).toBe(false);
+    expect(wrapper.find(".documents-heading .el-button").exists()).toBe(false);
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
+    await flushPromises();
+    expect(document.querySelector(".knowledge-search-dialog input")).not.toBeNull();
     wrapper.unmount();
   });
 
@@ -60,12 +92,22 @@ describe("KnowledgeBasesPage search", () => {
     await flushPromises();
     await wrapper.get(".knowledge-card").trigger("click");
     await flushPromises();
-    await wrapper.get(".knowledge-search-controls input").setValue("如何安装");
-    await wrapper.get(".knowledge-search-controls").trigger("submit");
+    expect(wrapper.find(".knowledge-search-controls").exists()).toBe(false);
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
+    await flushPromises();
+    const dialog = new DOMWrapper(document.querySelector<HTMLElement>(".knowledge-search-dialog")!);
+    await dialog.get(".knowledge-search-controls input").setValue("如何安装");
+    await dialog.get(".knowledge-search-controls").trigger("submit");
     await flushPromises();
     expect(search).toHaveBeenCalledWith("base-1", "如何安装");
-    expect(wrapper.get(".knowledge-search-results").text()).toContain("请先安装客户端。");
-    expect(wrapper.get(".knowledge-search-results").text()).toContain("安装指南.txt · 指南");
+    expect(dialog.get(".knowledge-search-results").text()).toContain("请先安装客户端。");
+    expect(dialog.get(".knowledge-search-results").text()).toContain("安装指南.txt · 指南");
+    await dialog.get(".el-dialog__headerbtn").trigger("click");
+    await flushPromises();
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
+    await flushPromises();
+    expect(dialog.get(".knowledge-search-controls input").element).toHaveProperty("value", "如何安装");
+    expect(search).toHaveBeenCalledTimes(1);
     wrapper.unmount();
   });
 
@@ -75,14 +117,21 @@ describe("KnowledgeBasesPage search", () => {
     await flushPromises();
     await wrapper.get(".knowledge-card").trigger("click");
     await flushPromises();
-    await wrapper.get(".knowledge-search-controls input").setValue("问题");
-    await wrapper.get(".knowledge-search-controls").trigger("submit");
+    await wrapper.get(".knowledge-search-trigger").trigger("click");
     await flushPromises();
-    expect(wrapper.get(".knowledge-search-feedback").text()).toContain("尚未完成索引");
+    const dialog = new DOMWrapper(document.querySelector<HTMLElement>(".knowledge-search-dialog")!);
+    await dialog.get(".knowledge-search-controls input").setValue("问题");
+    await dialog.get(".knowledge-search-controls").trigger("submit");
+    await flushPromises();
+    expect(dialog.get(".knowledge-search-feedback").text()).toContain("尚未完成索引");
     search.mockResolvedValueOnce({ index_ready: true, items: [] });
-    await wrapper.get(".knowledge-search-controls").trigger("submit");
+    await dialog.get(".knowledge-search-controls").trigger("submit");
     await flushPromises();
-    expect(wrapper.get(".knowledge-search-feedback").text()).toContain("没有找到相关内容");
+    expect(dialog.get(".knowledge-search-feedback").text()).toContain("没有找到相关内容");
+    search.mockRejectedValueOnce(new Error("retrieval_failed"));
+    await dialog.get(".knowledge-search-controls").trigger("submit");
+    await flushPromises();
+    expect(dialog.get('[role="alert"]').text()).toContain("检索失败");
     wrapper.unmount();
   });
 
@@ -99,12 +148,53 @@ describe("KnowledgeBasesPage search", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]!.find(".el-tag--success").text()).toBe("成功");
     expect(rows[1]!.find(".el-tag--danger").text()).toBe("失败");
-    await rows[0]!.get('button[aria-label="重新生成"]').trigger("click");
+    await rows[0]!.get('button[aria-label="更多"]').trigger("click");
+    await flushPromises();
+    const regenerateItem = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent === "重新生成");
+    expect(regenerateItem).toBeDefined();
+    regenerateItem!.click();
     await flushPromises();
     expect(regenerate).toHaveBeenCalledWith(base.id, ready.id);
-    await wrapper.findAll(".document-table tbody tr")[1]!.get('button[aria-label="重试"]').trigger("click");
+    await wrapper.findAll(".document-table tbody tr")[1]!.get('button[aria-label="更多"]').trigger("click");
+    await flushPromises();
+    const retryItem = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent === "重试");
+    expect(retryItem).toBeDefined();
+    retryItem!.click();
     await flushPromises();
     expect(retry).toHaveBeenCalledWith(base.id, failed.id);
+    wrapper.unmount();
+  });
+
+  it("keeps the return action in the detail header and returns to the catalog", async () => {
+    const wrapper = mountPage(vi.fn());
+    await flushPromises();
+    await wrapper.get(".knowledge-card").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".knowledge-detail-header .knowledge-back").text()).toContain("返回知识库目录");
+    expect(wrapper.get(".documents-heading").text()).toContain("全部文档");
+    expect(wrapper.find(".documents-heading .eyebrow").exists()).toBe(false);
+    await wrapper.get(".knowledge-back").trigger("click");
+    expect(wrapper.find(".knowledge-detail-header").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("uploads files from the document heading without category or URL controls", async () => {
+    const document: KnowledgeDocument = { id: "uploaded-1", knowledge_base_id: base.id, name: "资料.txt", source_type: "upload", state: "accepted", deleted: false, created_at: base.created_at, updated_at: base.updated_at, version: 1 };
+    const upload = vi.fn(async () => document);
+    const wrapper = mountPage(vi.fn(), undefined, undefined, undefined, [base], undefined, [], upload);
+    await flushPromises();
+    await wrapper.get(".knowledge-card").trigger("click");
+    await flushPromises();
+    expect(wrapper.get(".documents-heading .el-button").text()).toBe("上传文件");
+    expect(wrapper.find(".category-create").exists()).toBe(false);
+    expect(wrapper.find(".source-controls").exists()).toBe(false);
+    const file = new File(["资料内容"], "资料.txt", { type: "text/plain" });
+    const input = wrapper.get('input[type="file"]');
+    Object.defineProperty(input.element, "files", { value: [file] });
+    await input.trigger("change");
+    await flushPromises();
+    expect(upload).toHaveBeenCalledWith(base.id, file);
+    expect(wrapper.get(".document-table").text()).toContain("资料.txt");
     wrapper.unmount();
   });
 });

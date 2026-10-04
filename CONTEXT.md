@@ -123,7 +123,7 @@ _Avoid_: Agent Memory, user-authored note, Runtime checkpoint
 ## Workflows And Execution
 
 **Workflow**:
-A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, an optional Knowledge Selection, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
+A reusable executable configuration that combines a name, goal, optional Expert or Expert Team, environment, API access, schedule, optional Workflow Message Channels, an optional Knowledge Selection, and one persistent Workspace. It is a single execution definition, not a visual graph or arbitrary DAG.
 _Avoid_: Pipeline, visual DAG
 
 **Workflow Queue**:
@@ -150,8 +150,20 @@ _Avoid_: User Token, Idempotency Key, model credential
 An optional hourly, daily, or weekly schedule that starts a Workflow from its fixed goal in a selected time zone.
 _Avoid_: API call, Webhook, file watcher
 
+**Workflow Message Channel**:
+A User-owned configuration bound to one Workflow that accepts authorized external chat messages and returns that Workflow's answers to their originating chat. It identifies one messaging service account and its permitted audience without granting external participants a product User identity.
+_Avoid_: Connector Authorization, Workflow API Credential, notification-only Webhook
+
+**Message Channel Conversation**:
+The link between one Workflow Message Channel's external conversation scope and one Run Conversation. It preserves continuity for the same participant and chat without sharing history with another participant or channel.
+_Avoid_: External Conversation, Session, Native Session
+
+**Message Channel Delivery**:
+The record of returning one Run's answer or bounded status message to its originating external chat. Its delivery outcome is independent of the Run's execution outcome.
+_Avoid_: Runtime Event, Run retry, Artifact
+
 **Run Conversation**:
-A continuing conversation started by one manual, scheduled, or API Workflow trigger. It keeps the initiating Workflow Snapshot and contains one or more ordered Runs, so the User can follow up without losing the original goal, prior messages, or Workspace context.
+A continuing conversation started by one manual, scheduled, API, Session conversion, or Workflow Message Channel trigger. It keeps the initiating Workflow Snapshot and contains one or more ordered Runs, so the User or an authorized external participant can follow up without losing the original goal, prior messages, or Workspace context.
 _Avoid_: Session, one Runtime process, Run Event stream
 
 **Run**:
@@ -195,7 +207,7 @@ The ordered, platform-enforced and Assistant-configurable boundary that decides 
 _Avoid_: Prompt instruction, content filter toggle, moderation note
 
 **Share Configuration**:
-The per-Smart-Assistant public-use configuration containing an unpredictable share Token, an explicit non-empty HTTPS allowed-Origin list, iframe dimensions, a positive daily free-text limit, a data-processing acknowledgement, and revocation state. It grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
+The per-Smart-Assistant public-use configuration containing an unpredictable share Token, an explicit non-empty HTTPS allowed-Origin list, a fullscreen or floating embed type, iframe dimensions, an initial floating-window display state, an independent chat icon, a data-processing acknowledgement, and revocation state. It allows free-text questions by default without a per-Assistant daily call cap and grants access only to the rendered Assistant surface and never exposes private credentials or internal Session identity.
 _Avoid_: Public Session, API Key, User Access Token
 
 **Publication Validation**:
@@ -277,7 +289,7 @@ A source supplied to a Knowledge Base as uploaded bytes or a captured web source
 _Avoid_: Attachment, Workspace file, Artifact
 
 **Document Revision**:
-An immutable accepted source snapshot of a Knowledge Document. A later replacement creates a new revision; only the latest successfully ingested revision participates in retrieval while older revisions remain part of the document's history.
+An immutable accepted source snapshot of a Knowledge Document. A later replacement creates a new revision; current retrieval uses the latest successfully ingested revision, while a frozen Knowledge Index Generation may retain an older Ready revision under current source permissions.
 _Avoid_: Mutable file, overwrite, Runtime Snapshot
 
 **Ingestion**:
@@ -297,7 +309,7 @@ A bounded set of source excerpts returned for one Run from its frozen Knowledge 
 _Avoid_: Model memory, full document dump, Artifact
 
 **Knowledge Index Generation**:
-The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion by an active Retrieval Provider. A queued Run freezes its generation, and unavailable or superseded generations fail closed rather than being substituted with different content.
+The platform's monotonically identified Ready state for a Knowledge Base after verified ingestion by an active Retrieval Provider. A queued Run freezes its immutable set of Ready Document Revisions; retained generations remain usable under current source permissions, while unavailable generations fail closed rather than being substituted with different content.
 _Avoid_: Provider workspace, mutable search state, Workflow Snapshot
 
 **Knowledge Citation**:
@@ -391,7 +403,7 @@ A User-private grant that lets one installed Connector access an external identi
 _Avoid_: Connector Installation, permanent permission, shared platform credential
 
 **Connector Revision**:
-An immutable installed revision identified by its Connector source, semantic version, package checksum, and exact runtime policy. New executions resolve the active revision, while historical execution snapshots continue to reference the revision they originally used.
+An immutable installed revision identified by its Connector source, semantic version, package checksum, and exact runtime policy. New executions resolve the active revision, while historical execution snapshots continue to reference the revision they originally used. A selected MCP or CLI Connector carries the companion Skills of that same frozen revision.
 _Avoid_: Mutable Connector configuration, authorization version, latest tag
 
 **Connector Invocation Result**:

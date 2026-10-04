@@ -85,3 +85,38 @@ func TestSearchUsesOneVerifiedSourcePath(t *testing.T) {
 		t.Fatalf("generation changed during query = %v", err)
 	}
 }
+
+type retainedRepository struct{ *searchRepository }
+
+func (r retainedRepository) ValidateKnowledgeGeneration(ctx context.Context, owner, base string, generation int64) error {
+	if !r.visible {
+		return domain.ErrNotFound
+	}
+	if generation <= 0 || generation > r.generation {
+		return domain.ErrInvalid
+	}
+	return nil
+}
+func (r retainedRepository) ResolveKnowledgeGenerationSource(ctx context.Context, owner, base, revision string, generation int64) (domain.KnowledgeSearchSource, error) {
+	if !r.visible {
+		return domain.KnowledgeSearchSource{}, domain.ErrNotFound
+	}
+	return r.ResolveKnowledgeSearchSource(ctx, owner, base, revision, true)
+}
+
+func TestRetainedGenerationDoesNotSubstituteCurrentContent(t *testing.T) {
+	revision := uuid.NewString()
+	repo := retainedRepository{&searchRepository{visible: true, generation: 2, ready: map[string]domain.KnowledgeSearchSource{revision: {RevisionID: revision}}}}
+	provider := &searchProvider{citations: []Citation{{RevisionID: revision, Text: "frozen"}}, onQuery: func() { repo.generation++ }}
+	engine, _ := New(repo, provider)
+	if hits, err := engine.Search(context.Background(), "owner", "base", 1, "query", 8, 6000); err != nil || len(hits) != 1 {
+		t.Fatalf("frozen retrieval=%v %v", hits, err)
+	}
+	if _, err := engine.Search(context.Background(), "owner", "base", 0, "query", 8, 6000); err == nil {
+		t.Fatal("preview returned superseded generation during concurrent update")
+	}
+	provider.onQuery = func() { repo.visible = false }
+	if hits, err := engine.Search(context.Background(), "owner", "base", 1, "query", 8, 6000); err == nil || len(hits) != 0 {
+		t.Fatalf("revoked source returned=%v %v", hits, err)
+	}
+}

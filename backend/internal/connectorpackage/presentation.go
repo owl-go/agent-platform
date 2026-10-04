@@ -8,18 +8,74 @@ import (
 //go:embed icons/teambition.png
 var teambitionIcon []byte
 
+//go:embed icons/moka-hr.png
+var mokaHRIcon []byte
+
+//go:embed icons/picset-ai.png
+var picsetIcon []byte
+
+//go:embed icons/kling-ai.png
+var klingIcon []byte
+
+//go:embed icons/linear.png
+var linearIcon []byte
+
+//go:embed icons/pixso.png
+var pixsoIcon []byte
+
+//go:embed icons/camscanner.png
+var camscannerIcon []byte
+
+//go:embed icons/ai-hive.svg
+var aiHiveIcon []byte
+
+//go:embed icons/tianyancha.png
+var tianyanchaIcon []byte
+
+//go:embed icons/pkulaw.png
+var pkulawIcon []byte
+
+//go:embed icons/mindbye.png
+var mindbyeIcon []byte
+
 // DisplayIcon identifies a bundled presentation asset for known platform
 // Connectors, including the official Teambition image. Other packages keep
 // the generic Connector icon.
 func DisplayIcon(source string) string {
 	switch source {
+	case "pkulaw":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pkulawIcon)
+	case "mindbye":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(mindbyeIcon)
+	case "tianyancha":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(tianyanchaIcon)
+	case "ai-hive":
+		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(aiHiveIcon)
+	case "picset-ai":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(picsetIcon)
+
+	case "kling-ai":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(klingIcon)
+	case "pixso":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(pixsoIcon)
+	case "linear":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(linearIcon)
+	case "camscanner":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(camscannerIcon)
+	case "moka-hr":
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(mokaHRIcon)
 	case "teambition":
 		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(teambitionIcon)
-	case "feishu", "dingtalk", "notion", "modao":
+	case "feishu", "dingtalk", "notion", "modao", "github", "xiaoe", "openboost":
 		return source
+	case "caoliao":
+		return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(caoliaoIcon)
 	}
 	return "plug"
 }
+
+//go:embed icons/caoliao.svg
+var caoliaoIcon []byte
 
 // DisplayName and DisplayDescription keep previously published Notion revisions
 // on the current product label without mutating their immutable package metadata.

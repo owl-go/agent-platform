@@ -290,6 +290,25 @@ func (repository *Repository) DeleteWorkflow(ctx context.Context, ownerID, workf
 		if result.RowsAffected != 1 {
 			return domain.ErrNotFound
 		}
+		var channels []channelRecord
+		if err := tx.Clauses(clause.Locking{Strength: "NO KEY UPDATE"}).Where("workflow_id=? AND deleted_at IS NULL", workflowID).Find(&channels).Error; err != nil {
+			return err
+		}
+		for _, channel := range channels {
+			if err := tx.Where("channel_id=?", channel.ID).Delete(&channelReceiveCursorRecord{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&channelInboxRecord{}).Where("channel_id=?", channel.ID).Update("reply_ciphertext", []byte{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&channel).Updates(map[string]any{"enabled": false, "deleted_at": now, "credential_ciphertext": nil, "version": gorm.Expr("version+1")}).Error; err != nil {
+				return err
+			}
+			if err := stopChannelTasks(tx, channel.ID); err != nil {
+				return err
+			}
+		}
+
 		var queued []runRecord
 		if err := tx.Where("owner_user_id = ? AND workflow_id = ? AND state = 'queued'", ownerID, workflowID).Find(&queued).Error; err != nil {
 			return err
@@ -601,6 +620,10 @@ func (repository *Repository) ContinuePlannedRunConversation(ctx context.Context
 }
 
 func (repository *Repository) continueRunConversation(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment, selectionID, planPreference string, conditionalPlan bool) (domain.Run, error) {
+	return repository.continueRunConversationTriggered(ctx, ownerID, workflowID, runID, content, attachments, selectionID, planPreference, conditionalPlan, "manual")
+}
+
+func (repository *Repository) continueRunConversationTriggered(ctx context.Context, ownerID, workflowID, runID, content string, attachments []domain.Attachment, selectionID, planPreference string, conditionalPlan bool, trigger string) (domain.Run, error) {
 	content = strings.TrimSpace(content)
 	if content == "" && len(attachments) == 0 || len(content) > 100_000 {
 		return domain.Run{}, fmt.Errorf("%w: follow-up must contain text or an attachment", domain.ErrInvalid)
@@ -643,7 +666,7 @@ func (repository *Repository) continueRunConversation(ctx context.Context, owner
 			return err
 		}
 		stages = withCurrentExecutionConfiguration(stages, configuration)
-		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: "manual", State: "queued", Input: input, ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
+		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: trigger, State: "queued", Input: input, ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 		if selectionID == "" && root.SelectionID != nil {
 			selectionID = *root.SelectionID
 		}
@@ -1025,6 +1048,7 @@ func (repository *Repository) ListRuns(ctx context.Context, ownerID, workflowID 
 func summarizeRunConversations(rows []runRecord) []runRecord {
 	roots := make(map[string]runRecord)
 	latest := make(map[string]runRecord)
+	summaries := make([]runRecord, 0, len(rows))
 	for _, row := range rows {
 		if row.ID == row.ConversationID {
 			roots[row.ConversationID] = row
@@ -1035,7 +1059,6 @@ func summarizeRunConversations(rows []runRecord) []runRecord {
 		}
 	}
 
-	summaries := make([]runRecord, 0, len(roots))
 	for conversationID, root := range roots {
 		turn := latest[conversationID]
 		root.State = turn.State
@@ -1411,6 +1434,11 @@ func (repository *Repository) loadWorkflowOrigins(ctx context.Context, ownerID s
 
 func runDomain(row runRecord) domain.Run {
 	item := domain.Run{ID: row.ID, ConversationID: row.ConversationID, TurnNumber: row.TurnNumber, OwnerID: row.OwnerID, WorkflowName: row.WorkflowName, Trigger: row.Trigger, State: row.State, QueuedAt: row.QueuedAt, StartedAt: row.StartedAt, EndedAt: row.EndedAt}
+	item.MessageChannelName = row.MessageChannelName
+	item.MessageChannelProvider = row.MessageChannelProvider
+	if row.MessageChannelID != nil {
+		item.MessageChannelID = *row.MessageChannelID
+	}
 	if row.WorkflowID != nil {
 		item.WorkflowID = *row.WorkflowID
 	}

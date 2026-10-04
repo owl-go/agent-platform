@@ -1253,29 +1253,32 @@ func (settings Settings) Validate() error {
 }
 
 type Run struct {
-	ID                string
-	ConversationID    string
-	TurnNumber        int
-	OwnerID           string
-	WorkflowID        string
-	WorkflowName      string
-	Trigger           string
-	State             string
-	TextInput         *string
-	JSONInput         map[string]any
-	Attachments       []Attachment
-	ExpertStages      []ExpertStage
-	FinalText         *string
-	FinalJSON         map[string]any
-	Error             string
-	WorkflowSnapshot  map[string]any
-	QueuedAt          time.Time
-	QueuePosition     int
-	StartedAt         *time.Time
-	EndedAt           *time.Time
-	CreditConsumption *CreditConsumption
-	Evidence          []Evidence
-	ExecutionPlan     *ExecutionPlan
+	MessageChannelID       string
+	MessageChannelName     string
+	MessageChannelProvider string
+	ID                     string
+	ConversationID         string
+	TurnNumber             int
+	OwnerID                string
+	WorkflowID             string
+	WorkflowName           string
+	Trigger                string
+	State                  string
+	TextInput              *string
+	JSONInput              map[string]any
+	Attachments            []Attachment
+	ExpertStages           []ExpertStage
+	FinalText              *string
+	FinalJSON              map[string]any
+	Error                  string
+	WorkflowSnapshot       map[string]any
+	QueuedAt               time.Time
+	QueuePosition          int
+	StartedAt              *time.Time
+	EndedAt                *time.Time
+	CreditConsumption      *CreditConsumption
+	Evidence               []Evidence
+	ExecutionPlan          *ExecutionPlan
 }
 
 type ExpertStage struct {

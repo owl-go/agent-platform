@@ -63,15 +63,19 @@ const filteredSkills = computed(() => skills.value.filter((item) => matches(item
 const filteredExperts = computed(() => experts.value.filter((item) => matches(`${item.name} ${item.introduction}`)));
 const filteredTeams = computed(() => teams.value.filter((item) => matches(`${item.name} ${item.introduction}`)));
 const filteredFiles = computed(() => files.value.filter((item) => matches(`${item.name} ${item.path}`)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)));
+function connectorDisplayName(item: { id: string; name: string }): string {
+  const installation = managedInstallation(item.id);
+  return installation && item.name === installation.source ? installation.name || item.name : item.name;
+}
 const connectorRows = computed(() => [
-  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: item.name, icon: item.icon, available: item.tested && !item.test_error, active: item.tested && !item.test_error })),
-  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: item.name, icon: item.icon, available: item.state === "available" || (item.managed_installation && managedInstallation(item.id)?.state === "disabled"), active: cliActivationIsOn(item.id), definition: item })),
+  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: connectorDisplayName(item), icon: item.icon, available: item.tested && !item.test_error, active: item.tested && !item.test_error })),
+  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: connectorDisplayName(item), icon: item.icon, available: item.state === "available" || (item.managed_installation && managedInstallation(item.id)?.state === "disabled"), active: cliActivationIsOn(item.id), definition: item })),
 ]);
 const visibleConnectors = computed(() => {
   const value = selection.value; if (!value) return [];
   const rows = [...value.inherited_mcp_servers, ...value.mcp_servers].map((item) => ({ ...item, kind: "mcp" as const, key: `mcp:${item.id}` }));
   const all = [...rows, ...[...value.inherited_cli_connectors, ...value.cli_connectors].map((item) => ({ ...item, kind: "cli" as const, key: `cli:${item.id}` }))];
-  return all.filter((item, index) => all.findIndex((other) => other.key === item.key) === index);
+  return all.filter((item, index) => all.findIndex((other) => other.key === item.key) === index).map((item) => ({ ...item, name: connectorDisplayName(item) }));
 });
 function isWorkspaceFile(file?: ConversationFile): boolean { return file?.kind === "workspace" || file?.kind === "directory"; }
 function connectorEnabled(key: string): boolean { return !!selection.value && visibleConnectors.value.some((item) => item.key === key) && !selection.value.disabled_connectors.includes(key); }
@@ -233,13 +237,13 @@ async function beginRequestedManagedAuthorization() {
   managedCompletionBusy.value = true;
   try {
     const installation = managedInstallation(pending.definition.id);
-    if (installation?.source === "teambition" && installation.upgrade_available) {
+    if (["teambition", "camscanner"].includes(installation?.source ?? "") && installation?.upgrade_available) {
       await api.upgradeConnectorInstallation(installation.id, installation.version);
       await refreshManagedInstallations();
       pending.definition = cli.value.find(item => item.id === installation.id) ?? pending.definition;
       pending.scopes = cliActivationScopes(pending.definition);
     }
-    if (pending.definition.authentication_driver === "dingtalk" || managedInstallation(pending.definition.id)?.source === "teambition") {
+    if (pending.definition.authentication_driver === "dingtalk" || ["teambition", "camscanner"].includes(managedInstallation(pending.definition.id)?.source ?? "")) {
       await beginManagedAuthorization();
       return;
     }
@@ -272,7 +276,7 @@ async function completeManagedActivation() {
     }
     if (pending.flow?.state === "completed") await finishManagedActivation(pending);
   } catch {
-    if (managedInstallation(pending.definition.id)?.source === "teambition") {
+    if (["teambition", "camscanner"].includes(managedInstallation(pending.definition.id)?.source ?? "")) {
       try {
         await refreshManagedInstallations();
         if (managedInstallation(pending.definition.id)?.authorized) { await finishManagedActivation(pending); return; }
@@ -286,12 +290,12 @@ async function completeManagedActivation() {
 async function setManagedActivation(definition: CLIConnectorDefinition, active: boolean, selectAfter: boolean) {
   if (cliActivationBusy.value.includes(definition.id)) return;
   cliActivationBusy.value.push(definition.id); error.value = "";
-  const popup = active && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk" || managedInstallation(definition.id)?.source === "teambition") ? openCLIWindow() : null;
+  const popup = active && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk" || ["teambition", "camscanner"].includes(managedInstallation(definition.id)?.source ?? "")) ? openCLIWindow() : null;
   try {
     await refreshManagedInstallations();
     let installation = managedInstallation(definition.id);
     if (!installation) throw new Error("Connector installation is unavailable");
-    if (active && definition.authentication_driver === "connector_package" && installation.source !== "teambition" && !installation.authorized) {
+    if (active && definition.authentication_driver === "connector_package" && !["teambition", "camscanner"].includes(installation.source) && !installation.authorized) {
       await router.push("/resources?tab=connectors");
       return;
     }
@@ -307,7 +311,7 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
       installation = await api.installPublishedConnector(installation.source);
       await refreshManagedInstallations();
     }
-    if (installation.source === "teambition" && installation.upgrade_available) {
+    if (["teambition", "camscanner"].includes(installation.source) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       await refreshManagedInstallations();
       definition = cli.value.find((item) => item.id === installation!.id) ?? definition;
@@ -323,7 +327,7 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
         } catch { /* An unrefreshable grant continues through account authorization. */ }
       }
     }
-    if (installation.authorized && installation.source === "teambition") {
+    if (installation.authorized && ["teambition", "camscanner"].includes(installation.source)) {
       const scopes = cliActivationScopes(definition);
       const authorizations = await api.listConnectorAuthorizations(installation.id);
       if (!authorizations.some(item => item.selected && item.state === "active" && scopes.every(scope => item.scopes.includes(scope)))) {
@@ -338,7 +342,7 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
       return;
     }
     pendingManagedActivation.value = { definition, popup, selectAfter };
-    if (definition.authentication_driver === "dingtalk" || installation.source === "teambition") {
+    if (definition.authentication_driver === "dingtalk" || ["teambition", "camscanner"].includes(installation.source)) {
       await beginManagedAuthorization();
       return;
     }
@@ -362,6 +366,7 @@ function cliActivationScopes(definition: CLIConnectorDefinition) {
   return initial.length ? initial : cliUserScopes(definition);
 }
 function authorizationProvider(definition: CLIConnectorDefinition) {
+  if (managedInstallation(definition.id)?.source === "camscanner") return "CamScanner";
   if (managedInstallation(definition.id)?.source === "teambition") return "Teambition";
   return t(definition.authentication_driver === "dingtalk" ? "composer.providerDingtalk" : "composer.providerFeishu");
 }
@@ -461,7 +466,7 @@ async function refreshRequestedCLIAuthorization() {
   }
   const definition = cli.value.find((item) => item.id === request.connectorID);
   const capability = definition?.capabilities?.find((item) => item.id === request.capabilityID && item.identities?.includes("user"));
-  if (definition?.managed_installation && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk" || managedInstallation(definition.id)?.source === "teambition") && (capability || !request.capabilityID)) {
+  if (definition?.managed_installation && (definition.authentication_driver === "feishu" || definition.authentication_driver === "dingtalk" || ["teambition", "camscanner"].includes(managedInstallation(definition.id)?.source ?? "")) && (capability || !request.capabilityID)) {
     cliAuthorizationPrompt.value = undefined;
     const installation = managedInstallation(definition.id);
     if (installation?.state !== "active") return;
@@ -766,7 +771,7 @@ onBeforeUnmount(() => { disposed = true; if (props.approvalExecutionId) clearCom
             <small>{{ t('experts.teams') }}</small><button v-for="item in filteredTeams" :key="item.id" type="button" :disabled="locked || !item.available" @click="chooseExpert('team', item.id)"><Users /><span>{{ item.name }}<small>{{ item.introduction }}</small></span><Check v-if="selection?.expert_team_id === item.id" /></button>
           </template>
           <template v-if="menu === 'skills'"><button v-for="(item, index) in filteredSkills" :key="item.id" type="button" role="option" :aria-selected="highlighted === index" :class="{ highlighted: highlighted === index }" :disabled="locked" @click="chooseSkill(item)"><Sparkles /><span>{{ item.name }}</span><Check v-if="parts.some((part) => part.kind === 'skill' && part.id === item.id)" /></button><p v-if="!filteredSkills.length">{{ t('composer.empty') }}</p></template>
-          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t(item.definition.authentication_driver === 'connector_package' && managedInstallation(item.id)?.source !== 'teambition' && !managedInstallation(item.id)?.authorized ? 'composer.connectorCredentialsRequired' : 'composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
+          <template v-if="menu === 'connectors'"><div v-for="item in connectorRows.filter((row) => matches(row.name))" :key="item.key" class="composer-connector-option"><button type="button" :disabled="locked || !item.available" @click="chooseConnector(item)"><ConnectorIcon :icon="item.icon" :size="22" /><span>{{ item.name }}<small v-if="!item.available">{{ t('composer.connectorUnavailable') }}</small><small v-else-if="item.kind === 'cli' && !item.active">{{ t(item.definition.authentication_driver === 'connector_package' && !['teambition', 'camscanner'].includes(managedInstallation(item.id)?.source ?? '') && !managedInstallation(item.id)?.authorized ? 'composer.connectorCredentialsRequired' : 'composer.connectorInactive') }}</small></span><Check v-if="connectorEnabled(item.key)" /></button><el-switch v-if="item.kind === 'cli'" :model-value="item.active" :loading="cliActivationBusy.includes(item.id)" :disabled="locked || !item.available" :aria-label="t('composer.connectorActivation', { name: item.name })" @click.stop @change="setCLIActivation(item.definition, Boolean($event), Boolean($event))" /></div></template>
           <template v-if="menu === 'files'">
             <button type="button" @click="fileInput?.click()"><FilePlus2 />{{ t('composer.localFiles') }}</button>
             <button v-if="workspacePath" type="button" @click="loadFiles(workspacePath.split('/').slice(0, -1).join('/'))"><Folder />{{ t('composer.parentFolder') }}</button>

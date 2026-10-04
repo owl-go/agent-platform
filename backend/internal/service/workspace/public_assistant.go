@@ -11,6 +11,7 @@ import (
 	"html"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -43,7 +44,7 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		http.NotFound(writer, request)
 		return
 	}
-	if !publicOriginAllowed(request.Header.Get("Origin"), assistant.Share.AllowedOrigins) {
+	if !publicRequestOriginAllowed(request, assistant.Share.AllowedOrigins) {
 		writeAuthError(writer, http.StatusForbidden, "origin_not_allowed")
 		return
 	}
@@ -58,13 +59,25 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 			return
 		}
 	}
-	visitorHash, visitorCookie, visitorErr := publicVisitor(request)
+	visitorHash, visitorCookie, visitorErr := service.publicVisitor(request)
 	if visitorErr != nil {
 		writeAuthError(writer, http.StatusInternalServerError, "request_failed")
 		return
 	}
 	if visitorCookie != nil {
 		http.SetCookie(writer, visitorCookie)
+	}
+	if len(parts) == 6 && parts[5] == "turns" && request.Method == http.MethodPost {
+		service.streamPublicAssistantTurn(writer, request, assistant, token, visitorHash)
+		return
+	}
+	if len(parts) == 6 && parts[5] == "widget-icon" && request.Method == http.MethodGet {
+		service.downloadAssistantImage(writer, request, assistant.OwnerID, assistant.ID, true)
+		return
+	}
+	if len(parts) == 6 && parts[5] == "icon" && request.Method == http.MethodGet {
+		service.downloadAssistantIcon(writer, request, assistant.OwnerID, assistant.ID)
+		return
 	}
 	if len(parts) == 9 && parts[5] == "conversations" && parts[7] == "responses" && request.Method == http.MethodGet {
 		direct, directErr := service.directPublicResponse(request.Context(), assistant, visitorHash, parts[6], parts[8])
@@ -105,10 +118,6 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		return
 	}
 	if len(parts) == 6 && parts[5] == "answer" && request.Method == http.MethodPost {
-		if !assistant.Share.FreeTextEnabled {
-			writePublicJSON(writer, map[string]string{"kind": "unavailable", "answer": "暂时无法回答此类问题"}, http.StatusForbidden)
-			return
-		}
 		var input struct {
 			Question       string `json:"question"`
 			ConversationID string `json:"conversation_id"`
@@ -134,15 +143,6 @@ func (service *Service) publicAssistantHandler(writer http.ResponseWriter, reque
 		if matched {
 			_ = service.aiapplications.RecordSafetyAudit(request.Context(), assistant.OwnerID, assistant.ID, "public", aiapplicationdomain.SafetyAllow, "not_charged")
 			writePublicJSON(writer, map[string]any{"kind": "faq", "answer_markdown": match.FAQ.AnswerMarkdown, "faq_id": match.FAQ.ID, "confidence": match.Confidence}, http.StatusOK)
-			return
-		}
-		allowed, usageErr := service.aiapplications.ConsumeSharedAssistantCall(request.Context(), assistant.ID, assistant.Share.DailyCallLimit)
-		if usageErr != nil {
-			writeAuthError(writer, http.StatusInternalServerError, "request_failed")
-			return
-		}
-		if !allowed {
-			writeAuthError(writer, http.StatusTooManyRequests, "daily_call_limit_exceeded")
 			return
 		}
 		response, createErr := service.publicAnswer(request.Context(), assistant, visitorHash, input.ConversationID, input.Question)
@@ -252,7 +252,7 @@ func responseKind(state string) string {
 	return "generating"
 }
 
-func publicVisitor(request *http.Request) (string, *http.Cookie, error) {
+func (service *Service) publicVisitor(request *http.Request) (string, *http.Cookie, error) {
 	visitor := ""
 	if cookie, err := request.Cookie(visitorCookieName); err == nil {
 		visitor = cookie.Value
@@ -264,12 +264,15 @@ func publicVisitor(request *http.Request) (string, *http.Cookie, error) {
 			return "", nil, err
 		}
 		visitor = base64.RawURLEncoding.EncodeToString(value)
-		secure := request.TLS != nil
+		// HTTPS terminates at the edge. Use the configured platform origin,
+		// never client-controlled forwarding headers, to select cookie policy.
+		publicURL, _ := url.Parse(service.config.Authentication.RedirectURI)
+		secure := request.TLS != nil || (publicURL != nil && publicURL.Scheme == "https" && publicURL.Host != "" && publicURL.User == nil)
 		sameSite := http.SameSiteLaxMode
 		if secure {
 			sameSite = http.SameSiteNoneMode
 		}
-		cookie = &http.Cookie{Name: visitorCookieName, Value: visitor, Path: "/", HttpOnly: true, SameSite: sameSite, Secure: secure, MaxAge: 86400}
+		cookie = &http.Cookie{Name: visitorCookieName, Value: visitor, Path: "/", HttpOnly: true, SameSite: sameSite, Secure: secure, Partitioned: secure, MaxAge: 86400}
 	}
 	digest := sha256.Sum256([]byte(visitor))
 	return base64.RawURLEncoding.EncodeToString(digest[:]), cookie, nil
@@ -287,7 +290,7 @@ func (service *Service) publicAssistantEmbed(writer http.ResponseWriter, request
 		http.NotFound(writer, request)
 		return
 	}
-	if !publicOriginAllowed(request.Header.Get("Origin"), assistant.Share.AllowedOrigins) {
+	if !publicRequestOriginAllowed(request, assistant.Share.AllowedOrigins) {
 		writeAuthError(writer, http.StatusForbidden, "origin_not_allowed")
 		return
 	}
@@ -296,14 +299,13 @@ func (service *Service) publicAssistantEmbed(writer http.ResponseWriter, request
 		frameAncestors = strings.Join(assistant.Share.AllowedOrigins, " ")
 	}
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors "+frameAncestors)
+	writer.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors "+frameAncestors)
 	writer.Header().Set("X-Content-Type-Options", "nosniff")
 	writer.Header().Set("Cache-Control", "no-store")
 	name := html.EscapeString(assistant.Name)
 	intro := html.EscapeString(assistant.Introduction)
 	publicURL := "/api/v1/public/assistants/" + html.EscapeString(token)
-	visitorScript := `<script>const api='` + publicURL + `';const out=document.querySelector('#answer');let conversationId='';function show(v){if(v.answer_markdown||v.answer){out.textContent=v.answer_markdown||v.answer;return}out.textContent=v.kind==='generating'?'正在整理答案…':'暂时无法回答此类问题'}async function waitForAnswer(v){for(let attempt=0;attempt<30;attempt++){const response=await fetch(api+'/conversations/'+encodeURIComponent(v.conversation_id)+'/responses/'+encodeURIComponent(v.response_id));const next=await response.json();if(next.kind!=='generating'){conversationId=next.conversation_id;show(next);return}await new Promise(resolve=>setTimeout(resolve,1000))}show({kind:'error',answer:'回答生成超时，请稍后重试'})}fetch(api).then(r=>r.json()).then(d=>{for(const f of d.faqs||[]){const b=document.createElement('button');b.className='faq';b.type='button';b.textContent=f.question;b.onclick=()=>show(f);document.querySelector('#faqs').appendChild(b)}});document.querySelector('#form').onsubmit=async(e)=>{e.preventDefault();const q=document.querySelector('#question').value;const response=await fetch(api+'/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,conversation_id:conversationId||undefined})});const next=await response.json();if(next.kind==='generating'){conversationId=next.conversation_id;await waitForAnswer(next)}else show(next)}</script>`
-	writer.Write([]byte(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>` + name + `</title><style>body{font-family:system-ui,sans-serif;margin:0;padding:20px;color:#20342b;background:#f7faf8}main{max-width:720px;margin:auto;background:#fff;border:1px solid #dce8df;border-radius:16px;padding:20px}h1{margin:0 0 6px}p{color:#5b6c63}.faq{display:block;width:100%;text-align:left;border:1px solid #dce8df;border-radius:10px;background:#fff;padding:10px;margin:8px 0;cursor:pointer}textarea{box-sizing:border-box;width:100%;min-height:80px;padding:10px;border:1px solid #cbdad0;border-radius:10px}button[type=submit]{margin-top:8px;padding:9px 14px;border:0;border-radius:9px;background:#2b7d5b;color:#fff;cursor:pointer}#answer{white-space:pre-wrap;margin-top:16px}</style></head><body><main><h1>` + name + `</h1><p>` + intro + `</p><section id="faqs"></section><form id="form"><textarea id="question" placeholder="请输入问题"></textarea><button type="submit">提交问题</button></form><div id="answer" role="status"></div></main>` + visitorScript + `</body></html>`))
+	writer.Write([]byte(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>` + name + `</title></head><body><div id="app" data-assistant-api="` + publicURL + `" data-width="` + html.EscapeString(assistant.Share.Width) + `" data-height="` + fmt.Sprint(assistant.Share.Height) + `"><noscript>` + intro + `</noscript></div><script type="module" src="/assets/assistant-embed.js"></script></body></html>`))
 }
 
 func publicOriginAllowed(origin string, allowed []string) bool {
@@ -316,6 +318,17 @@ func publicOriginAllowed(origin string, allowed []string) bool {
 		}
 	}
 	return false
+}
+
+func publicRequestOriginAllowed(request *http.Request, allowed []string) bool {
+	// An embedded page fetches from its own platform origin, not its parent's
+	// origin. The configured CSP frame-ancestors still restricts the parent.
+	origin := request.Header.Get("Origin")
+	parsed, err := url.Parse(origin)
+	if err == nil && parsed.User == nil && parsed.Path == "" && parsed.RawQuery == "" && parsed.Fragment == "" && parsed.Host != "" && strings.EqualFold(parsed.Host, request.Host) && (parsed.Scheme == "https" || parsed.Scheme == "http") {
+		return true
+	}
+	return publicOriginAllowed(origin, allowed)
 }
 
 func writePublicJSON(writer http.ResponseWriter, value any, status int) {

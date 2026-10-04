@@ -35,3 +35,10 @@ func TestWorkflowResponseIncludesOperationalSummary(t *testing.T) {
 		t.Fatalf("schedule projection = %#v", response)
 	}
 }
+
+func TestRunProjectsMessageChannelProvider(t *testing.T) {
+	response := runResponse(workspacedomain.Run{ID: "run", Trigger: "message_channel", MessageChannelID: "channel", MessageChannelName: "Customer support", MessageChannelProvider: "wechat", QueuedAt: time.Now()})
+	if response.GetTrigger() != "message_channel" || response.GetMessageChannelProvider() != "wechat" || response.GetMessageChannelName() != "Customer support" {
+		t.Fatalf("missing channel origin: %#v", response)
+	}
+}

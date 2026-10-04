@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/connectorpackage"
 	"gorm.io/gorm"
 )
 
@@ -32,12 +33,14 @@ type connectorMCPManifest struct {
 }
 
 type connectorMCPPolicy struct {
-	LegacyProjection bool                  `json:"legacy_projection"`
-	AuthMode         string                `json:"auth_mode"`
-	MCP              *connectorMCPManifest `json:"mcp"`
+	LegacyProjection bool                      `json:"legacy_projection"`
+	AuthMode         string                    `json:"auth_mode"`
+	Metadata         connectorpackage.Metadata `json:"metadata"`
+	MCP              *connectorMCPManifest     `json:"mcp"`
 }
 
 type connectorMCPConfig struct {
+	Name           string
 	Transport      string
 	URL            string
 	Runner         string
@@ -68,6 +71,7 @@ func connectorMCPConfiguration(policy []byte) (connectorMCPConfig, string, error
 		return connectorMCPConfig{}, "", fmt.Errorf("Connector MCP transport is unsupported")
 	}
 	configuration := connectorMCPConfig{Transport: manifest.Transport, URL: manifest.URL, Runner: manifest.Runner, Package: manifest.Package, PackageVersion: manifest.PackageVersion, Arguments: append([]string(nil), manifest.Arguments...), EgressHosts: append([]string(nil), manifest.EgressHosts...), TimeoutSeconds: manifest.TimeoutSeconds, CPUMillis: manifest.Limits.CPU, MemoryMiB: manifest.Limits.MemoryMiB, ChildProcesses: manifest.Limits.ChildProcesses}
+	configuration.Name = parsed.Metadata.Name
 	for _, variable := range manifest.Environment {
 		configuration.Environment = append(configuration.Environment, domain.EnvironmentVariable{Name: variable.Name, Value: variable.Value, Configured: true})
 	}
@@ -111,13 +115,16 @@ func connectorMCPServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 			return domain.MCPServerSnapshot{}, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 		}
 		ciphertext = append([]byte(nil), authorization.CredentialCiphertext...)
-		secretAAD = "connector-authorization:" + ownerID
+		secretAAD = authorization.CredentialAAD
+		if secretAAD == "" {
+			secretAAD = "connector-authorization:" + ownerID
+		}
 	}
 	encoded, err := json.Marshal(map[string]any{"url": optionalConnectorString(configuration.URL), "runner": optionalConnectorString(configuration.Runner), "package": optionalConnectorString(configuration.Package), "package_version": optionalConnectorString(configuration.PackageVersion), "arguments": configuration.Arguments, "environment": configuration.Environment, "egress_hosts": configuration.EgressHosts, "timeout_seconds": configuration.TimeoutSeconds, "resource_limits": map[string]any{"cpu_millis": configuration.CPUMillis, "memory_mib": configuration.MemoryMiB, "child_processes": configuration.ChildProcesses}})
 	if err != nil {
 		return domain.MCPServerSnapshot{}, err
 	}
-	return domain.MCPServerSnapshot{ID: installation.ID, Name: installation.PackageSource, Icon: "plug", Transport: configuration.Transport, Configuration: encoded, SecretCiphertext: ciphertext, SecretOwnerID: ownerID, SecretAAD: secretAAD}, nil
+	return domain.MCPServerSnapshot{ID: installation.ID, Name: configuration.displayName(installation.PackageSource), Icon: connectorpackage.DisplayIcon(installation.PackageSource), PackageObjectKey: revision.ObjectKey, PackageSHA256: revision.PackageSHA256, Transport: configuration.Transport, Configuration: encoded, SecretCiphertext: ciphertext, SecretOwnerID: ownerID, SecretAAD: secretAAD}, nil
 }
 
 func connectorMCPServerCatalog(tx *gorm.DB, ownerID string, installation connectorInstallationRecord) (domain.MCPServer, error) {
@@ -145,7 +152,7 @@ func connectorMCPServerCatalog(tx *gorm.DB, ownerID string, installation connect
 			testError = "authorization required"
 		}
 	}
-	return domain.MCPServer{ID: installation.ID, OwnerID: ownerID, Name: installation.PackageSource, Icon: "plug", Transport: configuration.Transport, URL: optionalConnectorString(configuration.URL), Runner: optionalConnectorString(configuration.Runner), Package: optionalConnectorString(configuration.Package), PackageVersion: optionalConnectorString(configuration.PackageVersion), Arguments: configuration.Arguments, Environment: configuration.Environment, TestError: testError, TestedAt: func() *time.Time {
+	return domain.MCPServer{ID: installation.ID, OwnerID: ownerID, Name: configuration.displayName(installation.PackageSource), Icon: connectorpackage.DisplayIcon(installation.PackageSource), Transport: configuration.Transport, URL: optionalConnectorString(configuration.URL), Runner: optionalConnectorString(configuration.Runner), Package: optionalConnectorString(configuration.Package), PackageVersion: optionalConnectorString(configuration.PackageVersion), Arguments: configuration.Arguments, Environment: configuration.Environment, TestError: testError, TestedAt: func() *time.Time {
 		if tested {
 			now := time.Now().UTC()
 			return &now
@@ -159,4 +166,12 @@ func optionalConnectorString(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func (configuration connectorMCPConfig) displayName(source string) string {
+	name := configuration.Name
+	if name == "" {
+		name = source
+	}
+	return connectorpackage.DisplayName(source, name)
 }

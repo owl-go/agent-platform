@@ -91,6 +91,9 @@ func isImageModelTestRequest(request *http.Request) bool {
 func isEventStreamRequest(request *http.Request) bool {
 	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
 	if request.Method == http.MethodPost {
+		if len(parts) == 6 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "public" && parts[3] == "assistants" && parts[4] != "" && parts[5] == "turns" {
+			return true
+		}
 		return len(parts) == 8 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "ai-apps" &&
 			parts[3] == "assistants" && parts[4] != "" && parts[5] == "conversations" && parts[6] != "" && parts[7] == "turns"
 	}
@@ -113,7 +116,7 @@ func isEventStreamRequest(request *http.Request) bool {
 
 func rawBodyFilter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method == http.MethodGet || request.Method == http.MethodHead || request.Method == http.MethodOptions || isAttachmentUpload(request) {
+		if request.Method == http.MethodGet || request.Method == http.MethodHead || request.Method == http.MethodOptions || isMultipartUpload(request) {
 			next.ServeHTTP(writer, request)
 			return
 		}
@@ -130,9 +133,16 @@ func rawBodyFilter(next http.Handler) http.Handler {
 	})
 }
 
-func isAttachmentUpload(request *http.Request) bool {
-	// The attachment handler enforces its own 100 MiB limit for opaque file bytes.
-	return request.Method == http.MethodPost && request.URL.Path == "/api/v1/attachments/upload"
+func isMultipartUpload(request *http.Request) bool {
+	// Multipart handlers validate their own bounded image or attachment bytes.
+	if request.Method != http.MethodPost {
+		return false
+	}
+	if request.URL.Path == "/api/v1/attachments/upload" {
+		return true
+	}
+	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
+	return len(parts) == 6 && parts[0] == "api" && parts[1] == "v1" && parts[2] == "ai-apps" && parts[3] == "assistants" && parts[4] != "" && (parts[5] == "icon" || parts[5] == "widget-icon")
 }
 
 func recoveryFilter(logger *slog.Logger) kratoshttp.FilterFunc {

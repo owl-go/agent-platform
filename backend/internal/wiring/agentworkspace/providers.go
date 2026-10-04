@@ -16,6 +16,7 @@ import (
 	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	"agent-platform/backend/internal/data/aiapplication/modelchat"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
+	"agent-platform/backend/internal/data/messagechannel"
 	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/modeldiscovery"
@@ -28,6 +29,7 @@ import (
 	workspaceservice "agent-platform/backend/internal/service/workspace"
 	"agent-platform/backend/internal/skillstore"
 	aicreationwiring "agent-platform/backend/internal/wiring/aicreation"
+	knowledgewiring "agent-platform/backend/internal/wiring/knowledgebase"
 	"agent-platform/backend/internal/workspacefs"
 
 	kratoshttp "github.com/go-kratos/kratos/v3/transport/http"
@@ -35,6 +37,7 @@ import (
 )
 
 var ProviderSet = wire.NewSet(
+	knowledgewiring.NewSearcher,
 	NewTokenVerifier,
 	NewIdentityProvider,
 	NewAccountService,
@@ -87,12 +90,28 @@ func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analy
 	return analyticsrepo.New(database.ORM(), logger)
 }
 
-func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider) (*workspaceapplication.Service, error) {
+func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider, box *secretcrypto.Box, config platformconfig.Config) (*workspaceapplication.Service, error) {
 	repository := workspacerepo.New(database.ORM(), credits)
 	if err := repository.EnsureSystemSkills(ctx, objects); err != nil {
 		return nil, err
 	}
-	return workspaceapplication.New(repository, modeldiscovery.New(nil))
+	channelEndpoints := make([]messagechannel.ApprovedEndpoint, 0, len(config.MessageChannels.ApprovedEndpoints))
+	for _, endpoint := range config.MessageChannels.ApprovedEndpoints {
+		channelEndpoints = append(channelEndpoints, messagechannel.ApprovedEndpoint{URL: endpoint.URL, AllowPrivateNetwork: endpoint.AllowPrivateNetwork})
+	}
+	service, err := workspaceapplication.New(repository, modeldiscovery.New(nil))
+	if err == nil {
+		channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewTransports(nil, messagechannel.TransportOptions{ApprovedEndpoints: channelEndpoints, Cursor: workspaceapplication.NewChannelReceiveCursor(repository, box)}), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+			MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
+			MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
+			MaxTextBytes:               config.MessageChannels.MaxTextBytes,
+			MaxSendAttempts:            config.MessageChannels.MaxSendAttempts,
+			SendInterval:               config.MessageChannels.SendInterval.Value(),
+		})
+		channels.SetPairingContext(ctx)
+		service.EnableMessageChannels(channels)
+	}
+	return service, err
 }
 
 func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Service, error) {

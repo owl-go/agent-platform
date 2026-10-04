@@ -69,7 +69,7 @@ func (service *Service) assistantPublicationCheck(ctx context.Context, owner str
 
 	var shareErr error
 	if assistant.Share.Enabled {
-		if len(assistant.Share.AllowedOrigins) == 0 || assistant.Share.DailyCallLimit < 1 || !assistant.Share.DataProcessingAcknowledged {
+		if len(assistant.Share.AllowedOrigins) == 0 || !assistant.Share.DataProcessingAcknowledged {
 			shareErr = fmt.Errorf("controlled sharing settings are incomplete")
 		}
 		for _, origin := range assistant.Share.AllowedOrigins {
@@ -78,7 +78,7 @@ func (service *Service) assistantPublicationCheck(ctx context.Context, owner str
 			}
 		}
 	}
-	add("share_controls", shareErr, "Sharing is off or has explicit origins, a daily cap, and data acknowledgement.", "Sharing requires explicit origins, a positive daily cap, and data acknowledgement.")
+	add("share_controls", shareErr, "Sharing is off or has explicit origins and data acknowledgement.", "Sharing requires explicit origins and data acknowledgement.")
 
 	validation.Ready = true
 	for _, check := range validation.Checks {
@@ -95,4 +95,28 @@ func (service *Service) recordAssistantPublicationValidation(ctx context.Context
 		return aiapplicationdomain.SmartAssistant{}, fmt.Errorf("%w: assistant publication check failed", aiapplicationdomain.ErrInvalid)
 	}
 	return service.aiapplications.RecordPublicationValidation(ctx, owner, validation.AssistantID, validation.AssistantVersion, validation.CheckedAt)
+}
+
+// saveAssistantConfiguration uses the same publication checks for JSON and icon uploads.
+func (service *Service) saveAssistantConfiguration(ctx context.Context, owner, id string, candidate aiapplicationdomain.SmartAssistant, version int64) (aiapplicationdomain.SmartAssistant, error) {
+	var validation aiapplicationdomain.PublicationValidation
+	if candidate.State == aiapplicationdomain.StateEnabled {
+		validation = service.assistantPublicationCheck(ctx, owner, candidate)
+		if !validation.Ready {
+			return aiapplicationdomain.SmartAssistant{}, fmt.Errorf("%w: assistant publication check failed", aiapplicationdomain.ErrInvalid)
+		}
+	}
+	value, err := service.aiapplications.UpdateAssistant(ctx, owner, id, candidate, version)
+	if err == nil && candidate.State == aiapplicationdomain.StateEnabled {
+		issuedShareToken := value.Share.Token
+		validation.AssistantVersion = value.Version
+		validation.CheckedAt = time.Now().UTC()
+		validated, validationErr := service.recordAssistantPublicationValidation(ctx, owner, validation)
+		if validationErr != nil {
+			return value, validationErr
+		}
+		value = validated
+		value.Share.Token = issuedShareToken
+	}
+	return value, err
 }

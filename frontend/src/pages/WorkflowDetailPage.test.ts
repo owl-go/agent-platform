@@ -73,6 +73,56 @@ async function mountPage(api = apiStub(), path = `/workflows/${workflow.id}?tab=
 }
 
 describe("WorkflowDetailPage", () => {
+  it.each([
+    ["telegram", "Telegram"], ["discord", "Discord"], ["slack", "Slack"], ["matrix", "Matrix"], ["whatsapp", "WhatsApp"],
+    ["signal", "Signal"], ["dingtalk", "钉钉"], ["feishu", "飞书"], ["wecom", "企业微信"], ["wechat", "微信"],
+    ["qqbot", "QQ Bot"], ["bluebubbles", "BlueBubbles (iMessage)"], ["yuanbao", "元宝"],
+  ])("identifies %s as the trigger in Run History", async (provider, label) => {
+    const channelRun: Run = { ...run, trigger: "message_channel", message_channel_id: "channel-1", message_channel_name: "客服机器人", message_channel_provider: provider };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [channelRun]) }));
+    expect(wrapper.get('.run-row[role="button"]').text()).toContain(`${label} · 客服机器人`);
+    wrapper.unmount();
+  });
+  it("retains the channel name for older responses without a provider", async () => {
+    const legacyRun: Run = { ...run, trigger: "message_channel", message_channel_name: "历史机器人" };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [legacyRun]) }));
+    expect(wrapper.get('.run-row[role="button"]').text()).toContain("消息渠道 · 历史机器人");
+    wrapper.unmount();
+  });
+  it("opens one channel conversation with all turns and reruns its latest turn", async () => {
+    const root: Run = { ...run, message_channel_id: "channel", message_channel_provider: "wechat", trigger: "message_channel" };
+    const followUp: Run = { ...root, id: "follow-up", turn_number: 2, state: "failed", text_input: "同一用户的追问", final_text: "后续答案" };
+    const summary: Run = { ...root, turn_number: 2, state: "failed" };
+    const listTurns = vi.fn(async () => [root, followUp]);
+    const rerun = vi.fn(async () => ({ ...run, id: "rerun", conversation_id: "rerun" }));
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [summary]), listRunTurns: listTurns, rerunWorkflow: rerun }));
+    expect(wrapper.findAll('.run-row[role="button"]')).toHaveLength(1);
+    await wrapper.get('.run-row[role="button"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain(root.text_input);
+    expect(wrapper.text()).toContain(followUp.text_input);
+    expect(wrapper.text()).toContain("后续答案");
+    await wrapper.get(".run-conversation-head .back-link").trigger("click");
+    await wrapper.get('.run-row[role="button"] .run-actions button').trigger("click");
+    await flushPromises();
+    expect(listTurns).toHaveBeenCalledWith(workflow.id, root.id);
+    expect(rerun).toHaveBeenCalledWith(workflow.id, followUp.id);
+    wrapper.unmount();
+  });
+  it("cancels the active turn of a channel conversation instead of its terminal root", async () => {
+    const root: Run = { ...run, trigger: "message_channel", message_channel_id: "channel" };
+    const active: Run = { ...root, id: "active-turn", turn_number: 2, state: "running" };
+    const queued: Run = { ...root, id: "queued-turn", turn_number: 3, state: "queued" };
+    const summary: Run = { ...root, turn_number: 3, state: "queued" };
+    const cancel = vi.fn(async () => ({ ...active, state: "cancelled" as const }));
+    const listTurns = vi.fn(async () => [root, active, queued]);
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [summary]), cancelRun: cancel, listRunTurns: listTurns }));
+    await wrapper.get('.run-row[role="button"] .run-actions button').trigger("click");
+    await flushPromises();
+    expect(cancel).toHaveBeenCalledWith(workflow.id, active.id);
+    expect(listTurns).toHaveBeenCalledWith(workflow.id, root.id);
+    wrapper.unmount();
+  });
   beforeEach(() => {
     window.localStorage.clear();
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
@@ -132,11 +182,35 @@ describe("WorkflowDetailPage", () => {
     expect(validated.get(".workflow-next-steps").text()).toContain("定时触发");
     expect(validated.get(".workflow-next-steps").text()).toContain("接入业务系统");
     expect(validated.get(".workflow-next-steps").text()).toContain("连接代码仓库");
+    expect(validated.get(".workflow-next-steps").text()).toContain("配置消息渠道");
     await validated.get(".workflow-next-steps .el-button").trigger("click");
     await flushPromises();
     expect(validated.findAll(".tabs button")[3]!.classes()).toContain("active");
     expect((validated.get("#workflow-settings-schedule").element as HTMLDetailsElement).open).toBe(true);
     validated.unmount();
+  });
+
+  it("opens Message Channel setup from the successful Run quick configuration", async () => {
+    const listMessageChannels = vi.fn(async () => ({ items: [], available: true }));
+    const wrapper = await mountPage(apiStub({ listMessageChannels }));
+    expect(listMessageChannels).not.toHaveBeenCalled();
+    const action = wrapper.findAll(".workflow-next-step-actions .el-button").find(button => button.text() === "配置消息渠道")!;
+    await action.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.findAll(".tabs button")[3]!.classes()).toContain("active");
+    const section = wrapper.get("#workflow-settings-channels");
+    expect((section.element as HTMLDetailsElement).open).toBe(true);
+    expect(listMessageChannels).toHaveBeenCalledWith(workflow.id, expect.any(AbortSignal));
+    expect(section.findAll(".channel-provider-card")).toHaveLength(13);
+    await section.get('[data-provider="slack"]').trigger("click");
+    await flushPromises();
+    const dialog = Array.from(document.body.querySelectorAll('[role="dialog"]')).find((item) => item.textContent?.includes("配置 Slack"))!;
+    expect(dialog).toBeDefined();
+    expect(dialog.textContent).toContain("配置 Slack");
+    expect(dialog.textContent).toContain("Signing Secret");
+    expect(dialog.querySelectorAll('input[type="password"]')).toHaveLength(2);
+    wrapper.unmount();
   });
 
   it("opens the operational Overview by default", async () => {
@@ -630,9 +704,13 @@ describe("WorkflowDetailPage", () => {
     await wrapper.vm.$nextTick();
 
     const sections = wrapper.findAll(".settings-section");
-    expect(sections).toHaveLength(5);
+    expect(sections).toHaveLength(6);
+    expect(wrapper.find("#workflow-settings-channels").text()).toContain("消息渠道");
     expect(sections.every((section) => section.attributes("open") === undefined)).toBe(true);
-    expect(wrapper.text()).toContain("0 个知识库 · 0 个环境变量");
+    expect(wrapper.get("#workflow-settings-environment > summary").text()).toContain("0 个环境变量");
+    expect(wrapper.find("#workflow-settings-resources").exists()).toBe(false);
+    expect(wrapper.find("#workflow-settings-basic .knowledge-base-picker").exists()).toBe(true);
+    expect(wrapper.get("#workflow-settings-environment").find(".knowledge-base-picker").exists()).toBe(false);
     expect(wrapper.find(".section-heading-actions").exists()).toBe(false);
     expect(wrapper.find(".danger-zone").exists()).toBe(false);
     const bottomActions = wrapper.get(".settings-actions-bottom");
@@ -667,19 +745,31 @@ describe("WorkflowDetailPage", () => {
     await wrapper.findAll(".tabs button").at(3)!.trigger("click");
     await wrapper.vm.$nextTick();
 
-    const choices = wrapper.findAll<HTMLInputElement>(".knowledge-base-option input[type='checkbox']");
+    const picker = wrapper.get("#workflow-settings-basic .knowledge-base-picker");
+    const select = picker.getComponent({ name: "ElSelect" });
+    expect(select.props("multiple")).toBe(true);
+    expect(select.props("filterable")).toBe(true);
+    expect(select.props("modelValue")).toEqual([]);
+    expect(picker.find("input[type='checkbox']").exists()).toBe(false);
+    const choices = select.findAllComponents({ name: "ElOption" });
     expect(choices).toHaveLength(2);
-    expect(choices.every((choice) => !choice.element.checked)).toBe(true);
-    expect(choices[0]!.element.disabled).toBe(false);
-    expect(choices[1]!.element.disabled).toBe(true);
-    expect(wrapper.get(".knowledge-base-options").text()).toContain("2 份文档可检索");
-    expect(wrapper.get(".knowledge-base-options").text()).toContain("暂无可检索文档");
+    expect(choices[0]!.props("disabled")).toBe(false);
+    expect(choices[1]!.props("disabled")).toBe(true);
+    expect(choices[0]!.text()).toContain("2 份文档可检索");
+    expect(choices[1]!.text()).toContain("暂无可检索文档");
+    await choices[1]!.trigger("click");
+    expect(select.props("modelValue")).toEqual([]);
 
-    await choices[0]!.setValue(true);
-    expect(choices[0]!.element.checked).toBe(true);
+    await choices[0]!.trigger("click");
+    expect(select.props("modelValue")).toEqual(["kb-1"]);
+    expect(select.findAll(".el-tag").map(tag => tag.text())).toEqual(["产品资料"]);
     await wrapper.get(".settings-form").trigger("submit");
     await flushPromises();
     expect(updateWorkflow).toHaveBeenCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: ["kb-1"] }), workflow.version);
+    await choices[0]!.trigger("click");
+    await wrapper.get(".settings-form").trigger("submit");
+    await flushPromises();
+    expect(updateWorkflow).toHaveBeenLastCalledWith(workflow.id, expect.objectContaining({ knowledge_base_ids: [] }), workflow.version);
     wrapper.unmount();
   });
 

@@ -20,6 +20,10 @@ func (repository *Repository) ReadyKnowledgeSearchGeneration(ctx context.Context
 }
 
 func (repository *Repository) ResolveKnowledgeSearchSource(ctx context.Context, ownerID, baseID, revisionID string, administrator bool) (domain.KnowledgeSearchSource, error) {
+	return repository.resolveKnowledgeSource(ctx, ownerID, baseID, revisionID, administrator, 0)
+}
+
+func (repository *Repository) resolveKnowledgeSource(ctx context.Context, ownerID, baseID, revisionID string, administrator bool, generation int64) (domain.KnowledgeSearchSource, error) {
 	var row struct {
 		DocumentID   string `gorm:"column:document_id"`
 		RevisionID   string `gorm:"column:revision_id"`
@@ -32,8 +36,12 @@ func (repository *Repository) ResolveKnowledgeSearchSource(ctx context.Context, 
 		Joins("JOIN knowledge_bases AS knowledge_bases ON knowledge_bases.id = document.knowledge_base_id AND knowledge_bases.deleted_at IS NULL").
 		Joins("LEFT JOIN knowledge_categories AS category ON category.id = document.category_id").
 		Where("knowledge_bases.id = ? AND revision.id = ? AND revision.state = 'ready'", baseID, revisionID).
-		Where("(document.category_id IS NULL OR category.deleted_at IS NULL)").
-		Where("revision.revision = (SELECT MAX(candidate.revision) FROM knowledge_document_revisions AS candidate WHERE candidate.document_id = document.id AND candidate.state = 'ready')")
+		Where("(document.category_id IS NULL OR category.deleted_at IS NULL)")
+	if generation == 0 {
+		query = query.Where("revision.revision = (SELECT MAX(candidate.revision) FROM knowledge_document_revisions AS candidate WHERE candidate.document_id = document.id AND candidate.state = 'ready')")
+	} else {
+		query = query.Where("EXISTS (SELECT 1 FROM knowledge_generation_revisions membership JOIN knowledge_index_generations generation ON generation.id = membership.generation_id WHERE membership.revision_id = revision.id AND generation.knowledge_base_id = ? AND generation.generation = ? AND generation.state = 'ready')", baseID, generation)
+	}
 	query = knowledgeBaseAccess(query, ownerID, false)
 	if !administrator {
 		query = query.Where("knowledge_bases.platform = false OR knowledge_bases.visibility = 'public'")

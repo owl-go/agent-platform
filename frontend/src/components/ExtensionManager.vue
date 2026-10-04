@@ -15,6 +15,7 @@ import ConnectorIcon from "./ConnectorIcon.vue";
 import ProfileIcon from "./ProfileIcon.vue";
 import IconPicker from "./IconPicker.vue";
 import ResourceTrustMeta from "./ResourceTrustMeta.vue";
+import CatalogLoading from "./CatalogLoading.vue";
 
 type ResourceTab = "mcp" | "skills";
 type ConnectorCatalogEntry = { publication?: ConnectorPublication; installation?: ConnectorInstallation };
@@ -66,7 +67,7 @@ const operationError = ref<{ message: string; zIndex: number }>();
 const statusErrors = ref<string[]>([]);
 function reportError(cause?: unknown, validationKey = "invalidInput") {
   const keys = { unauthenticated: "loginRequired", forbidden: "permissionDenied", not_found: "resourceMissing", conflict: "resourceChanged", validation: validationKey, rate_limited: "tooManyRequests", unavailable: "serviceUnavailable", unknown: "operationFailed" } as const;
-  const authorizationErrors: Record<string, string> = { dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_cli_enterprise_denied: "dingtalkCLIEnterpriseDenied", dingtalk_cli_user_denied: "dingtalkCLIUserDenied", dingtalk_cli_channel_required: "dingtalkCLIChannelRequired", dingtalk_cli_auth_expired: "dingtalkCLIAuthExpired", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
+  const authorizationErrors: Record<string, string> = { tianyancha_region_blocked: "tianyanchaRegionBlocked", xiaoe_oauth_callback_blocked: "xiaoeOAuthCallbackBlocked", dingtalk_cli_access_disabled: "dingtalkCLIAccessDisabled", dingtalk_cli_enterprise_denied: "dingtalkCLIEnterpriseDenied", dingtalk_cli_user_denied: "dingtalkCLIUserDenied", dingtalk_cli_channel_required: "dingtalkCLIChannelRequired", dingtalk_cli_auth_expired: "dingtalkCLIAuthExpired", dingtalk_identity_mismatch: "dingtalkIdentityMismatch", dingtalk_authorization_failed: "dingtalkAuthorizationFailed" };
   const key = cause instanceof ApiError ? authorizationErrors[cause.code] ?? (cause.status === 413 ? "uploadTooLarge" : keys[cause.kind]) : cause instanceof TypeError ? "networkFailed" : "operationFailed";
   operationError.value = { message: t(`resources.${key}`), zIndex: nextZIndex() };
   emit("error");
@@ -77,6 +78,7 @@ function setStatusError(source: string, failed: boolean) {
 }
 const canManageCLI = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const activeTab = ref<ResourceTab>(props.initialTab);
+const loading = ref(true);
 const mcp = ref<MCPServer[]>([]);
 const skills = ref<Skill[]>([]);
 const createdSkillIDs = ref(new Set<string>());
@@ -123,9 +125,9 @@ function showPackageDetails(entry: ConnectorCatalogEntry) { closeConnectorDetail
 async function connectFromDetails() {
   const entry = detailPackage.value;
   if (entry?.installation) {
-    if (["notion", "teambition"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
+    if (["notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha"].includes(entry.installation.source)) await startBrowserConnection(entry.installation, entry.publication);
     else if (entry.installation.state === "disabled" && entry.publication) await installPublication(entry.publication);
-    else if (["wecom", "modao"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
+    else if (["wecom", "modao", "picset-ai", "ai-hive", "openboost", "moka-hr", "pkulaw"].includes(entry.installation.source)) { const installation = entry.installation; closeConnectorDetails(); openProvidedConnection(installation); }
     else if (entry.installation.authentication_driver === "feishu" || entry.installation.authentication_driver === "dingtalk") await setupPublishedConnector(entry.installation, entry.publication);
   } else if (entry?.publication) await installPublication(entry.publication);
   else if (detailCLI.value) {
@@ -137,7 +139,7 @@ async function connectFromDetails() {
   else if (detailMCP.value) await testMCP(detailMCP.value);
 }
 const detailBusy = computed(() => launchingConnector.value || Boolean(detailPackage.value && connectorOperationBusy(detailPackage.value.publication?.source || detailPackage.value.installation?.source || "")) || Boolean(detailCLI.value && (cliEnableBusy.value.includes(detailCLI.value.id) || cliAuthorizationBusy.value.includes(detailCLI.value.id))));
-const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "wecom", "modao"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
+const detailCanConnect = computed(() => Boolean(detailPackage.value?.publication && (!detailPackage.value.installation || detailPackage.value.installation.state === "disabled") || detailPackage.value?.installation && ["feishu", "dingtalk", "notion", "teambition", "xiaoe", "github", "camscanner", "kling-ai", "linear", "pixso", "tianyancha", "wecom", "modao", "picset-ai", "ai-hive", "openboost", "moka-hr", "pkulaw"].includes(detailPackage.value.installation.source) || detailCLI.value || detailMCP.value && ((!detailMCP.value.platform && !detailMCP.value.managed_installation) || canManageCLI.value)));
 async function disconnectFromDetails() {
   const installation = detailPackage.value?.installation;
   if (installation) await runConnectorOperation(installation.source, async () => {
@@ -198,14 +200,19 @@ const visibleConnectorCatalogItems = computed(() => connectorCatalogItems.value.
 }));
 // Categories describe existing connector sources; unknown and private connectors stay discoverable.
 function connectorCategory(source: string) {
+  if (["pkulaw", "mindbye"].includes(source)) return "legal";
+  if (source === "moka-hr") return "recruitment";
+  if (source === "tianyancha") return "industry";
+  if (["xiaoe", "openboost"].includes(source)) return "marketing";
+  if (["caoliao", "camscanner"].includes(source)) return "productivity";
   if (["feishu", "dingtalk", "wecom", "@larksuite/cli"].includes(source)) return "collaboration";
   if (source === "notion") return "documents";
-  if (source === "teambition") return "projects";
-  if (source === "modao") return "design";
+  if (["teambition", "linear", "github"].includes(source)) return "projects";
+  if (["modao", "picset-ai", "kling-ai", "pixso", "ai-hive"].includes(source)) return "design";
   return "other";
 }
 const installedOnly = computed(() => props.selectable && props.mineOnly || connectorView.value === "installed");
-const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "other"].map(key => ({
+const connectorSections = computed(() => ["collaboration", "documents", "projects", "design", "marketing", "productivity", "industry", "recruitment", "legal", "other"].map(key => ({
   key, title: t(`resources.connectorCategory.${key}`),
   mcp: visibleMCP.value.filter(item => !item.managed_installation && connectorCategory("") === key && (!props.mineOnly || !props.selectable || !item.platform)),
   cli: visibleCLI.value.filter(item => !item.managed_installation && connectorCategory(item.npm_package) === key && (!installedOnly.value || cliInstalled(item))),
@@ -245,7 +252,7 @@ onBeforeUnmount(() => {
 
 async function completeBrowserReturn() {
   await refresh();
-  const flowID = router?.currentRoute.value.query.teambition_auth;
+  const flowID = router?.currentRoute.value.query.xiaoe_auth ?? router?.currentRoute.value.query.connector_auth ?? router?.currentRoute.value.query.linear_auth ?? router?.currentRoute.value.query.teambition_auth;
   if (typeof flowID !== "string" || !/^[0-9a-f-]{36}$/i.test(flowID)) return;
   try { await api.completeConnectorAuthorizationFlow(flowID); }
   catch (cause) { if (!(cause instanceof ApiError && cause.kind === "not_found")) reportError(cause); }
@@ -255,6 +262,9 @@ async function completeBrowserReturn() {
   await refresh();
   const query = { ...router.currentRoute.value.query };
   delete query.teambition_auth;
+  delete query.xiaoe_auth;
+  delete query.connector_auth;
+  delete query.linear_auth;
   await router.replace({ query });
 }
 
@@ -273,6 +283,7 @@ async function refresh() {
     await Promise.all([refreshCLIAuthorizations(), refreshConnectorAuthorizations(), refreshSkillDocuments()]);
     notifyResources();
   } catch (cause) { reportError(cause); }
+  finally { loading.value = false; }
 }
 
 async function refreshConnectorAuthorizations() {
@@ -310,17 +321,23 @@ async function saveProvidedConnection() {
   const form = providedConnection.value;
   if (!form || providedConnectionBusy.value) return;
   const modao = form.installation.source === "modao";
-  const invalidKey = modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
+  const moka = form.installation.source === "moka-hr";
+  const openboost = form.installation.source === "openboost";
+  const picset = form.installation.source === "picset-ai";
+  const aiHive = form.installation.source === "ai-hive";
+  const pkulaw = form.installation.source === "pkulaw";
+  const bearerToken = aiHive || pkulaw;
+  const invalidKey = pkulaw ? "pkulawCredentialsInvalid" : moka ? "mokaCredentialsInvalid" : openboost ? "openboostCredentialsInvalid" : aiHive ? "aiHiveCredentialsInvalid" : picset ? "picsetCredentialsInvalid" : modao ? "modaoCredentialsInvalid" : "providedCredentialsInvalid";
   const botID = form.botID.trim();
-  if (modao ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
+  if (moka ? !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(botID) || !form.secret || form.secret.length > 8192 || /[\s:\x00-\x1f\x7f]/u.test(form.secret) : bearerToken ? !form.secret || form.secret.length > 4096 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : picset ? !/^sk_live_[A-Za-z0-9_-]+$/.test(form.secret) || form.secret.length > 4096 : (modao || openboost) ? !form.secret || form.secret.length > 32768 || /[\s\x00-\x1f\x7f]/u.test(form.secret) : !botID || !form.secret) {
     reportError(new ApiError("validation", 422, "invalid_input"), invalidKey);
     return;
   }
   providedConnectionBusy.value = true;
   try {
-    const credentials = modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
+    const credentials = moka ? { moka_api_key: form.secret, moka_org_id: botID } : openboost ? { openboost_secret_key: form.secret } : bearerToken ? { MCP_BEARER_TOKEN: form.secret } : picset ? { picset_api_key: form.secret } : modao ? { modao_token: form.secret } : { bot_id: botID, secret: form.secret };
     let installation = form.installation;
-    if (modao && installation.upgrade_available) {
+    if ((modao || picset || bearerToken || openboost || moka) && installation.upgrade_available) {
       installation = await api.upgradeConnectorInstallation(installation.id, installation.version);
       form.installation = installation;
     }
@@ -345,9 +362,9 @@ async function startBrowserConnection(installation: ConnectorInstallation, publi
   } catch (cause) { closeBlankCLIWindow(popup); connectorFlowWindows.delete(installation.id); reportError(cause, "connectorAuthorizationInvalidInput"); }
   finally { connectorBusy.value = connectorBusy.value.filter((source) => source !== installation.source); }
 }
-function notionVerificationCode(actionURL?: string) {
+function connectorVerificationCode(actionURL?: string) {
   if (!actionURL) return "";
-  try { return new URL(actionURL).searchParams.get("verificationCode") ?? ""; }
+  try { return new URL(actionURL).searchParams.get("verificationCode") ?? new URL(actionURL).searchParams.get("user_code") ?? ""; }
   catch { return ""; }
 }
 async function setupPublishedConnector(item: ConnectorInstallation, publication?: ConnectorPublication) {
@@ -396,7 +413,7 @@ async function completePublishedConnectorFlows() {
         connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: completed };
         if (completed.state !== "waiting_for_user") { closeBlankCLIWindow(connectorFlowWindows.get(installationID) ?? null); connectorFlowWindows.delete(installationID); await refresh(); }
       } catch (cause) {
-        if (connectorInstallations.value.find(item => item.id === installationID)?.source === "teambition" && cause instanceof ApiError && cause.kind === "not_found") {
+        if (["teambition", "xiaoe", "kling-ai", "linear", "pixso", "tianyancha"].includes(connectorInstallations.value.find(item => item.id === installationID)?.source ?? "") && cause instanceof ApiError && cause.kind === "not_found") {
           await refresh();
           if (connectorInstallations.value.find(item => item.id === installationID)?.authorized) {
             connectorAuthorizationFlows.value = { ...connectorAuthorizationFlows.value, [installationID]: { ...flow, state: "completed" } };
@@ -774,7 +791,8 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="activeTab === 'mcp'" class="extension-catalog-section">
       <div class="resource-toolbar extension-catalog-toolbar connector-catalog-toolbar">
         <nav v-if="!mineOnly || !selectable" class="subtabs connector-view-tabs" :aria-label="t('resources.connectors')"><el-button text :class="{ active: connectorView === 'market' }" :aria-pressed="connectorView === 'market'" @click="connectorView = 'market'">{{ t('resources.connectorMarket') }}</el-button><el-button text :class="{ active: connectorView === 'installed' }" :aria-pressed="connectorView === 'installed'" @click="connectorView = 'installed'">{{ t('resources.installed') }}</el-button></nav><slot name="catalog-actions" /><el-button type="primary" class="compact-action" @click="openNewConnector"><Plus />{{ t('resources.newConnector') }}</el-button></div>
-      <div class="catalog-groups">
+      <CatalogLoading v-if="loading" compact />
+      <div v-else class="catalog-groups">
       <section v-for="section in connectorSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid connector-catalog-grid">
@@ -805,7 +823,8 @@ async function fileToBase64(file: File): Promise<string> {
     </div>
     <div v-if="activeTab === 'skills'" class="extension-catalog-section">
       <div class="resource-toolbar extension-catalog-toolbar skill-add-actions"><slot name="catalog-actions" /><el-button type="primary" class="compact-action" @click="openNewSkill"><Plus />{{ t('resources.newSkill') }}</el-button><el-dropdown trigger="click" @command="handleSkillAction"><el-button type="primary" class="skill-add-menu-button"><ChevronDown :size="15" /></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="create">{{ t('resources.createSkill') }}</el-dropdown-item><el-dropdown-item command="upload">{{ t('resources.uploadSkill') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
-      <div class="catalog-groups">
+      <CatalogLoading v-if="loading" />
+      <div v-else class="catalog-groups">
       <section v-for="section in skillSections" :key="section.key" class="catalog-group">
       <h2 class="catalog-group-title">{{ section.title }}</h2>
       <div class="resource-list extension-catalog-grid skill-catalog-grid">
@@ -821,8 +840,7 @@ async function fileToBase64(file: File): Promise<string> {
               </div>
             </div>
             <p>{{ skillDescription(item) }}</p>
-            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" :detail="t('resources.isolatedRuntime')" />
-            <small>{{ item.source === 'git' ? item.git_url : t('composer.localSkill') }} · {{ t('composer.version', { version: item.version }) }}</small>
+            <ResourceTrustMeta :source="item.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="item.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="t('resources.packageValidated')" status-tone="success" />
           </div>
         </article>
         <div v-if="!section.items.length" class="empty-inline extension-empty"><span>◇</span><p>{{ t('common.empty') }}</p></div>
@@ -835,10 +853,10 @@ async function fileToBase64(file: File): Promise<string> {
   <ConnectorDetails :mcp="detailMCP" :cli="detailCLI" :installation="detailPackage?.installation" :publication="detailPackage?.publication" :can-connect="detailCanConnect" :can-uninstall="Boolean(detailPackage?.installation || detailCLI && cliInstalled(detailCLI))" :can-disconnect="Boolean(detailPackage?.installation && detailPackage.installation.authorized || detailCLI && hasActiveCLIAuthorization(detailCLI))" :connected-state="detailCLI ? enablementFor(detailCLI.id)?.state === 'enabled' && (detailCLI.authentication_driver === 'none' || hasActiveCLIAuthorization(detailCLI) && !cliNeedsActivation(detailCLI)) : undefined" :busy="detailBusy" :enablement="detailCLI ? enablementFor(detailCLI.id) : undefined" :can-edit="Boolean(detailMCP && ((!detailMCP.platform && !detailMCP.managed_installation) || canManageCLI) || detailCLI && canManageCLI && !detailCLI.managed_installation && detailCLI.mutable)" @close="closeConnectorDetails" @use="useConnectorPrompt" @connect="connectFromDetails" @disconnect="disconnectFromDetails" @uninstall="uninstallFromDetails" @edit-mcp="editMCPFromDetails" @edit-cli="editCLIFromDetails">
     <template #details>
       <div v-if="detailPackage" class="connector-supplementary-details"><template v-for="entry in [detailPackage]" :key="entry.installation?.id || entry.publication?.source">
-            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t('resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
-            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t('resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
+            <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="entry.installation ? t('resources.personalInstallation') : t('resources.allCanInstall')" :status="entry.publication?.revision.conformance_available ? t(entry.publication.revision.mode === 'mcp' ? 'resources.packageValidated' : 'resources.runtimeVerified') : t('resources.unverified')" :status-tone="entry.publication?.revision.conformance_available ? 'success' : 'warning'" :detail="entry.publication?.revision.runtime_digests?.length ? t('resources.runtimeDigestCount', { count: entry.publication.revision.runtime_digests.length }) : ''" />
+            <small>{{ t('resources.packageVersion', { version: entry.publication?.revision.package_version || entry.installation?.package_version }) }} · {{ entry.publication?.revision.conformance_available ? t(entry.publication.revision.mode === 'mcp' ? 'resources.packageValidated' : 'resources.conformanceAvailable') : t('resources.conformanceUnavailable') }}</small>
             <small v-if="entry.installation && connectorSetups[entry.installation.id]?.provider_name">{{ connectorSetups[entry.installation.id].provider_name }}<template v-if="connectorSetups[entry.installation.id].developer_console_url"> · <a @click.stop :href="connectorSetups[entry.installation.id].developer_console_url" target="_blank" rel="noreferrer">{{ t('resources.developerConsole') }}</a></template></small>
-            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <span v-if="entry.installation.source === 'notion' && notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url)">{{ t('resources.notionVerifyCode', { code: notionVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url) }) }}</span> <a @click.stop v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
+            <small v-if="entry.installation && connectorAuthorizationFlows[entry.installation.id]?.state === 'waiting_for_user'">{{ t('resources.connectorAuthorizationPending') }} <span v-if="['notion', 'github'].includes(entry.installation.source) && connectorVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url)">{{ t(entry.installation.source === 'github' ? 'resources.githubVerifyCode' : 'resources.notionVerifyCode', { code: connectorVerificationCode(connectorAuthorizationFlows[entry.installation.id].action_url) }) }}</span> <a @click.stop v-if="connectorAuthorizationFlows[entry.installation.id].action_url" :href="connectorAuthorizationFlows[entry.installation.id].action_url" target="_blank" rel="noopener noreferrer">{{ t('resources.connectorAuthorizeNow') }}</a></small>
             <div v-if="entry.installation && connectorAuthorizations[entry.installation.id]?.length" class="connector-account-actions" @click.stop>
               <span v-for="authorization in connectorAuthorizations[entry.installation.id].filter((item) => item.state === 'active' || item.state === 'expired')" :key="authorization.id"><el-button text :type="authorization.selected ? 'primary' : 'default'" :disabled="authorization.state !== 'active'" @click="selectAuthorization(entry.installation!, authorization)">{{ authorization.external_display_name || authorization.external_identity_id || authorization.identity_ref }}{{ authorization.selected ? ` · ${t('resources.selectedAccount')}` : '' }}</el-button><el-button v-if="authorization.state === 'expired'" text type="primary" @click="refreshAuthorization(entry.installation!, authorization)">{{ t('resources.refreshAuthorization') }}</el-button><el-button text type="danger" @click="disconnectAuthorization(entry.installation!, authorization)">{{ t('resources.disconnectAccount') }}</el-button></span>
             </div>
@@ -874,9 +892,30 @@ async function fileToBase64(file: File): Promise<string> {
     <div v-if="providedConnection" class="modal-layer" @click.self="closeProvidedConnection">
       <form class="modal-card provided-connector-form el-card" role="dialog" aria-modal="true" aria-labelledby="provided-connection-title" @keydown.esc.stop.prevent="closeProvidedConnection" @submit.prevent="saveProvidedConnection">
         <h2 id="provided-connection-title">{{ t('resources.connect') }} {{ providedConnection.installation.name }}</h2>
-        <template v-if="providedConnection.installation.source === 'modao'">
+        <template v-if="providedConnection.installation.source === 'pkulaw'">
+          <label>Access Token<input v-model="providedConnection.secret" name="pkulaw_token" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://mcp.pkulaw.com/" target="_blank" rel="noopener noreferrer">{{ t('resources.pkulawTokenHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'ai-hive'">
+          <label>{{ t('resources.aiHiveApiKey') }}<input v-model="providedConnection.secret" name="ai_hive_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://ai-hive.iclip.cn/" target="_blank" rel="noopener noreferrer">{{ t('resources.aiHiveApiKeyHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'picset-ai'">
+          <label>{{ t('resources.picsetApiKey') }}<input v-model="providedConnection.secret" name="picset_api_key" type="password" autocomplete="new-password" maxlength="4096" required></label>
+          <a href="https://picsetai.cn/developer-api" target="_blank" rel="noopener noreferrer">{{ t('resources.picsetApiKeyHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'modao'">
           <label>{{ t('resources.modaoToken') }}<input v-model="providedConnection.secret" name="modao_token" type="password" autocomplete="new-password" maxlength="32768" required></label>
           <a href="https://modao.cc/feature/ai-mcp.html" target="_blank" rel="noopener noreferrer">{{ t('resources.modaoTokenHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'openboost'">
+          <label>Secret Key<input v-model="providedConnection.secret" name="openboost_secret_key" type="password" autocomplete="new-password" maxlength="32768" required></label>
+          <a href="https://open.microdata-inc.com/mcp-list" target="_blank" rel="noopener noreferrer">{{ t('resources.openboostTokenHelp') }}</a>
+        </template>
+        <template v-else-if="providedConnection.installation.source === 'moka-hr'">
+          <label>{{ t('resources.mokaApiKey') }}<input v-model="providedConnection.secret" name="moka_api_key" type="password" autocomplete="new-password" maxlength="8192" required></label>
+          <label>{{ t('resources.mokaOrgId') }}<input v-model="providedConnection.botID" name="moka_org_id" autocomplete="off" maxlength="128" required></label>
+          <a href="https://www.mokahr.com/docs/api/index.html" target="_blank" rel="noopener noreferrer">{{ t('resources.mokaConnectionHelp') }}</a>
         </template>
         <template v-else>
           <label>{{ t('resources.wecomBotId') }}<input v-model="providedConnection.botID" name="bot_id" autocomplete="off" maxlength="512" required></label>

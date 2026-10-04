@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
@@ -201,5 +202,47 @@ func TestConnectorDetailsExposeExamplesFromExactRevision(t *testing.T) {
 	}
 	if len(installation.ExamplesZh) != 1 || installation.ExamplesZh[0] != publication.ExamplesZh[0] || len(installation.ExamplesEn) != 1 || installation.ExamplesEn[0] != publication.ExamplesEn[0] || installation.Mode != "mcp" {
 		t.Fatalf("installation details = %#v", installation)
+	}
+}
+
+func TestCamScannerUsesInteractiveLoginAndOnlyShortLivedRuntimeCredential(t *testing.T) {
+	policy := connectorRevisionPolicy{AuthMode: "oauth", Metadata: connectorpackage.Metadata{Source: "camscanner"}, CLI: &connectorpackage.CLIManifest{AuthenticationDriver: "connector_package"}}
+	if connectorAuthorizationMode(policy) != "interactive" {
+		t.Fatal("browser login unavailable")
+	}
+	if err := validateProvidedConnectorCredentials(policy, nil); err == nil {
+		t.Fatal("manual token bypass accepted")
+	}
+	fields := connectorAuthorizationCredentialFields(policy, connectorAuthorizationGrant{ExternalID: "owner", AccessToken: "short-token", RefreshToken: "renewal-token", IsDomestic: "1", ExpiresAt: time.Now().Add(time.Hour)})
+	if len(fields) != 4 || fields["user_id"] != "owner" || fields["is_domestic"] != "1" || fields["access_token"] != "short-token" || fields["refresh_token"] != "" {
+		t.Fatal("incorrect credential materialization")
+	}
+	policy.AuthMode = "cli"
+	if connectorAuthorizationMode(policy) != "provided" {
+		t.Fatal("driver chosen without reviewed policy")
+	}
+}
+
+func TestPKULawProvidedTokenBoundary(t *testing.T) {
+	policy := connectorRevisionPolicy{Metadata: connectorpackage.Metadata{Source: "pkulaw"}}
+	for _, test := range []struct {
+		name, credentials string
+		valid             bool
+	}{
+		{"valid", `{"MCP_BEARER_TOKEN":"fixture-token"}`, true},
+		{"empty", `{"MCP_BEARER_TOKEN":""}`, false},
+		{"wrong field", `{"token":"fixture-token"}`, false},
+		{"non string", `{"MCP_BEARER_TOKEN":123}`, false},
+		{"extra secret", `{"MCP_BEARER_TOKEN":"fixture-token","other":"secret"}`, false},
+		{"header injection", `{"MCP_BEARER_TOKEN":"value\r\nInjected: yes"}`, false},
+		{"bearer prefix", `{"MCP_BEARER_TOKEN":"Bearer token"}`, false},
+		{"oversized", `{"MCP_BEARER_TOKEN":"` + strings.Repeat("x", 4097) + `"}`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := validatePKULawCredentials(policy, []byte(test.credentials))
+			if (err == nil) != test.valid {
+				t.Fatalf("validation = %v, valid = %v", err, test.valid)
+			}
+		})
 	}
 }

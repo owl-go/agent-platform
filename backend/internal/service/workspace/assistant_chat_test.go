@@ -57,11 +57,16 @@ type assistantKnowledgeSearcher struct {
 	hits  []retrieval.Hit
 	err   error
 	calls int
+	query string
 }
 
 func (searcher *assistantKnowledgeSearcher) Search(_ context.Context, owner, baseID string, generation int64, query string, limit, _ int) ([]retrieval.Hit, error) {
 	searcher.calls++
-	if owner != "owner" || baseID != "base" || generation != 0 || query != "question" || limit != 5 {
+	expectedQuery := searcher.query
+	if expectedQuery == "" {
+		expectedQuery = "question"
+	}
+	if owner != "owner" || baseID != "base" || generation != 0 || query != expectedQuery || limit != 5 {
 		return nil, fmt.Errorf("unexpected search arguments: %s %s %d %s %d", owner, baseID, generation, query, limit)
 	}
 	return searcher.hits, searcher.err
@@ -210,6 +215,49 @@ func TestAssistantScopeInquiryReturnsCurrentCapabilityFAQWithoutModel(t *testing
 	}
 	if answer.text != "可以创建会话，也可以创建工作流" || answer.source != "faq" || answer.faqID != "capabilities" || answer.inputTokens != 0 || answer.outputTokens != 0 {
 		t.Fatalf("scope answer = %+v", answer)
+	}
+}
+
+func TestAssistantTypedFAQReturnsStoredAnswerBeforeScopeClassification(t *testing.T) {
+	repository := &currentAssistantRepository{
+		assistant: aiappdomain.SmartAssistant{ID: "assistant-1", OwnerID: "owner", ProviderModelID: "unavailable-model", PreprocessPrompt: "询问运行框架或技术实现必须判定为 out_of_scope"},
+		faqs:      []aiappdomain.FAQ{{ID: "engine", Question: "运行引擎是什么？", AnswerMarkdown: "这个项目使用已配置的运行引擎。", Enabled: true}},
+	}
+	application, err := aiapp.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Even with an unavailable model, a stored FAQ must still be answerable. This
+	// reproduces typed questions being routed to model/scope classification.
+	service := &Service{aiapplications: application, workspace: mustAssistantWorkspace(t)}
+	answer, err := service.answerAssistantTurn(context.Background(), "owner", aiappdomain.AssistantConversation{ID: "conversation", AssistantID: "assistant-1"}, aiappdomain.AssistantTurn{ID: "turn", Question: "运行引擎是什么？"}, "", "authenticated", func(string) error { return nil })
+	if err != nil || answer.text != repository.faqs[0].AnswerMarkdown || answer.source != "faq" || answer.faqID != "engine" || answer.inputTokens != 0 || answer.outputTokens != 0 {
+		t.Fatalf("typed FAQ did not return its stored answer: answer=%+v, err=%v", answer, err)
+	}
+}
+
+func mustAssistantWorkspace(t *testing.T) *workspaceapplication.Service {
+	t.Helper()
+	application, err := workspaceapplication.New(&assistantModelRepository{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return application
+}
+
+func TestAssistantIdentityInquiryReturnsCurrentPublicProfileWithoutModel(t *testing.T) {
+	repository := &currentAssistantRepository{assistant: aiappdomain.SmartAssistant{
+		ID: "assistant", OwnerID: "owner", Name: "项目分析助手", Description: "帮助你了解项目功能与部署说明。",
+		ProviderModelID: "unavailable", Prompt: "不应公开的助手指导", PreprocessPrompt: "不应公开的分类配置", KnowledgeBaseIDs: []string{"base"},
+	}}
+	application, err := aiapp.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{aiapplications: application, workspace: mustAssistantWorkspace(t)}
+	answer, err := service.answerAssistantTurn(context.Background(), "owner", aiappdomain.AssistantConversation{AssistantID: "assistant"}, aiappdomain.AssistantTurn{Question: "你是谁"}, "", "authenticated", func(string) error { return nil })
+	if err != nil || answer.text != "我是项目分析助手。\n\n帮助你了解项目功能与部署说明。" || answer.source != "configuration" || answer.inputTokens != 0 || answer.outputTokens != 0 {
+		t.Fatalf("public identity question rejected: answer=%+v, err=%v", answer, err)
 	}
 }
 

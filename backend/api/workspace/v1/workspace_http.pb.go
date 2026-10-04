@@ -21,6 +21,7 @@ const OperationAgentWorkspaceServiceAdjustUserCredits = "/workspace.v1.AgentWork
 const OperationAgentWorkspaceServiceBeginCLIConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/BeginCLIConnectorAuthorization"
 const OperationAgentWorkspaceServiceBeginConnectorAuthorizationFlow = "/workspace.v1.AgentWorkspaceService/BeginConnectorAuthorizationFlow"
 const OperationAgentWorkspaceServiceBeginConnectorSetup = "/workspace.v1.AgentWorkspaceService/BeginConnectorSetup"
+const OperationAgentWorkspaceServiceCancelChannelLogin = "/workspace.v1.AgentWorkspaceService/CancelChannelLogin"
 const OperationAgentWorkspaceServiceCancelRun = "/workspace.v1.AgentWorkspaceService/CancelRun"
 const OperationAgentWorkspaceServiceCancelSessionMessage = "/workspace.v1.AgentWorkspaceService/CancelSessionMessage"
 const OperationAgentWorkspaceServiceCompleteCLIConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/CompleteCLIConnectorAuthorization"
@@ -31,6 +32,7 @@ const OperationAgentWorkspaceServiceConfigureUserDailyCredits = "/workspace.v1.A
 const OperationAgentWorkspaceServiceConfigureWorkflowGitSource = "/workspace.v1.AgentWorkspaceService/ConfigureWorkflowGitSource"
 const OperationAgentWorkspaceServiceConnectConnector = "/workspace.v1.AgentWorkspaceService/ConnectConnector"
 const OperationAgentWorkspaceServiceContinueRunConversation = "/workspace.v1.AgentWorkspaceService/ContinueRunConversation"
+const OperationAgentWorkspaceServiceControlMessageChannel = "/workspace.v1.AgentWorkspaceService/ControlMessageChannel"
 const OperationAgentWorkspaceServiceCreateCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/CreateCLIConnectorDefinition"
 const OperationAgentWorkspaceServiceCreateConnectorPackage = "/workspace.v1.AgentWorkspaceService/CreateConnectorPackage"
 const OperationAgentWorkspaceServiceCreateExpert = "/workspace.v1.AgentWorkspaceService/CreateExpert"
@@ -98,6 +100,7 @@ const OperationAgentWorkspaceServiceListCLIConnectorAuthorizations = "/workspace
 const OperationAgentWorkspaceServiceListCLIConnectorDefinitions = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorDefinitions"
 const OperationAgentWorkspaceServiceListCLIConnectorEnablements = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorEnablements"
 const OperationAgentWorkspaceServiceListCLIConnectorHealth = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorHealth"
+const OperationAgentWorkspaceServiceListChannelDeliveries = "/workspace.v1.AgentWorkspaceService/ListChannelDeliveries"
 const OperationAgentWorkspaceServiceListCommandApprovals = "/workspace.v1.AgentWorkspaceService/ListCommandApprovals"
 const OperationAgentWorkspaceServiceListConnectorAuthorizations = "/workspace.v1.AgentWorkspaceService/ListConnectorAuthorizations"
 const OperationAgentWorkspaceServiceListConnectorInstallations = "/workspace.v1.AgentWorkspaceService/ListConnectorInstallations"
@@ -117,6 +120,7 @@ const OperationAgentWorkspaceServiceListKnowledgeBases = "/workspace.v1.AgentWor
 const OperationAgentWorkspaceServiceListKnowledgeCategories = "/workspace.v1.AgentWorkspaceService/ListKnowledgeCategories"
 const OperationAgentWorkspaceServiceListKnowledgeDocuments = "/workspace.v1.AgentWorkspaceService/ListKnowledgeDocuments"
 const OperationAgentWorkspaceServiceListMCPConnectors = "/workspace.v1.AgentWorkspaceService/ListMCPConnectors"
+const OperationAgentWorkspaceServiceListMessageChannels = "/workspace.v1.AgentWorkspaceService/ListMessageChannels"
 const OperationAgentWorkspaceServiceListModelCreditRates = "/workspace.v1.AgentWorkspaceService/ListModelCreditRates"
 const OperationAgentWorkspaceServiceListModelProviderConnections = "/workspace.v1.AgentWorkspaceService/ListModelProviderConnections"
 const OperationAgentWorkspaceServiceListModelProviderPresets = "/workspace.v1.AgentWorkspaceService/ListModelProviderPresets"
@@ -133,6 +137,7 @@ const OperationAgentWorkspaceServiceListUsers = "/workspace.v1.AgentWorkspaceSer
 const OperationAgentWorkspaceServiceListWorkflows = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
 const OperationAgentWorkspaceServiceListWorkspaceEntries = "/workspace.v1.AgentWorkspaceService/ListWorkspaceEntries"
 const OperationAgentWorkspaceServiceOptimizeImagePrompt = "/workspace.v1.AgentWorkspaceService/OptimizeImagePrompt"
+const OperationAgentWorkspaceServicePollChannelLogin = "/workspace.v1.AgentWorkspaceService/PollChannelLogin"
 const OperationAgentWorkspaceServicePreviewSessionWorkflowDraft = "/workspace.v1.AgentWorkspaceService/PreviewSessionWorkflowDraft"
 const OperationAgentWorkspaceServicePreviewWorkflowSchedule = "/workspace.v1.AgentWorkspaceService/PreviewWorkflowSchedule"
 const OperationAgentWorkspaceServicePublishCLIConnectorDefinition = "/workspace.v1.AgentWorkspaceService/PublishCLIConnectorDefinition"
@@ -145,10 +150,12 @@ const OperationAgentWorkspaceServiceReplacePromptOptimizationCandidates = "/work
 const OperationAgentWorkspaceServiceRerunWorkflow = "/workspace.v1.AgentWorkspaceService/RerunWorkflow"
 const OperationAgentWorkspaceServiceResetUserPassword = "/workspace.v1.AgentWorkspaceService/ResetUserPassword"
 const OperationAgentWorkspaceServiceResolveConversationSelection = "/workspace.v1.AgentWorkspaceService/ResolveConversationSelection"
+const OperationAgentWorkspaceServiceRetryChannelDelivery = "/workspace.v1.AgentWorkspaceService/RetryChannelDelivery"
 const OperationAgentWorkspaceServiceRetrySessionMessage = "/workspace.v1.AgentWorkspaceService/RetrySessionMessage"
 const OperationAgentWorkspaceServiceReviseImageModel = "/workspace.v1.AgentWorkspaceService/ReviseImageModel"
 const OperationAgentWorkspaceServiceRevokeWorkflowCredential = "/workspace.v1.AgentWorkspaceService/RevokeWorkflowCredential"
 const OperationAgentWorkspaceServiceRunWorkflow = "/workspace.v1.AgentWorkspaceService/RunWorkflow"
+const OperationAgentWorkspaceServiceSaveMessageChannel = "/workspace.v1.AgentWorkspaceService/SaveMessageChannel"
 const OperationAgentWorkspaceServiceSelectConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/SelectConnectorAuthorization"
 const OperationAgentWorkspaceServiceSendSessionMessage = "/workspace.v1.AgentWorkspaceService/SendSessionMessage"
 const OperationAgentWorkspaceServiceSetImageModelAvailability = "/workspace.v1.AgentWorkspaceService/SetImageModelAvailability"
@@ -158,6 +165,8 @@ const OperationAgentWorkspaceServiceSetSessionExpertSelection = "/workspace.v1.A
 const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
 const OperationAgentWorkspaceServiceSetUserRoles = "/workspace.v1.AgentWorkspaceService/SetUserRoles"
 const OperationAgentWorkspaceServiceStageConnectorPackage = "/workspace.v1.AgentWorkspaceService/StageConnectorPackage"
+const OperationAgentWorkspaceServiceStartChannelLogin = "/workspace.v1.AgentWorkspaceService/StartChannelLogin"
+const OperationAgentWorkspaceServiceStartChannelSenderPairing = "/workspace.v1.AgentWorkspaceService/StartChannelSenderPairing"
 const OperationAgentWorkspaceServiceStopImageGeneration = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
 const OperationAgentWorkspaceServiceSubmitImageGeneration = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
 const OperationAgentWorkspaceServiceSyncIdentityGroups = "/workspace.v1.AgentWorkspaceService/SyncIdentityGroups"
@@ -186,6 +195,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	BeginCLIConnectorAuthorization(context.Context, *BeginCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorizationFlow, error)
 	BeginConnectorAuthorizationFlow(context.Context, *BeginConnectorAuthorizationFlowRequest) (*ConnectorAuthorizationFlow, error)
 	BeginConnectorSetup(context.Context, *BeginConnectorSetupRequest) (*ConnectorSetup, error)
+	CancelChannelLogin(context.Context, *CancelChannelLoginRequest) (*DeleteResponse, error)
 	CancelRun(context.Context, *CancelRunRequest) (*Run, error)
 	CancelSessionMessage(context.Context, *CancelSessionMessageRequest) (*SessionMessage, error)
 	CompleteCLIConnectorAuthorization(context.Context, *CompleteCLIConnectorAuthorizationRequest) (*CLIConnectorAuthorizationFlow, error)
@@ -196,6 +206,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ConfigureWorkflowGitSource(context.Context, *ConfigureWorkflowGitSourceRequest) (*Workflow, error)
 	ConnectConnector(context.Context, *ConnectConnectorRequest) (*ConnectorInstallation, error)
 	ContinueRunConversation(context.Context, *ContinueRunConversationRequest) (*Run, error)
+	ControlMessageChannel(context.Context, *ControlMessageChannelRequest) (*MessageChannel, error)
 	CreateCLIConnectorDefinition(context.Context, *CreateCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
 	CreateConnectorPackage(context.Context, *CreateConnectorPackageRequest) (*ConnectorInstallation, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
@@ -263,6 +274,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListCLIConnectorDefinitions(context.Context, *ListCLIConnectorDefinitionsRequest) (*ListCLIConnectorDefinitionsResponse, error)
 	ListCLIConnectorEnablements(context.Context, *ListCLIConnectorEnablementsRequest) (*ListCLIConnectorEnablementsResponse, error)
 	ListCLIConnectorHealth(context.Context, *ListCLIConnectorHealthRequest) (*ListCLIConnectorHealthResponse, error)
+	ListChannelDeliveries(context.Context, *ListChannelDeliveriesRequest) (*ListChannelDeliveriesResponse, error)
 	ListCommandApprovals(context.Context, *ListCommandApprovalsRequest) (*ListCommandApprovalsResponse, error)
 	ListConnectorAuthorizations(context.Context, *ListConnectorAuthorizationsRequest) (*ListConnectorAuthorizationsResponse, error)
 	ListConnectorInstallations(context.Context, *ListConnectorInstallationsRequest) (*ListConnectorInstallationsResponse, error)
@@ -282,6 +294,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListKnowledgeCategories(context.Context, *ListKnowledgeCategoriesRequest) (*ListKnowledgeCategoriesResponse, error)
 	ListKnowledgeDocuments(context.Context, *ListKnowledgeDocumentsRequest) (*ListKnowledgeDocumentsResponse, error)
 	ListMCPConnectors(context.Context, *ListMCPConnectorsRequest) (*ListMCPConnectorsResponse, error)
+	ListMessageChannels(context.Context, *ListMessageChannelsRequest) (*ListMessageChannelsResponse, error)
 	ListModelCreditRates(context.Context, *ListModelCreditRatesRequest) (*ListModelCreditRatesResponse, error)
 	ListModelProviderConnections(context.Context, *ListModelProviderConnectionsRequest) (*ListModelProviderConnectionsResponse, error)
 	ListModelProviderPresets(context.Context, *ListModelProviderPresetsRequest) (*ListModelProviderPresetsResponse, error)
@@ -298,6 +311,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
 	ListWorkspaceEntries(context.Context, *ListWorkspaceEntriesRequest) (*ListWorkspaceEntriesResponse, error)
 	OptimizeImagePrompt(context.Context, *OptimizeImagePromptRequest) (*OptimizeImagePromptResponse, error)
+	PollChannelLogin(context.Context, *PollChannelLoginRequest) (*ChannelLogin, error)
 	PreviewSessionWorkflowDraft(context.Context, *PreviewSessionWorkflowDraftRequest) (*SessionWorkflowDraft, error)
 	PreviewWorkflowSchedule(context.Context, *PreviewWorkflowScheduleRequest) (*PreviewWorkflowScheduleResponse, error)
 	PublishCLIConnectorDefinition(context.Context, *PublishCLIConnectorDefinitionRequest) (*CLIConnectorDefinition, error)
@@ -310,10 +324,12 @@ type AgentWorkspaceServiceHTTPServer interface {
 	RerunWorkflow(context.Context, *RerunWorkflowRequest) (*Run, error)
 	ResetUserPassword(context.Context, *ResetUserPasswordRequest) (*ResetUserPasswordResponse, error)
 	ResolveConversationSelection(context.Context, *ResolveConversationSelectionRequest) (*ConversationSelection, error)
+	RetryChannelDelivery(context.Context, *RetryChannelDeliveryRequest) (*DeleteResponse, error)
 	RetrySessionMessage(context.Context, *RetrySessionMessageRequest) (*SendSessionMessageResponse, error)
 	ReviseImageModel(context.Context, *ReviseImageModelRequest) (*ImageModel, error)
 	RevokeWorkflowCredential(context.Context, *RevokeWorkflowCredentialRequest) (*DeleteResponse, error)
 	RunWorkflow(context.Context, *RunWorkflowRequest) (*Run, error)
+	SaveMessageChannel(context.Context, *SaveMessageChannelRequest) (*MessageChannel, error)
 	SelectConnectorAuthorization(context.Context, *SelectConnectorAuthorizationRequest) (*ConnectorInstallation, error)
 	SendSessionMessage(context.Context, *SendSessionMessageRequest) (*SendSessionMessageResponse, error)
 	SetImageModelAvailability(context.Context, *SetImageModelAvailabilityRequest) (*ImageModel, error)
@@ -323,6 +339,8 @@ type AgentWorkspaceServiceHTTPServer interface {
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
 	SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error)
 	StageConnectorPackage(context.Context, *StageConnectorPackageRequest) (*ConnectorRevision, error)
+	StartChannelLogin(context.Context, *StartChannelLoginRequest) (*ChannelLogin, error)
+	StartChannelSenderPairing(context.Context, *StartChannelSenderPairingRequest) (*ChannelLogin, error)
 	StopImageGeneration(context.Context, *StopImageGenerationRequest) (*ImageGenerationRecord, error)
 	SubmitImageGeneration(context.Context, *SubmitImageGenerationRequest) (*ImageGenerationRecord, error)
 	SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
@@ -409,6 +427,15 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/sessions/{session_id}/messages/{message_id}/workflow", _AgentWorkspaceService_CreateWorkflowFromSession0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/sessions/{session_id}/workflow-links", _AgentWorkspaceService_ListSessionWorkflowLinks0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows", _AgentWorkspaceService_ListWorkflows0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/workflows/{workflow_id}/message-channels", _AgentWorkspaceService_ListMessageChannels0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/message-channels", _AgentWorkspaceService_SaveMessageChannel0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/channel-logins", _AgentWorkspaceService_StartChannelLogin0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll", _AgentWorkspaceService_PollChannelLogin0_HTTP_Handler(srv))
+	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}", _AgentWorkspaceService_CancelChannelLogin0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/channel-sender-pairings", _AgentWorkspaceService_StartChannelSenderPairing0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions", _AgentWorkspaceService_ControlMessageChannel0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries", _AgentWorkspaceService_ListChannelDeliveries0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry", _AgentWorkspaceService_RetryChannelDelivery0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows", _AgentWorkspaceService_CreateWorkflow0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_GetWorkflow0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/workflows/{workflow_id}", _AgentWorkspaceService_UpdateWorkflow0_HTTP_Handler(srv))
@@ -1740,6 +1767,204 @@ func _AgentWorkspaceService_ListWorkflows0_HTTP_Handler(srv AgentWorkspaceServic
 			return err
 		}
 		reply := out.(*ListWorkflowsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListMessageChannels0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListMessageChannelsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListMessageChannels)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListMessageChannels(ctx, req.(*ListMessageChannelsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListMessageChannelsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_SaveMessageChannel0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SaveMessageChannelRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceSaveMessageChannel)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SaveMessageChannel(ctx, req.(*SaveMessageChannelRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*MessageChannel)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_StartChannelLogin0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in StartChannelLoginRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceStartChannelLogin)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.StartChannelLogin(ctx, req.(*StartChannelLoginRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ChannelLogin)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_PollChannelLogin0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in PollChannelLoginRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServicePollChannelLogin)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.PollChannelLogin(ctx, req.(*PollChannelLoginRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ChannelLogin)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_CancelChannelLogin0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in CancelChannelLoginRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceCancelChannelLogin)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.CancelChannelLogin(ctx, req.(*CancelChannelLoginRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_StartChannelSenderPairing0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in StartChannelSenderPairingRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceStartChannelSenderPairing)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.StartChannelSenderPairing(ctx, req.(*StartChannelSenderPairingRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ChannelLogin)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ControlMessageChannel0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ControlMessageChannelRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceControlMessageChannel)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ControlMessageChannel(ctx, req.(*ControlMessageChannelRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*MessageChannel)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ListChannelDeliveries0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ListChannelDeliveriesRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceListChannelDeliveries)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ListChannelDeliveries(ctx, req.(*ListChannelDeliveriesRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ListChannelDeliveriesResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_RetryChannelDelivery0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in RetryChannelDeliveryRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceRetryChannelDelivery)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.RetryChannelDelivery(ctx, req.(*RetryChannelDeliveryRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*DeleteResponse)
 		return ctx.Result(200, reply)
 	}
 }
@@ -3919,6 +4144,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	BeginCLIConnectorAuthorization(ctx context.Context, req *BeginCLIConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *CLIConnectorAuthorizationFlow, err error)
 	BeginConnectorAuthorizationFlow(ctx context.Context, req *BeginConnectorAuthorizationFlowRequest, opts ...http.CallOption) (rsp *ConnectorAuthorizationFlow, err error)
 	BeginConnectorSetup(ctx context.Context, req *BeginConnectorSetupRequest, opts ...http.CallOption) (rsp *ConnectorSetup, err error)
+	CancelChannelLogin(ctx context.Context, req *CancelChannelLoginRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	CancelRun(ctx context.Context, req *CancelRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	CancelSessionMessage(ctx context.Context, req *CancelSessionMessageRequest, opts ...http.CallOption) (rsp *SessionMessage, err error)
 	CompleteCLIConnectorAuthorization(ctx context.Context, req *CompleteCLIConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *CLIConnectorAuthorizationFlow, err error)
@@ -3929,6 +4155,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ConfigureWorkflowGitSource(ctx context.Context, req *ConfigureWorkflowGitSourceRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	ConnectConnector(ctx context.Context, req *ConnectConnectorRequest, opts ...http.CallOption) (rsp *ConnectorInstallation, err error)
 	ContinueRunConversation(ctx context.Context, req *ContinueRunConversationRequest, opts ...http.CallOption) (rsp *Run, err error)
+	ControlMessageChannel(ctx context.Context, req *ControlMessageChannelRequest, opts ...http.CallOption) (rsp *MessageChannel, err error)
 	CreateCLIConnectorDefinition(ctx context.Context, req *CreateCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
 	CreateConnectorPackage(ctx context.Context, req *CreateConnectorPackageRequest, opts ...http.CallOption) (rsp *ConnectorInstallation, err error)
 	CreateExpert(ctx context.Context, req *CreateExpertRequest, opts ...http.CallOption) (rsp *Expert, err error)
@@ -3996,6 +4223,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListCLIConnectorDefinitions(ctx context.Context, req *ListCLIConnectorDefinitionsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorDefinitionsResponse, err error)
 	ListCLIConnectorEnablements(ctx context.Context, req *ListCLIConnectorEnablementsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorEnablementsResponse, err error)
 	ListCLIConnectorHealth(ctx context.Context, req *ListCLIConnectorHealthRequest, opts ...http.CallOption) (rsp *ListCLIConnectorHealthResponse, err error)
+	ListChannelDeliveries(ctx context.Context, req *ListChannelDeliveriesRequest, opts ...http.CallOption) (rsp *ListChannelDeliveriesResponse, err error)
 	ListCommandApprovals(ctx context.Context, req *ListCommandApprovalsRequest, opts ...http.CallOption) (rsp *ListCommandApprovalsResponse, err error)
 	ListConnectorAuthorizations(ctx context.Context, req *ListConnectorAuthorizationsRequest, opts ...http.CallOption) (rsp *ListConnectorAuthorizationsResponse, err error)
 	ListConnectorInstallations(ctx context.Context, req *ListConnectorInstallationsRequest, opts ...http.CallOption) (rsp *ListConnectorInstallationsResponse, err error)
@@ -4015,6 +4243,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListKnowledgeCategories(ctx context.Context, req *ListKnowledgeCategoriesRequest, opts ...http.CallOption) (rsp *ListKnowledgeCategoriesResponse, err error)
 	ListKnowledgeDocuments(ctx context.Context, req *ListKnowledgeDocumentsRequest, opts ...http.CallOption) (rsp *ListKnowledgeDocumentsResponse, err error)
 	ListMCPConnectors(ctx context.Context, req *ListMCPConnectorsRequest, opts ...http.CallOption) (rsp *ListMCPConnectorsResponse, err error)
+	ListMessageChannels(ctx context.Context, req *ListMessageChannelsRequest, opts ...http.CallOption) (rsp *ListMessageChannelsResponse, err error)
 	ListModelCreditRates(ctx context.Context, req *ListModelCreditRatesRequest, opts ...http.CallOption) (rsp *ListModelCreditRatesResponse, err error)
 	ListModelProviderConnections(ctx context.Context, req *ListModelProviderConnectionsRequest, opts ...http.CallOption) (rsp *ListModelProviderConnectionsResponse, err error)
 	ListModelProviderPresets(ctx context.Context, req *ListModelProviderPresetsRequest, opts ...http.CallOption) (rsp *ListModelProviderPresetsResponse, err error)
@@ -4031,6 +4260,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	ListWorkflows(ctx context.Context, req *ListWorkflowsRequest, opts ...http.CallOption) (rsp *ListWorkflowsResponse, err error)
 	ListWorkspaceEntries(ctx context.Context, req *ListWorkspaceEntriesRequest, opts ...http.CallOption) (rsp *ListWorkspaceEntriesResponse, err error)
 	OptimizeImagePrompt(ctx context.Context, req *OptimizeImagePromptRequest, opts ...http.CallOption) (rsp *OptimizeImagePromptResponse, err error)
+	PollChannelLogin(ctx context.Context, req *PollChannelLoginRequest, opts ...http.CallOption) (rsp *ChannelLogin, err error)
 	PreviewSessionWorkflowDraft(ctx context.Context, req *PreviewSessionWorkflowDraftRequest, opts ...http.CallOption) (rsp *SessionWorkflowDraft, err error)
 	PreviewWorkflowSchedule(ctx context.Context, req *PreviewWorkflowScheduleRequest, opts ...http.CallOption) (rsp *PreviewWorkflowScheduleResponse, err error)
 	PublishCLIConnectorDefinition(ctx context.Context, req *PublishCLIConnectorDefinitionRequest, opts ...http.CallOption) (rsp *CLIConnectorDefinition, err error)
@@ -4043,10 +4273,12 @@ type AgentWorkspaceServiceHTTPClient interface {
 	RerunWorkflow(ctx context.Context, req *RerunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
 	ResetUserPassword(ctx context.Context, req *ResetUserPasswordRequest, opts ...http.CallOption) (rsp *ResetUserPasswordResponse, err error)
 	ResolveConversationSelection(ctx context.Context, req *ResolveConversationSelectionRequest, opts ...http.CallOption) (rsp *ConversationSelection, err error)
+	RetryChannelDelivery(ctx context.Context, req *RetryChannelDeliveryRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	RetrySessionMessage(ctx context.Context, req *RetrySessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
 	ReviseImageModel(ctx context.Context, req *ReviseImageModelRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
 	RevokeWorkflowCredential(ctx context.Context, req *RevokeWorkflowCredentialRequest, opts ...http.CallOption) (rsp *DeleteResponse, err error)
 	RunWorkflow(ctx context.Context, req *RunWorkflowRequest, opts ...http.CallOption) (rsp *Run, err error)
+	SaveMessageChannel(ctx context.Context, req *SaveMessageChannelRequest, opts ...http.CallOption) (rsp *MessageChannel, err error)
 	SelectConnectorAuthorization(ctx context.Context, req *SelectConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *ConnectorInstallation, err error)
 	SendSessionMessage(ctx context.Context, req *SendSessionMessageRequest, opts ...http.CallOption) (rsp *SendSessionMessageResponse, err error)
 	SetImageModelAvailability(ctx context.Context, req *SetImageModelAvailabilityRequest, opts ...http.CallOption) (rsp *ImageModel, err error)
@@ -4056,6 +4288,8 @@ type AgentWorkspaceServiceHTTPClient interface {
 	SetUserEnabled(ctx context.Context, req *SetUserEnabledRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
 	SetUserRoles(ctx context.Context, req *SetUserRolesRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
 	StageConnectorPackage(ctx context.Context, req *StageConnectorPackageRequest, opts ...http.CallOption) (rsp *ConnectorRevision, err error)
+	StartChannelLogin(ctx context.Context, req *StartChannelLoginRequest, opts ...http.CallOption) (rsp *ChannelLogin, err error)
+	StartChannelSenderPairing(ctx context.Context, req *StartChannelSenderPairingRequest, opts ...http.CallOption) (rsp *ChannelLogin, err error)
 	StopImageGeneration(ctx context.Context, req *StopImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	SubmitImageGeneration(ctx context.Context, req *SubmitImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	SyncIdentityGroups(ctx context.Context, req *SyncIdentityGroupsRequest, opts ...http.CallOption) (rsp *ListIdentityGroupsResponse, err error)
@@ -4150,6 +4384,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) BeginConnectorSetup(ctx context.Co
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) CancelChannelLogin(ctx context.Context, in *CancelChannelLoginRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceCancelChannelLogin),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "DELETE", path, nil, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4317,6 +4567,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ContinueRunConversation(ctx contex
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceContinueRunConversation),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ControlMessageChannel(ctx context.Context, in *ControlMessageChannelRequest, opts ...http.CallOption) (*MessageChannel, error) {
+	var out MessageChannel
+	pattern := "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceControlMessageChannel),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -5429,6 +5696,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListCLIConnectorHealth(ctx context
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListChannelDeliveries(ctx context.Context, in *ListChannelDeliveriesRequest, opts ...http.CallOption) (*ListChannelDeliveriesResponse, error) {
+	var out ListChannelDeliveriesResponse
+	pattern := "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListChannelDeliveries),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListCommandApprovals(ctx context.Context, in *ListCommandApprovalsRequest, opts ...http.CallOption) (*ListCommandApprovalsResponse, error) {
 	var out ListCommandApprovalsResponse
 	pattern := "/api/v1/command-approvals"
@@ -5733,6 +6016,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ListMCPConnectors(ctx context.Cont
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ListMessageChannels(ctx context.Context, in *ListMessageChannelsRequest, opts ...http.CallOption) (*ListMessageChannelsResponse, error) {
+	var out ListMessageChannelsResponse
+	pattern := "/api/v1/workflows/{workflow_id}/message-channels"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceListMessageChannels),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) ListModelCreditRates(ctx context.Context, in *ListModelCreditRatesRequest, opts ...http.CallOption) (*ListModelCreditRatesResponse, error) {
 	var out ListModelCreditRatesResponse
 	pattern := "/api/v1/admin/model-credit-rates"
@@ -5990,6 +6289,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) OptimizeImagePrompt(ctx context.Co
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) PollChannelLogin(ctx context.Context, in *PollChannelLoginRequest, opts ...http.CallOption) (*ChannelLogin, error) {
+	var out ChannelLogin
+	pattern := "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServicePollChannelLogin),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) PreviewSessionWorkflowDraft(ctx context.Context, in *PreviewSessionWorkflowDraftRequest, opts ...http.CallOption) (*SessionWorkflowDraft, error) {
 	var out SessionWorkflowDraft
 	pattern := "/api/v1/sessions/{session_id}/messages/{message_id}/workflow-draft"
@@ -6193,6 +6509,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ResolveConversationSelection(ctx c
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) RetryChannelDelivery(ctx context.Context, in *RetryChannelDeliveryRequest, opts ...http.CallOption) (*DeleteResponse, error) {
+	var out DeleteResponse
+	pattern := "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceRetryChannelDelivery),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) RetrySessionMessage(ctx context.Context, in *RetrySessionMessageRequest, opts ...http.CallOption) (*SendSessionMessageResponse, error) {
 	var out SendSessionMessageResponse
 	pattern := "/api/v1/sessions/{session_id}/messages/{message_id}/retry"
@@ -6251,6 +6584,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) RunWorkflow(ctx context.Context, i
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceRunWorkflow),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) SaveMessageChannel(ctx context.Context, in *SaveMessageChannelRequest, opts ...http.CallOption) (*MessageChannel, error) {
+	var out MessageChannel
+	pattern := "/api/v1/workflows/{workflow_id}/message-channels"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceSaveMessageChannel),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
@@ -6404,6 +6754,40 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) StageConnectorPackage(ctx context.
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceStageConnectorPackage),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) StartChannelLogin(ctx context.Context, in *StartChannelLoginRequest, opts ...http.CallOption) (*ChannelLogin, error) {
+	var out ChannelLogin
+	pattern := "/api/v1/workflows/{workflow_id}/channel-logins"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceStartChannelLogin),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) StartChannelSenderPairing(ctx context.Context, in *StartChannelSenderPairingRequest, opts ...http.CallOption) (*ChannelLogin, error) {
+	var out ChannelLogin
+	pattern := "/api/v1/workflows/{workflow_id}/channel-sender-pairings"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceStartChannelSenderPairing),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)

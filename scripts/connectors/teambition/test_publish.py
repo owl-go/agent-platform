@@ -9,6 +9,33 @@ spec.loader.exec_module(publisher)
 
 
 class PublicationLifecycleTest(unittest.TestCase):
+    def test_moka_build_identity_is_explicitly_reviewed(self):
+        self.assertEqual(publisher.build_identity('moka-hr'), ('Moka HR package build ', '@agent-platform/moka-hr-connector'))
+        with self.assertRaisesRegex(RuntimeError, 'unreviewed'):
+            publisher.build_identity('unknown')
+
+    def test_moka_cleanup_retains_other_connectors_and_refuses_active_authorization(self):
+        items = [{'id': 'moka-build', 'name': 'Moka HR package build 0.1.0 hash', 'version': 1, 'npm_package': '@agent-platform/moka-hr-connector'},
+                 {'id': 'other', 'name': 'Modao package build 0.1.1 hash', 'npm_package': '@agent-platform/modao-connector'}]
+        calls = []
+        active = True
+        def fake_api(base, token, method, path, body=None):
+            calls.append((method, path))
+            if method == 'DELETE':
+                items.pop(0)
+                return {'deleted': True}
+            if path.endswith('/cli-health'):
+                return {'items': [{'definition_id': 'moka-build', 'enablement_count': 0, 'active_authorization_count': int(active)}]}
+            return {'items': items.copy()}
+        with patch.object(publisher, 'api', fake_api):
+            with self.assertRaisesRegex(RuntimeError, 'user usage'):
+                publisher.cleanup_staging_definitions('base', 'token', 'moka-hr')
+            self.assertFalse(any(method == 'DELETE' for method, _ in calls))
+            active = False
+            publisher.cleanup_staging_definitions('base', 'token', 'moka-hr')
+        self.assertEqual([item['id'] for item in items], ['other'])
+        self.assertIn(('DELETE', '/api/v1/admin/connectors/cli/moka-build?expected_version=1'), calls)
+
     def test_old_package_revision_supplies_exact_conformance_without_new_definition(self):
         revisions = [{'revision': {'package_version': '0.3.3', 'bundle_sha256': 'bundle',
                                   'runtime_digests': ['digest'], 'conformance_available': True}}]
@@ -60,6 +87,8 @@ class PublicationLifecycleTest(unittest.TestCase):
         with patch.object(publisher, 'api', fake_api):
             publisher.cleanup_staging_definitions('base', 'token', 'modao')
         self.assertEqual([path for method, path in calls if method == 'DELETE'], ['/api/v1/admin/connectors/cli/modao-stage?expected_version=2'])
+        self.assertEqual(publisher.build_identity('picset-ai'), ('Picset AI package build ', '@agent-platform/picset-ai-connector'))
+        self.assertEqual(publisher.build_identity('openboost'), ('OpenBoost package build ', '@agent-platform/openboost-connector'))
         with self.assertRaisesRegex(RuntimeError, 'unreviewed'):
             publisher.build_identity('other')
 

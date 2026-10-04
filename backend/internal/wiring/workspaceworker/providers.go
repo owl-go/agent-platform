@@ -15,15 +15,21 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/cliconnector"
 	creditsrepo "agent-platform/backend/internal/data/credits/gormrepo"
+	"agent-platform/backend/internal/data/messagechannel"
 	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
+	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/infrastructure/gormdb"
+	"agent-platform/backend/internal/knowledgebase/ingestion"
+	"agent-platform/backend/internal/knowledgebase/ragflow"
+	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/secretcrypto"
 	workerserver "agent-platform/backend/internal/server/worker"
 	aicreationwiring "agent-platform/backend/internal/wiring/aicreation"
+	knowledgewiring "agent-platform/backend/internal/wiring/knowledgebase"
 
 	kratos "github.com/go-kratos/kratos/v3"
 	"github.com/go-kratos/kratos/v3/transport"
@@ -37,8 +43,15 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 }
 
 type Worker struct {
-	workspace  *workspaceapplication.Worker
-	aicreation *aicreationapplication.Service
+	ingestion            *ingestion.Processor
+	legacy               *ingestion.LegacyProcessor
+	knowledgeProvider    *ragflow.Client
+	knowledgeSources     func(context.Context) (bool, error)
+	workspace            *workspaceapplication.Worker
+	aicreation           *aicreationapplication.Service
+	channels             *workspaceapplication.MessageChannels
+	channelConnections   *workspaceapplication.ChannelConnections
+	authorizationRenewal *workspaceapplication.ConnectorAuthorizationRenewal
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -46,10 +59,34 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	if err != nil || worked {
 		return worked, err
 	}
+	if worker.legacy != nil {
+		worked, err = worker.legacy.ProcessNext(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
+	if worker.ingestion != nil {
+		worked, err = worker.ingestion.ProcessNext(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
 	return worker.aicreation.ProcessNext(ctx)
 }
 
 func (worker *Worker) CleanupExpiredAIContent(ctx context.Context) (bool, error) {
+	if worker.knowledgeProvider != nil {
+		worked, err := worker.knowledgeProvider.Cleanup(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
+	if worker.knowledgeSources != nil {
+		worked, err := worker.knowledgeSources(ctx)
+		if worked || err != nil {
+			return worked, err
+		}
+	}
 	removed, err := worker.aicreation.CleanupExpired(ctx)
 	return removed > 0, err
 }
@@ -111,7 +148,63 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	return &Worker{workspace: workspaceWorker, aicreation: aicreation}, nil
+	worker := &Worker{workspace: workspaceWorker, aicreation: aicreation}
+	provider, err := knowledgewiring.NewProvider(config, repository)
+	if err != nil {
+		return nil, err
+	}
+	if provider != nil {
+		searcher, err := retrieval.New(repository, provider)
+		if err != nil {
+			return nil, err
+		}
+		if err = executor.EnableKnowledgeRetrieval(searcher); err != nil {
+			return nil, err
+		}
+		worker.ingestion, err = ingestion.New(repository, objects, provider)
+		if err != nil {
+			return nil, err
+		}
+		worker.legacy, err = ingestion.NewLegacy(repository, objects)
+		if err != nil {
+			return nil, err
+		}
+		worker.knowledgeProvider = provider
+		worker.knowledgeSources = func(ctx context.Context) (bool, error) {
+			return repository.CleanupExpiredKnowledgeSources(ctx, objects)
+		}
+	}
+	channelEndpoints := make([]messagechannel.ApprovedEndpoint, 0, len(config.MessageChannels.ApprovedEndpoints))
+	for _, endpoint := range config.MessageChannels.ApprovedEndpoints {
+		channelEndpoints = append(channelEndpoints, messagechannel.ApprovedEndpoint{URL: endpoint.URL, AllowPrivateNetwork: endpoint.AllowPrivateNetwork})
+	}
+	channels := workspaceapplication.NewMessageChannels(repository, box, messagechannel.NewTransports(nil, messagechannel.TransportOptions{ApprovedEndpoints: channelEndpoints, Cursor: workspaceapplication.NewChannelReceiveCursor(repository, box)}), config.MessageChannels.Enabled, config.MessageChannels.CallbackBaseURL, workspaceapplication.ChannelLimits{
+		MaxPendingMessages:         config.MessageChannels.MaxPendingMessages,
+		MaxSenderMessagesPerMinute: config.MessageChannels.MaxSenderMessagesPerMinute,
+		MaxTextBytes:               config.MessageChannels.MaxTextBytes,
+		MaxSendAttempts:            config.MessageChannels.MaxSendAttempts,
+		SendInterval:               config.MessageChannels.SendInterval.Value(),
+	})
+	channels.EnableTypingObserver(func(provider, event string) {
+		if event == "started" || event == "stopped" {
+			logger.Info("message channel typing", "provider", provider, "event", event)
+		} else {
+			logger.Warn("message channel typing", "provider", provider, "event", event)
+		}
+	})
+	registrar := feishucli.NewRegistrar(nil)
+	renewal := workspaceapplication.NewConnectorAuthorizationRenewal(repository, box, func(ctx context.Context, appID, appSecret, token string) (workspaceapplication.ConnectorRenewalGrant, error) {
+		grant, err := registrar.RefreshAuthorization(ctx, appID, appSecret, token)
+		return workspaceapplication.ConnectorRenewalGrant{ExternalID: grant.ExternalID, AccessToken: grant.AccessToken, RefreshToken: grant.RefreshToken, Scopes: grant.Scopes, ExpiresAt: grant.ExpiresAt}, err
+	}, func(event string) {
+		logger.Info("connector authorization renewal", "provider", "feishu", "event", event)
+	})
+	worker.authorizationRenewal = renewal
+	channels.EnableAuthorizationRenewal(renewal)
+	workspaceWorker.EnableMessageChannels(channels)
+	worker.channels = channels
+	worker.channelConnections = workspaceapplication.NewChannelConnections(channels, config.MessageChannels.MaxConnections)
+	return worker, nil
 }
 
 func newCLIConnectorBuilder(config platformconfig.Config, objects objectstore.Provider) (*cliconnector.Builder, error) {
@@ -227,6 +320,32 @@ func NewServers(database *gormdb.Database, worker *Worker, warm *containerproces
 	for _, loop := range loops {
 		servers = append(servers, loop)
 	}
+	if config.MessageChannels.Enabled {
+		for _, task := range []struct {
+			name    string
+			process workerserver.ProcessFunc
+		}{
+			{"message-channel-inbox", worker.channels.ProcessInbox},
+			{"message-channel-delivery", worker.channels.ProcessDelivery},
+			{"message-channel-connections", worker.channelConnections.ProcessNext},
+		} {
+			loop, err := workerserver.NewLoopWithState(task.name, interval, task.process, state)
+			if err != nil {
+				return nil, err
+			}
+			servers = append(servers, loop)
+		}
+	}
+	maintenance, err := workerserver.NewLoopWithState("message-channel-maintenance", 15*time.Minute, worker.channels.ProcessMaintenance, state)
+	if err != nil {
+		return nil, err
+	}
+	renewalLoop, err := workerserver.NewLoopWithState("connector-authorization-renewal", time.Minute, worker.authorizationRenewal.ProcessNext, state)
+	if err != nil {
+		return nil, err
+	}
+	servers = append(servers, renewalLoop)
+	servers = append(servers, maintenance)
 	return append(servers, management, reaper, contentReaper), nil
 }
 

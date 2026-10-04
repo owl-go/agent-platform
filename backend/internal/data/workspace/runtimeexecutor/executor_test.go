@@ -12,7 +12,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -538,6 +540,71 @@ func TestExecuteMakesImageAttachmentReadableAndKeepsWorkspaceWritable(t *testing
 	}
 	if _, err := os.Stat(filepath.Join(persistent, ".agent-platform-attachments")); !os.IsNotExist(err) {
 		t.Fatalf("reserved attachment mountpoint was persisted: %v", err)
+	}
+}
+
+func TestExecuteChannelSecretsFilterOutputWithoutEnteringRuntime(t *testing.T) {
+	executor, job, persistent := newTeamTestExecutor(t)
+	job.Snapshot.ExpertTeam = nil
+	secret := "channel-only-secret-value"
+	job.AdditionalRedactionValues = [][]byte{[]byte(secret)}
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, config cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			encoded, _ := json.Marshal(request)
+			if strings.Contains(string(encoded), secret) {
+				t.Fatal("channel credential entered Runtime request")
+			}
+			_, slot, err := executor.warmSlot(job, executor.config.Worker.Runtimes[string(domain.RuntimeCodex)])
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = filepath.WalkDir(slot.credentials, func(path string, entry os.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if !entry.IsDir() {
+					data, err := os.ReadFile(path)
+					if err != nil {
+						return err
+					}
+					if bytes.Contains(data, []byte(secret)) {
+						t.Fatal("channel credential entered credential mount")
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(request.WorkspacePath, "report.txt"), []byte(secret), 0600); err != nil {
+				t.Fatal(err)
+			}
+			publishSuccessfulRuntime(t, events, request.RunID, secret)
+			return agentruntime.Result{FinalMessage: secret}, nil
+		}}, nil
+	}
+	progress := &recordingProgress{}
+	result, err := executor.Execute(context.Background(), job, progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.FinalMessage, secret) || !strings.Contains(result.FinalMessage, "[REDACTED]") {
+		t.Fatalf("final result not filtered: %q", result.FinalMessage)
+	}
+	for _, event := range progress.events {
+		encoded, _ := json.Marshal(event)
+		if bytes.Contains(encoded, []byte(secret)) {
+			t.Fatal("progress leaked channel secret")
+		}
+	}
+	commitSuccessfulResult(t, result)
+	data, err := os.ReadFile(filepath.Join(persistent, "report.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte(secret)) {
+		t.Fatal("promoted Workspace leaked channel secret")
 	}
 }
 
@@ -1380,6 +1447,127 @@ func TestSanitizeNativeStateRemovesTransientConfigAndRedactsSessionFiles(t *test
 	}
 }
 
+func TestFirstWorkflowCommitCreatesOwnerDirectory(t *testing.T) {
+	root, err := os.MkdirTemp("/tmp", "first-workflow-commit-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	if err := os.Chmod(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	uid, gid := os.Getuid(), os.Getgid()
+	if os.Geteuid() == 0 {
+		uid, gid = 65532, 65532
+	}
+	executor := &Executor{config: platformconfig.Config{
+		Workspace: platformconfig.WorkspaceConfig{Root: root},
+		Worker:    platformconfig.WorkerConfig{SandboxUID: uid, SandboxGID: gid},
+	}}
+	job := application.ExecutionJob{Kind: application.JobWorkflow, Snapshot: domain.ExecutionSnapshot{WorkspacePath: "workflows/new-owner/new-workflow"}}
+	workspace, persistent, _, err := executor.stageWorkspaceAt(job, filepath.Join(root, ".runtime-containers", "slot", "workspace"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "result.txt"), []byte("first result"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := preparePersistentWorkspaceTree(workspace, uid, gid); err != nil {
+		t.Fatal(err)
+	}
+	commit := &nativeStateCommit{promotions: []nativeStatePromotion{{temporary: workspace, persistent: persistent}}, temporaryRoots: []string{workspace}}
+	if err := commit.Commit(); err != nil {
+		t.Fatalf("first Workflow Workspace commit: %v", err)
+	}
+	for _, directory := range []string{filepath.Join(root, "workflows"), filepath.Dir(persistent)} {
+		info, err := os.Stat(directory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		owner := info.Sys().(*syscall.Stat_t)
+		if int(owner.Uid) != uid || int(owner.Gid) != gid || info.Mode().Perm() != 0o700 {
+			t.Fatalf("persistent parent owner/mode = %d:%d %o, want %d:%d 700", owner.Uid, owner.Gid, info.Mode().Perm(), uid, gid)
+		}
+	}
+	content, err := os.ReadFile(filepath.Join(persistent, "result.txt"))
+	if err != nil || string(content) != "first result" {
+		t.Fatalf("persistent Workspace content = %q, error = %v", content, err)
+	}
+	if os.Geteuid() == 0 {
+		binary, err := os.Executable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		input, err := os.Open(binary)
+		if err != nil {
+			t.Fatal(err)
+		}
+		accessibleBinary := filepath.Join(root, "runtimeexecutor.test")
+		output, err := os.OpenFile(accessibleBinary, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o755)
+		if err != nil {
+			_ = input.Close()
+			t.Fatal(err)
+		}
+		_, copyErr := io.Copy(output, input)
+		if err := errors.Join(copyErr, input.Close(), output.Close()); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(accessibleBinary, "-test.run=^TestFirstWorkflowPlatformAccessHelper$")
+		command.Env = append(os.Environ(), "TEST_FIRST_WORKFLOW_ROOT="+root)
+		command.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}}
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("platform UID cannot manage first Workflow Workspace: %v\n%s", err, output)
+		}
+	}
+	if err := commit.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(persistent); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("rollback left new persistent Workspace: %v", err)
+	}
+	if err := commit.Cleanup(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFirstWorkflowPlatformAccessHelper(t *testing.T) {
+	root := os.Getenv("TEST_FIRST_WORKFLOW_ROOT")
+	if root == "" {
+		return
+	}
+	store, err := workspacefs.New(root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := "workflows/new-owner/new-workflow"
+	if _, _, err := store.List(context.Background(), path, ""); err != nil {
+		t.Fatalf("list first Workspace: %v", err)
+	}
+	if err := store.Clear(context.Background(), path); err != nil {
+		t.Fatalf("clear first Workspace: %v", err)
+	}
+}
+
+func TestStateParentRejectsSymlinkAndPreservesExistingOwnership(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Symlink(t.TempDir(), filepath.Join(root, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := createOwnedStateParent(filepath.Join(root, "link", "new"), os.Getuid(), os.Getgid()); err == nil {
+		t.Fatal("persistent parent followed a symbolic link")
+	}
+	if err := os.Chmod(root, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := createOwnedStateParent(root, os.Getuid(), os.Getgid()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(root)
+	if err != nil || info.Mode().Perm() != 0o750 {
+		t.Fatalf("existing parent permissions changed: %v, %v", info, err)
+	}
+}
+
 func TestNativeStateCommitCanRollbackAllPromotedMembers(t *testing.T) {
 	root := t.TempDir()
 	commit := &nativeStateCommit{}
@@ -1594,4 +1782,50 @@ func TestWarmSlotIsStablePerResourceAndRuntime(t *testing.T) {
 		}
 	}
 
+}
+
+func TestSelectedManagedMCPConnectorMountsFrozenPackageSkills(t *testing.T) {
+	var archive bytes.Buffer
+	writer := zip.NewWriter(&archive)
+	entries := map[string]string{
+		"connector-meta.json":  `{"source":"example-mcp","version":"1.0.0","type":"mcp","name":"Example","description":"Example CLI","examples_zh":["发送"],"examples_en":["Send"],"minPlatformVersion":"1.0.0","auth_mode":"none"}`,
+		"icon.svg":             `<svg xmlns="http://www.w3.org/2000/svg"></svg>`,
+		"mcp.json":             `{"transport":"streamable_http","url":"https://mcp.example.com","egress_hosts":["mcp.example.com"],"timeout_seconds":60}`,
+		"skills/send/SKILL.md": "---\nname: example-send\ndisplay_name: Send\ndescription: Send messages\nversion: 1.0.0\nauthor: Example\n---\n\n# Send\nUse the reviewed send command.\n",
+	}
+	for name, content := range entries {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	provider := memory.New()
+	digest := sha256.Sum256(archive.Bytes())
+	sha := hex.EncodeToString(digest[:])
+	key := "connectors/example-mcp/1.0.0/" + sha + ".zip"
+	if _, err := provider.Put(context.Background(), key, bytes.NewReader(archive.Bytes()), objectstore.PutOptions{Size: int64(archive.Len()), SHA256: sha, ContentType: "application/zip"}); err != nil {
+		t.Fatal(err)
+	}
+	connector := domain.MCPServerSnapshot{ID: "installed-1", Name: "Example", Transport: "streamable_http", Configuration: json.RawMessage(`{"url":"https://mcp.example.com","egress_hosts":["mcp.example.com"]}`), PackageObjectKey: key, PackageSHA256: sha}
+	job := application.ExecutionJob{Snapshot: domain.ExecutionSnapshot{MCPServers: []domain.MCPServerSnapshot{connector}, ProviderModel: domain.ProviderModelSnapshot{ModelID: "model", Endpoint: "https://models.example.test", ProviderType: "anthropic", Protocols: []string{"anthropic_messages"}}}}
+	files, _, _, err := (&Executor{objects: provider}).extensionFiles(context.Background(), job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(files["connector-skills/installed-1/SKILL.md"], []byte(entries["skills/send/SKILL.md"])) || !bytes.Equal(files["connector-skills/installed-1/skills/send/SKILL.md"], []byte(entries["skills/send/SKILL.md"])) {
+		t.Fatalf("mounted Connector Skills = %#v", files)
+	}
+	if !strings.Contains(buildInstruction(job, nil), "first read /run/agent-credentials/connector-skills/installed-1/SKILL.md") {
+		t.Fatal("managed Connector Skill was not prioritized")
+	}
+	job.Snapshot.MCPServers[0].PackageSHA256 = strings.Repeat("b", 64)
+	if _, _, _, err := (&Executor{objects: provider}).extensionFiles(context.Background(), job); err == nil {
+		t.Fatal("expected a changed frozen package digest to be rejected")
+	}
 }

@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -179,6 +178,14 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		}
 		return result, fmt.Errorf("%w: FAQ is unavailable", aiappdomain.ErrInvalid)
 	}
+	if faq, ok := matchAssistantExactFAQ(enabled, turn.Question); ok {
+		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
+		return result, nil
+	}
+	if isAssistantGreeting(turn.Question) {
+		result.text, result.source = assistantGreetingAnswer(assistant), "configuration"
+		return result, nil
+	}
 	if faq, ok := matchAssistantScopeFAQ(enabled, turn.Question); ok {
 		result.text, result.source, result.faqID = faq.AnswerMarkdown, "faq", faq.ID
 		return result, nil
@@ -187,35 +194,54 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text, result.source = assistantScopeFallback(assistant), "configuration"
 		return result, nil
 	}
-	faqChoices := make([]map[string]string, 0, len(enabled))
-	for _, faq := range enabled {
-		faqChoices = append(faqChoices, map[string]string{"id": faq.ID, "question": faq.Question})
+	if isAssistantIdentityInquiry(turn.Question) {
+		result.text, result.source = assistantIdentityAnswer(assistant), "configuration"
+		return result, nil
 	}
-	choices, _ := json.Marshal(faqChoices)
 	model, err := service.resolveAssistantTurnModel(ctx, owner, assistant)
 	if err != nil {
 		return result, err
 	}
-	preprocessInstruction := "判断用户的问题是否在此智能助手的服务范围，或是否等价于一条常见问题。只返回 JSON：{\"decision\":\"faq|out_of_scope|continue\",\"faq_id\":\"\",\"question\":\"整理后的问题\"}。faq_id 只能来自提供的列表；没有充分依据就选择 continue。不得把范围外问题判为 FAQ。"
-	if assistant.PreprocessPrompt != "" {
-		preprocessInstruction += "\n用户配置的预处理提示词：" + assistant.PreprocessPrompt
-	}
-	preprocess := []aiapp.ChatMessage{{Role: "system", Content: preprocessInstruction}, {Role: "user", Content: "助手简介：" + assistant.Description + "\n助手提示词：" + assistant.Prompt + "\n常见问题：" + string(choices) + "\n用户问题：" + turn.Question}}
+	preprocess := assistantPreprocessMessages(assistant, enabled, turn.Question)
 	classified, err := service.runAssistantModel(ctx, owner, turn.ID, 1, model, preprocess, false, nil)
 	result.inputTokens += classified.InputTokens
 	result.outputTokens += classified.OutputTokens
 	if err != nil {
 		return result, err
 	}
-	var decision struct {
-		Decision string `json:"decision"`
-		FAQID    string `json:"faq_id"`
-		Question string `json:"question"`
+	decision, err := parseAssistantClassification(classified.Text)
+	if err != nil {
+		return result, err
 	}
-	classification := strings.TrimSpace(classified.Text)
-	classification = strings.TrimPrefix(strings.TrimSuffix(strings.TrimPrefix(classification, "```json"), "```"), "```")
-	if err := json.Unmarshal([]byte(strings.TrimSpace(classification)), &decision); err != nil {
-		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned invalid classification", Cause: err}
+	question := turn.Question
+	if decision.Decision == "continue" {
+		if rewritten := strings.TrimSpace(decision.Question); rewritten != "" && len([]rune(rewritten)) <= 4000 {
+			question = rewritten
+		}
+	}
+	var knowledge string
+	var grounded, retrieved bool
+	if decision.Decision == "out_of_scope" && len(assistant.KnowledgeBaseIDs) > 0 {
+		// A classifier without Knowledge context cannot decide whether a
+		// selected source covers the question. Retrieve the original request
+		// before final refusal and reuse these verified excerpts if admitted.
+		knowledge, grounded, err = service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
+		if err != nil {
+			return result, err
+		}
+		retrieved = true
+		if grounded {
+			checked, checkErr := service.runAssistantModel(ctx, owner, turn.ID, 4, model, assistantKnowledgeScopeMessages(assistant, enabled, question, knowledge), false, nil)
+			result.inputTokens += checked.InputTokens
+			result.outputTokens += checked.OutputTokens
+			if checkErr != nil {
+				return result, checkErr
+			}
+			decision, err = parseAssistantClassification(checked.Text)
+			if err != nil {
+				return result, err
+			}
+		}
 	}
 	switch decision.Decision {
 	case "faq":
@@ -230,16 +256,12 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 		result.text, result.source = assistantScopeRefusal, "scope"
 		return result, nil
 	case "continue":
-	default:
-		return result, &aiapp.ChatError{Code: aiapp.ChatFailureInvalidResponse, Message: "Assistant preprocessing returned an unknown decision"}
 	}
-	question := strings.TrimSpace(decision.Question)
-	if question == "" || len([]rune(question)) > 4000 {
-		question = turn.Question
-	}
-	knowledge, grounded, err := service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
-	if err != nil {
-		return result, err
+	if !retrieved {
+		knowledge, grounded, err = service.retrieveAssistantKnowledge(ctx, owner, assistant.KnowledgeBaseIDs, question)
+		if err != nil {
+			return result, err
+		}
 	}
 	result.source = "model"
 	if grounded {
@@ -255,10 +277,7 @@ func (service *Service) answerAssistantTurn(ctx context.Context, owner string, c
 	if err != nil {
 		return result, err
 	}
-	system := "你是智能助手“" + assistant.Name + "”。遵循以下助手提示词：\n" + assistant.Prompt + "\n回答风格：" + assistant.ResponseStyle
-	if knowledge != "" {
-		system += "\n只在相关时使用以下知识库结果；若与问题不符可忽略：" + knowledge
-	}
+	system := assistantAnswerInstruction(assistant, knowledge)
 	messages := append([]aiapp.ChatMessage{{Role: "system", Content: system}}, contextMessages...)
 	messages = append(messages, aiapp.ChatMessage{Role: "user", Content: question})
 	generated, generateErr := service.runAssistantModel(ctx, owner, turn.ID, 3, model, messages, true, func(delta string) error {

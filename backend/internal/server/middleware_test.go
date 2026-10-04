@@ -1,8 +1,10 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -26,6 +28,9 @@ func TestRequestTimeoutSelection(t *testing.T) {
 		{name: "Workflow Run SSE", path: "/api/v1/workflows/00000000-0000-4000-8000-000000000001/runs/00000000-0000-4000-8000-000000000002/events", wantTimeout: 30 * time.Minute},
 		{name: "Image Generation SSE", path: "/api/v1/ai-creation/image-generations/00000000-0000-4000-8000-000000000001/events", wantTimeout: 30 * time.Minute},
 		{name: "Assistant Turn SSE", method: http.MethodPost, path: "/api/v1/ai-apps/assistants/00000000-0000-4000-8000-000000000001/conversations/00000000-0000-4000-8000-000000000002/turns", wantTimeout: 30 * time.Minute},
+		{name: "Public Assistant Turn SSE", method: http.MethodPost, path: "/api/v1/public/assistants/test-share-token/turns", wantTimeout: 30 * time.Minute},
+		{name: "Public Assistant metadata", method: http.MethodGet, path: "/api/v1/public/assistants/test-share-token", wantTimeout: time.Second},
+		{name: "Similar public path", method: http.MethodPost, path: "/api/v1/public/assistants/test-share-token/turns/extra", wantTimeout: time.Second},
 		{name: "Assistant Turn cancellation", method: http.MethodPost, path: "/api/v1/ai-apps/assistants/00000000-0000-4000-8000-000000000001/conversations/00000000-0000-4000-8000-000000000002/turns/00000000-0000-4000-8000-000000000003/cancel", wantTimeout: time.Second},
 	}
 	for _, test := range tests {
@@ -57,5 +62,29 @@ func TestSecurityHeadersApplyToSharedHTTPListener(t *testing.T) {
 	})).ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/runs/id/events", nil))
 	if response.Header().Get("X-Content-Type-Options") != "nosniff" || response.Header().Get("X-Frame-Options") != "DENY" {
 		t.Fatalf("security headers = %v", response.Header())
+	}
+}
+
+func TestImageMultipartUploadsReachTheirBoundedHandler(t *testing.T) {
+	for _, path := range []string{"/api/v1/ai-apps/assistants/id/icon", "/api/v1/ai-apps/assistants/id/widget-icon", "/api/v1/ai-apps/assistants/id/widget-icon/extra", "/api/v1/ai-apps/assistants/id", "/api/v1/public/assistants/id/widget-icon"} {
+		t.Run(path, func(t *testing.T) {
+			body := strings.Repeat("x", 128*1024)
+			request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+			writer := httptest.NewRecorder()
+			rawBodyFilter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				actual, err := io.ReadAll(r.Body)
+				if err != nil || string(actual) != body {
+					t.Fatal("multipart body truncated")
+				}
+				w.WriteHeader(http.StatusNoContent)
+			})).ServeHTTP(writer, request)
+			want := http.StatusRequestEntityTooLarge
+			if path == "/api/v1/ai-apps/assistants/id/icon" || path == "/api/v1/ai-apps/assistants/id/widget-icon" {
+				want = http.StatusNoContent
+			}
+			if writer.Code != want {
+				t.Fatalf("status=%d want=%d", writer.Code, want)
+			}
+		})
 	}
 }

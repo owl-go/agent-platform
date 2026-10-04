@@ -291,34 +291,43 @@ func (repository *Repository) SettleTx(tx *gorm.DB, settlement domain.Settlement
 func (repository *Repository) Balance(ctx context.Context, userID, timezone string, now time.Time) (domain.Balance, error) {
 	var balance domain.Balance
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		account, err := repository.ensureAccountTx(tx, userID, timezone, now)
-		if err != nil {
-			return err
-		}
-		balance, err = toBalance(account, now)
-		if err == nil {
-			imageDaily, imagePersistent, reservationErr := activeImageReservations(tx, userID, account.CreditDay)
-			if reservationErr != nil {
-				return reservationErr
-			}
-			stageDaily, stagePersistent, reservationErr := activeStageReservations(tx, userID, account.CreditDay)
-			if reservationErr != nil {
-				return reservationErr
-			}
-			reserved := imageDaily + imagePersistent + stageDaily + stagePersistent
-			balance.Reserved = reserved
-			balance.Available = balance.Total - reserved
-			groupBudget, budgetErr := limitingGroupBudget(tx, userID, account.CreditDay, false)
-			if budgetErr != nil {
-				return budgetErr
-			}
-			balance.GroupBudget = groupBudget
-			if groupBudget != nil && groupBudget.Available < balance.Available {
-				balance.Available = groupBudget.Available
-			}
-		}
+		var err error
+		balance, err = repository.BalanceTx(tx, userID, timezone, now)
 		return err
 	})
+	return balance, err
+}
+
+// BalanceTx checks Available Credit inside the caller's admission transaction.
+func (repository *Repository) BalanceTx(tx *gorm.DB, userID, timezone string, now time.Time) (domain.Balance, error) {
+	var balance domain.Balance
+
+	account, err := repository.ensureAccountTx(tx, userID, timezone, now)
+	if err != nil {
+		return balance, err
+	}
+	balance, err = toBalance(account, now)
+	if err == nil {
+		imageDaily, imagePersistent, reservationErr := activeImageReservations(tx, userID, account.CreditDay)
+		if reservationErr != nil {
+			return balance, reservationErr
+		}
+		stageDaily, stagePersistent, reservationErr := activeStageReservations(tx, userID, account.CreditDay)
+		if reservationErr != nil {
+			return balance, reservationErr
+		}
+		reserved := imageDaily + imagePersistent + stageDaily + stagePersistent
+		balance.Reserved = reserved
+		balance.Available = balance.Total - reserved
+		groupBudget, budgetErr := limitingGroupBudget(tx, userID, account.CreditDay, false)
+		if budgetErr != nil {
+			return balance, budgetErr
+		}
+		balance.GroupBudget = groupBudget
+		if groupBudget != nil && groupBudget.Available < balance.Available {
+			balance.Available = groupBudget.Available
+		}
+	}
 	return balance, err
 }
 

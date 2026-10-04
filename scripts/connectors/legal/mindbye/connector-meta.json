@@ -1,0 +1,15 @@
+{
+  "source": "mindbye",
+  "version": "1.0.0",
+  "type": "mcp",
+  "name": "明白律师",
+  "description": "通过官方 MCP 提交合同风险审查并查询报告与附件。",
+  "examples_zh": [
+    "从乙方立场、均势尺度审查这份合同，并查询审查报告"
+  ],
+  "examples_en": [
+    "Review this contract for Party B with a balanced negotiation stance"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "none"
+}

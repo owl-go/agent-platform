@@ -72,6 +72,15 @@ service AgentWorkspaceService {
   rpc ListSessionWorkflowLinks(ListSessionWorkflowLinksRequest) returns (ListSessionWorkflowLinksResponse) { option (google.api.http) = {get: "/api/v1/sessions/{session_id}/workflow-links"}; }
 
   rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) { option (google.api.http) = {get: "/api/v1/workflows"}; }
+  rpc ListMessageChannels(ListMessageChannelsRequest) returns (ListMessageChannelsResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/message-channels"}; }
+  rpc SaveMessageChannel(SaveMessageChannelRequest) returns (MessageChannel) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels" body: "*"}; }
+  rpc StartChannelLogin(StartChannelLoginRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-logins" body: "*"}; }
+  rpc PollChannelLogin(PollChannelLoginRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll" body: "*"}; }
+  rpc CancelChannelLogin(CancelChannelLoginRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}"}; }
+  rpc StartChannelSenderPairing(StartChannelSenderPairingRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-sender-pairings" body: "*"}; }
+  rpc ControlMessageChannel(ControlMessageChannelRequest) returns (MessageChannel) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions" body: "*"}; }
+  rpc ListChannelDeliveries(ListChannelDeliveriesRequest) returns (ListChannelDeliveriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries"}; }
+  rpc RetryChannelDelivery(RetryChannelDeliveryRequest) returns (DeleteResponse) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry" body: "*"}; }
   rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) { option (google.api.http) = {post: "/api/v1/workflows" body: "*"}; }
   rpc GetWorkflow(GetWorkflowRequest) returns (Workflow) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}"}; }
   rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow) { option (google.api.http) = {patch: "/api/v1/workflows/{workflow_id}" body: "*"}; }
@@ -466,7 +475,7 @@ message ContinueRunConversationRequest { string workflow_id = 1; string run_id =
 message CancelRunRequest { string workflow_id = 1; string run_id = 2; }
 message RerunWorkflowRequest { string workflow_id = 1; string run_id = 2; }
 message DecideRunExecutionPlanRequest { string workflow_id = 1; string run_id = 2; string decision = 3; int64 expected_version = 4; }
-message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; int32 queue_position = 21; repeated Evidence evidence = 22; optional ExecutionPlan execution_plan = 23; }
+message Run { string id = 1; string workflow_id = 2; string workflow_name = 3; string trigger = 4; string state = 5; optional string text_input = 6; optional google.protobuf.Struct json_input = 7; optional string final_text = 8; optional google.protobuf.Struct final_json = 9; optional string error = 10; google.protobuf.Timestamp queued_at = 11; optional google.protobuf.Timestamp started_at = 12; optional google.protobuf.Timestamp ended_at = 13; int64 elapsed_ms = 14; optional google.protobuf.Struct workflow_snapshot = 15; string conversation_id = 16; int32 turn_number = 17; repeated Attachment attachments = 18; repeated ExpertStage expert_stages = 19; optional CreditConsumption credit_consumption = 20; int32 queue_position = 21; repeated Evidence evidence = 22; optional ExecutionPlan execution_plan = 23; string message_channel_id = 24; string message_channel_name = 25; string message_channel_provider = 26; }
 
 message ListArtifactsRequest { string workflow_id = 1; }
 message ListArtifactsResponse { repeated Artifact items = 1; }
@@ -636,3 +645,100 @@ message ConversationFile { string kind = 1; string id = 2; string name = 3; stri
 message FileReference { string kind = 1; string id = 2; string path = 3; }
 message GetSkillDocumentRequest { string skill_id = 1; }
 message SkillDocument { Skill skill = 1; string content = 2; }
+
+// Message Channel management is owner-only. Credentials are write-only.
+message ChannelAudience {
+ repeated string sender_ids = 1;
+ repeated string group_ids = 2;
+ bool allow_direct = 3;
+}
+message MessageChannel {
+ string id = 1;
+ string workflow_id = 2;
+ string provider = 3;
+ string name = 4;
+ string account_id = 5;
+ string account_name = 6;
+ string tenant_id = 7;
+ string region = 8;
+ ChannelAudience audience = 9;
+ bool enabled = 10;
+ int64 version = 11;
+ int64 config_version = 12;
+ string validation_state = 13;
+ string validation_code = 14;
+ google.protobuf.Timestamp validation_until = 15;
+ string health = 16;
+ string error_code = 17;
+ string callback_url = 18;
+}
+message ListMessageChannelsRequest { string workflow_id = 1; }
+message ListMessageChannelsResponse { repeated MessageChannel items = 1; bool available = 2; }
+message SaveMessageChannelRequest {
+ string workflow_id = 1;
+ string channel_id = 2;
+ int64 version = 3;
+ string provider = 4;
+ string name = 5;
+ string region = 6;
+ ChannelAudience audience = 7;
+ map<string,string> credentials = 8;
+ string login_id = 9;
+}
+message StartChannelLoginRequest {
+ string workflow_id = 1;
+ string provider = 2;
+ string region = 3;
+ string method = 4;
+ map<string,string> credentials = 5;
+ string channel_id = 6;
+ int64 version = 7;
+}
+message PollChannelLoginRequest { string workflow_id = 1; string login_id = 2; string verification_code = 3; }
+message CancelChannelLoginRequest { string workflow_id = 1; string login_id = 2; }
+message StartChannelSenderPairingRequest {
+ string workflow_id = 1;
+ string login_id = 2;
+ string channel_id = 3;
+ int64 version = 4;
+}
+message ChannelLogin {
+ string id = 1;
+ string provider = 2;
+ string status = 3;
+ string qr_content = 4;
+ string account_id = 5;
+ string account_name = 6;
+ string suggested_sender_id = 7;
+ google.protobuf.Timestamp expires_at = 8;
+ string pairing_code = 9;
+ string pairing_status = 10;
+ google.protobuf.Timestamp pairing_expires_at = 11;
+}
+message ControlMessageChannelRequest {
+ string workflow_id = 1;
+ string channel_id = 2;
+ int64 version = 3;
+ string action = 4;
+}
+message ChannelDelivery {
+ string id = 1;
+ string channel_id = 2;
+ string run_id = 3;
+ string kind = 4;
+ int32 chunk = 5;
+ string state = 6;
+ int32 attempts = 7;
+ string error_code = 8;
+ string provider_message_id = 9;
+ google.protobuf.Timestamp created_at = 10;
+}
+message ListChannelDeliveriesRequest { string workflow_id = 1; string channel_id = 2; }
+message ListChannelDeliveriesResponse { repeated ChannelDelivery items = 1; }
+message RetryChannelDeliveryRequest {
+ string workflow_id = 1;
+ string channel_id = 2;
+ string delivery_id = 3;
+ int64 version = 4;
+ bool confirm_possible_duplicate = 5;
+}

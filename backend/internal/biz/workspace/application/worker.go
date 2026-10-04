@@ -22,24 +22,27 @@ const (
 )
 
 type ExecutionJob struct {
-	Kind                JobKind
-	ID                  string
-	OwnerID             string
-	Timezone            string
-	WorkflowID          string
-	ConversationID      string
-	SessionID           string
-	AssistantMessageID  int64
-	MCPServerID         string
-	ExpertID            string
-	StageIdentity       string
-	MCPServer           domain.MCPServerSnapshot
-	Instruction         string
-	Attachments         []domain.Attachment
-	CheckpointRef       string
-	StageCheckpointRefs map[int]string
-	Snapshot            domain.ExecutionSnapshot
-	CLIConnector        cliconnector.Definition
+	// AdditionalRedactionValues are host-side filters only: never persist them
+	// in a Snapshot or pass them to the Runtime environment or command line.
+	AdditionalRedactionValues [][]byte `json:"-"`
+	Kind                      JobKind
+	ID                        string
+	OwnerID                   string
+	Timezone                  string
+	WorkflowID                string
+	ConversationID            string
+	SessionID                 string
+	AssistantMessageID        int64
+	MCPServerID               string
+	ExpertID                  string
+	StageIdentity             string
+	MCPServer                 domain.MCPServerSnapshot
+	Instruction               string
+	Attachments               []domain.Attachment
+	CheckpointRef             string
+	StageCheckpointRefs       map[int]string
+	Snapshot                  domain.ExecutionSnapshot
+	CLIConnector              cliconnector.Definition
 }
 
 type ExecutionResult struct {
@@ -117,6 +120,7 @@ type Worker struct {
 	executor         Executor
 	connectorBuilder *cliconnector.Builder
 	analytics        productanalytics.Observer
+	channels         *MessageChannels
 }
 
 const cancellationPollInterval = 200 * time.Millisecond
@@ -136,6 +140,10 @@ func (worker *Worker) EnableProductAnalytics(observer productanalytics.Observer)
 	if observer != nil {
 		worker.analytics = observer
 	}
+}
+
+func (worker *Worker) EnableMessageChannels(channels *MessageChannels) {
+	worker.channels = channels
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -173,9 +181,15 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	executionCtx, cancel := context.WithCancel(ctx)
 	monitorDone := make(chan struct{})
 	go worker.monitorCancellation(executionCtx, *job, cancel, monitorDone)
+	stopTyping := func() {}
+	if worker.channels != nil {
+		stopTyping = worker.channels.TrackExecution(executionCtx, *job)
+		defer stopTyping()
+	}
 	result, executeErr := worker.executor.Execute(executionCtx, *job, worker.repository)
 	close(monitorDone)
 	cancel()
+	stopTyping()
 	if executeErr != nil {
 		discardSuccessCommit(result)
 		if ctx.Err() != nil {

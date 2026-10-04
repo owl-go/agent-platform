@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -59,7 +60,13 @@ type Service struct {
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
+	server.Handle(pixsoOAuthCallbackPath, http.HandlerFunc(service.pixsoOAuthCallback))
+	server.Handle(tianyanchaOAuthCallbackPath, http.HandlerFunc(service.tianyanchaOAuthCallback))
+	server.Handle(linearOAuthCallbackPath, http.HandlerFunc(service.linearOAuthCallback))
+	server.Handle(xiaoeOAuthCallbackPath, http.HandlerFunc(service.xiaoeOAuthCallback))
+	server.Handle("/api/v1/message-channel-callbacks/{provider}/{channel_id}", http.HandlerFunc(service.messageChannelCallback))
 	server.Handle(teambitionOAuthCallbackPath, http.HandlerFunc(service.teambitionOAuthCallback))
+	server.Handle(klingOAuthCallbackPath, http.HandlerFunc(service.klingOAuthCallback))
 	server.Handle("/api/v1/sessions/{session_id}/messages/{message_id}/events", http.HandlerFunc(service.streamSessionMessage))
 	server.Handle("/api/v1/resource-creation-actions/", http.HandlerFunc(service.decideResourceCreationAction))
 	server.Handle("/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download", http.HandlerFunc(service.downloadSessionArtifact))
@@ -85,6 +92,7 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-creation/image-generations/{record_id}/events", http.HandlerFunc(service.streamImageGeneration))
 	server.Handle("/api/v1/ai-apps/assistants", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}", http.HandlerFunc(service.aiApplicationsHandler))
+	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/widget-icon", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/icon", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/ai-apps/assistants/{assistant_id}/faqs/{faq_id}", http.HandlerFunc(service.aiApplicationsHandler))
@@ -104,15 +112,18 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle("/api/v1/ai-apps/embedding-provider", http.HandlerFunc(service.aiApplicationsHandler))
 	server.Handle("/api/v1/public/assistants/{share_token}", http.HandlerFunc(service.publicAssistantHandler))
 	server.Handle("/api/v1/public/assistants/{share_token}/answer", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/turns", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/widget-icon", http.HandlerFunc(service.publicAssistantHandler))
+	server.Handle("/api/v1/public/assistants/{share_token}/icon", http.HandlerFunc(service.publicAssistantHandler))
 	server.Handle("/api/v1/public/assistants/{share_token}/conversations/{conversation_id}/responses/{response_id}", http.HandlerFunc(service.publicAssistantHandler))
 	server.Handle("/embed/assistant/{share_token}", http.HandlerFunc(service.publicAssistantEmbed))
 }
 
-func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, analytics productanalytics.Observer, config platformconfig.Config) (*Service, error) {
+func New(accounts *accountapplication.Service, credits *creditsapplication.Service, aicreation *aicreationapplication.Service, aiapplications *aiapplication.Service, chatModel aiapplication.ChatModel, workspace *workspaceapplication.Service, box *secretcrypto.Box, files *workspacefs.Store, skills *skillstore.Store, objects objectstore.Provider, analytics productanalytics.Observer, config platformconfig.Config, searcher retrieval.Searcher) (*Service, error) {
 	if accounts == nil || credits == nil || aicreation == nil || aiapplications == nil || chatModel == nil || workspace == nil || box == nil || files == nil || skills == nil || objects == nil || analytics == nil {
 		return nil, fmt.Errorf("Account, Credits, AI Creation, AI Applications, Agent Workspace, encryption, Workspace File, Skill, Object Store, and product analytics services are required")
 	}
-	service := &Service{accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, analytics: analytics, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
+	service := &Service{knowledgeSearch: searcher, accounts: accounts, credits: credits, aicreation: aicreation, aiapplications: aiapplications, assistantChatModel: chatModel, workspace: workspace, box: box, files: files, skills: skills, objects: objects, config: config, analytics: analytics, feishu: feishucli.NewRegistrar(nil), removeNativeSessionState: workspacefs.RemoveNativeSessionState, cloneGitSource: files.Clone}
 	return service, nil
 }
 
@@ -192,6 +203,18 @@ func (service *Service) validateExpertInputAvailability(ctx context.Context, inp
 
 func publicError(err error) error {
 	var providerFailure *aicreationapplication.ProviderFailure
+	var channelFailure *workspaceapplication.ChannelAccountFailure
+	if errors.As(err, &channelFailure) {
+		switch channelFailure.Code {
+		case "feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable":
+			return kratoserrors.New(http.StatusUnprocessableEntity, channelFailure.Code, channelFailure.Code).WithMetadata(map[string]string{
+				"provider_code":        strconv.Itoa(channelFailure.ProviderCode),
+				"provider_http_status": strconv.Itoa(channelFailure.HTTPStatus),
+			})
+		default:
+			return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", "channel account connection failed")
+		}
+	}
 	switch {
 	case errors.Is(err, accountdomain.ErrUnauthenticated):
 		return kratoserrors.New(http.StatusUnauthorized, "authentication_required", "authentication required")

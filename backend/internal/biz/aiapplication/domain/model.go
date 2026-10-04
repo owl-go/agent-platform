@@ -78,6 +78,8 @@ func (policy SafetyPolicy) Decide(input string) SafetyDecision {
 	return SafetyAllow
 }
 
+var assistantObjectID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
 type ShareConfiguration struct {
 	Enabled                    bool     `json:"enabled"`
 	Token                      string   `json:"token,omitempty"`
@@ -86,9 +88,14 @@ type ShareConfiguration struct {
 	AllowedOrigins             []string `json:"allowed_origins,omitempty"`
 	Width                      string   `json:"width"`
 	Height                     int      `json:"height"`
-	FreeTextEnabled            bool     `json:"free_text_enabled"`
-	DailyCallLimit             int      `json:"daily_call_limit"`
+	EmbedType                  string   `json:"embed_type"`
+	WidgetDefaultOpen          bool     `json:"widget_default_open"`
+	WidgetIcon                 string   `json:"widget_icon,omitempty"`
 	DataProcessingAcknowledged bool     `json:"data_processing_acknowledged"`
+
+	// Deprecated compatibility fields: free questions are always enabled, without a daily cap.
+	FreeTextEnabled bool `json:"free_text_enabled"`
+	DailyCallLimit  int  `json:"daily_call_limit"`
 }
 
 type PublicationCheck struct {
@@ -164,18 +171,22 @@ func (assistant SmartAssistant) Validate() error {
 			return fmt.Errorf("%w: share width must be 100%% or px", ErrInvalid)
 		}
 	}
+	if assistant.Share.EmbedType != "" && assistant.Share.EmbedType != "fullscreen" && assistant.Share.EmbedType != "floating" {
+		return fmt.Errorf("%w: unsupported embed type", ErrInvalid)
+	}
+	if assistant.Share.WidgetIcon != "" {
+		prefix := "ai-applications/assistant-icons/" + assistant.OwnerID + "/"
+		id := strings.TrimPrefix(assistant.Share.WidgetIcon, prefix)
+		if assistant.OwnerID == "" || id == assistant.Share.WidgetIcon || strings.Contains(id, "/") || !assistantObjectID.MatchString(id) {
+			return fmt.Errorf("%w: widget icon must belong to the assistant owner", ErrInvalid)
+		}
+	}
 	if assistant.Share.Height != 0 && (assistant.Share.Height < 400 || assistant.Share.Height > 1600) {
 		return fmt.Errorf("%w: share height is outside 400-1600px", ErrInvalid)
-	}
-	if assistant.Share.DailyCallLimit < 0 {
-		return fmt.Errorf("%w: daily call limit cannot be negative", ErrInvalid)
 	}
 	if assistant.Share.Enabled {
 		if len(assistant.Share.AllowedOrigins) == 0 {
 			return fmt.Errorf("%w: sharing requires at least one allowed origin", ErrInvalid)
-		}
-		if assistant.Share.DailyCallLimit < 1 {
-			return fmt.Errorf("%w: sharing requires a positive daily call limit", ErrInvalid)
 		}
 		if !assistant.Share.DataProcessingAcknowledged {
 			return fmt.Errorf("%w: sharing requires data-processing acknowledgement", ErrInvalid)

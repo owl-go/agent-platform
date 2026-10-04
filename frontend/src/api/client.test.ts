@@ -2,7 +2,27 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
+  it.each(["99991672", "private-provider-detail", null])("retains only numeric provider diagnostics (%s)", async(providerCode)=>{
+    vi.stubGlobal("fetch", vi.fn(async()=>new Response(JSON.stringify({reason:"feishu_tenant_permission_required",message:"private-provider-detail",metadata:{provider_code:providerCode}}),{status:422})));
+    const api=createPlatformApi(()=>"token");
+    await expect(api.startChannelLogin("workflow",{provider:"feishu",region:"feishu",method:"credentials",version:0,credentials:{app_id:"app",app_secret:"secret"}})).rejects.toMatchObject({code:"feishu_tenant_permission_required",providerCode:providerCode==="99991672"?99991672:undefined});
+  });
+  it("starts a scoped sender pairing and normalizes its expiry", async()=>{
+    const fetchMock=vi.fn(async(_input:RequestInfo|URL,_init?:RequestInit)=>new Response(JSON.stringify({id:"login",status:"connected",pairing_status:"waiting",pairing_code:"pair nonce",pairing_expires_at:{seconds:"1791032700",nanos:120000000}}),{status:200}));
+    vi.stubGlobal("fetch",fetchMock);
+    const result=await createPlatformApi(()=>"token").startChannelSenderPairing("workflow/1",{channel_id:"channel",version:3});
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/v1/workflows/workflow%2F1/channel-sender-pairings");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({channel_id:"channel",version:3});
+    expect(result.pairing_expires_at).toBe(new Date(1791032700120).toISOString());
+  });
   afterEach(() => vi.unstubAllGlobals());
+
+  it("normalizes the message channel validation deadline before rendering", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ available: true, items: [{ id: "channel", provider: "wechat", version: 1, config_version: 1, validation_until: { seconds: "1791032700", nanos: 120000000 }, audience: {} }] }), { status: 200 })));
+    const { items } = await createPlatformApi(() => "token").listMessageChannels("workflow");
+    expect(items[0]?.validation_until).toBe(new Date(1791032700120).toISOString());
+    expect(new Date(items[0]!.validation_until!).toLocaleTimeString()).not.toBe("Invalid Date");
+  });
 
   it("loads the metadata-only Home overview and normalizes omitted collections", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ recent_tasks: [{ kind: "session", id: "session-1", title: "Report", state: "completed", updated_at: "2026-09-28T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));

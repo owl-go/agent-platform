@@ -11,6 +11,8 @@ type KnowledgeIngestionJob struct {
 	DocumentID      string
 	KnowledgeBaseID string
 	ObjectKey       string
+	SHA256          string
+	Size            int64
 	ContentType     string
 	Attempts        int
 }

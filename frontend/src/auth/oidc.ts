@@ -1,5 +1,6 @@
 import { UserManager, WebStorageStateStore, type User, type UserManagerSettings } from "oidc-client-ts";
 import type { OIDCClient, OIDCUser } from "./session";
+import { localeStorageKey } from "../i18n";
 
 export interface OIDCEnvironment {
   VITE_OIDC_AUTHORITY?: string;
@@ -24,7 +25,7 @@ export interface BrowserOIDC {
 interface UserManagerLike {
   getUser(): Promise<User | null>;
   signinSilent(): Promise<User | null>;
-  signinRedirect(): Promise<void>;
+  signinRedirect(args?: { ui_locales: string }): Promise<void>;
   signinRedirectCallback(): Promise<User>;
   signoutRedirect(): Promise<void>;
   events: UserManager["events"];
@@ -77,7 +78,7 @@ export function createBrowserOIDC(
   const callbackURL = new URL(settings.redirectURI);
   const search = new URLSearchParams(browser.location.search);
   return {
-    client: new UserManagerClient(manager),
+    client: new UserManagerClient(manager, () => browser.localStorage.getItem(localeStorageKey) === "en-US" ? "en" : "zh-Hans"),
     isCallback: browser.location.pathname === callbackURL.pathname && (search.has("code") || search.has("error")),
     replaceCallbackURL() {
       browser.history.replaceState({}, document.title, "/");
@@ -93,7 +94,7 @@ function migrateStoredUser(sessionStore: Storage, persistentStore: Storage, auth
 }
 
 class UserManagerClient implements OIDCClient {
-  constructor(private readonly manager: UserManagerLike) {}
+  constructor(private readonly manager: UserManagerLike, private readonly loginLocale: () => string) {}
 
   async getUser(): Promise<OIDCUser | null> {
     const stored = await this.manager.getUser();
@@ -110,7 +111,7 @@ class UserManagerClient implements OIDCClient {
   }
 
   async signIn(): Promise<void> {
-    await this.manager.signinRedirect();
+    await this.manager.signinRedirect({ ui_locales: this.loginLocale() });
   }
 
   async signOut(): Promise<void> {

@@ -124,3 +124,43 @@ func TestPublicationStatsUsesBoundedWindow(t *testing.T) {
 		t.Fatalf("PublicationStats() = %#v, %v", stats, err)
 	}
 }
+
+func TestAssistantSharingIgnoresLegacyQuestionRestrictions(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now().UTC()
+	legacy := domain.SmartAssistant{
+		ID: "assistant", Name: "助手", OwnerID: "owner", State: domain.StateEnabled,
+		Version: 4, ValidatedVersion: 4, LastValidatedAt: &now,
+		Share: domain.ShareConfiguration{Enabled: true, TokenHash: "stored-hash", TokenRevision: 2, AllowedOrigins: []string{"https://support.example.test"}, FreeTextEnabled: false, DailyCallLimit: 2, DataProcessingAcknowledged: true},
+	}
+	repository := &lifecycleRepository{assistant: legacy}
+	service, err := application.New(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFree := func(assistant domain.SmartAssistant, err error) {
+		t.Helper()
+		if err != nil || !assistant.Share.FreeTextEnabled || assistant.Share.DailyCallLimit != 0 || assistant.Share.EmbedType != "fullscreen" {
+			t.Fatalf("sharing=%#v err=%v", assistant.Share, err)
+		}
+	}
+	assertFree(service.GetAssistant(ctx, "owner", "assistant"))
+	assertFree(service.ResolveSharedAssistant(ctx, "share-token-long-enough-to-resolve-123"))
+	list, err := service.ListAssistants(ctx, "owner")
+	if err != nil || len(list) != 1 {
+		t.Fatalf("list=%#v err=%v", list, err)
+	}
+	assertFree(list[0], nil)
+	if repository.assistant.Share.TokenRevision != 2 || repository.assistant.Version != 4 || repository.assistant.Share.FreeTextEnabled {
+		t.Fatal("reading legacy settings mutated saved configuration or revoked the share")
+	}
+	legacy.State = domain.StateDraft
+	assertFree(service.UpdateAssistant(ctx, "owner", "assistant", legacy, 4))
+	if !repository.assistant.Share.FreeTextEnabled || repository.assistant.Share.DailyCallLimit != 0 {
+		t.Fatal("update persisted legacy restrictions")
+	}
+	assertFree(service.CreateAssistant(ctx, "owner", legacy))
+	if !repository.assistant.Share.FreeTextEnabled || repository.assistant.Share.DailyCallLimit != 0 {
+		t.Fatal("creation persisted legacy restrictions")
+	}
+}

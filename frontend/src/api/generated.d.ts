@@ -1828,6 +1828,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/channel-logins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StartChannelLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgentWorkspaceService_CancelChannelLogin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_PollChannelLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/channel-sender-pairings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StartChannelSenderPairing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/git-source": {
         parameters: {
             query?: never;
@@ -1838,6 +1902,70 @@ export interface paths {
         get?: never;
         put: operations["AgentWorkspaceService_ConfigureWorkflowGitSource"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/message-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListMessageChannels"];
+        put?: never;
+        post: operations["AgentWorkspaceService_SaveMessageChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_ControlMessageChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ListChannelDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_RetryChannelDelivery"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2056,6 +2184,11 @@ export interface components {
             file_references?: components["schemas"]["v1FileReference"][];
             plan_preference?: string;
         };
+        AgentWorkspaceServiceControlMessageChannelBody: {
+            /** Format: int64 */
+            version?: number;
+            action?: string;
+        };
         AgentWorkspaceServiceCreateKnowledgeCategoryBody: {
             name?: string;
         };
@@ -2112,6 +2245,9 @@ export interface components {
         AgentWorkspaceServiceExchangeWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceGenerateWorkflowCredentialBody: Record<string, never>;
         AgentWorkspaceServiceInstallPublishedConnectorBody: Record<string, never>;
+        AgentWorkspaceServicePollChannelLoginBody: {
+            verification_code?: string;
+        };
         AgentWorkspaceServicePublishCLIConnectorDefinitionBody: {
             /** Format: int64 */
             expected_version?: number;
@@ -2130,6 +2266,11 @@ export interface components {
         };
         AgentWorkspaceServiceRerunWorkflowBody: Record<string, never>;
         AgentWorkspaceServiceResetUserPasswordBody: Record<string, never>;
+        AgentWorkspaceServiceRetryChannelDeliveryBody: {
+            /** Format: int64 */
+            version?: number;
+            confirm_possible_duplicate?: boolean;
+        };
         AgentWorkspaceServiceRetrySessionMessageBody: Record<string, never>;
         AgentWorkspaceServiceReviseImageModelBody: {
             /** Format: int64 */
@@ -2153,6 +2294,19 @@ export interface components {
             text_input?: string;
             json_input?: Record<string, never>;
             plan_preference?: string;
+        };
+        AgentWorkspaceServiceSaveMessageChannelBody: {
+            channel_id?: string;
+            /** Format: int64 */
+            version?: number;
+            provider?: string;
+            name?: string;
+            region?: string;
+            audience?: components["schemas"]["v1ChannelAudience"];
+            credentials?: {
+                [key: string]: string;
+            };
+            login_id?: string;
         };
         AgentWorkspaceServiceSelectConnectorAuthorizationBody: {
             /** Format: int64 */
@@ -2191,6 +2345,23 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
             reason?: string;
+        };
+        AgentWorkspaceServiceStartChannelLoginBody: {
+            provider?: string;
+            region?: string;
+            method?: string;
+            credentials?: {
+                [key: string]: string;
+            };
+            channel_id?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        AgentWorkspaceServiceStartChannelSenderPairingBody: {
+            login_id?: string;
+            channel_id?: string;
+            /** Format: int64 */
+            version?: number;
         };
         AgentWorkspaceServiceStopImageGenerationBody: Record<string, never>;
         AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
@@ -2436,6 +2607,42 @@ export interface components {
             name?: string;
             git_url?: string;
             git_ref?: string;
+        };
+        /** @description Message Channel management is owner-only. Credentials are write-only. */
+        v1ChannelAudience: {
+            sender_ids?: string[];
+            group_ids?: string[];
+            allow_direct?: boolean;
+        };
+        v1ChannelDelivery: {
+            id?: string;
+            channel_id?: string;
+            run_id?: string;
+            kind?: string;
+            /** Format: int32 */
+            chunk?: number;
+            state?: string;
+            /** Format: int32 */
+            attempts?: number;
+            error_code?: string;
+            provider_message_id?: string;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        v1ChannelLogin: {
+            id?: string;
+            provider?: string;
+            status?: string;
+            qr_content?: string;
+            account_id?: string;
+            account_name?: string;
+            suggested_sender_id?: string;
+            /** Format: date-time */
+            expires_at?: string;
+            pairing_code?: string;
+            pairing_status?: string;
+            /** Format: date-time */
+            pairing_expires_at?: string;
         };
         v1CommandApproval: {
             id?: string;
@@ -3234,6 +3441,9 @@ export interface components {
         v1ListCLIConnectorHealthResponse: {
             items?: components["schemas"]["v1CLIConnectorHealth"][];
         };
+        v1ListChannelDeliveriesResponse: {
+            items?: components["schemas"]["v1ChannelDelivery"][];
+        };
         v1ListCommandApprovalsResponse: {
             items?: components["schemas"]["v1CommandApproval"][];
         };
@@ -3292,6 +3502,10 @@ export interface components {
         };
         v1ListMCPConnectorsResponse: {
             items?: components["schemas"]["v1MCPConnector"][];
+        };
+        v1ListMessageChannelsResponse: {
+            items?: components["schemas"]["v1MessageChannel"][];
+            available?: boolean;
         };
         v1ListModelCreditRatesResponse: {
             items?: components["schemas"]["v1ModelCreditRate"][];
@@ -3384,6 +3598,29 @@ export interface components {
             package_version?: string;
             arguments?: string[];
             icon?: string;
+        };
+        v1MessageChannel: {
+            id?: string;
+            workflow_id?: string;
+            provider?: string;
+            name?: string;
+            account_id?: string;
+            account_name?: string;
+            tenant_id?: string;
+            region?: string;
+            audience?: components["schemas"]["v1ChannelAudience"];
+            enabled?: boolean;
+            /** Format: int64 */
+            version?: number;
+            /** Format: int64 */
+            config_version?: number;
+            validation_state?: string;
+            validation_code?: string;
+            /** Format: date-time */
+            validation_until?: string;
+            health?: string;
+            error_code?: string;
+            callback_url?: string;
         };
         v1ModelCreditRate: {
             revision_id?: string;
@@ -3628,6 +3865,9 @@ export interface components {
             queue_position?: number;
             evidence?: components["schemas"]["v1Evidence"][];
             execution_plan?: components["schemas"]["v1ExecutionPlan"];
+            message_channel_id?: string;
+            message_channel_name?: string;
+            message_channel_provider?: string;
         };
         v1RuntimeEngineStatus: {
             name?: string;
@@ -8885,6 +9125,144 @@ export interface operations {
             };
         };
     };
+    AgentWorkspaceService_StartChannelLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceStartChannelLoginBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ChannelLogin"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_CancelChannelLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                login_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_PollChannelLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                login_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServicePollChannelLoginBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ChannelLogin"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_StartChannelSenderPairing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceStartChannelSenderPairingBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ChannelLogin"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
     AgentWorkspaceService_ConfigureWorkflowGitSource: {
         parameters: {
             query?: never;
@@ -8907,6 +9285,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1Workflow"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListMessageChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListMessageChannelsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_SaveMessageChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceSaveMessageChannelBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MessageChannel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ControlMessageChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                channel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceControlMessageChannelBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1MessageChannel"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ListChannelDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                channel_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ListChannelDeliveriesResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_RetryChannelDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                channel_id: string;
+                delivery_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceRetryChannelDeliveryBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1DeleteResponse"];
                 };
             };
             /** @description An unexpected error response. */

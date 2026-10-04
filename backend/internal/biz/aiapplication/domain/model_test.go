@@ -32,7 +32,7 @@ func TestSmartAssistantSharingRequiresControlledPublicationSettings(t *testing.T
 		t.Fatalf("Validate() error = %v, want ErrInvalid for unrestricted sharing", err)
 	}
 	assistant.Share.AllowedOrigins = []string{"https://support.example.test"}
-	assistant.Share.DailyCallLimit = 100
+	assistant.Share.DailyCallLimit = 0
 	assistant.Share.DataProcessingAcknowledged = true
 	if err := assistant.Validate(); err != nil {
 		t.Fatalf("Validate() controlled sharing error = %v", err)
@@ -104,5 +104,23 @@ func TestEmbeddingConfigurationRequiresHTTPSAndCurrentDimensions(t *testing.T) {
 	configuration.Dimensions = 768
 	if !errors.Is(configuration.Validate(), domain.ErrInvalid) {
 		t.Fatal("Validate() accepted unsupported embedding dimensions")
+	}
+}
+
+func TestSmartAssistantEmbeddingSettingsAreOwnerScoped(t *testing.T) {
+	assistant := domain.SmartAssistant{Name: "助手", OwnerID: "owner", Share: domain.ShareConfiguration{EmbedType: "floating", WidgetDefaultOpen: true, WidgetIcon: "ai-applications/assistant-icons/owner/2a748f68-95a5-41df-8a53-488e335c223c"}}
+	if err := assistant.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"https://example.test/icon.png", "ai-applications/assistant-icons/other/2a748f68-95a5-41df-8a53-488e335c223c", "ai-applications/assistant-icons/owner/../other", "ai-applications/assistant-icons/owner/not-an-id"} {
+		assistant.Share.WidgetIcon = key
+		if !errors.Is(assistant.Validate(), domain.ErrInvalid) {
+			t.Fatalf("accepted widget key %q", key)
+		}
+	}
+	assistant.Share.WidgetIcon = ""
+	assistant.Share.EmbedType = "unsupported"
+	if !errors.Is(assistant.Validate(), domain.ErrInvalid) {
+		t.Fatal("accepted unsupported embed type")
 	}
 }

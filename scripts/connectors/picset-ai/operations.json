@@ -1,0 +1,284 @@
+{
+  "upload-url": {
+    "method": "POST",
+    "risk": "high",
+    "paid": false,
+    "fields": [
+      "scene"
+    ],
+    "required": [
+      "scene"
+    ],
+    "image_scenes": {}
+  },
+  "image-audit": {
+    "method": "POST",
+    "risk": "high",
+    "paid": false,
+    "fields": [
+      "scene",
+      "oss_path"
+    ],
+    "required": [
+      "scene",
+      "oss_path"
+    ],
+    "image_scenes": {}
+  },
+  "product-main": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "product_images",
+      "requirements",
+      "target_platform",
+      "target_language",
+      "output_count",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "product_images"
+    ],
+    "image_scenes": {
+      "product_images": "product_main"
+    }
+  },
+  "product-detail": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "product_images",
+      "requirements",
+      "target_platform",
+      "target_language",
+      "output_count",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "product_images"
+    ],
+    "image_scenes": {
+      "product_images": "product_detail"
+    }
+  },
+  "ad-image": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "product_images",
+      "requirements",
+      "ad_type",
+      "target_language",
+      "output_count",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "product_images"
+    ],
+    "image_scenes": {
+      "product_images": "ad_image"
+    }
+  },
+  "style-replicate": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "reference_image",
+      "product_images",
+      "requirements",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "reference_image",
+      "product_images"
+    ],
+    "image_scenes": {
+      "reference_image": "style_replicate_reference",
+      "product_images": "style_replicate_product"
+    }
+  },
+  "sku-replace": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "reference_image",
+      "product_image",
+      "product_description",
+      "text_changes",
+      "requirements",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "reference_image",
+      "product_image"
+    ],
+    "image_scenes": {
+      "reference_image": "sku_replace_reference",
+      "product_image": "sku_replace_product"
+    }
+  },
+  "image-refinement": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "images",
+      "requirements",
+      "white_background",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "images"
+    ],
+    "image_scenes": {
+      "images": "image_refinement"
+    }
+  },
+  "image-translation": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "images",
+      "requirements",
+      "target_language",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "images"
+    ],
+    "image_scenes": {
+      "images": "image_translation"
+    }
+  },
+  "canvas-image": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "prompt",
+      "reference_images",
+      "model",
+      "aspect_ratio",
+      "resolution",
+      "speed_mode",
+      "gpt_quality"
+    ],
+    "required": [
+      "prompt"
+    ],
+    "image_scenes": {
+      "reference_images": "canvas_image"
+    }
+  },
+  "image-layer-2-0-auto": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "image"
+    ],
+    "required": [
+      "image"
+    ],
+    "image_scenes": {
+      "image": "image_layer"
+    }
+  },
+  "image-layer-2-0-natural-language": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "image",
+      "prompt",
+      "speed_mode",
+      "resolution"
+    ],
+    "required": [
+      "image",
+      "prompt"
+    ],
+    "image_scenes": {
+      "image": "image_layer"
+    }
+  },
+  "image-layer-2-0-region": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "image",
+      "prompt",
+      "rectangles",
+      "speed_mode",
+      "resolution"
+    ],
+    "required": [
+      "image",
+      "rectangles"
+    ],
+    "image_scenes": {
+      "image": "image_layer"
+    }
+  },
+  "image-layer-1-0": {
+    "method": "POST",
+    "risk": "high",
+    "paid": true,
+    "fields": [
+      "image"
+    ],
+    "required": [
+      "image"
+    ],
+    "image_scenes": {
+      "image": "image_layer"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "risk": "low",
+    "paid": false,
+    "fields": [
+      "request_id"
+    ],
+    "required": [
+      "request_id"
+    ],
+    "image_scenes": {}
+  }
+}

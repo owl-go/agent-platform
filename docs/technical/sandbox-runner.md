@@ -8,7 +8,7 @@ Session 与 Run Conversation 的每个 Execution Stage 按 Owner、资源 ID、�
 
 进入 `waiting_for_user` 时不结束 Stage：保留 Container、临时 Workspace、Workflow Queue slot 与 Execution Credit Reservation，暂停普通执行超时，仅运行最长十五分钟的 User Action Wait deadline，并持续接受取消。Worker 重启后的 Reconcile 只能从已持久化的批准状态恢复；过期、拒绝、Definition disabled 或 Authorization revoked 均关闭尚未启动的命令。批准后由公共 CLI Connector Wrapper 在真实进程启动前再次校验不可变 argv 摘要和全部当前授权。
 
-Workspace Run 在临时副本工作；挂载前整棵临时文件树必须归固定 Runtime 用户 `65532:65532` 独占，目录为 `0700`、普通文件为 `0600`，已有所有者执行位的文件保持可执行。Runtime 不依赖宿主机用户手工修改权限。仅成功执行才安全合并到 Workflow 的持久 Workspace；被最终响应明确捕获的 Artifact 会先写入对象存储，再从待合并的 Workspace 副本移除，保持项目文件与交付产物分离。路径穿越、符号链接、特殊文件和超过 1 GiB 配额均 fail closed。失败或取消不会污染持久 Workspace。
+Workspace Run 在临时副本工作；挂载前整棵临时文件树必须归固定 Runtime 用户 `65532:65532` 独占，目录为 `0700`、普通文件为 `0600`，已有所有者执行位的文件保持可执行。Runtime 不依赖宿主机用户手工修改权限。仅成功执行才安全合并到 Workflow 的持久 Workspace；被最终响应明确捕获的 Artifact 会先写入对象存储，再从待合并的 Workspace 副本移除，保持项目文件与交付产物分离。路径穿越、符号链接、特殊文件和超过 1 GiB 配额均 fail closed。失败或取消不会污染持久 Workspace。 首次成功提交 Workspace 时由 Worker 以暂存 Workspace 的用户身份创建私有 Owner 父目录；提交回滚会撤回新 Workspace，保留已有 Workspace。
 
 模型、MCP、Workflow 环境与 Git SSH Secret 只存在于单次任务的 Credential 目录，权限为 0700/0600；每次 Container 停止后立即幂等清理，不等待 Warm Container 到期。Secret 不进入镜像层、Docker 参数、对象 Key、日志或结果。
 

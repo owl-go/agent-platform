@@ -79,6 +79,15 @@ const (
 	AgentWorkspaceService_CreateWorkflowFromSession_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/CreateWorkflowFromSession"
 	AgentWorkspaceService_ListSessionWorkflowLinks_FullMethodName                  = "/workspace.v1.AgentWorkspaceService/ListSessionWorkflowLinks"
 	AgentWorkspaceService_ListWorkflows_FullMethodName                             = "/workspace.v1.AgentWorkspaceService/ListWorkflows"
+	AgentWorkspaceService_ListMessageChannels_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ListMessageChannels"
+	AgentWorkspaceService_SaveMessageChannel_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/SaveMessageChannel"
+	AgentWorkspaceService_StartChannelLogin_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/StartChannelLogin"
+	AgentWorkspaceService_PollChannelLogin_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/PollChannelLogin"
+	AgentWorkspaceService_CancelChannelLogin_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/CancelChannelLogin"
+	AgentWorkspaceService_StartChannelSenderPairing_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/StartChannelSenderPairing"
+	AgentWorkspaceService_ControlMessageChannel_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ControlMessageChannel"
+	AgentWorkspaceService_ListChannelDeliveries_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListChannelDeliveries"
+	AgentWorkspaceService_RetryChannelDelivery_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/RetryChannelDelivery"
 	AgentWorkspaceService_CreateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/CreateWorkflow"
 	AgentWorkspaceService_GetWorkflow_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
 	AgentWorkspaceService_UpdateWorkflow_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/UpdateWorkflow"
@@ -248,6 +257,15 @@ type AgentWorkspaceServiceClient interface {
 	CreateWorkflowFromSession(ctx context.Context, in *CreateWorkflowFromSessionRequest, opts ...grpc.CallOption) (*CreateWorkflowFromSessionResponse, error)
 	ListSessionWorkflowLinks(ctx context.Context, in *ListSessionWorkflowLinksRequest, opts ...grpc.CallOption) (*ListSessionWorkflowLinksResponse, error)
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
+	ListMessageChannels(ctx context.Context, in *ListMessageChannelsRequest, opts ...grpc.CallOption) (*ListMessageChannelsResponse, error)
+	SaveMessageChannel(ctx context.Context, in *SaveMessageChannelRequest, opts ...grpc.CallOption) (*MessageChannel, error)
+	StartChannelLogin(ctx context.Context, in *StartChannelLoginRequest, opts ...grpc.CallOption) (*ChannelLogin, error)
+	PollChannelLogin(ctx context.Context, in *PollChannelLoginRequest, opts ...grpc.CallOption) (*ChannelLogin, error)
+	CancelChannelLogin(ctx context.Context, in *CancelChannelLoginRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	StartChannelSenderPairing(ctx context.Context, in *StartChannelSenderPairingRequest, opts ...grpc.CallOption) (*ChannelLogin, error)
+	ControlMessageChannel(ctx context.Context, in *ControlMessageChannelRequest, opts ...grpc.CallOption) (*MessageChannel, error)
+	ListChannelDeliveries(ctx context.Context, in *ListChannelDeliveriesRequest, opts ...grpc.CallOption) (*ListChannelDeliveriesResponse, error)
+	RetryChannelDelivery(ctx context.Context, in *RetryChannelDeliveryRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
 	UpdateWorkflow(ctx context.Context, in *UpdateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
@@ -955,6 +973,96 @@ func (c *agentWorkspaceServiceClient) ListWorkflows(ctx context.Context, in *Lis
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListWorkflowsResponse)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListWorkflows_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListMessageChannels(ctx context.Context, in *ListMessageChannelsRequest, opts ...grpc.CallOption) (*ListMessageChannelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMessageChannelsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListMessageChannels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) SaveMessageChannel(ctx context.Context, in *SaveMessageChannelRequest, opts ...grpc.CallOption) (*MessageChannel, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageChannel)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_SaveMessageChannel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) StartChannelLogin(ctx context.Context, in *StartChannelLoginRequest, opts ...grpc.CallOption) (*ChannelLogin, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChannelLogin)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_StartChannelLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) PollChannelLogin(ctx context.Context, in *PollChannelLoginRequest, opts ...grpc.CallOption) (*ChannelLogin, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChannelLogin)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_PollChannelLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) CancelChannelLogin(ctx context.Context, in *CancelChannelLoginRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_CancelChannelLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) StartChannelSenderPairing(ctx context.Context, in *StartChannelSenderPairingRequest, opts ...grpc.CallOption) (*ChannelLogin, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChannelLogin)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_StartChannelSenderPairing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ControlMessageChannel(ctx context.Context, in *ControlMessageChannelRequest, opts ...grpc.CallOption) (*MessageChannel, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MessageChannel)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ControlMessageChannel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ListChannelDeliveries(ctx context.Context, in *ListChannelDeliveriesRequest, opts ...grpc.CallOption) (*ListChannelDeliveriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListChannelDeliveriesResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ListChannelDeliveries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) RetryChannelDelivery(ctx context.Context, in *RetryChannelDeliveryRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_RetryChannelDelivery_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2055,6 +2163,15 @@ type AgentWorkspaceServiceServer interface {
 	CreateWorkflowFromSession(context.Context, *CreateWorkflowFromSessionRequest) (*CreateWorkflowFromSessionResponse, error)
 	ListSessionWorkflowLinks(context.Context, *ListSessionWorkflowLinksRequest) (*ListSessionWorkflowLinksResponse, error)
 	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
+	ListMessageChannels(context.Context, *ListMessageChannelsRequest) (*ListMessageChannelsResponse, error)
+	SaveMessageChannel(context.Context, *SaveMessageChannelRequest) (*MessageChannel, error)
+	StartChannelLogin(context.Context, *StartChannelLoginRequest) (*ChannelLogin, error)
+	PollChannelLogin(context.Context, *PollChannelLoginRequest) (*ChannelLogin, error)
+	CancelChannelLogin(context.Context, *CancelChannelLoginRequest) (*DeleteResponse, error)
+	StartChannelSenderPairing(context.Context, *StartChannelSenderPairingRequest) (*ChannelLogin, error)
+	ControlMessageChannel(context.Context, *ControlMessageChannelRequest) (*MessageChannel, error)
+	ListChannelDeliveries(context.Context, *ListChannelDeliveriesRequest) (*ListChannelDeliveriesResponse, error)
+	RetryChannelDelivery(context.Context, *RetryChannelDeliveryRequest) (*DeleteResponse, error)
 	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
 	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
@@ -2347,6 +2464,33 @@ func (UnimplementedAgentWorkspaceServiceServer) ListSessionWorkflowLinks(context
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListWorkflows not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListMessageChannels(context.Context, *ListMessageChannelsRequest) (*ListMessageChannelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMessageChannels not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) SaveMessageChannel(context.Context, *SaveMessageChannelRequest) (*MessageChannel, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveMessageChannel not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) StartChannelLogin(context.Context, *StartChannelLoginRequest) (*ChannelLogin, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartChannelLogin not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) PollChannelLogin(context.Context, *PollChannelLoginRequest) (*ChannelLogin, error) {
+	return nil, status.Error(codes.Unimplemented, "method PollChannelLogin not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) CancelChannelLogin(context.Context, *CancelChannelLoginRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CancelChannelLogin not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) StartChannelSenderPairing(context.Context, *StartChannelSenderPairingRequest) (*ChannelLogin, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartChannelSenderPairing not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ControlMessageChannel(context.Context, *ControlMessageChannelRequest) (*MessageChannel, error) {
+	return nil, status.Error(codes.Unimplemented, "method ControlMessageChannel not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ListChannelDeliveries(context.Context, *ListChannelDeliveriesRequest) (*ListChannelDeliveriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListChannelDeliveries not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) RetryChannelDelivery(context.Context, *RetryChannelDeliveryRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RetryChannelDelivery not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateWorkflow not implemented")
@@ -3754,6 +3898,168 @@ func _AgentWorkspaceService_ListWorkflows_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).ListWorkflows(ctx, req.(*ListWorkflowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListMessageChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMessageChannelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListMessageChannels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListMessageChannels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListMessageChannels(ctx, req.(*ListMessageChannelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_SaveMessageChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveMessageChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).SaveMessageChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_SaveMessageChannel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).SaveMessageChannel(ctx, req.(*SaveMessageChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_StartChannelLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartChannelLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).StartChannelLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_StartChannelLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).StartChannelLogin(ctx, req.(*StartChannelLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_PollChannelLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PollChannelLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).PollChannelLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_PollChannelLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).PollChannelLogin(ctx, req.(*PollChannelLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_CancelChannelLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelChannelLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).CancelChannelLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_CancelChannelLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).CancelChannelLogin(ctx, req.(*CancelChannelLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_StartChannelSenderPairing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartChannelSenderPairingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).StartChannelSenderPairing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_StartChannelSenderPairing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).StartChannelSenderPairing(ctx, req.(*StartChannelSenderPairingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ControlMessageChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ControlMessageChannelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ControlMessageChannel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ControlMessageChannel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ControlMessageChannel(ctx, req.(*ControlMessageChannelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ListChannelDeliveries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListChannelDeliveriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ListChannelDeliveries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ListChannelDeliveries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ListChannelDeliveries(ctx, req.(*ListChannelDeliveriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_RetryChannelDelivery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetryChannelDeliveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).RetryChannelDelivery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_RetryChannelDelivery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).RetryChannelDelivery(ctx, req.(*RetryChannelDeliveryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5858,6 +6164,42 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListWorkflows",
 			Handler:    _AgentWorkspaceService_ListWorkflows_Handler,
+		},
+		{
+			MethodName: "ListMessageChannels",
+			Handler:    _AgentWorkspaceService_ListMessageChannels_Handler,
+		},
+		{
+			MethodName: "SaveMessageChannel",
+			Handler:    _AgentWorkspaceService_SaveMessageChannel_Handler,
+		},
+		{
+			MethodName: "StartChannelLogin",
+			Handler:    _AgentWorkspaceService_StartChannelLogin_Handler,
+		},
+		{
+			MethodName: "PollChannelLogin",
+			Handler:    _AgentWorkspaceService_PollChannelLogin_Handler,
+		},
+		{
+			MethodName: "CancelChannelLogin",
+			Handler:    _AgentWorkspaceService_CancelChannelLogin_Handler,
+		},
+		{
+			MethodName: "StartChannelSenderPairing",
+			Handler:    _AgentWorkspaceService_StartChannelSenderPairing_Handler,
+		},
+		{
+			MethodName: "ControlMessageChannel",
+			Handler:    _AgentWorkspaceService_ControlMessageChannel_Handler,
+		},
+		{
+			MethodName: "ListChannelDeliveries",
+			Handler:    _AgentWorkspaceService_ListChannelDeliveries_Handler,
+		},
+		{
+			MethodName: "RetryChannelDelivery",
+			Handler:    _AgentWorkspaceService_RetryChannelDelivery_Handler,
 		},
 		{
 			MethodName: "CreateWorkflow",

@@ -26,10 +26,6 @@ type Repository interface {
 	DeleteFAQ(context.Context, string, string, string) error
 }
 
-type ShareUsageRepository interface {
-	ConsumeShareCall(context.Context, string, time.Time, int) (bool, error)
-}
-
 type SafetyAuditRepository interface {
 	RecordSafetyAudit(context.Context, string, string, string, domain.SafetyDecision, string) error
 }
@@ -154,12 +150,18 @@ func (service *Service) ConsumeExternalRate(ctx context.Context, scope, key stri
 }
 
 func (service *Service) ListAssistants(ctx context.Context, owner string) ([]domain.SmartAssistant, error) {
-	return service.repository.ListAssistants(ctx, owner)
+	assistants, err := service.repository.ListAssistants(ctx, owner)
+	for i := range assistants {
+		assistants[i] = withShareDefaults(assistants[i])
+	}
+	return assistants, err
 }
 func (service *Service) GetAssistant(ctx context.Context, owner, id string) (domain.SmartAssistant, error) {
-	return service.repository.GetAssistant(ctx, owner, id)
+	assistant, err := service.repository.GetAssistant(ctx, owner, id)
+	return withShareDefaults(assistant), err
 }
 func (service *Service) CreateAssistant(ctx context.Context, owner string, assistant domain.SmartAssistant) (domain.SmartAssistant, error) {
+	assistant = withShareDefaults(assistant)
 	assistant.OwnerID = owner
 	if assistant.State == "" {
 		assistant.State = domain.StateDraft
@@ -202,7 +204,7 @@ func (service *Service) CreateAssistant(ctx context.Context, owner string, assis
 // configuration. Share credentials and conversation identity are intentionally
 // excluded from the copy.
 func (service *Service) CopyAssistant(ctx context.Context, owner, id string) (domain.SmartAssistant, error) {
-	source, err := service.repository.GetAssistant(ctx, owner, id)
+	source, err := service.GetAssistant(ctx, owner, id)
 	if err != nil {
 		return domain.SmartAssistant{}, err
 	}
@@ -225,14 +227,14 @@ func (service *Service) CopyAssistant(ctx context.Context, owner, id string) (do
 			return domain.SmartAssistant{}, err
 		}
 	}
-	return service.repository.GetAssistant(ctx, owner, created.ID)
+	return service.GetAssistant(ctx, owner, created.ID)
 }
 
 func (service *Service) SetAssistantState(ctx context.Context, owner, id string, state domain.ApplicationState, version int64) (domain.SmartAssistant, error) {
 	if state != domain.StateDraft && state != domain.StateEnabled && state != domain.StateDisabled {
 		return domain.SmartAssistant{}, fmt.Errorf("%w: unsupported assistant state", domain.ErrInvalid)
 	}
-	assistant, err := service.repository.GetAssistant(ctx, owner, id)
+	assistant, err := service.GetAssistant(ctx, owner, id)
 	if err != nil {
 		return domain.SmartAssistant{}, err
 	}
@@ -260,6 +262,7 @@ func hashShareToken(token string) string {
 	return base64.RawURLEncoding.EncodeToString(digest[:])
 }
 func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, assistant domain.SmartAssistant, version int64) (domain.SmartAssistant, error) {
+	assistant = withShareDefaults(assistant)
 	assistant.OwnerID = owner
 	issuedShareToken := ""
 	current, err := service.repository.GetAssistant(ctx, owner, id)
@@ -319,7 +322,7 @@ func (service *Service) UpdateAssistant(ctx context.Context, owner, id string, a
 }
 
 func (service *Service) RegenerateShareToken(ctx context.Context, owner, id string, version int64) (domain.SmartAssistant, error) {
-	assistant, err := service.repository.GetAssistant(ctx, owner, id)
+	assistant, err := service.GetAssistant(ctx, owner, id)
 	if err != nil {
 		return domain.SmartAssistant{}, err
 	}
@@ -363,18 +366,17 @@ func (service *Service) ResolveSharedAssistant(ctx context.Context, token string
 	if assistant.LastValidatedAt == nil || assistant.ValidatedVersion != assistant.Version {
 		return domain.SmartAssistant{}, domain.ErrNotFound
 	}
-	return assistant, nil
+	return withShareDefaults(assistant), nil
 }
 
-func (service *Service) ConsumeSharedAssistantCall(ctx context.Context, assistantID string, dailyLimit int) (bool, error) {
-	if dailyLimit <= 0 {
-		return true, nil
+// Keep the legacy JSON fields readable by older clients while ignoring their saved values.
+func withShareDefaults(assistant domain.SmartAssistant) domain.SmartAssistant {
+	assistant.Share.FreeTextEnabled = true
+	assistant.Share.DailyCallLimit = 0
+	if assistant.Share.EmbedType == "" {
+		assistant.Share.EmbedType = "fullscreen"
 	}
-	repository, ok := service.repository.(ShareUsageRepository)
-	if !ok {
-		return true, nil
-	}
-	return repository.ConsumeShareCall(ctx, assistantID, time.Now().UTC(), dailyLimit)
+	return assistant
 }
 
 func (service *Service) RecordPublicationValidation(ctx context.Context, owner, id string, version int64, checkedAt time.Time) (domain.SmartAssistant, error) {
@@ -382,7 +384,8 @@ func (service *Service) RecordPublicationValidation(ctx context.Context, owner, 
 	if !ok {
 		return domain.SmartAssistant{}, fmt.Errorf("publication repository is unavailable")
 	}
-	return repository.RecordPublicationValidation(ctx, owner, id, version, checkedAt.UTC())
+	assistant, err := repository.RecordPublicationValidation(ctx, owner, id, version, checkedAt.UTC())
+	return withShareDefaults(assistant), err
 }
 
 func (service *Service) PublicationStats(ctx context.Context, owner, id string, windowDays int) (domain.PublicationStats, error) {

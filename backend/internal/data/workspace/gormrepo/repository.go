@@ -584,30 +584,33 @@ type skillRecord struct {
 func (skillRecord) TableName() string { return "skills" }
 
 type runRecord struct {
-	SelectionID       *string    `gorm:"column:selection_id"`
-	QueuePositionID   string     `gorm:"-"`
-	ID                string     `gorm:"column:id"`
-	ConversationID    string     `gorm:"column:conversation_id"`
-	TurnNumber        int        `gorm:"column:turn_number"`
-	OwnerID           string     `gorm:"column:owner_user_id"`
-	WorkflowID        *string    `gorm:"column:workflow_id"`
-	WorkflowName      string     `gorm:"column:workflow_name"`
-	Trigger           string     `gorm:"column:trigger"`
-	State             string     `gorm:"column:state"`
-	Input             []byte     `gorm:"column:input;type:jsonb"`
-	WorkflowSnapshot  []byte     `gorm:"column:workflow_snapshot;type:jsonb"`
-	FinalResult       []byte     `gorm:"column:final_result;type:jsonb"`
-	TerminalError     *string    `gorm:"column:terminal_error"`
-	QueuedAt          time.Time  `gorm:"column:queued_at"`
-	StartedAt         *time.Time `gorm:"column:started_at"`
-	EndedAt           *time.Time `gorm:"column:ended_at"`
-	CancelRequested   *time.Time `gorm:"column:cancel_requested_at"`
-	ExpertStages      []byte     `gorm:"column:expert_stages;type:jsonb"`
-	CreditConsumption []byte     `gorm:"column:credit_consumption;type:jsonb"`
-	Evidence          []byte     `gorm:"column:evidence;type:jsonb"`
-	ExecutionPlan     []byte     `gorm:"column:execution_plan;type:jsonb"`
-	NativeCheckpoint  string     `gorm:"column:native_checkpoint"`
-	Version           int64      `gorm:"column:version"`
+	MessageChannelID       *string    `gorm:"column:message_channel_id"`
+	MessageChannelName     string     `gorm:"column:message_channel_name"`
+	MessageChannelProvider string     `gorm:"column:message_channel_provider"`
+	SelectionID            *string    `gorm:"column:selection_id"`
+	QueuePositionID        string     `gorm:"-"`
+	ID                     string     `gorm:"column:id"`
+	ConversationID         string     `gorm:"column:conversation_id"`
+	TurnNumber             int        `gorm:"column:turn_number"`
+	OwnerID                string     `gorm:"column:owner_user_id"`
+	WorkflowID             *string    `gorm:"column:workflow_id"`
+	WorkflowName           string     `gorm:"column:workflow_name"`
+	Trigger                string     `gorm:"column:trigger"`
+	State                  string     `gorm:"column:state"`
+	Input                  []byte     `gorm:"column:input;type:jsonb"`
+	WorkflowSnapshot       []byte     `gorm:"column:workflow_snapshot;type:jsonb"`
+	FinalResult            []byte     `gorm:"column:final_result;type:jsonb"`
+	TerminalError          *string    `gorm:"column:terminal_error"`
+	QueuedAt               time.Time  `gorm:"column:queued_at"`
+	StartedAt              *time.Time `gorm:"column:started_at"`
+	EndedAt                *time.Time `gorm:"column:ended_at"`
+	CancelRequested        *time.Time `gorm:"column:cancel_requested_at"`
+	ExpertStages           []byte     `gorm:"column:expert_stages;type:jsonb"`
+	CreditConsumption      []byte     `gorm:"column:credit_consumption;type:jsonb"`
+	Evidence               []byte     `gorm:"column:evidence;type:jsonb"`
+	ExecutionPlan          []byte     `gorm:"column:execution_plan;type:jsonb"`
+	NativeCheckpoint       string     `gorm:"column:native_checkpoint"`
+	Version                int64      `gorm:"column:version"`
 }
 
 func (runRecord) TableName() string { return "runs" }

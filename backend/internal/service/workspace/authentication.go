@@ -46,7 +46,11 @@ func NewAuthenticationFilter(accounts *accountapplication.Service, workspace *wo
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			if (request.Method == http.MethodGet && request.URL.Path == teambitionOAuthCallbackPath) || request.URL.Path == "/healthz" || request.URL.Path == "/readyz" || strings.HasPrefix(request.URL.Path, "/embed/assistant/") || strings.HasPrefix(request.URL.Path, "/api/v1/public/assistants/") {
+			if (request.Method == http.MethodGet && (request.URL.Path == tianyanchaOAuthCallbackPath || request.URL.Path == xiaoeOAuthCallbackPath || request.URL.Path == teambitionOAuthCallbackPath || request.URL.Path == klingOAuthCallbackPath || request.URL.Path == linearOAuthCallbackPath || request.URL.Path == pixsoOAuthCallbackPath)) || request.URL.Path == "/healthz" || request.URL.Path == "/readyz" || strings.HasPrefix(request.URL.Path, "/embed/assistant/") || strings.HasPrefix(request.URL.Path, "/api/v1/public/assistants/") {
+				next.ServeHTTP(writer, request)
+				return
+			}
+			if _, _, callback := channelCallbackRoute(request.Method, request.URL.Path); callback {
 				next.ServeHTTP(writer, request)
 				return
 			}

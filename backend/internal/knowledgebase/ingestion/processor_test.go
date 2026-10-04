@@ -3,6 +3,8 @@ package ingestion
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"testing"
@@ -80,5 +82,24 @@ func TestProcessorAcceptsSourceOnlyAfterProviderIndexing(t *testing.T) {
 	worked, err := processor.ProcessNext(context.Background())
 	if err != nil || !worked || !provider.uploaded || repository.finished != nil || len(provider.removed) != 1 || provider.removed[0] != "old-revision" {
 		t.Fatalf("ProcessNext() = worked=%t err=%v uploaded=%t finished=%v", worked, err, provider.uploaded, repository.finished)
+	}
+}
+
+func TestProcessorRejectsChangedRevisionBytesBeforeIndexing(t *testing.T) {
+	digest := sha256.Sum256([]byte("hello"))
+	for _, content := range []string{"hello", "other", "shorter source"} {
+		t.Run(content, func(t *testing.T) {
+			repository := &fakeRepository{job: &workspaceapplication.KnowledgeIngestionJob{ID: "job", KnowledgeBaseID: "base", RevisionID: "revision", ObjectKey: "source", ContentType: "text/plain", Size: 5, SHA256: hex.EncodeToString(digest[:])}}
+			provider := &fakeProvider{}
+			processor, err := New(repository, fakeObjects{content: []byte(content)}, provider)
+			if err != nil {
+				t.Fatal(err)
+			}
+			worked, err := processor.ProcessNext(context.Background())
+			valid := content == "hello"
+			if err != nil || !worked || !repository.finishCalled || provider.uploaded != valid || (repository.finished == nil) != valid {
+				t.Fatalf("worked=%t err=%v uploaded=%t recorded=%v", worked, err, provider.uploaded, repository.finished)
+			}
+		})
 	}
 }

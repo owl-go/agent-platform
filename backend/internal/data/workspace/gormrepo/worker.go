@@ -455,12 +455,12 @@ func cancelDisabledOwnerWork(tx *gorm.DB, now time.Time) error {
 	}
 	if err := tx.Raw(`
 		UPDATE runs SET state = 'cancelled', cancel_requested_at = ?, ended_at = ?, version = version + 1
-		WHERE state = 'queued' AND owner_user_id IN (SELECT id FROM users WHERE disabled_at IS NOT NULL)
+		WHERE state = 'queued' AND (cancel_requested_at IS NOT NULL OR owner_user_id IN (SELECT id FROM users WHERE disabled_at IS NOT NULL))
 		RETURNING id`, now, now).Scan(&runs).Error; err != nil {
 		return err
 	}
 	for _, run := range runs {
-		if err := tx.Table("run_events").Create(map[string]any{"run_id": run.ID, "sequence": 1, "event_type": "run.cancelled", "payload": []byte(`{}`), "occurred_at": now}).Error; err != nil {
+		if err := appendRunEvents(tx, run.ID, nil, "run.cancelled", now); err != nil {
 			return err
 		}
 	}
@@ -558,10 +558,11 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		SELECT candidate.* FROM runs candidate
 		JOIN users owner ON owner.id = candidate.owner_user_id AND owner.disabled_at IS NULL
 		JOIN workflows workflow ON workflow.id = candidate.workflow_id AND workflow.deleted_at IS NULL
-		WHERE candidate.state = 'queued'
+		WHERE candidate.state = 'queued' AND candidate.cancel_requested_at IS NULL
+ AND (candidate.message_channel_id IS NULL OR ?)
 		  AND NOT EXISTS (SELECT 1 FROM runs active WHERE active.workflow_id = candidate.workflow_id AND active.state IN ('running', 'waiting_for_user'))
 		ORDER BY candidate.queued_at, candidate.id
-		FOR UPDATE OF candidate, workflow SKIP LOCKED LIMIT 1`).Scan(&row).Error
+		FOR UPDATE OF candidate, workflow SKIP LOCKED LIMIT 1`, messageChannelsEnabled(tx)).Scan(&row).Error
 	if err != nil || row.ID == "" {
 		return nil, err
 	}
@@ -574,7 +575,7 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 		if updateErr := tx.Model(&runRecord{}).Where("id = ? AND state = 'queued'", row.ID).Updates(map[string]any{"state": "failed", "terminal_error": message, "ended_at": now, "version": gorm.Expr("version + 1")}).Error; updateErr != nil {
 			return nil, updateErr
 		}
-		if eventErr := tx.Table("run_events").Create(map[string]any{"run_id": row.ID, "sequence": 1, "event_type": "run.failed", "payload": []byte(`{}`), "occurred_at": now}).Error; eventErr != nil {
+		if eventErr := appendRunEvents(tx, row.ID, nil, "run.failed", now); eventErr != nil {
 			return nil, eventErr
 		}
 		return nil, nil
@@ -637,7 +638,11 @@ func claimWorkflowRun(tx *gorm.DB) (*application.ExecutionJob, error) {
 	if row.WorkflowID != nil {
 		workflowID = *row.WorkflowID
 	}
-	return &application.ExecutionJob{Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, ConversationID: row.ConversationID, Instruction: instruction, Attachments: input.Attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
+	values, err := channelRedactionValues(tx, row.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &application.ExecutionJob{AdditionalRedactionValues: values, Kind: application.JobWorkflow, ID: row.ID, OwnerID: row.OwnerID, WorkflowID: workflowID, ConversationID: row.ConversationID, Instruction: instruction, Attachments: input.Attachments, CheckpointRef: checkpoint, StageCheckpointRefs: stageCheckpoints, Snapshot: snapshot}, nil
 }
 
 func sameStageRuntimes(current, previous domain.ExecutionSnapshot) bool {
@@ -1101,6 +1106,18 @@ func hydrateStageCredentials(tx *gorm.DB, snapshot *domain.ExecutionSnapshot) er
 func (repository *Repository) FinishSucceeded(ctx context.Context, job application.ExecutionJob, result application.ExecutionResult) error {
 	commitAttempted := false
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		redactor, err := channelRedactor(tx, job)
+		if err != nil {
+			return err
+		}
+		result.FinalMessage = string(redactor.Bytes([]byte(result.FinalMessage)))
+		if result.FinalJSON != nil {
+			result.FinalJSON = redactChannelJSON(result.FinalJSON, redactor).(map[string]any)
+		}
+		for index := range result.Events {
+			result.Events[index].Payload = redactor.Bytes(result.Events[index].Payload)
+		}
+
 		now := time.Now().UTC()
 		if err := repository.settleTerminalCredits(tx, result); err != nil {
 			return err
@@ -1340,6 +1357,11 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		message = message[:4_096]
 	}
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		redactor, err := channelRedactor(tx, job)
+		if err != nil {
+			return err
+		}
+		message = string(redactor.Bytes([]byte(message)))
 		now := time.Now().UTC()
 		if err := repository.settleTerminalCredits(tx, executionResult); err != nil {
 			return err
@@ -1694,6 +1716,12 @@ func (repository *Repository) RecordProgress(ctx context.Context, job applicatio
 		return nil
 	}
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		redactor, err := channelRedactor(tx, job)
+		if err != nil {
+			return err
+		}
+		event.Payload = redactor.Bytes(event.Payload)
+
 		var run runRecord
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state").Where("id = ? AND owner_user_id = ?", job.ID, job.OwnerID).Take(&run).Error; err != nil {
 			return mapNotFound(err)
@@ -1895,7 +1923,13 @@ func appendRunEvents(tx *gorm.DB, runID string, events []application.ExecutionEv
 		}
 	}
 	sequence++
-	return tx.Table("run_events").Create(map[string]any{"run_id": runID, "sequence": sequence, "event_type": terminal, "payload": []byte(`{}`), "occurred_at": now}).Error
+	if err := tx.Table("run_events").Create(map[string]any{"run_id": runID, "sequence": sequence, "event_type": terminal, "payload": []byte(`{}`), "occurred_at": now}).Error; err != nil {
+		return err
+	}
+	if terminal == "run.succeeded" || terminal == "run.failed" || terminal == "run.cancelled" {
+		return enqueueRunChannelDelivery(tx, runID)
+	}
+	return nil
 }
 
 func boundedSummary(value string) string {
@@ -1908,4 +1942,10 @@ func boundedSummary(value string) string {
 		return value[start:]
 	}
 	return value
+}
+
+func messageChannelsEnabled(tx *gorm.DB) bool {
+	value, ok := tx.Get(channelEnabledKey)
+	enabled, _ := value.(bool)
+	return ok && enabled
 }
