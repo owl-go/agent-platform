@@ -84,6 +84,7 @@ const (
 	AgentWorkspaceService_StartChannelLogin_FullMethodName                         = "/workspace.v1.AgentWorkspaceService/StartChannelLogin"
 	AgentWorkspaceService_PollChannelLogin_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/PollChannelLogin"
 	AgentWorkspaceService_CancelChannelLogin_FullMethodName                        = "/workspace.v1.AgentWorkspaceService/CancelChannelLogin"
+	AgentWorkspaceService_StartChannelSenderPairing_FullMethodName                 = "/workspace.v1.AgentWorkspaceService/StartChannelSenderPairing"
 	AgentWorkspaceService_ControlMessageChannel_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ControlMessageChannel"
 	AgentWorkspaceService_ListChannelDeliveries_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListChannelDeliveries"
 	AgentWorkspaceService_RetryChannelDelivery_FullMethodName                      = "/workspace.v1.AgentWorkspaceService/RetryChannelDelivery"
@@ -261,6 +262,7 @@ type AgentWorkspaceServiceClient interface {
 	StartChannelLogin(ctx context.Context, in *StartChannelLoginRequest, opts ...grpc.CallOption) (*ChannelLogin, error)
 	PollChannelLogin(ctx context.Context, in *PollChannelLoginRequest, opts ...grpc.CallOption) (*ChannelLogin, error)
 	CancelChannelLogin(ctx context.Context, in *CancelChannelLoginRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	StartChannelSenderPairing(ctx context.Context, in *StartChannelSenderPairingRequest, opts ...grpc.CallOption) (*ChannelLogin, error)
 	ControlMessageChannel(ctx context.Context, in *ControlMessageChannelRequest, opts ...grpc.CallOption) (*MessageChannel, error)
 	ListChannelDeliveries(ctx context.Context, in *ListChannelDeliveriesRequest, opts ...grpc.CallOption) (*ListChannelDeliveriesResponse, error)
 	RetryChannelDelivery(ctx context.Context, in *RetryChannelDeliveryRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
@@ -1021,6 +1023,16 @@ func (c *agentWorkspaceServiceClient) CancelChannelLogin(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_CancelChannelLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) StartChannelSenderPairing(ctx context.Context, in *StartChannelSenderPairingRequest, opts ...grpc.CallOption) (*ChannelLogin, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChannelLogin)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_StartChannelSenderPairing_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2156,6 +2168,7 @@ type AgentWorkspaceServiceServer interface {
 	StartChannelLogin(context.Context, *StartChannelLoginRequest) (*ChannelLogin, error)
 	PollChannelLogin(context.Context, *PollChannelLoginRequest) (*ChannelLogin, error)
 	CancelChannelLogin(context.Context, *CancelChannelLoginRequest) (*DeleteResponse, error)
+	StartChannelSenderPairing(context.Context, *StartChannelSenderPairingRequest) (*ChannelLogin, error)
 	ControlMessageChannel(context.Context, *ControlMessageChannelRequest) (*MessageChannel, error)
 	ListChannelDeliveries(context.Context, *ListChannelDeliveriesRequest) (*ListChannelDeliveriesResponse, error)
 	RetryChannelDelivery(context.Context, *RetryChannelDeliveryRequest) (*DeleteResponse, error)
@@ -2466,6 +2479,9 @@ func (UnimplementedAgentWorkspaceServiceServer) PollChannelLogin(context.Context
 }
 func (UnimplementedAgentWorkspaceServiceServer) CancelChannelLogin(context.Context, *CancelChannelLoginRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CancelChannelLogin not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) StartChannelSenderPairing(context.Context, *StartChannelSenderPairingRequest) (*ChannelLogin, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartChannelSenderPairing not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ControlMessageChannel(context.Context, *ControlMessageChannelRequest) (*MessageChannel, error) {
 	return nil, status.Error(codes.Unimplemented, "method ControlMessageChannel not implemented")
@@ -3972,6 +3988,24 @@ func _AgentWorkspaceService_CancelChannelLogin_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).CancelChannelLogin(ctx, req.(*CancelChannelLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_StartChannelSenderPairing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartChannelSenderPairingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).StartChannelSenderPairing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_StartChannelSenderPairing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).StartChannelSenderPairing(ctx, req.(*StartChannelSenderPairingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -6150,6 +6184,10 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelChannelLogin",
 			Handler:    _AgentWorkspaceService_CancelChannelLogin_Handler,
+		},
+		{
+			MethodName: "StartChannelSenderPairing",
+			Handler:    _AgentWorkspaceService_StartChannelSenderPairing_Handler,
 		},
 		{
 			MethodName: "ControlMessageChannel",

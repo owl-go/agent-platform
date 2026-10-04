@@ -36,6 +36,7 @@ const directOnly = computed(() => setup.value.audience === "direct");
 const roomsOnly = computed(() => setup.value.audience === "rooms");
 const credentialComplete = computed(() => fields.value.length > 0 && fields.value.every(field => form.credentials[field]?.trim()));
 let loginExpiryTimer: ReturnType<typeof setTimeout> | undefined;
+let pairingExpiryTimer: ReturnType<typeof setTimeout> | undefined;
 let loginTimer: ReturnType<typeof setTimeout> | undefined;
 let loginAbort: AbortController | undefined;
 let loginGeneration = 0;
@@ -70,22 +71,29 @@ function edit(channel?: MessageChannel, provider = "telegram") {
 }
 function clearSecrets() { form.credentials = {}; }
 function clearLogin() {
-  ++loginGeneration; clearTimeout(loginTimer); clearTimeout(loginExpiryTimer); polling.value = false; loginAbort?.abort();
+  ++loginGeneration; clearTimeout(loginTimer); clearTimeout(loginExpiryTimer); clearTimeout(pairingExpiryTimer); polling.value = false; loginAbort?.abort();
   const pending = login.value; login.value = undefined; qrImage.value = ""; verificationCode.value = "";
-  if (pending && !disposed) void api.cancelChannelLogin(props.workflowId, pending.id).catch(() => {});
+  if (pending) void api.cancelChannelLogin(props.workflowId, pending.id).catch(() => {});
 }
 function reconnect() { clearLogin(); reconnecting.value = true; clearSecrets(); }
 function chooseLoginMethod(method: "qr" | "credentials") { clearLogin(); clearSecrets(); loginMethod.value = method; }
 async function applyLogin(result: ChannelLogin, generation: number) {
   if (disposed || generation !== loginGeneration || !dialog.value) return;
   login.value = result;
+  clearTimeout(pairingExpiryTimer);
+  if (result.pairing_expires_at && ["connecting", "waiting"].includes(result.pairing_status ?? "")) {
+    pairingExpiryTimer = setTimeout(() => {
+      if (generation === loginGeneration && login.value) { login.value = { ...login.value, pairing_status: "expired", pairing_code: "" }; clearTimeout(loginTimer); }
+    }, Math.max(0, Date.parse(result.pairing_expires_at) - Date.now()));
+  }
   clearTimeout(loginExpiryTimer);
   loginExpiryTimer = setTimeout(() => {
     if (generation === loginGeneration && login.value) { login.value = { ...login.value, status: "expired", qr_content: "" }; qrImage.value = ""; clearTimeout(loginTimer); }
   }, Math.max(0, Date.parse(result.expires_at) - Date.now()));
   if (result.status === "connected") {
     qrImage.value = ""; verificationCode.value = ""; clearSecrets();
-    if (!form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
+    if (result.provider !== "feishu" && !form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
+    if (["connecting", "waiting"].includes(result.pairing_status ?? "")) loginTimer = setTimeout(() => pollLogin(generation), 2000);
     return;
   }
   if (["expired", "failed"].includes(result.status)) { qrImage.value = ""; return; }
@@ -95,6 +103,30 @@ async function applyLogin(result: ChannelLogin, generation: number) {
     qrImage.value = image;
   }
   if (result.status !== "verification_required") loginTimer = setTimeout(() => pollLogin(generation), 2000);
+}
+async function startSenderPairing() {
+  if (busy.value || polling.value || !authenticated.value || form.provider !== "feishu") return;
+  const current = login.value?.status === "connected" && Date.now() < Date.parse(login.value.expires_at) ? login.value : undefined;
+  if (!current && !editing.value) return;
+  if (!current) clearLogin();
+  const generation = loginGeneration;
+  loginAbort?.abort(); loginAbort = new AbortController(); busy.value = true; error.value = "";
+  try {
+    const result = await api.startChannelSenderPairing(props.workflowId, current ? {login_id:current.id} : {channel_id:editing.value!.id,version:editing.value!.version}, loginAbort.signal);
+    if (generation !== loginGeneration || !dialog.value || disposed) { void api.cancelChannelLogin(props.workflowId,result.id).catch(()=>{}); return; }
+    await applyLogin(result,generation);
+  } catch { if (!disposed && generation === loginGeneration) error.value = t("channels.pairing.failed"); }
+  finally { if (generation === loginGeneration) busy.value = false; }
+}
+function acceptPairedSender() {
+  const candidate = login.value;
+  if (candidate?.status !== "connected" || candidate.pairing_status !== "recognized" || !candidate.suggested_sender_id) return;
+  form.senders = [...new Set([...ids(form.senders),candidate.suggested_sender_id])].join("\n");
+}
+async function copyPairingCode() {
+  if (login.value?.pairing_status !== "waiting" || !login.value.pairing_code) return;
+  try { await navigator.clipboard.writeText(login.value.pairing_code); }
+  catch { error.value = t("channels.pairing.copyFailed"); }
 }
 async function connectAccount() {
   if (busy.value) return;
@@ -221,6 +253,20 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
         <p class="muted">{{ t(`channels.receive.${setup.receive}`) }}</p>
         <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
         <el-form-item :label="t('channels.senderLabel', {kind:setup.sender})"><el-input v-model="form.senders" type="textarea" :disabled="busy" :placeholder="setup.sender" /></el-form-item>
+        <div v-if="form.provider === 'feishu'" class="channel-sender-pairing">
+          <el-button v-if="!['connecting','waiting'].includes(login?.pairing_status ?? '')" :loading="busy" :disabled="busy || polling" @click="startSenderPairing">{{ t('channels.pairing.generate') }}</el-button>
+          <p v-if="login?.pairing_status" role="status">{{ t(`channels.pairing.${login.pairing_status}`) }}</p>
+          <template v-if="login?.pairing_status === 'waiting' && login.pairing_code">
+            <p>{{ t('channels.pairing.instruction') }}</p>
+            <code class="channel-pairing-code">{{ login.pairing_code }}</code>
+            <el-button :disabled="busy" @click="copyPairingCode">{{ t('channels.pairing.copy') }}</el-button>
+            <p class="muted">{{ t('channels.pairing.expires', { time: login.pairing_expires_at ? new Date(login.pairing_expires_at).toLocaleTimeString() : '' }) }}</p>
+          </template>
+          <template v-if="login?.pairing_status === 'recognized' && login.suggested_sender_id">
+            <code>{{ login.suggested_sender_id }}</code>
+            <el-button :disabled="busy || ids(form.senders).includes(login.suggested_sender_id)" @click="acceptPairedSender">{{ t('channels.pairing.accept') }}</el-button>
+          </template>
+        </div>
         <el-checkbox v-if="!directOnly && !roomsOnly" v-model="form.direct" :disabled="busy">{{ t('channels.allowDirect') }}</el-checkbox>
         <p v-if="directOnly" class="muted">{{ t('channels.directOnly') }}</p>
         <el-form-item v-if="!directOnly" :label="t(roomsOnly ? 'channels.roomLabel' : 'channels.groupLabel', {kind:setup.group})"><el-input v-model="form.groups" type="textarea" :disabled="busy" :placeholder="setup.group" /></el-form-item>
@@ -240,6 +286,9 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 .channel-provider-identity { display:flex; align-items:center; gap:var(--aw-space-2); min-width:0; }
 .channel-provider-action { flex-shrink:0; color:var(--aw-primary); font-size:var(--aw-font-size-body); }
 .channel-dialog-title { display:flex; align-items:center; gap:var(--aw-space-2); margin:0; }
+.channel-sender-pairing { display:flex; flex-wrap:wrap; align-items:center; gap:var(--aw-space-2); margin-bottom:var(--aw-space-4); }
+.channel-sender-pairing p { width:100%; margin:0; }
+.channel-pairing-code { overflow-wrap:anywhere; user-select:all; }
 .channel-provider-card:hover:not(:disabled) { background:var(--aw-n2); border-color:var(--aw-primary); }
 .channel-provider-card:focus-visible { outline:2px solid var(--aw-primary); outline-offset:2px; }
 .channel-provider-card:disabled { cursor:not-allowed; opacity:.55; }

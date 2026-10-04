@@ -1876,6 +1876,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/{workflow_id}/channel-sender-pairings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_StartChannelSenderPairing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows/{workflow_id}/git-source": {
         parameters: {
             query?: never;
@@ -2341,6 +2357,12 @@ export interface components {
             /** Format: int64 */
             version?: number;
         };
+        AgentWorkspaceServiceStartChannelSenderPairingBody: {
+            login_id?: string;
+            channel_id?: string;
+            /** Format: int64 */
+            version?: number;
+        };
         AgentWorkspaceServiceStopImageGenerationBody: Record<string, never>;
         AgentWorkspaceServiceTestMCPConnectorBody: Record<string, never>;
         AgentWorkspaceServiceTransferGroupResourcesBody: {
@@ -2617,6 +2639,10 @@ export interface components {
             suggested_sender_id?: string;
             /** Format: date-time */
             expires_at?: string;
+            pairing_code?: string;
+            pairing_status?: string;
+            /** Format: date-time */
+            pairing_expires_at?: string;
         };
         v1CommandApproval: {
             id?: string;
@@ -9179,6 +9205,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AgentWorkspaceServicePollChannelLoginBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ChannelLogin"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_StartChannelSenderPairing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceStartChannelSenderPairingBody"];
             };
         };
         responses: {

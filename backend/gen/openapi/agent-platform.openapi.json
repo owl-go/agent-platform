@@ -6673,6 +6673,56 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/channel-sender-pairings": {
+      "post": {
+        "operationId": "AgentWorkspaceService_StartChannelSenderPairing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1ChannelLogin"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/rpcStatus"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWorkspaceServiceStartChannelSenderPairingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/git-source": {
       "put": {
         "operationId": "AgentWorkspaceService_ConfigureWorkflowGitSource",
@@ -8171,6 +8221,21 @@
           }
         }
       },
+      "AgentWorkspaceServiceStartChannelSenderPairingBody": {
+        "type": "object",
+        "properties": {
+          "login_id": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "AgentWorkspaceServiceStopImageGenerationBody": {
         "type": "object"
       },
@@ -8920,6 +8985,16 @@
             "type": "string"
           },
           "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pairing_code": {
+            "type": "string"
+          },
+          "pairing_status": {
+            "type": "string"
+          },
+          "pairing_expires_at": {
             "type": "string",
             "format": "date-time"
           }

@@ -113,7 +113,27 @@ func (s *Service) CancelChannelLogin(ctx context.Context, r *workspacev1.CancelC
 	return &workspacev1.DeleteResponse{Deleted: true}, nil
 }
 func loginResponse(l application.ChannelLogin) *workspacev1.ChannelLogin {
-	return &workspacev1.ChannelLogin{Id: l.ID, Provider: l.Provider, Status: l.Status, QrContent: l.QRContent, AccountId: l.AccountID, AccountName: l.AccountName, SuggestedSenderId: l.SuggestedSenderID, ExpiresAt: timestamppb.New(l.ExpiresAt)}
+	response := &workspacev1.ChannelLogin{Id: l.ID, Provider: l.Provider, Status: l.Status, QrContent: l.QRContent, AccountId: l.AccountID, AccountName: l.AccountName, SuggestedSenderId: l.SuggestedSenderID, ExpiresAt: timestamppb.New(l.ExpiresAt), PairingCode: l.PairingCode, PairingStatus: l.PairingStatus}
+	if l.PairingExpiresAt != nil {
+		response.PairingExpiresAt = timestamppb.New(*l.PairingExpiresAt)
+	}
+	return response
+}
+
+func (s *Service) StartChannelSenderPairing(ctx context.Context, r *workspacev1.StartChannelSenderPairingRequest) (*workspacev1.ChannelLogin, error) {
+	owner, err := s.owner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := s.channelService()
+	if err != nil {
+		return nil, err
+	}
+	login, err := channels.StartSenderPairing(ctx, owner, r.WorkflowId, r.LoginId, r.ChannelId, r.Version)
+	if err != nil {
+		return nil, publicError(err)
+	}
+	return loginResponse(login), nil
 }
 
 func (s *Service) ControlMessageChannel(ctx context.Context, request *workspacev1.ControlMessageChannelRequest) (*workspacev1.MessageChannel, error) {

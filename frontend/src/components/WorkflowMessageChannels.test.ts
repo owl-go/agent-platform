@@ -11,7 +11,7 @@ function widget(api: Partial<PlatformApi>, locale: "zh-CN" | "en-US" = "zh-CN") 
     ElButton:{template:'<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',props:["disabled"]},
     ElAlert:{template:'<p role="alert">{{title}}</p>',props:["title"]}, ElEmpty:{template:'<p>{{description}}</p>',props:["description"]}, ElTag:{template:'<span><slot /></span>'},
     ElForm:{template:'<form><slot /></form>'}, ElFormItem:{template:'<label>{{label}}<slot /></label>',props:["label"]},
-    ElInput:{template:'<input :value="modelValue" :type="type" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)" />',props:["modelValue","type","disabled"]},
+    ElInput:{template:'<textarea v-if="type === \'textarea\'" :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)"/><input v-else :value="modelValue" :type="type" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)" />',props:["modelValue","type","disabled"]},
     ElSelect:{template:'<select :value="modelValue" :disabled="disabled" @change="$emit(\'update:modelValue\', $event.target.value)"><slot /></select>',props:["modelValue","disabled"]},
     ElOption:{template:'<option :value="value">{{label}}</option>',props:["value","label"]},
     ElCheckbox:{template:'<label><input type="checkbox" :checked="modelValue" :disabled="disabled" @change="$emit(\'update:modelValue\', $event.target.checked)"/><slot/></label>',props:["modelValue","disabled"]},
@@ -21,9 +21,70 @@ function widget(api: Partial<PlatformApi>, locale: "zh-CN" | "en-US" = "zh-CN") 
 }
 const connectedLogin = (provider: string): ChannelLogin => ({ id:"login", provider, status:"connected", qr_content:"", account_id:"bot", account_name:"Bot", suggested_sender_id:"", expires_at:new Date(Date.now()+300000).toISOString() });
 const button = (wrapper: ReturnType<typeof widget>, text: string) => wrapper.findAll("button").find(b=>b.text()===text)!;
-const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input");
+const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input, textarea");
 vi.mock("qrcode", () => ({ default:{toDataURL:vi.fn(async()=>"data:image/png;base64,cXJjb2Rl")} }));
 describe("Workflow message channels",()=>{
+  it.each(["zh-CN", "en-US"] as const)("pairs a Feishu sender and requires owner confirmation in %s", async(locale)=>{
+    vi.useFakeTimers();
+    const zh=locale==="zh-CN";
+    const base=connectedLogin("feishu");
+    const waiting:ChannelLogin={...base,pairing_status:"waiting",pairing_code:"pair 0123456789abcdef0123456789abcdef",pairing_expires_at:new Date(Date.now()+120000).toISOString()};
+    const pair=vi.fn(async()=>waiting),poll=vi.fn(async()=>({...waiting,pairing_status:"recognized" as const,pairing_code:"",suggested_sender_id:"ou_identified"}));
+    const save=vi.fn(async()=>channel),cancel=vi.fn(async()=>{});
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:vi.fn(async()=>base),startChannelSenderPairing:pair,pollChannelLogin:poll,saveMessageChannel:save,cancelChannelLogin:cancel},locale);
+    try {
+      await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
+      await field(wrapper,"App ID").setValue("app");await field(wrapper,"App Secret").setValue("secret");
+      await button(wrapper,zh?"连接账号":"Connect account").trigger("click");await flushPromises();
+      await button(wrapper,zh?"自动识别发送者":"Identify sender automatically").trigger("click");await flushPromises();
+      expect(pair).toHaveBeenCalledWith("workflow",{login_id:"login"},expect.any(AbortSignal));
+      expect(wrapper.get('.channel-pairing-code').text()).toBe(waiting.pairing_code);
+      await vi.advanceTimersByTimeAsync(2000);await flushPromises();
+      expect(wrapper.find('.channel-pairing-code').exists()).toBe(false);
+      expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe("");
+      expect(button(wrapper,zh?"保存":"Save").attributes("disabled")).toBeDefined();expect(save).not.toHaveBeenCalled();
+      await button(wrapper,zh?"加入允许的发送者":"Add allowed sender").trigger("click");await flushPromises();
+      expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe("ou_identified");
+      await button(wrapper,zh?"保存":"Save").trigger("click");await flushPromises();
+      expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({login_id:"login",credentials:{},audience:{sender_ids:["ou_identified"],group_ids:[],allow_direct:true}}),expect.any(AbortSignal));
+    } finally {wrapper.unmount();vi.useRealTimers();}
+  });
+  it("pairs an existing saved Feishu account without exposing credentials and preserves its audience", async()=>{
+    const pair=vi.fn(async()=>({...connectedLogin("feishu"),pairing_status:"recognized" as const,suggested_sender_id:"ou_new"})),cancel=vi.fn(async()=>{});
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider:"feishu",region:"feishu",audience:{sender_ids:["ou_old"],group_ids:[],allow_direct:true}}]})),startChannelSenderPairing:pair,cancelChannelLogin:cancel});
+    await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
+    expect(wrapper.findAll('input[type="password"]')).toHaveLength(0);
+    await button(wrapper,"自动识别发送者").trigger("click");await flushPromises();
+    expect(pair).toHaveBeenCalledWith("workflow",{channel_id:"channel",version:3},expect.any(AbortSignal));
+    await button(wrapper,"加入允许的发送者").trigger("click");await flushPromises();
+    expect((field(wrapper,"允许的发送者").element as HTMLInputElement).value).toBe("ou_old\nou_new");
+    expect(button(wrapper,"加入允许的发送者").attributes("disabled")).toBeDefined();
+    wrapper.unmount();expect(cancel).toHaveBeenCalledWith("workflow","login");
+  });
+  it("cancels a pairing returned after the owner leaves the form", async()=>{
+    let resolvePair!: (login:ChannelLogin)=>void;
+    const pair=vi.fn((_workflow:string,_input:unknown,_signal?:AbortSignal)=>new Promise<ChannelLogin>(resolve=>{resolvePair=resolve;})),cancel=vi.fn(async()=>{});
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider:"feishu",region:"feishu"}]})),startChannelSenderPairing:pair,cancelChannelLogin:cancel});
+    await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
+    await button(wrapper,"自动识别发送者").trigger("click");await flushPromises();
+    wrapper.unmount();
+    resolvePair({...connectedLogin("feishu"),pairing_status:"waiting",pairing_code:"pair stale"});await flushPromises();
+    expect(cancel).toHaveBeenCalledWith("workflow","login");
+    expect(pair.mock.calls[0]?.[2]?.aborted).toBe(true);
+  });
+  it("hides an expired pairing code and cancels its temporary connection on close", async()=>{
+    vi.useFakeTimers();
+    const pair=vi.fn(async()=>({...connectedLogin("feishu"),pairing_status:"waiting" as const,pairing_code:"pair temporary",pairing_expires_at:new Date(Date.now()+1000).toISOString()})),poll=vi.fn(),cancel=vi.fn(async()=>{});
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider:"feishu",region:"feishu"}]})),startChannelSenderPairing:pair,pollChannelLogin:poll,cancelChannelLogin:cancel});
+    try {
+      await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
+      await button(wrapper,"自动识别发送者").trigger("click");await flushPromises();
+      await vi.advanceTimersByTimeAsync(1000);await flushPromises();
+      expect(wrapper.find('.channel-pairing-code').exists()).toBe(false);expect(poll).not.toHaveBeenCalled();
+      await button(wrapper,"取消").trigger("click");expect(cancel).toHaveBeenCalledWith("workflow","login");
+    } finally {wrapper.unmount();vi.useRealTimers();}
+  });
+
   it.each(["zh-CN", "en-US"] as const)("shows actionable Feishu tenant permission failure in %s", async(locale)=>{
     const start=vi.fn().mockRejectedValue(new ApiError("validation",422,"feishu_tenant_permission_required","request",99991672));
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start},locale);

@@ -77,6 +77,7 @@ service AgentWorkspaceService {
   rpc StartChannelLogin(StartChannelLoginRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-logins" body: "*"}; }
   rpc PollChannelLogin(PollChannelLoginRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll" body: "*"}; }
   rpc CancelChannelLogin(CancelChannelLoginRequest) returns (DeleteResponse) { option (google.api.http) = {delete: "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}"}; }
+  rpc StartChannelSenderPairing(StartChannelSenderPairingRequest) returns (ChannelLogin) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/channel-sender-pairings" body: "*"}; }
   rpc ControlMessageChannel(ControlMessageChannelRequest) returns (MessageChannel) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions" body: "*"}; }
   rpc ListChannelDeliveries(ListChannelDeliveriesRequest) returns (ListChannelDeliveriesResponse) { option (google.api.http) = {get: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries"}; }
   rpc RetryChannelDelivery(RetryChannelDeliveryRequest) returns (DeleteResponse) { option (google.api.http) = {post: "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry" body: "*"}; }
@@ -695,6 +696,12 @@ message StartChannelLoginRequest {
 }
 message PollChannelLoginRequest { string workflow_id = 1; string login_id = 2; string verification_code = 3; }
 message CancelChannelLoginRequest { string workflow_id = 1; string login_id = 2; }
+message StartChannelSenderPairingRequest {
+ string workflow_id = 1;
+ string login_id = 2;
+ string channel_id = 3;
+ int64 version = 4;
+}
 message ChannelLogin {
  string id = 1;
  string provider = 2;
@@ -704,6 +711,9 @@ message ChannelLogin {
  string account_name = 6;
  string suggested_sender_id = 7;
  google.protobuf.Timestamp expires_at = 8;
+ string pairing_code = 9;
+ string pairing_status = 10;
+ google.protobuf.Timestamp pairing_expires_at = 11;
 }
 message ControlMessageChannelRequest {
  string workflow_id = 1;

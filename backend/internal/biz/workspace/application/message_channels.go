@@ -71,6 +71,9 @@ type MessageChannels struct {
 	logins               map[string]*channelLoginSession
 	typingObserver       func(string, string)
 	authorizationRenewal *ConnectorAuthorizationRenewal
+	pairingMu            sync.Mutex
+	pairings             map[string]string
+	pairingContext       context.Context
 }
 
 func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCipher, transports map[string]ChannelTransport, enabled bool, callbackBase string, options ...ChannelLimits) *MessageChannels {
@@ -87,7 +90,7 @@ func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCiphe
 	for provider, transport := range transports {
 		registry[provider] = transport
 	}
-	return &MessageChannels{repository: repository, cipher: cipher, transports: registry, enabled: enabled, callbackBase: strings.TrimRight(callbackBase, "/"), limits: limits, logins: map[string]*channelLoginSession{}}
+	return &MessageChannels{repository: repository, cipher: cipher, transports: registry, enabled: enabled, callbackBase: strings.TrimRight(callbackBase, "/"), limits: limits, logins: map[string]*channelLoginSession{}, pairings: map[string]string{}, pairingContext: context.Background()}
 }
 func ChannelCredentialAAD(c domain.MessageChannel) string {
 	return "message-channel:" + c.OwnerID + ":" + c.ID + ":" + fmt.Sprint(c.ConfigVersion)
@@ -124,11 +127,11 @@ func (s *MessageChannels) Save(ctx context.Context, owner, workflow, id string, 
 	if !clientChannelCredentials(credentials) {
 		return c, domain.ErrInvalid
 	}
-	return s.save(ctx, owner, workflow, id, version, c, credentials)
+	return s.save(ctx, owner, workflow, id, version, c, credentials, nil)
 }
 
 // Only decrypted login or retained channel credentials may contain metadata.
-func (s *MessageChannels) save(ctx context.Context, owner, workflow, id string, version int64, c domain.MessageChannel, credentials ChannelCredentials) (domain.MessageChannel, error) {
+func (s *MessageChannels) save(ctx context.Context, owner, workflow, id string, version int64, c domain.MessageChannel, credentials ChannelCredentials, expected *ChannelIdentity) (domain.MessageChannel, error) {
 	if !s.enabled {
 		return c, fmt.Errorf("%w: message channels are disabled by the administrator", domain.ErrInvalid)
 	}
@@ -172,6 +175,9 @@ func (s *MessageChannels) save(ctx context.Context, owner, workflow, id string, 
 	identity, err := transport.Account.Identify(ctx, credentials, c.Region)
 	if err != nil {
 		return c, err
+	}
+	if expected != nil && (identity.ID != expected.ID || identity.TenantID != expected.TenantID || identity.BindingID != expected.BindingID) {
+		return c, domain.ErrConflict
 	}
 	secret := make([]byte, 32)
 	if _, err = rand.Read(secret); err != nil {
@@ -250,6 +256,14 @@ func (s *MessageChannels) Control(ctx context.Context, owner, workflow, id strin
 		}
 		if err = transport.receiver().Configure(ctx, old, credentials, old.Channel.CallbackURL); err != nil {
 			return old.Channel, err
+		}
+	}
+	// Serialize admission of a permanent receiver with temporary sender pairing.
+	if action == "validate" || action == "enable" {
+		s.pairingMu.Lock()
+		defer s.pairingMu.Unlock()
+		if s.pairings[old.Channel.BindingID] != "" {
+			return old.Channel, domain.ErrConflict
 		}
 	}
 	stored, err := s.repository.ControlMessageChannel(ctx, owner, workflow, id, version, action, code)

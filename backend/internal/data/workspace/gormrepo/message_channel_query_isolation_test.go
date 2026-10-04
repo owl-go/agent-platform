@@ -20,6 +20,10 @@ func TestChannelProtectionPreservesIndependentResourceQueries(t *testing.T) {
 		contains  string
 		forbidden string
 	}{
+		{"pairing reception", func(r *Repository) error {
+			_, err := r.ChannelAccountReceiving(context.Background(), "feishu", "feishu:app")
+			return err
+		}, `SELECT count(*) FROM "workflow_message_channels"`, `FOR UPDATE`},
 		{"enablements", func(r *Repository) error {
 			_, err := r.ListCLIConnectorEnablements(context.Background(), "owner")
 			return err

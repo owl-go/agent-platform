@@ -26,6 +26,8 @@ type ChannelLoginStep struct {
 type ChannelLogin struct {
 	ID, Provider, Status, QRContent, AccountID, AccountName, SuggestedSenderID string
 	ExpiresAt                                                                  time.Time
+	PairingCode, PairingStatus                                                 string
+	PairingExpiresAt                                                           *time.Time
 }
 
 // ChannelAccountFailure carries only a stable code and numeric provider diagnostics.
@@ -46,6 +48,8 @@ type channelLoginSession struct {
 	public                           ChannelLogin
 	ciphertext                       []byte
 	expiry                           *time.Timer
+	identity                         ChannelIdentity
+	pairing                          *channelSenderPairing
 }
 type channelLoginPrivate struct {
 	State       map[string]string
@@ -60,6 +64,7 @@ func (s *MessageChannels) sealLogin(l *channelLoginSession, state channelLoginPr
 	if err != nil {
 		return err
 	}
+	defer clear(data)
 	l.ciphertext, err = s.cipher.Encrypt(data, l.aad())
 	return err
 }
@@ -69,6 +74,7 @@ func (s *MessageChannels) openLogin(l *channelLoginSession) (channelLoginPrivate
 	if err != nil {
 		return state, domain.ErrInvalid
 	}
+	defer clear(data)
 	if json.Unmarshal(data, &state) != nil {
 		return state, domain.ErrInvalid
 	}
@@ -191,6 +197,7 @@ func (s *MessageChannels) completeLogin(ctx context.Context, l *channelLoginSess
 		return err
 	}
 	l.public.Status, l.public.AccountID, l.public.AccountName = "connected", identity.ID, identity.Name
+	l.identity = identity
 	l.public.SuggestedSenderID, l.public.QRContent = sender, ""
 	return nil
 }
@@ -204,6 +211,10 @@ func (s *MessageChannels) findLogin(owner, workflow, id string) (*channelLoginSe
 	return l, nil
 }
 func (s *MessageChannels) removeLogin(l *channelLoginSession) {
+	if l.pairing != nil {
+		l.pairing.cancel()
+		l.public.PairingCode = ""
+	}
 	if l.expiry != nil {
 		l.expiry.Stop()
 	}
@@ -232,6 +243,10 @@ func (s *MessageChannels) PollLogin(ctx context.Context, owner, workflow, id, co
 		l.public.Status = "expired"
 		s.removeLogin(l)
 		return l.public, nil
+	}
+	if l.pairing != nil && (l.public.PairingStatus == "connecting" || l.public.PairingStatus == "waiting") && !time.Now().Before(l.pairing.expires) {
+		l.public.PairingStatus, l.public.PairingCode = "expired", ""
+		l.pairing.cancel()
 	}
 	if l.public.Status == "connected" || l.public.Status == "failed" || l.public.Status == "expired" {
 		return l.public, nil
@@ -307,7 +322,8 @@ func (s *MessageChannels) SaveWithLogin(ctx context.Context, owner, workflow, id
 	if err != nil {
 		return c, err
 	}
-	result, err := s.save(ctx, owner, workflow, id, version, c, state.Credentials)
+	defer clear(state.Credentials)
+	result, err := s.save(ctx, owner, workflow, id, version, c, state.Credentials, &l.identity)
 	if err == nil {
 		s.removeLogin(l)
 	}

@@ -4,7 +4,7 @@ import type { InjectionKey } from "vue";
 export interface ChannelAudience { sender_ids: string[]; group_ids: string[]; allow_direct: boolean }
 export type MessageChannel = Omit<Required<components["schemas"]["v1MessageChannel"]>, "version" | "config_version" | "audience" | "validation_until"> & { version: number; config_version: number; audience: ChannelAudience; validation_until?: string };
 export type ChannelDelivery = Omit<Required<components["schemas"]["v1ChannelDelivery"]>, "attempts"> & { attempts: number };
-export interface ChannelLogin { id: string; provider: string; status: "waiting" | "scanned" | "verification_required" | "connected" | "expired" | "failed"; qr_content: string; account_id: string; account_name: string; suggested_sender_id: string; expires_at: string }
+export interface ChannelLogin { id: string; provider: string; status: "waiting" | "scanned" | "verification_required" | "connected" | "expired" | "failed"; qr_content: string; account_id: string; account_name: string; suggested_sender_id: string; expires_at: string; pairing_code?: string; pairing_status?: "" | "connecting" | "waiting" | "recognized" | "expired" | "failed"; pairing_expires_at?: string }
 export interface ChannelLoginInput { provider: string; region: string; method: "qr" | "credentials"; credentials: Record<string,string>; channel_id?: string; version: number }
 export interface MessageChannelInput { channel_id?: string; version: number; provider: string; name: string; region: string; audience: ChannelAudience; credentials: Record<string,string>; login_id?: string }
 
@@ -217,6 +217,7 @@ export interface PlatformApi {
   startChannelLogin(workflowID: string, input: ChannelLoginInput, signal?: AbortSignal): Promise<ChannelLogin>;
   pollChannelLogin(workflowID: string, loginID: string, verificationCode?: string, signal?: AbortSignal): Promise<ChannelLogin>;
   cancelChannelLogin(workflowID: string, loginID: string, signal?: AbortSignal): Promise<void>;
+  startChannelSenderPairing(workflowID: string, input: { login_id?: string; channel_id?: string; version?: number }, signal?: AbortSignal): Promise<ChannelLogin>;
   saveMessageChannel(workflowID: string, input: MessageChannelInput, signal?: AbortSignal): Promise<MessageChannel>;
   controlMessageChannel(workflowID: string, channelID: string, version: number, action: string, signal?: AbortSignal): Promise<MessageChannel>;
   listChannelDeliveries(workflowID: string, channelID: string, signal?: AbortSignal): Promise<ChannelDelivery[]>;
@@ -545,6 +546,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async startChannelLogin(workflowID, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-logins`, json("POST", input, signal)); },
     async pollChannelLogin(workflowID, loginID, verificationCode = "", signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-logins/${encodeURIComponent(loginID)}/poll`, json("POST", {verification_code:verificationCode}, signal)); },
     async cancelChannelLogin(workflowID, loginID, signal) { await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-logins/${encodeURIComponent(loginID)}`, {method:"DELETE", signal}); },
+    async startChannelSenderPairing(workflowID, input, signal) { return call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/channel-sender-pairings`, json("POST", input, signal)); },
     async saveMessageChannel(workflowID, input, signal) { return normalizeChannel(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels`, json("POST", input, signal))); },
     async controlMessageChannel(workflowID, channelID, version, action, signal) { return normalizeChannel(await call(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/actions`, json("POST", {version,action}, signal))); },
     async listChannelDeliveries(workflowID, channelID, signal) { const result = await call<{items?: ChannelDelivery[]}>(`/api/v1/workflows/${encodeURIComponent(workflowID)}/message-channels/${encodeURIComponent(channelID)}/deliveries`, {signal}); return result.items ?? []; },
