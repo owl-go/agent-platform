@@ -301,3 +301,11 @@ Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provi
 仅接受公共契约 `reasoning.summary` 的完整公开摘要；不读取原始 thinking、工具参数/输出或内部错误。最终成员的摘要经过本次全部凭证的精确值脱敏、链接截止和 600 字限制；之前成员只提供固定进度标签。摘要并非所有 Runtime 都会产生，缺少时继续展示实际活动与耗时。答案继续使用累计安全缓冲，跨 delta 凭证脱敏边界保持不变。
 
 Inbox 的既有 `response` JSONB 保存最新公开摘要，答复草稿仍仅在内存。停止监视前在当前授权下刷新摘要，覆盖短于一次刷新周期的执行；成功终态第一张卡保留摘要，后续卡仅包含答案。Feishu 非验证 Delivery 每段最多 1800 字，为摘要和进度留出 30 KB 请求预算，完整答案按原顺序续发。配置撤销、generation、revision fencing 和发送结果不确定的恢复规则保持适用。本轮不改变 Migration 或 Runtime 镜像；真实飞书显示与各 Runtime 摘要粒度仍需现场验收。
+
+#### 公开摘要与进度发布证据
+
+2026-10-04 从 `main_temp` 的 `20d21d81b63a613bd0cd1fc658084f4205ead7f8`（功能提交 `419722f`）发布 `feishu-public-progress-20261004-1`。API Image ID 为 `sha256:a03a3161656ca58d7d0c537f021ddcfc46021f4486ba2e1b9970b432d783b243`，Worker Image ID 为 `sha256:ff563a85acc44754099cfb809459395d30aa84a1c215073e09381447dfa0a7e4`。前端源码未变，继续使用上一版已验证静态资源。
+
+实际执行并通过：四个受影响包测试、独立 PostgreSQL 16 的 `make test`、四包 `go test -race`、`make build`、四包 `go vet`、新增边界测试以及集成后的四包 PostgreSQL 测试。覆盖公开摘要/答案分离、摘要裁剪前脱敏、链接排除、阶段与 Run 隔离、真实工具计数、短任务收尾保存、卡片请求预算、数据库恢复/revision fencing 和完整长答案续发。独立数据库已清理。未运行 Web 门禁（未改前端），未运行 Linux + runsc Sandbox/Production Conformance；不声称真实飞书显示或所有 Runtime 摘要粒度已经验收。
+
+服务器备份目录为 `/opt/agent-platform/backups/pre-feishu-public-progress-20261004-1`，数据库备份 checksum 与 restore-list 通过（未执行完整恢复演练）；候选 API readyz、配置 checksum、完整迁移 ledger 不变检查通过。切换前活动 Run/Assistant Response 合计 0；切换后 API/Worker healthy，Worker 9090 readyz 通过，启用 Feishu 连接聚合为 `connected|1`。公网 API healthz/readyz、OIDC metadata、首页和关键 JS 校验通过，匿名配对请求保持 401。现场证据位于 `/opt/agent-platform/evidence/feishu-public-progress-20261004-1`。可回退上一版 API/Worker 镜像，不需要数据库或静态资源回滚。
