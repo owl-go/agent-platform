@@ -264,7 +264,7 @@ func (s *MessageChannels) Control(ctx context.Context, owner, workflow, id strin
 	if action == "validate" || action == "enable" {
 		s.pairingMu.Lock()
 		defer s.pairingMu.Unlock()
-		if s.pairings[old.Channel.BindingID] != "" {
+		if s.pairings[senderPairingBinding(old.Channel.Provider, old.Channel.BindingID)] != "" {
 			return old.Channel, domain.ErrConflict
 		}
 	}

@@ -687,11 +687,11 @@ Object.assign((en as unknown as { channels: Record<string, unknown> }).channels,
 }, wecomErrorCode: "(WeCom error code: {code})", providerErrorCode: "(Feishu error code: {code})" });
 
 Object.assign((zh as unknown as { channels: Record<string, unknown> }).channels, { pairing: {
-  generate: "自动识别发送者", connecting: "正在连接飞书机器人…", waiting: "等待配对消息", recognized: "已识别发送者，请确认加入允许名单。", expired: "配对码已过期，请重新生成。", failed: "配对连接失败。请确认应用已开启长连接和接收私聊事件，且当前未启用或验证接入；稍后重试。",
+  generate: "自动识别发送者", connecting: "正在连接{provider}机器人…", waiting: "等待配对消息", recognized: "已识别发送者，请确认加入允许名单。", expired: "配对码已过期，请重新生成。", failed: "配对连接失败。请确认机器人消息接收配置及私聊权限已生效，且当前未启用或验证接入；稍后重试。",
   instruction: "让需要加入的发送者私聊此机器人，发送下面的完整配对消息。此消息不会触发工作流。", copy: "复制配对消息", copyFailed: "复制失败，请选中并复制配对消息。", expires: "配对码有效至 {time}，仅可使用一次。", accept: "加入允许的发送者",
 } });
 Object.assign((en as unknown as { channels: Record<string, unknown> }).channels, { pairing: {
-  generate: "Identify sender automatically", connecting: "Connecting to the Feishu bot…", waiting: "Waiting for pairing message", recognized: "Sender identified. Confirm to add them to the allowed audience.", expired: "Pairing code expired. Generate a new one.", failed: "Pairing connection failed. Enable persistent connection and direct-message events, stop active reception or verification, then retry.",
+  generate: "Identify sender automatically", connecting: "Connecting to the {provider} bot…", waiting: "Waiting for pairing message", recognized: "Sender identified. Confirm to add them to the allowed audience.", expired: "Pairing code expired. Generate a new one.", failed: "Pairing connection failed. Check bot message reception and direct-chat permissions, stop active reception or verification, then retry.",
   instruction: "Ask the sender to send the complete pairing message below in a direct chat with this bot. This message will not run the Workflow.", copy: "Copy pairing message", copyFailed: "Copy failed. Select and copy the pairing message.", expires: "Valid until {time}. This code can be used once.", accept: "Add allowed sender",
 } });
 

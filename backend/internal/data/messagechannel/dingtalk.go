@@ -55,6 +55,23 @@ func normalizeDingTalk(s application.ChannelStored, e *chatbot.BotCallbackDataMo
 // The SDK's StreamClient reconnects with context.Background, even after Close.
 // Keep the official frame types, but own the connection and its cancellation.
 func (a *DingTalk) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink) error {
+	return a.ConnectWithHealth(ctx, s, c, receive, nil)
+}
+func (a *DingTalk) ConnectWithHealth(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink, health application.ChannelConnectionHealthSink) error {
+	return a.connect(ctx, s, c, receive, health, dialDingTalkSocket)
+}
+func dialDingTalkSocket(ctx context.Context, target string, headers http.Header) (channelSocket, error) {
+	dialer := websocket.Dialer{NetDialContext: dialPublicProvider, HandshakeTimeout: 10 * time.Second}
+	conn, response, err := dialer.DialContext(ctx, target, headers)
+	if response != nil && err != nil && response.Body != nil {
+		response.Body.Close()
+	}
+	if err != nil {
+		return nil, providerError("provider_connection_failed")
+	}
+	return conn, nil
+}
+func (a *DingTalk) connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink, health application.ChannelConnectionHealthSink, dial channelSocketDialer) error {
 	result, status, _, err := a.request(ctx, http.MethodPost, "https://api.dingtalk.com/v1.0/gateway/connections/open", "", map[string]any{
 		"clientId": c["client_id"], "clientSecret": c["client_secret"], "ua": "agent-workspace/1.0",
 		"subscriptions": []map[string]string{{"type": "CALLBACK", "topic": payload.BotMessageCallbackTopic}},
@@ -66,11 +83,7 @@ func (a *DingTalk) Connect(ctx context.Context, s application.ChannelStored, c a
 	if err != nil {
 		return err
 	}
-	dialer := websocket.Dialer{NetDialContext: dialPublicProvider, HandshakeTimeout: 10 * time.Second}
-	conn, response, err := dialer.DialContext(ctx, target, nil)
-	if response != nil && err != nil {
-		response.Body.Close()
-	}
+	conn, err := dial(ctx, target, nil)
 	if err != nil {
 		return providerError("provider_connection_failed")
 	}
@@ -78,6 +91,11 @@ func (a *DingTalk) Connect(ctx context.Context, s application.ChannelStored, c a
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
 	defer stop()
 	conn.SetReadLimit(64 * 1024)
+	if health != nil {
+		if err := health(ctx, "connected"); err != nil {
+			return err
+		}
+	}
 	for {
 		conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
 		_, data, err := conn.ReadMessage()
@@ -95,7 +113,8 @@ func (a *DingTalk) Connect(ctx context.Context, s application.ChannelStored, c a
 		ack.SetHeader(payload.DataFrameHeaderKMessageId, frame.GetMessageId())
 		ack.SetHeader(payload.DataFrameHeaderKContentType, payload.DataFrameContentTypeKJson)
 		conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		if writeErr := conn.WriteJSON(ack); writeErr != nil {
+		ackData, _ := json.Marshal(ack)
+		if writeErr := conn.WriteMessage(websocket.TextMessage, ackData); writeErr != nil {
 			return providerError("provider_connection_failed")
 		}
 		if err != nil {
