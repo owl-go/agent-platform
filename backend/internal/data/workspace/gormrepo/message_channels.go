@@ -41,6 +41,7 @@ func (r channelRecord) stored() (application.ChannelStored, error) {
 	}
 	c.ID, c.OwnerID, c.WorkflowID = r.ID, r.OwnerUserID, r.WorkflowID
 	c.BindingID = r.BindingID
+	c.TenantID = r.TenantID
 	c.Version, c.ConfigVersion = r.Version, r.ConfigVersion
 	c.Enabled, c.ValidationState, c.ValidationCode, c.ValidationUntil = r.Enabled, r.ValidationState, r.ValidationCode, r.ValidationUntil
 	c.Health, c.ErrorCode = r.Health, r.ErrorCode
@@ -307,6 +308,14 @@ func (r *Repository) ReceiveChannelMessage(ctx context.Context, stored applicati
 		if !row.Enabled && !validation {
 			return nil
 		}
+		// A single-tenant DingTalk application authenticates the Stream. Only an
+		// allowed participant's exact validation message can pin its enterprise.
+		// Recheck under the row lock: an old connection may still have no TenantID.
+		if row.Provider == "dingtalk" {
+			if m.TenantID == "" || (row.TenantID != "" && row.TenantID != m.TenantID) || (row.TenantID == "" && !validation) {
+				return nil
+			}
+		}
 		var duplicate int64
 		if err := tx.Model(&channelInboxRecord{}).Where("channel_id=? AND (event_id=? OR (chat_id=? AND message_id=?))", row.ID, m.EventID, m.ChatID, m.MessageID).Count(&duplicate).Error; err != nil {
 			return err
@@ -345,6 +354,11 @@ func (r *Repository) ReceiveChannelMessage(ctx context.Context, stored applicati
 		}
 		if err := tx.Model(&row).Updates(map[string]any{"health": "connected", "error_code": ""}).Error; err != nil {
 			return err
+		}
+		if row.Provider == "dingtalk" && row.TenantID == "" {
+			if err := tx.Model(&row).Update("tenant_id", m.TenantID).Error; err != nil {
+				return err
+			}
 		}
 		accepted = true
 		if validation {

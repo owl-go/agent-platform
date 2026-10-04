@@ -60,6 +60,8 @@ func (a ChannelAudience) Validate() error {
 }
 
 type ChannelMessage struct {
+	// TenantID is supplied by the authenticated receiver, never channel configuration input.
+	TenantID   string    `json:"tenant_id,omitempty"`
 	EventID    string    `json:"event_id"`
 	MessageID  string    `json:"message_id"`
 	SenderID   string    `json:"sender_id"`
@@ -84,7 +86,7 @@ func (m ChannelMessage) Validate(now time.Time) error {
 			return ErrInvalid
 		}
 	}
-	if !utf8.ValidString(m.ThreadID) || strings.ContainsAny(m.ThreadID, "\x00\r\n") || len(m.ThreadID) > 256 || !utf8.ValidString(m.Text) || len(m.Text) > 10_000 || strings.TrimSpace(m.Text) == "" || m.OccurredAt.Before(now.Add(-24*time.Hour)) || m.OccurredAt.After(now.Add(5*time.Minute)) {
+	if !utf8.ValidString(m.TenantID) || strings.ContainsAny(m.TenantID, "\x00\r\n") || len(m.TenantID) > 256 || !utf8.ValidString(m.ThreadID) || strings.ContainsAny(m.ThreadID, "\x00\r\n") || len(m.ThreadID) > 256 || !utf8.ValidString(m.Text) || len(m.Text) > 10_000 || strings.TrimSpace(m.Text) == "" || m.OccurredAt.Before(now.Add(-24*time.Hour)) || m.OccurredAt.After(now.Add(5*time.Minute)) {
 		return ErrInvalid
 	}
 	return nil

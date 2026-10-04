@@ -151,7 +151,7 @@ An optional hourly, daily, or weekly schedule that starts a Workflow from its fi
 _Avoid_: API call, Webhook, file watcher
 
 **Workflow Message Channel**:
-A User-owned configuration bound to one Workflow that accepts authorized external chat messages and returns that Workflow's answers to their originating chat. It identifies one messaging service account and its permitted audience without granting external participants a product User identity.
+A User-owned configuration bound to one Workflow that accepts authorized external chat messages and returns that Workflow's answers to their originating chat. It identifies one messaging service account and its permitted audience without granting external participants a product User identity. A DingTalk internal application is bound by its authenticated Client ID; its enterprise identity is pinned from an allowed participant’s authenticated Stream validation message before enablement, rather than supplied by the User.
 _Avoid_: Connector Authorization, Workflow API Credential, notification-only Webhook
 
 **Message Channel Conversation**:

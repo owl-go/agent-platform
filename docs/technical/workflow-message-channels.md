@@ -210,7 +210,7 @@ message_channels:
 省略数值或设置为 0 使用上述默认值。连接数上限 1000；backlog 1..10000、sender/minute 1..100、正文 128..10000 bytes、次数 1..32、发送间隔 3s..1m。一个 Workflow 最多十六个未删除配置，能够同时容纳全部 13 种渠道；相同接收身份（包括关闭配置）只允许一条绑定。飞书通过 region+App ID、钉钉通过 Client ID 约束，不允许修改自报企业 ID 绕过重复绑定。
 
 1. 在供应商控制台建立应用机器人、启用正确事件与权限。平台不支持仅有发送能力的群 Webhook。
-2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书选择飞书/Lark，只需填写 App ID、App Secret，发送者可通过一次性私聊配对识别 Open ID 并确认加入，也可手动填写，群 Chat ID 可选；Tenant Key 由平台通过应用凭证自动查询，不要求手动配置。钉钉填写 Staff ID、Conversation ID、Corp ID。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
+2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书选择飞书/Lark，只需填写 App ID、App Secret，发送者可通过一次性私聊配对识别 Open ID 并确认加入，也可手动填写，群 Chat ID 可选；Tenant Key 由平台通过应用凭证自动查询，不要求手动配置。钉钉只填写 Client ID、Client Secret 作为应用凭证，受众使用 Staff ID 和可选 Conversation ID，Corp ID 在接入验证消息中自动识别并绑定。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
 3. 保存。Telegram 验证时注册当前回调并拒绝已有其他 Webhook 的 Bot；Slack 需将展示的回调填入 Events API，并订阅 `app_mention`、`message.im`，至少具有接收对应范围与 `chat:write` 权限。Discord Bot 需启用适用的 Message Content Intent；钉钉选择 Stream；飞书选择长连接 `im.message.receive_v1`。
 4. 点击验证，从允许的发送者/聊天发送展示的 `verify ...`，群聊需 @ Bot。仅固定回复成功发送后标记 passing，不创建 Run、不读 Workspace、不消耗 Credits；窗口十分钟。
 5. 启用后发送两次真实问题，在 Run History 检查来源与连续回合，再验证回复和 Credits。断线、unknown、停用、删除与重启应按执行计划逐个供应商记录证据。发送 history 仅显示投递元数据；重发不调用模型。
@@ -325,3 +325,13 @@ Inbox 的既有 `response` JSONB 保存最新公开摘要，答复草稿仍仅�
 实际通过目标包回归/协议/Markdown 测试、独立 PostgreSQL 16 的 `make test`、`make build`、Message Channel Adapter 与 Workspace Application 的 `go test -race` 和 `go vet`。独立数据库已清理。前端与 Runtime 镜像未改，未运行 Web 或 Linux + runsc Sandbox/Production Conformance；未取得真实飞书客户端视觉验收。
 
 服务器备份位于 `/opt/agent-platform/backups/pre-feishu-markdown-cards-20261004-1`，数据库 checksum 与 restore-list 检查通过；未进行完整恢复演练。候选 API readyz、配置 checksum、切换前后完整 migration ledger 不变检查通过，切换前活动执行数为 0；切换后 API/Worker healthy，Worker readyz 通过，启用 Feishu 连接聚合为 `connected|1`。公网 API healthz/readyz 和 OIDC metadata 通过，既有首页/关键 JS 与已验证产物逐字节一致，匿名配对请求保持 401。现场证据位于 `/opt/agent-platform/evidence/feishu-markdown-cards-20261004-1`；可回退 `feishu-public-progress-20261004-1` 的 API/Worker 镜像，数据库和静态资源无需回滚。
+
+### 钉钉企业身份自动绑定（2026-10-04）
+
+企业内部应用的凭证表单仅保留 Client ID 和 Client Secret。`Identify` 用企业 accessToken 接口认证应用，稳定 Binding ID 仍为 Client ID；该接口只返回 token 与有效期，因此账号连接阶段不伪造 Corp ID，也不采用旧凭证中自报的 `corp_id`。账号连接、保存和收发验证仍是独立步骤。
+
+Stream 由这对凭证在官方网关认证；机器人 CALLBACK 必须匹配 `robotCode=Client ID`，具有非空 `chatbotCorpId`，且 `senderCorpId` 与机器人企业一致。归一化消息的 Tenant ID 只由此接收器提供。首次绑定只接受当前验证窗口内、当前允许发送者在允许聊天中发送的完整验证消息；Repository 在锁定渠道配置的同一事务里保存 Corp ID、Inbox 与验证 Delivery。失败回滚不留下企业绑定，未通过原聊天回复验证不能启用。后续收消息在 Adapter 与 Repository 都校验已绑定企业；Repository 会拒绝持有旧空 Tenant ID 的连接送来的其他企业消息。
+
+已有配置保留其企业约束，旧 `corp_id` 不再参与凭证认证；停用后重新保存会开启新的受控验证绑定流程。不新增通讯录权限、Migration、Runtime Capability 或公开回调路由。真实账号的企业身份绑定与收发仍需现场验证。协议依据：[官方企业 accessToken 响应模型](https://github.com/alibabacloud-go/dingtalk/blob/master/oauth2_1_0/client.go)、[官方 Stream 认证协议](https://open-dingtalk.github.io/developerpedia/docs/learn/stream/protocol/)和[官方机器人消息模型](https://github.com/open-dingtalk/dingtalk-stream-sdk-go/blob/main/chatbot/model.go)。
+
+本轮已通过 Adapter、Domain、Application 与 GORM Repository 目标包测试（使用独立 PostgreSQL 16）、`make test`、`make build`、Adapter/Domain/Application 的 `go test -race`，以及 DingTalk 绑定和渠道验证的 PostgreSQL race 测试。`go vet` 覆盖 Adapter、Domain 与 Repository；前端 `make web-typecheck`、`make web-build` 和全部 585 项测试通过（包含双凭证连接及目标组件 32 项测试）。独立数据库仅用于本地测试，不替代真实钉钉收发、Linux + runsc Sandbox/Production Conformance；本轮未改变 Runtime 镜像。

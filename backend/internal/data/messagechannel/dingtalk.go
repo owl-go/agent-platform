@@ -19,21 +19,21 @@ import (
 type DingTalk struct{ *HTTP }
 
 func (a *DingTalk) Identify(ctx context.Context, c application.ChannelCredentials, _ string) (application.ChannelIdentity, error) {
-	if c["client_id"] == "" || c["client_secret"] == "" || c["corp_id"] == "" {
+	if c["client_id"] == "" || c["client_secret"] == "" {
 		return application.ChannelIdentity{}, providerError("dingtalk_credentials_invalid")
 	}
 	result, status, _, err := a.request(ctx, http.MethodPost, "https://api.dingtalk.com/v1.0/oauth2/accessToken", "", map[string]string{"appKey": c["client_id"], "appSecret": c["client_secret"]})
 	if err != nil || status != 200 || rawString(result["accessToken"]) == "" {
 		return application.ChannelIdentity{}, providerError("provider_identity_failed")
 	}
-	return application.ChannelIdentity{ID: c["client_id"], BindingID: c["client_id"], Name: c["client_id"], TenantID: c["corp_id"]}, nil
+	return application.ChannelIdentity{ID: c["client_id"], BindingID: c["client_id"], Name: c["client_id"]}, nil
 }
 func (a *DingTalk) Configure(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, _ string) error {
 	identity, err := a.Identify(ctx, c, "")
 	if err != nil {
 		return err
 	}
-	if identity.ID != s.Channel.AccountID || identity.TenantID != s.Channel.TenantID {
+	if identity.ID != s.Channel.AccountID {
 		return providerError("provider_identity_changed")
 	}
 	return nil
@@ -44,11 +44,12 @@ func validDingTalkReply(target string) bool {
 	return err == nil && u.Scheme == "https" && u.Host == "oapi.dingtalk.com" && u.User == nil && u.Path == "/robot/sendBySession" && u.Fragment == "" && len(target) <= 4096
 }
 func normalizeDingTalk(s application.ChannelStored, e *chatbot.BotCallbackDataModel) (domain.ChannelMessage, bool) {
-	if e == nil || e.Msgtype != "text" || e.ChatbotCorpId != s.Channel.TenantID || e.SenderCorpId != s.Channel.TenantID || e.ChatbotUserId == e.SenderId || !validDingTalkReply(e.SessionWebhook) || (e.ConversationType != "1" && e.ConversationType != "2") {
+	if e == nil || e.Msgtype != "text" || e.ChatbotCorpId == "" || e.SenderCorpId != e.ChatbotCorpId || (s.Channel.TenantID != "" && e.ChatbotCorpId != s.Channel.TenantID) || e.ChatbotUserId == e.SenderId || !validDingTalkReply(e.SessionWebhook) || (e.ConversationType != "1" && e.ConversationType != "2") {
 		return domain.ChannelMessage{}, false
 	}
-	// Staff IDs are scoped to this authenticated enterprise, never display names.
-	return domain.ChannelMessage{EventID: e.MsgId, MessageID: e.MsgId, SenderID: e.SenderStaffId, ChatID: e.ConversationId, Group: e.ConversationType == "2", Mentioned: e.IsInAtList, Text: strings.TrimSpace(e.Text.Content), OccurredAt: time.UnixMilli(e.CreateAt), Reply: map[string]string{"session_webhook": e.SessionWebhook, "expires_at": strconv.FormatInt(e.SessionWebhookExpiredTime, 10)}}, true
+	// Corp ID comes only from the credential-authenticated Stream callback.
+	// Staff IDs are scoped to that enterprise, never display names.
+	return domain.ChannelMessage{EventID: e.MsgId, MessageID: e.MsgId, TenantID: e.ChatbotCorpId, SenderID: e.SenderStaffId, ChatID: e.ConversationId, Group: e.ConversationType == "2", Mentioned: e.IsInAtList, Text: strings.TrimSpace(e.Text.Content), OccurredAt: time.UnixMilli(e.CreateAt), Reply: map[string]string{"session_webhook": e.SessionWebhook, "expires_at": strconv.FormatInt(e.SessionWebhookExpiredTime, 10)}}, true
 }
 
 // The SDK's StreamClient reconnects with context.Background, even after Close.
@@ -133,11 +134,17 @@ func dingTalkFrame(ctx context.Context, s application.ChannelStored, frame *payl
 	if frame.Type != "CALLBACK" || frame.GetTopic() != payload.BotMessageCallbackTopic {
 		return payload.NewDataFrameResponse(payload.DataFrameResponseStatusCodeKHandlerNotFound), false, nil
 	}
-	var event chatbot.BotCallbackDataModel
+	var event struct {
+		chatbot.BotCallbackDataModel
+		RobotCode string `json:"robotCode"`
+	}
 	if json.Unmarshal([]byte(frame.Data), &event) != nil {
 		return payload.NewDataFrameResponse(payload.DataFrameResponseStatusCodeKInternalError), false, providerError("provider_payload_invalid")
 	}
-	if message, ok := normalizeDingTalk(s, &event); ok {
+	if s.Channel.AccountID != "" && event.RobotCode != s.Channel.AccountID {
+		return ack, false, nil
+	}
+	if message, ok := normalizeDingTalk(s, &event.BotCallbackDataModel); ok {
 		commitCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		if err := receive(commitCtx, message); err != nil {
