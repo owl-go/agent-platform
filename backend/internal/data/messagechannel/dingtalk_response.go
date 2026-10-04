@@ -91,7 +91,7 @@ func (a *DingTalk) CreateResponse(ctx context.Context, s application.ChannelStor
 	return a.cardRequest(ctx, c, http.MethodPost, "/v1.0/im/v1.0/robot/interactiveCards/send", body, handle, false)
 }
 
-func (a *DingTalk) UpdateResponse(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, handle string, preview application.ChannelResponsePreview, final bool) application.ChannelSendResult {
+func (a *DingTalk) UpdateResponse(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, _ domain.ChannelMessage, handle string, preview application.ChannelResponsePreview, final bool) application.ChannelSendResult {
 	parts := strings.Split(handle, ".")
 	if len(parts) != 2 || len(parts[0]) != 64 || strings.ToLower(parts[0]) != parts[0] {
 		return application.ChannelSendResult{State: "failed", Code: "provider_reply_invalid"}

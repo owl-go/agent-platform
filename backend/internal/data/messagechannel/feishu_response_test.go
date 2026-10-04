@@ -65,7 +65,7 @@ func TestFeishuReactionAndSingleMutableCard(t *testing.T) {
 		t.Fatal(result)
 	}
 	for _, final := range []bool{false, true} {
-		if result := adapter.UpdateResponse(ctx, s, c, "card", application.ChannelResponsePreview{Answer: "answer", Summary: "公开摘要", Status: "正在调用工具", ToolsCompleted: 2, ElapsedSeconds: 65}, final); result.State != "sent" || result.MessageID != "card" {
+		if result := adapter.UpdateResponse(ctx, s, c, domain.ChannelMessage{}, "card", application.ChannelResponsePreview{Answer: "answer", Summary: "公开摘要", Status: "正在调用工具", ToolsCompleted: 2, ElapsedSeconds: 65}, final); result.State != "sent" || result.MessageID != "card" {
 			t.Fatal(result)
 		}
 	}
@@ -87,7 +87,7 @@ func TestFeishuCardUncertaintyAndSize(t *testing.T) {
 	if r := adapter.CreateResponse(context.Background(), application.ChannelStored{}, c, domain.ChannelMessage{MessageID: "source"}, "uuid", application.ChannelResponsePreview{}, false); r.State != "outcome_unknown" {
 		t.Fatal(r)
 	}
-	if r := adapter.UpdateResponse(context.Background(), application.ChannelStored{}, c, "card", application.ChannelResponsePreview{Answer: "answer"}, true); r.State != "retry_wait" {
+	if r := adapter.UpdateResponse(context.Background(), application.ChannelStored{}, c, domain.ChannelMessage{}, "card", application.ChannelResponsePreview{Answer: "answer"}, true); r.State != "retry_wait" {
 		t.Fatal(r)
 	}
 	for _, text := range []string{strings.Repeat("中文🙂", 10000), strings.Repeat("&", 10000), strings.Repeat("![", 10000), strings.Repeat("\x00\"\\<at>\n", 10000)} {

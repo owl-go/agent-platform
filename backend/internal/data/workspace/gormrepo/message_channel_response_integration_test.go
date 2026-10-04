@@ -1,13 +1,17 @@
 package gormrepo
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/secretcrypto"
 )
 
 func TestChannelResponseHandlesPersistAndRevisionFence(t *testing.T) {
@@ -67,7 +71,7 @@ func TestChannelResponseHandlesPersistAndRevisionFence(t *testing.T) {
 }
 
 func TestResponseTerminalCardsPreserveCompleteAnswerAndConfirmedRecovery(t *testing.T) {
-	for _, provider := range []string{"feishu", "dingtalk"} {
+	for _, provider := range []string{"feishu", "dingtalk", "wecom"} {
 		t.Run(provider, func(t *testing.T) {
 			f := newChannelFixture(t)
 			f.enable(t)
@@ -122,5 +126,35 @@ func TestResponseTerminalCardsPreserveCompleteAnswerAndConfirmedRecovery(t *test
 			}
 
 		})
+	}
+}
+
+func TestChannelResponseReceiptExposesOnlyEncryptedOriginalCapability(t *testing.T) {
+	f := newChannelFixture(t)
+	f.enable(t)
+	ctx := context.Background()
+	stored := f.stored(t)
+	m := f.message("protected-response", "alice", "question")
+	m.Reply = map[string]string{"req_id": "protected-callback", "received_at": "123"}
+	if err := f.app.Receive(ctx, stored, m); err != nil {
+		t.Fatal(err)
+	}
+	m.Reply = nil
+	current, err := f.repo.GetChannelResponseReceipt(ctx, stored, m)
+	if err != nil || current == nil || current.Message.Reply != nil || len(current.ReplyCiphertext) == 0 || bytes.Contains(current.ReplyCiphertext, []byte("protected-callback")) {
+		t.Fatal("receipt capability not encrypted", err)
+	}
+	box, err := secretcrypto.New(base64.StdEncoding.EncodeToString(make([]byte, 32)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain, err := box.Decrypt(current.ReplyCiphertext, application.ChannelReplyAAD(stored.Channel.ID, m))
+	var reply map[string]string
+	if err != nil || json.Unmarshal(plain, &reply) != nil || reply["req_id"] != "protected-callback" {
+		t.Fatal("original callback was not retained", err)
+	}
+	m.EventID = "another-event"
+	if _, err := box.Decrypt(current.ReplyCiphertext, application.ChannelReplyAAD(stored.Channel.ID, m)); err == nil {
+		t.Fatal("callback capability escaped originating event binding")
 	}
 }

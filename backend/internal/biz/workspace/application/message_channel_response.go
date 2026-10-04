@@ -15,6 +15,17 @@ type ChannelResponseRepository interface {
 	SaveChannelResponse(context.Context, *ChannelTypingJob, ChannelResponseState) error
 }
 
+func (s *MessageChannels) restoreResponseReply(current *ChannelTypingJob) bool {
+	reply, err := s.cipher.Decrypt(current.ReplyCiphertext, ChannelReplyAAD(current.Stored.Channel.ID, current.Message))
+	defer clear(reply)
+	var restored map[string]string
+	if err != nil || json.Unmarshal(reply, &restored) != nil {
+		return false
+	}
+	current.Message.Reply = restored
+	return true
+}
+
 func (s *MessageChannels) receiveFeedback(ctx context.Context, stored ChannelStored, message domain.ChannelMessage) {
 	repository, ok := s.repository.(ChannelResponseRepository)
 	response := s.transports[stored.Channel.Provider].Response
@@ -43,6 +54,9 @@ func (s *MessageChannels) receiveFeedback(ctx context.Context, stored ChannelSto
 		return
 	}
 	defer clear(c)
+	if !s.restoreResponseReply(current) {
+		return
+	}
 	if repository.SaveChannelResponse(requestCtx, current, state) != nil {
 		return
 	}
@@ -155,14 +169,24 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 				requestCancel()
 				return
 			}
+			// Repository projections deliberately omit callback capabilities.
+			// Rehydrate only after current owner, audience and generation checks.
+			if !s.restoreResponseReply(current) {
+				requestCancel()
+				return
+			}
 			if !current.Running {
 				s.clearResponseReaction(requestCtx, repository, current)
-				preview := ChannelResponsePreview{Status: "等待工作流拥有者处理", Summary: current.Response.Summary}
+				preview := ChannelResponsePreview{Status: "等待工作流拥有者处理", Summary: current.Response.Summary, ElapsedSeconds: int64(time.Since(started) / time.Second)}
 				if current.Response.Phase == "ready" && preview != lastPreview {
 					if c, err := s.credentials(current.Stored); err == nil {
-						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Response.MessageID, preview, false)
+						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Message, current.Response.MessageID, preview, false)
 						clear(c)
 						if result.State == "sent" {
+							if !s.saveUpdatedResponse(requestCtx, repository, current, result) {
+								requestCancel()
+								return
+							}
 							lastPreview = preview
 						}
 					}
@@ -196,17 +220,24 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 						state := current.Response
 						state.Summary = preview.Summary
 						if repository.SaveChannelResponse(requestCtx, current, state) != nil {
+							clear(c)
 							requestCancel()
 							return
 						}
 					}
 					if preview != lastPreview {
-						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Response.MessageID, preview, false)
+						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Message, current.Response.MessageID, preview, false)
 						if result.State == "sent" {
+							if !s.saveUpdatedResponse(requestCtx, repository, current, result) {
+								clear(c)
+								requestCancel()
+								return
+							}
 							lastPreview = preview
 						}
 					}
 				}
+				clear(c)
 			}
 			requestCancel()
 			select {
@@ -218,6 +249,17 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 	}()
 	var once sync.Once
 	return recorder, func() { once.Do(cancel); <-done }
+}
+
+// A provider may close a bounded stream before execution ends. Checkpoint the
+// confirmed handle so terminal delivery can use the original chat fallback.
+func (s *MessageChannels) saveUpdatedResponse(ctx context.Context, repository ChannelResponseRepository, current *ChannelTypingJob, result ChannelSendResult) bool {
+	if result.MessageID == "" || result.MessageID == current.Response.MessageID {
+		return true
+	}
+	state := current.Response
+	state.MessageID = result.MessageID
+	return repository.SaveChannelResponse(ctx, current, state) == nil
 }
 
 func (s *MessageChannels) clearResponseReaction(ctx context.Context, repository ChannelResponseRepository, current *ChannelTypingJob) {
@@ -240,6 +282,11 @@ func (s *MessageChannels) sendResponse(ctx context.Context, job *ChannelSendJob,
 	response := s.transports[job.Stored.Channel.Provider].Response
 	repository, ok := s.repository.(ChannelResponseRepository)
 	if response == nil || !ok || job.Delivery.Kind == "validation" || job.Delivery.Chunk > 1 {
+		return sender.Send(ctx, job.Stored, c, job.Message, text, job.Delivery.ID)
+	}
+	// Pre-stream WeCom Inbox records have no callback capability. Retain their
+	// original authorized Markdown delivery instead of fabricating a stream.
+	if job.Stored.Channel.Provider == "wecom" && job.Message.Reply["req_id"] == "" && job.Message.Reply["received_at"] == "" {
 		return sender.Send(ctx, job.Stored, c, job.Message, text, job.Delivery.ID)
 	}
 	var state ChannelResponseState
@@ -267,9 +314,9 @@ func (s *MessageChannels) sendResponse(ctx context.Context, job *ChannelSendJob,
 		}
 		result = response.CreateResponse(ctx, job.Stored, c, job.Message, job.Delivery.ID, preview, true)
 	} else {
-		result = response.UpdateResponse(ctx, job.Stored, c, state.MessageID, preview, true)
+		result = response.UpdateResponse(ctx, job.Stored, c, job.Message, state.MessageID, preview, true)
 	}
-	if fallback := s.transports[job.Stored.Channel.Provider].ResponseFallback; result.State == "failed" && result.Code == "provider_rejected" && fallback != nil {
+	if fallback := s.transports[job.Stored.Channel.Provider].ResponseFallback; fallback != nil && ((result.State == "failed" && result.Code == "provider_rejected") || (job.Stored.Channel.Provider == "wecom" && result.State == "expired" && result.Code == "provider_stream_expired")) {
 		return fallback.Send(ctx, job.Stored, c, job.Message, text, job.Delivery.ID)
 	}
 	return result

@@ -4,6 +4,14 @@
 
 需求跟踪：[Issue #62](https://github.com/owl-go/agent-platform/issues/62)；实施顺序见 [执行计划](../tickets/workflow-message-channels-execution.md)。
 
+## 企业微信原生流式 Markdown 回复（2026-10-04）
+
+企业微信 API 长连接智能机器人复用 `ChannelResponseSender` 与 response revision fence。授权文本提交 Inbox 后即发送「正在分析」；Worker 每秒最多一次全量替换原生 `msgtype=stream` 的同一 `stream.id`，包含真实阶段、工具计数、用时、最多 600 字已脱敏最终成员公开摘要及最多 1800 字答案预览。终态第一段设置 `finish=true`，超过 1800 字的答案按原顺序续发原聊天 Markdown；接入验证仍用固定内容普通消息。群回复沿用原 callback 目标并注明当前提问者 User ID，不转为新的私聊。Markdown 保留标题、强调、列表、引用、链接和代码语法，共用处理使模型 HTML mention/图片保持惰性，代码字面量保留。实际显示遵循客户端子集；本次不接入 .md 附件。原始推理、工具参数/结果、其他成员草稿与凭据不进入 IM。
+
+`aibot_respond_msg` 透传原消息回调 `headers.req_id`，累积正文通过 `stream.content`，每段内容不超过官方 20480 字节；Worker 通过 Application 在授权检查后解密原 Inbox Reply，更新接口重新读取其中的回调；req_id 参与共享精确字节脱敏，不把 callback capability 复制到 response JSON。持久化 handle 只含从 Bot ID 与原 Message ID 派生的 SHA-256 stream ID 、截止时间及已确认的 closed 标记，禁止跨机器人、消息或私聊目标替换。首次回复还必须在 callback 后五秒内发出；缺少原回调字段的升级前 Inbox 继续用既有普通 Markdown 发送。收到时刻加 330 秒作为保守截止时间，在供应商首次回复起六分钟限制内预留余量，不重开流延长权限。到期前五秒的进度刷新发送 finish=true，移除暂定答案并说明任务尚未结束、结果将另行发送；仅收到成功 ACK 后 checkpoint closed handle，终态不能重开该流。只有本地确认 `provider_stream_expired` 或明确供应商拒绝时，终态可以通过已授权原聊天 `aibot_send_msg` Markdown 补发；超时、不确定发送、429、无效身份均不触发自动备用发送。已有创建意图、unknown 与显式恢复规则继续适用。超过流式时限后进度不再更新，完整终态结果仍通过原聊天送达。
+
+回执读取与持久化 callback sink 分离，单个接收连接使用有界 16 条 FIFO；sink 仍逐条处理并接受最多十秒 context，拥塞则断开，不伪造 Inbox ACK 或承诺供应商重放。相同 req_id 的流式请求串行，等待锁可取消；写后未确认或非法回执立即关闭连接，避免旧 ACK 确认另一帧。取消、sink 失败和断开均释放 reader、heartbeat 与发送绑定。企业微信未注册原消息 Typing 表情；模板卡片更新依赖 `template_card_event` 并限事件后五秒，不能作为任意执行进度的更新接口。本地 fake 协议与数据库测试不代替真实企业微信客户端显示、长任务补发和重连验收。依据：[企业微信官方 SDK 流式回复、Markdown 与卡片更新接口](https://github.com/WecomTeam/aibot-node-sdk/blob/main/src/client.ts)、[腾讯官方接入说明及六分钟限制](https://cloud.tencent.com/document/product/1831/137051)。
+
 ## 企业微信账号认证诊断（2026-10-04）
 
 企业微信智能机器人采用 API 长连接模式，凭据为该机器人页面的 Bot ID 与 Secret。认证请求沿用 `aibot_subscribe` 的 `body.bot_id` / `body.secret`；仅无 `cmd` 且 `headers.req_id` 匹配本次请求的回执可确认认证成功。回调与无关回执不直接作为认证结果；等待总时限最多 15 秒且不超过请求 Deadline，读取最多 32 帧，失败与取消均关闭连接。协议参考：[官方 SDK WebSocket 实现](https://github.com/WecomTeam/aibot-node-sdk/blob/main/src/ws.ts)。

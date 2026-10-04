@@ -34,7 +34,7 @@ func (r *Repository) GetChannelResponseReceipt(ctx context.Context, stored appli
 	if err := json.Unmarshal(source.Response, &state); err != nil {
 		return nil, err
 	}
-	return &application.ChannelTypingJob{InboxID: source.ID, Stored: current, Message: message, Response: state, ResponseRevision: source.ResponseRevision}, nil
+	return &application.ChannelTypingJob{InboxID: source.ID, Stored: current, Message: message, ReplyCiphertext: source.ReplyCiphertext, Response: state, ResponseRevision: source.ResponseRevision}, nil
 }
 
 // Revision fencing prevents receipt feedback, Worker activity and terminal

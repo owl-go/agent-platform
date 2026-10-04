@@ -503,9 +503,9 @@ func enqueueChannelDelivery(tx *gorm.DB, c channelRecord, inbox channelInboxReco
 		return err
 	}
 	chunks := domain.SplitChannelText(text)
-	if (c.Provider == "feishu" || c.Provider == "dingtalk") && kind != "validation" {
-		// The first terminal chunk replaces the streaming card; continuation
-		// cards preserve the entire answer within the provider's payload limit.
+	if (c.Provider == "feishu" || c.Provider == "dingtalk" || c.Provider == "wecom") && kind != "validation" {
+		// The first terminal chunk replaces the card or stream; continuation
+		// messages preserve the entire answer within the provider's payload limit.
 		chunks = nil
 		runes := []rune(text)
 		for len(runes) > 0 {
