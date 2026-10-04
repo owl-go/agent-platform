@@ -317,3 +317,11 @@ Inbox 的既有 `response` JSONB 保存最新公开摘要，答复草稿仍仅�
 正文保留标题、加粗/斜体/删除线、列表、引用、表格、代码和链接语法。Goldmark CommonMark Parser 仅用于识别代码内容，不将回复转换为 HTML；代码块和行内代码中的比较符、HTML 示例和图片字面文本原样保留。代码以外的 HTML 起始符和实体入口转义，图片语法的 `!` 转成文字实体，阻止模型内容触发飞书人员提及或资源图片。回答仍经过既有凭证脱敏与私有链接门禁，卡片大小预算和稳定消息 ID 更新规则保持适用。
 
 验证采用真实卡片生成与 POST/PATCH 协议 seam；最小 `**重点**` 载荷在旧实现未声明 Markdown 组件时失败，修复后通过。CommonMark 渲染验证覆盖标题、列表、引用、表格、代码原文及 HTML/图片不生效；请求预算覆盖中文、控制字符、实体和图片符号的最坏展开。协议依据：[卡片 2.0 结构](https://open.feishu.cn/document/feishu-cards/card-json-v2-structure)、[2.0 Markdown 组件](https://open.feishu.cn/document/feishu-cards/card-json-v2-components/content-components/rich-text)与[更新消息卡片](https://open.feishu.cn/document/server-docs/im-v1/message-card/patch)。真实客户端显示仍须现场确认。
+
+#### Markdown 卡片发布证据
+
+2026-10-04 从 `main_temp` 的 `ab90c95b1f160d370b3b99b121ac3e91785cc7bf`（功能提交 `5298813`）发布 `feishu-markdown-cards-20261004-1`，集成后的 tree 与已验证功能 tree 相同。API Image ID 为 `sha256:f1f804592e836812be491a142bf1d9d667e9a7259fa481e6be7e8a3f70c717e9`，Worker Image ID 为 `sha256:50d3d33d4168509a2385d02624ecfae735aaf8195d87862ee529062c059174a6`。
+
+实际通过目标包回归/协议/Markdown 测试、独立 PostgreSQL 16 的 `make test`、`make build`、Message Channel Adapter 与 Workspace Application 的 `go test -race` 和 `go vet`。独立数据库已清理。前端与 Runtime 镜像未改，未运行 Web 或 Linux + runsc Sandbox/Production Conformance；未取得真实飞书客户端视觉验收。
+
+服务器备份位于 `/opt/agent-platform/backups/pre-feishu-markdown-cards-20261004-1`，数据库 checksum 与 restore-list 检查通过；未进行完整恢复演练。候选 API readyz、配置 checksum、切换前后完整 migration ledger 不变检查通过，切换前活动执行数为 0；切换后 API/Worker healthy，Worker readyz 通过，启用 Feishu 连接聚合为 `connected|1`。公网 API healthz/readyz 和 OIDC metadata 通过，既有首页/关键 JS 与已验证产物逐字节一致，匿名配对请求保持 401。现场证据位于 `/opt/agent-platform/evidence/feishu-markdown-cards-20261004-1`；可回退 `feishu-public-progress-20261004-1` 的 API/Worker 镜像，数据库和静态资源无需回滚。
