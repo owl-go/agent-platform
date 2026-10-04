@@ -25,7 +25,7 @@ func feishuBase(region string) string {
 	return "https://open.feishu.cn"
 }
 func (a *Feishu) token(ctx context.Context, c application.ChannelCredentials, region string) (string, error) {
-	if c["app_id"] == "" || c["app_secret"] == "" || c["tenant_key"] == "" {
+	if c["app_id"] == "" || c["app_secret"] == "" {
 		return "", providerError("feishu_credentials_invalid")
 	}
 	result, status, _, err := a.request(ctx, http.MethodPost, feishuBase(region)+"/open-apis/auth/v3/tenant_access_token/internal", "", map[string]string{"app_id": c["app_id"], "app_secret": c["app_secret"]})
@@ -48,7 +48,17 @@ func (a *Feishu) Identify(ctx context.Context, c application.ChannelCredentials,
 	if err != nil || status != 200 || result["code"] == nil || rawNumber(result["code"]) != 0 || json.Unmarshal(result["bot"], &bot) != nil || bot.OpenID == "" || bot.Status != 2 {
 		return application.ChannelIdentity{}, providerError("provider_identity_failed")
 	}
-	return application.ChannelIdentity{ID: bot.OpenID, BindingID: feishuBase(region) + ":" + c["app_id"], Name: bot.Name, TenantID: c["tenant_key"]}, nil
+	result, status, _, err = a.request(ctx, http.MethodGet, feishuBase(region)+"/open-apis/tenant/v2/tenant/query", "Bearer "+token, nil)
+	var code *int
+	var data struct {
+		Tenant struct {
+			Key string `json:"tenant_key"`
+		} `json:"tenant"`
+	}
+	if err != nil || status != http.StatusOK || json.Unmarshal(result["code"], &code) != nil || code == nil || *code != 0 || json.Unmarshal(result["data"], &data) != nil || strings.TrimSpace(data.Tenant.Key) == "" {
+		return application.ChannelIdentity{}, providerError("provider_identity_failed")
+	}
+	return application.ChannelIdentity{ID: bot.OpenID, BindingID: feishuBase(region) + ":" + c["app_id"], Name: bot.Name, TenantID: data.Tenant.Key}, nil
 }
 func (a *Feishu) Configure(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, _ string) error {
 	identity, err := a.Identify(ctx, c, s.Channel.Region)
@@ -68,7 +78,7 @@ func value(v *string) string {
 	return *v
 }
 func normalizeFeishu(s application.ChannelStored, e *larkim.P2MessageReceiveV1) (domain.ChannelMessage, bool) {
-	if e == nil || e.Event == nil || e.Event.Message == nil || e.Event.Sender == nil || e.Event.Sender.SenderId == nil || e.EventV2Base == nil || e.EventV2Base.Header == nil {
+	if s.Channel.TenantID == "" || e == nil || e.Event == nil || e.Event.Message == nil || e.Event.Sender == nil || e.Event.Sender.SenderId == nil || e.EventV2Base == nil || e.EventV2Base.Header == nil {
 		return domain.ChannelMessage{}, false
 	}
 	sender, msg := e.Event.Sender, e.Event.Message

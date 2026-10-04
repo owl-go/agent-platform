@@ -20,6 +20,21 @@ function widget(api: Partial<PlatformApi>, locale: "zh-CN" | "en-US" = "zh-CN") 
   }}});
 }
 describe("Workflow message channels",()=>{
+  it.each(["zh-CN", "en-US"] as const)("saves Feishu with only application credentials in %s",async(locale)=>{
+    const save=vi.fn(async()=>channel);
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),saveMessageChannel:save},locale);await flushPromises();
+    await wrapper.findAll("button").find(b=>b.text()===(locale==="zh-CN" ? "添加渠道" : "Add channel"))!.trigger("click");
+    await wrapper.get("select").setValue("feishu");await flushPromises();
+    expect(wrapper.text()).not.toContain("Tenant Key");
+    const inputFor=(label:string)=>wrapper.findAll("label").find(l=>l.text()===label)!.get("input");
+    await inputFor(locale==="zh-CN" ? "名称" : "Name").setValue("Feishu bot");
+    await inputFor("App ID").setValue("app");
+    await inputFor("App Secret").setValue("secret");
+    await inputFor(locale==="zh-CN" ? "允许的发送者 ID" : "Allowed sender IDs").setValue("ou_sender");
+    await wrapper.findAll("button").find(b=>b.text()===(locale==="zh-CN" ? "保存" : "Save"))!.trigger("click");await flushPromises();
+    expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({provider:"feishu",region:"feishu",credentials:{app_id:"app",app_secret:"secret"}}),expect.any(AbortSignal));
+    wrapper.unmount();
+  });
   it("keeps configuration disabled until verification and confirms shared Workspace access",async()=>{
     const control = vi.fn(async()=>({...channel,enabled:true,version:4}));
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[channel]})),controlMessageChannel:control}); await flushPromises();

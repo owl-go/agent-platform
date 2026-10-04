@@ -19,7 +19,7 @@ const deliveryChannel = ref<MessageChannel>();
 const confirmation = ref<{ channel: MessageChannel; action: string; delivery?: ChannelDelivery }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
 const providerFields: Record<string, string[]> = {
-  telegram:["bot_token"], discord:["bot_token"], slack:["bot_token","signing_secret"], dingtalk:["client_id","client_secret","corp_id"], feishu:["app_id","app_secret","tenant_key"],
+  telegram:["bot_token"], discord:["bot_token"], slack:["bot_token","signing_secret"], dingtalk:["client_id","client_secret","corp_id"], feishu:["app_id","app_secret"],
   matrix:["endpoint","access_token"], whatsapp:["access_token","app_secret","verify_token","phone_number_id","business_account_id","graph_version"], signal:["endpoint","bridge_token","account_id"],
   wecom:["bot_id","bot_secret"], wechat:["bot_token","account_id","user_id"], qqbot:["app_id","app_secret"], bluebubbles:["endpoint","password"], yuanbao:["app_key","app_secret"],
 };

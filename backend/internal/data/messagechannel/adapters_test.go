@@ -176,6 +176,17 @@ func TestGatewayNormalizersRejectBotsAndTenantDrift(t *testing.T) {
 	if _, ok := normalizeFeishu(fs, fe); ok {
 		t.Fatal("cross-tenant Feishu event accepted")
 	}
+	fe.Event.Sender.TenantKey = strptr("tenant")
+	fe.EventV2Base.Header.TenantKey = "other"
+	if _, ok := normalizeFeishu(fs, fe); ok {
+		t.Fatal("cross-tenant Feishu header accepted")
+	}
+	fs.Channel.TenantID = ""
+	fe.EventV2Base.Header.TenantKey = ""
+	fe.Event.Sender.TenantKey = strptr("")
+	if _, ok := normalizeFeishu(fs, fe); ok {
+		t.Fatal("Feishu event without a verified tenant accepted")
+	}
 }
 func TestProviderSendPreservesTargetsAndUsesSafeFailures(t *testing.T) {
 	tests := []struct{ provider, reply string }{{"telegram", `{"ok":true,"result":{"message_id":99}}`}, {"slack", `{"ok":true,"ts":"123.1"}`}, {"discord", `{"id":"99"}`}, {"dingtalk", `{"errcode":0}`}, {"feishu", `{"code":0,"data":{"message_id":"99"}}`}}
@@ -196,7 +207,7 @@ func TestProviderSendPreservesTargetsAndUsesSafeFailures(t *testing.T) {
 			})
 			adapter := NewTransports(transport)[test.provider].Sender
 			s := application.ChannelStored{Channel: domain.MessageChannel{Region: "feishu"}}
-			c := application.ChannelCredentials{"bot_token": "test-token", "app_id": "app", "app_secret": "secret", "tenant_key": "tenant"}
+			c := application.ChannelCredentials{"bot_token": "test-token", "app_id": "app", "app_secret": "secret"}
 			m := domain.ChannelMessage{ChatID: "123", MessageID: "456", ThreadID: "789", SenderID: "sender", Reply: map[string]string{"session_webhook": "https://oapi.dingtalk.com/robot/sendBySession?session=protected", "expires_at": strconv.FormatInt(time.Now().Add(time.Hour).UnixMilli(), 10)}}
 			result := adapter.Send(context.Background(), s, c, m, "answer", "stable-key")
 			if result.State != "sent" {
