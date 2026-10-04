@@ -420,6 +420,19 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if err != nil {
 		return nil, publicError(err)
 	}
+	if locker, ok := repository.(interface {
+		LockConnectorAuthorizationRefresh(context.Context, string, string, string) (func(), bool, error)
+	}); ok {
+		release, locked, lockErr := locker.LockConnectorAuthorizationRefresh(ctx, principal.UserID, request.InstallationId, request.AuthorizationId)
+		if lockErr != nil {
+			return nil, publicError(lockErr)
+		}
+		if !locked {
+			return nil, publicError(domain.ErrConflict)
+		}
+		defer release()
+	}
+
 	items, err := repository.ListConnectorAuthorizations(ctx, principal.UserID, request.InstallationId)
 	if err != nil {
 		return nil, publicError(err)
@@ -434,6 +447,10 @@ func (service *Service) RefreshConnectorAuthorization(ctx context.Context, reque
 	if current.ID == "" {
 		return nil, publicError(domain.ErrNotFound)
 	}
+	if current.Version != request.ExpectedVersion {
+		return nil, publicError(domain.ErrConflict)
+	}
+
 	_, _, policy, err := connectorInstallationPolicy(ctx, repository, principal.UserID, request.InstallationId)
 	if err != nil {
 		return nil, publicError(err)

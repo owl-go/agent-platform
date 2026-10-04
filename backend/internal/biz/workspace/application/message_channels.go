@@ -61,15 +61,16 @@ type MessageChannelRepository interface {
 }
 
 type MessageChannels struct {
-	repository     MessageChannelRepository
-	cipher         ChannelCipher
-	transports     map[string]ChannelTransport
-	enabled        bool
-	callbackBase   string
-	limits         ChannelLimits
-	loginMu        sync.Mutex
-	logins         map[string]*channelLoginSession
-	typingObserver func(string, string)
+	repository           MessageChannelRepository
+	cipher               ChannelCipher
+	transports           map[string]ChannelTransport
+	enabled              bool
+	callbackBase         string
+	limits               ChannelLimits
+	loginMu              sync.Mutex
+	logins               map[string]*channelLoginSession
+	typingObserver       func(string, string)
+	authorizationRenewal *ConnectorAuthorizationRenewal
 }
 
 func NewMessageChannels(repository MessageChannelRepository, cipher ChannelCipher, transports map[string]ChannelTransport, enabled bool, callbackBase string, options ...ChannelLimits) *MessageChannels {
@@ -342,6 +343,21 @@ func (s *MessageChannels) ProcessInbox(ctx context.Context) (bool, error) {
 	if !s.enabled {
 		return false, nil
 	}
+	if s.authorizationRenewal != nil {
+		if pending, ok := s.repository.(interface {
+			PendingChannelOwner(context.Context) (string, error)
+		}); ok {
+			owner, err := pending.PendingChannelOwner(ctx)
+			if err != nil {
+				return false, err
+			}
+			if owner != "" {
+				if _, err = s.authorizationRenewal.RenewOwner(ctx, owner); err != nil {
+					return false, err
+				}
+			}
+		}
+	}
 	return s.repository.AdmitChannelMessage(ctx)
 }
 func (s *MessageChannels) ProcessDelivery(ctx context.Context) (bool, error) {
@@ -389,4 +405,8 @@ func (s *MessageChannels) Deliveries(ctx context.Context, owner, workflow, id st
 }
 func (s *MessageChannels) Retry(ctx context.Context, owner, workflow, id, delivery string, version int64, confirm bool) error {
 	return s.repository.RetryChannelDelivery(ctx, owner, workflow, id, delivery, version, confirm)
+}
+
+func (s *MessageChannels) EnableAuthorizationRenewal(renewal *ConnectorAuthorizationRenewal) {
+	s.authorizationRenewal = renewal
 }

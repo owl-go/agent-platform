@@ -114,6 +114,8 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 9. 首个 Run 冻结 Workflow Snapshot；后续保持其 goal/environment，按当前 Personal Settings 冻结 Runtime/Model，沿用对话的 specialist/resource selection。外部消息只有 text input，不允许提交 selection ID、任意附件路径、资源 ID、模型或 Runtime 指令字段。owner 在平台修改某 Run Conversation 的选择遵循现有规则，不改变渠道受众授权。
 10. 受众授权意味着运行 owner 所配置的 Workflow；新增启用说明必须明确共享 Workspace、知识和外部操作的影响。不要把隔离 conversation key 当作文件级隐私保证。需要参与者文件隔离的场景使用独立 Workflow；首期不自动把私有 Artifact/引用下载 URL 发到外部。
 
+飞书 CLI Connector 的已选 OAuth 授权在准入前由独立续期用例检查；有有效 refresh credential 时先续期再检查依赖，保持原 Run Conversation。续期网络调用不在 Inbox/Workflow 事务中进行；并发刷新进行中时暂缓准入，失败保留现有 fail-closed 路径。具体锁、版本、身份和撤销边界见 `connector-platform.md`。
+
 队列满、Credits 不足与依赖不可用进入 durable rejected，创建有界 status Delivery，不占 Run 槽、不自动重新执行，也不无限等待队列腾空。事件重试读取相同 rejection；参与者下一次主动发送的新问题才是新请求。未授权、Bot、非法/过大文本和超过接收速率的事件直接忽略，不保留正文，不把存在性、资源详情或余额发给对方。接收 backlog、每 sender/channel 速率、文本大小、发送间隔和最大发送次数可通过严格 YAML 设置；默认值见部署步骤。发送 lease 固定 60 秒，单次外部发送限时 15 秒。backlog 满时返回失败，不 ACK 为已持久化；没有承诺供应商一定会补发。
 
 渠道不请求模型 Plan 确认。Connector 授权缺失或高风险操作仍通过既有 User Action Wait 暂停，只向 IM 返回不含私有操作细节的“等待工作流拥有者处理”；只有 owner 的 OIDC 身份可审批，超时收口。外部回复“同意”没有审批效力。
