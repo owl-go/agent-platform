@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
+  it.each(["99991672", "private-provider-detail", null])("retains only numeric provider diagnostics (%s)", async(providerCode)=>{
+    vi.stubGlobal("fetch", vi.fn(async()=>new Response(JSON.stringify({reason:"feishu_tenant_permission_required",message:"private-provider-detail",metadata:{provider_code:providerCode}}),{status:422})));
+    const api=createPlatformApi(()=>"token");
+    await expect(api.startChannelLogin("workflow",{provider:"feishu",region:"feishu",method:"credentials",version:0,credentials:{app_id:"app",app_secret:"secret"}})).rejects.toMatchObject({code:"feishu_tenant_permission_required",providerCode:providerCode==="99991672"?99991672:undefined});
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it("normalizes the message channel validation deadline before rendering", async () => {

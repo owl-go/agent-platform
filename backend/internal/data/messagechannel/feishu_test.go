@@ -118,3 +118,41 @@ func TestFeishuRequiresBothApplicationCredentials(t *testing.T) {
 		}
 	}
 }
+
+func TestFeishuAccountFailureReportsSafeStep(t *testing.T) {
+	tests := []struct {
+		name, path, body, code string
+		status                 int
+	}{
+		{"credential rejection", "/open-apis/auth/v3/tenant_access_token/internal", `{"code":10003,"msg":"secret-provider-detail"}`, "feishu_credentials_rejected", 200},
+		{"bot unavailable", "/open-apis/bot/v3/info", `{"code":99991672,"msg":"secret-provider-detail"}`, "feishu_bot_unavailable", 403},
+		{"bot inactive", "/open-apis/bot/v3/info", `{"code":0,"bot":{"open_id":"bot","activate_status":1}}`, "feishu_bot_inactive", 200},
+		{"missing tenant scope", "/open-apis/tenant/v2/tenant/query", `{"code":99991672,"msg":"secret-provider-detail"}`, "feishu_tenant_permission_required", 403},
+		{"tenant denied", "/open-apis/tenant/v2/tenant/query", `{"code":1184001,"msg":"secret-provider-detail"}`, "feishu_tenant_permission_required", 403},
+		{"tenant absent", "/open-apis/tenant/v2/tenant/query", `{"code":1184000,"msg":"secret-provider-detail"}`, "feishu_tenant_unavailable", 404},
+		{"malformed token success", "/open-apis/auth/v3/tenant_access_token/internal", `{"code":"0","tenant_access_token":"token"}`, "feishu_authentication_unavailable", 200},
+		{"malformed bot success", "/open-apis/bot/v3/info", `{"code":"0","bot":{"open_id":"bot","activate_status":2}}`, "feishu_bot_unavailable", 200},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			a := &Feishu{NewHTTP(roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Path == test.path {
+					return jsonResponse(test.body, test.status), nil
+				}
+				switch r.URL.Path {
+				case "/open-apis/auth/v3/tenant_access_token/internal":
+					return jsonResponse(`{"code":0,"tenant_access_token":"token"}`, 200), nil
+				case "/open-apis/bot/v3/info":
+					return jsonResponse(`{"code":0,"bot":{"open_id":"bot","activate_status":2}}`, 200), nil
+				default:
+					t.Fatal("unexpected request after failure")
+					return nil, errors.New("unexpected request")
+				}
+			}))}
+			identity, err := a.Identify(context.Background(), application.ChannelCredentials{"app_id": "app", "app_secret": "secret"}, "feishu")
+			if identity != (application.ChannelIdentity{}) || err == nil || !strings.Contains(err.Error(), test.code) || strings.Contains(err.Error(), "secret-provider-detail") || !errors.Is(err, domain.ErrInvalid) {
+				t.Fatalf("failure lost safe step: %#v, %v", identity, err)
+			}
+		})
+	}
+}

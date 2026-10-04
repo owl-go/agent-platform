@@ -139,7 +139,7 @@ export type Personality = "gentle_professional" | "direct_efficient" | "lively_f
 
 export type ApiErrorKind = "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";
 export class ApiError extends Error {
-  constructor(public readonly kind: ApiErrorKind, public readonly status: number, public readonly code: string, public readonly requestID = "") {
+  constructor(public readonly kind: ApiErrorKind, public readonly status: number, public readonly code: string, public readonly requestID = "", public readonly providerCode?: number) {
     super(code || `request_failed_${status}`);
     this.name = "ApiError";
   }
@@ -844,10 +844,12 @@ async function request<T>(accessToken: string, path: string, init: RequestInit =
   headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(path, { ...init, headers });
   if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { reason?: string; message?: string; error?: string };
+    const body = await response.json().catch(() => ({})) as { reason?: string; message?: string; error?: string; metadata?: { provider_code?: unknown } };
     const code = body.reason ?? body.error ?? body.message ?? `request_failed_${response.status}`;
     const kind: ApiErrorKind = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : response.status === 404 ? "not_found" : response.status === 409 || response.status === 412 ? "conflict" : response.status === 400 || response.status === 413 || response.status === 422 ? "validation" : response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : "unknown";
-    throw new ApiError(kind, response.status, code, response.headers.get("X-Request-ID") ?? "");
+    const rawProviderCode = body.metadata?.provider_code;
+    const providerCode = typeof rawProviderCode === "string" && /^\d{1,10}$/.test(rawProviderCode) ? Number(rawProviderCode) : undefined;
+    throw new ApiError(kind, response.status, code, response.headers.get("X-Request-ID") ?? "", providerCode);
   }
   if (response.status === 204) return undefined as T;
   return response.json().then(normalizeTimestamps) as Promise<T>;

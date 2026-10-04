@@ -211,7 +211,7 @@ message_channels:
 4. 点击验证，从允许的发送者/聊天发送展示的 `verify ...`，群聊需 @ Bot。仅固定回复成功发送后标记 passing，不创建 Run、不读 Workspace、不消耗 Credits；窗口十分钟。
 5. 启用后发送两次真实问题，在 Run History 检查来源与连续回合，再验证回复和 Credits。断线、unknown、停用、删除与重启应按执行计划逐个供应商记录证据。发送 history 仅显示投递元数据；重发不调用模型。
 
-飞书自建应用通过 App ID/Secret 获取 `tenant_access_token`，再调用[获取企业信息](https://open.feishu.cn/document/server-docs/tenant-v2/query)取得 `data.tenant.tenant_key`，保存为已认证的企业身份。查询失败或返回空 Tenant Key 时拒绝保存；旧凭证中的手填 Tenant Key 不作为身份依据。接入验证重新查询并匹配已保存的企业身份，接收消息继续同时校验事件 Header 与 Sender 的 Tenant Key。已有配置若曾填错 Tenant Key，需停用后重新保存以取得正确身份，并重新验证收发。此自动查询路径仅有本地协议测试，真实飞书/Lark 账号权限与端到端验收仍待验证。
+飞书自建应用须开通「获取企业信息」（`tenant:tenant:readonly`）并发布包含权限的版本。平台通过 App ID/Secret 获取 `tenant_access_token`，再调用[获取企业信息](https://open.feishu.cn/document/server-docs/tenant-v2/query)取得 `data.tenant.tenant_key`，保存为已认证的企业身份。查询失败或返回空 Tenant Key 时拒绝保存；旧凭证中的手填 Tenant Key 不作为身份依据。接入验证重新查询并匹配已保存的企业身份，接收消息继续同时校验事件 Header 与 Sender 的 Tenant Key。已有配置若曾填错 Tenant Key，需停用后重新保存以取得正确身份，并重新验证收发。此自动查询路径仅有本地协议测试，真实飞书/Lark 账号权限与端到端验收仍待验证。
 
 SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go SDK v3.12.0。Telegram/Slack 使用有界 HTTP Adapter。HTTP 仅允许官方精确域、TLS、无重定向与公共解析地址；钉钉 Stream 限定官方 WSS 网关及公共解析地址，ticket 正确 URL 编码。Discord/飞书连接端点由官方 SDK 认证握手获得，不允许 owner 输入任意服务器地址；尚未取得实际网络恢复验收。
 
@@ -258,3 +258,5 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 原 QQ HTTP callback Adapter 的签名逻辑保留协议测试，但不注册为产品接收方式；供应商侧既有 callback 配置须切换为 WebSocket 模式。账号保存仍保持未验证且停用，只有验证窗口或启用状态会被连接监督器选择。`ChannelStreamHealthReceiver` 可选扩展报告 connecting/connected，Application 验证固定状态后按配置版本保存；READY 不能伪造用户消息、验证成功或 Run。QQ Gateway Resume 仅限当前连接监督生命周期；Worker 重启及配置替换不承诺补收未提交消息，既有持久 Inbox 仍幂等恢复。
 
 协议依据：[腾讯官方 WebSocket SDK](https://github.com/tencent-connect/qqbot-agent-sdk/blob/main/src/qqbot_agent_sdk/websocket.py)。
+
+账号接入错误区分应用认证、机器人信息、机器人未启用、企业信息权限拒绝与企业身份查询失败。HTTP 响应仅返回固定的错误分类与数值型供应商错误码/状态，不转发供应商原始消息、Token 或 App Secret；界面显示对应的操作建议，未知错误仍使用通用提示。2026-10-04 用户报告的真实飞书账号连接失败尚未取得对应步骤和供应商响应，不能归因于缺权限或声称已验证恢复。

@@ -4,7 +4,7 @@ import { ElForm, ElFormItem } from "element-plus";
 import "element-plus/theme-chalk/el-form.css";
 import "element-plus/theme-chalk/el-form-item.css";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type MessageChannel, type MessageChannelInput, type ChannelLogin } from "../api/client";
+import { ApiError, platformApiKey, type MessageChannel, type MessageChannelInput, type ChannelLogin } from "../api/client";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import QRCode from "qrcode";
 import { channelSetups } from "./messageChannelSetup";
@@ -104,7 +104,14 @@ async function connectAccount() {
     const result = await api.startChannelLogin(props.workflowId, { provider: form.provider, region: form.provider === "feishu" ? form.region : "", method: loginMethod.value, credentials: loginMethod.value === "qr" ? {} : { ...form.credentials }, channel_id: editing.value?.id, version: editing.value?.version ?? 0 }, loginAbort.signal);
     if (generation !== loginGeneration || !dialog.value) { void api.cancelChannelLogin(props.workflowId, result.id).catch(() => {}); return; }
     await applyLogin(result, generation);
-  } catch { if (!disposed && generation === loginGeneration) error.value = t("channels.loginFailed"); }
+  } catch (failure) {
+    if (!disposed && generation === loginGeneration) {
+      const codes = ["feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable"];
+      const knownFailure = form.provider === "feishu" && failure instanceof ApiError && codes.includes(failure.code);
+      error.value = t(knownFailure ? `channels.loginErrors.${failure.code}` : "channels.loginFailed");
+      if (knownFailure && failure.providerCode) error.value += ` ${t("channels.providerErrorCode", { code: failure.providerCode })}`;
+    }
+  }
   finally { if (generation === loginGeneration) busy.value = false; }
 }
 async function pollLogin(generation = loginGeneration) {
