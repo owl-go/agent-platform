@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/application"
@@ -139,7 +140,7 @@ func normalizeWeCom(s application.ChannelStored, frame wecomFrame) (domain.Chann
 		timestamp = time.Now().UTC()
 	}
 	// The authenticated smart-bot group callback is delivered only on bot mentions.
-	return domain.ChannelMessage{EventID: event.ID, MessageID: event.ID, SenderID: event.From.ID, ChatID: chat, Group: group, Mentioned: group, Text: event.Text.Content, OccurredAt: timestamp, Reply: map[string]string{}}, true
+	return domain.ChannelMessage{EventID: event.ID, MessageID: event.ID, SenderID: event.From.ID, ChatID: chat, Group: group, Mentioned: group, Text: event.Text.Content, OccurredAt: timestamp, Reply: map[string]string{"req_id": frame.Headers.ID, "received_at": strconv.FormatInt(time.Now().UnixMilli(), 10)}}, true
 }
 func (a *WeCom) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink) error {
 	return a.ConnectWithHealth(ctx, s, c, sink, nil)
@@ -166,7 +167,40 @@ func (a *WeCom) ConnectWithHealth(ctx context.Context, s application.ChannelStor
 		}
 	}
 	go session.heartbeat(websocket.TextMessage, 25*time.Second, func() []byte { return wecomRequest("ping", uuid.NewString(), nil) })
-	for child.Err() == nil {
+	// Read receipts independently from the durable callback sink: receipt feedback
+	// itself waits for a socket ACK. A bounded FIFO preserves callback order.
+	messages := make(chan domain.ChannelMessage, 16)
+	failures := make(chan error, 1)
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+		defer cancel()
+		err := a.readMessages(child, socket, session, s, messages)
+		failures <- err
+	}()
+	defer func() { cancel(); socket.Close(); <-readerDone }()
+	for {
+		select {
+		case <-child.Done():
+			return child.Err()
+		case err := <-failures:
+			return err
+		case m := <-messages:
+			if child.Err() != nil {
+				return child.Err()
+			}
+			commitCtx, commitCancel := context.WithTimeout(child, 10*time.Second)
+			err := sink(commitCtx, m)
+			commitCancel()
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (a *WeCom) readMessages(ctx context.Context, socket channelSocket, session *socketSession, s application.ChannelStored, messages chan<- domain.ChannelMessage) error {
+	for ctx.Err() == nil {
 		_ = socket.SetReadDeadline(time.Now().Add(90 * time.Second))
 		_, data, err := socket.ReadMessage()
 		if err != nil {
@@ -190,21 +224,22 @@ func (a *WeCom) ConnectWithHealth(ctx context.Context, s application.ChannelStor
 		}
 		if frame.Cmd == "aibot_msg_callback" {
 			if m, ok := normalizeWeCom(s, frame); ok {
-				commitCtx, cancel := context.WithTimeout(child, 10*time.Second)
-				err := sink(commitCtx, m)
-				cancel()
-				if err != nil {
-					return err
+				select {
+				case messages <- m:
+				default:
+					return providerError("provider_receive_overloaded")
 				}
 			}
-			// Smart-bot callbacks do not expose a separate durable ACK. A saved Inbox is
-			// the platform recovery boundary; no receipt or successful answer is fabricated.
+			// No separate durable callback ACK; the committed Inbox is the recovery boundary.
 			continue
 		}
-		session.respond(frame.Headers.ID, data)
+		if frame.Cmd == "" {
+			session.respond(frame.Headers.ID, data)
+		}
 	}
-	return child.Err()
+	return ctx.Err()
 }
+
 func (a *WeCom) Send(ctx context.Context, s application.ChannelStored, _ application.ChannelCredentials, m domain.ChannelMessage, text, key string) application.ChannelSendResult {
 	session := a.bindings.get(s)
 	if session == nil {
@@ -213,7 +248,7 @@ func (a *WeCom) Send(ctx context.Context, s application.ChannelStored, _ applica
 	if m.Group {
 		text = "[" + m.SenderID + "] " + text
 	}
-	data, err := session.request(ctx, key, websocket.TextMessage, wecomRequest("aibot_send_msg", key, map[string]any{"chatid": m.ChatID, "msgtype": "markdown", "markdown": map[string]string{"content": text}}))
+	data, err := session.request(ctx, key, websocket.TextMessage, wecomRequest("aibot_send_msg", key, map[string]any{"chatid": m.ChatID, "msgtype": "markdown", "markdown": map[string]string{"content": safeCardMarkdown(text)}}))
 	if err != nil {
 		return application.ChannelSendResult{State: "outcome_unknown", Code: "provider_send_unconfirmed"}
 	}

@@ -114,7 +114,7 @@ func (a *Feishu) sendCardPreview(ctx context.Context, s application.ChannelStore
 	result, status, retry, err := a.request(ctx, http.MethodPost, feishuBase(s.Channel.Region)+"/open-apis/im/v1/messages/"+url.PathEscape(m.MessageID)+"/reply", "Bearer "+token, body)
 	return feishuCardResult(result, status, retry, err, "")
 }
-func (a *Feishu) UpdateResponse(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, id string, preview application.ChannelResponsePreview, final bool) application.ChannelSendResult {
+func (a *Feishu) UpdateResponse(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, _ domain.ChannelMessage, id string, preview application.ChannelResponsePreview, final bool) application.ChannelSendResult {
 	token, err := a.token(ctx, c, s.Channel.Region)
 	if err != nil {
 		return application.ChannelSendResult{State: "retry_wait", Code: "provider_authentication_failed", RetryAfter: time.Minute}

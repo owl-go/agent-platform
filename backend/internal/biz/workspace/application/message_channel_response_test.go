@@ -30,12 +30,14 @@ func (r *responseTestRepository) SaveChannelResponse(_ context.Context, job *Cha
 }
 
 type responseTestSender struct {
-	events      chan string
-	updates     chan ChannelResponsePreview
-	createState string
-	createCode  string
-	updateState string
-	updateCode  string
+	events          chan string
+	updates         chan ChannelResponsePreview
+	createState     string
+	createCode      string
+	updateState     string
+	updateCode      string
+	updateID        string
+	receivedReplies chan string
 }
 
 func (r *responseTestSender) React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error) {
@@ -49,7 +51,10 @@ func (r *responseTestSender) ClearReaction(ctx context.Context, _ ChannelStored,
 	r.events <- "clear"
 	return nil
 }
-func (r *responseTestSender) CreateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, _ domain.ChannelMessage, _ string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+func (r *responseTestSender) CreateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, m domain.ChannelMessage, _ string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	if r.receivedReplies != nil {
+		r.receivedReplies <- m.Reply["req_id"]
+	}
 	if final {
 		if r.createState != "" {
 			r.events <- "create"
@@ -65,7 +70,10 @@ func (r *responseTestSender) CreateResponse(_ context.Context, _ ChannelStored, 
 	}
 	return ChannelSendResult{State: "sent", MessageID: "card"}
 }
-func (r *responseTestSender) UpdateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+func (r *responseTestSender) UpdateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, m domain.ChannelMessage, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	if r.receivedReplies != nil {
+		r.receivedReplies <- m.Reply["req_id"]
+	}
 	r.updates <- preview
 	if r.updateState != "" {
 		r.events <- "update"
@@ -75,6 +83,9 @@ func (r *responseTestSender) UpdateResponse(_ context.Context, _ ChannelStored, 
 		r.events <- "final:" + id + ":" + preview.Answer
 	} else {
 		r.events <- "update:" + id + ":" + preview.Answer
+	}
+	if r.updateID != "" {
+		id = r.updateID
 	}
 	return ChannelSendResult{State: "sent", MessageID: id}
 }
@@ -236,10 +247,18 @@ func TestChannelResponseFastRunCreatesStructuredTerminalPreview(t *testing.T) {
 }
 
 func dingTalkResponseApplicationFixture() (*MessageChannels, *responseTestRepository, *responseTestSender, ExecutionJob) {
+	return responseApplicationFixture("dingtalk")
+}
+
+func responseApplicationFixture(provider string) (*MessageChannels, *responseTestRepository, *responseTestSender, ExecutionJob) {
 	app, repo, sender, job := responseFixture()
-	repo.current.Stored.Channel.Provider = "dingtalk"
+	repo.current.Stored.Channel.Provider = provider
+	if provider == "wecom" {
+		repo.current.Message.Reply = map[string]string{"req_id": "callback", "received_at": "123"}
+		repo.current.ReplyCiphertext, _ = json.Marshal(repo.current.Message.Reply)
+	}
 	// This wrapper implements cards, without inventing unsupported reactions.
-	app.transports = map[string]ChannelTransport{"dingtalk": {Sender: sender, Response: cardOnlyResponse{sender}, ResponseFallback: sender}}
+	app.transports = map[string]ChannelTransport{provider: {Sender: sender, Response: cardOnlyResponse{sender}, ResponseFallback: sender}}
 	return app, repo, sender, job
 }
 
@@ -248,65 +267,75 @@ type cardOnlyResponse struct{ sender *responseTestSender }
 func (r cardOnlyResponse) CreateResponse(ctx context.Context, s ChannelStored, c ChannelCredentials, m domain.ChannelMessage, key string, preview ChannelResponsePreview, final bool) ChannelSendResult {
 	return r.sender.CreateResponse(ctx, s, c, m, key, preview, final)
 }
-func (r cardOnlyResponse) UpdateResponse(ctx context.Context, s ChannelStored, c ChannelCredentials, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
-	return r.sender.UpdateResponse(ctx, s, c, id, preview, final)
+func (r cardOnlyResponse) UpdateResponse(ctx context.Context, s ChannelStored, c ChannelCredentials, m domain.ChannelMessage, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	return r.sender.UpdateResponse(ctx, s, c, m, id, preview, final)
 }
 
-func TestDingTalkFeedbackCreatesOneReceiptThenStreamsAndFinalizesIt(t *testing.T) {
-	app, repo, sender, job := dingTalkResponseApplicationFixture()
-	ctx := context.Background()
-	current, _ := repo.GetChannelTypingJob(ctx, job)
-	app.receiveFeedback(ctx, current.Stored, current.Message)
-	awaitResponse(t, sender, "create")
-	app.receiveFeedback(ctx, current.Stored, current.Message)
-	current, _ = repo.GetChannelTypingJob(ctx, job)
-	if current.Response.Phase != "ready" || current.Response.MessageID != "card" || current.Response.ReactionID != "" {
-		t.Fatal("receipt lost or invented a reaction", current.Response)
+func TestChannelResponseFeedbackCreatesOneReceiptThenStreamsAndFinalizesIt(t *testing.T) {
+	for _, provider := range []string{"dingtalk", "wecom"} {
+		t.Run(provider, func(t *testing.T) {
+			app, repo, sender, job := responseApplicationFixture(provider)
+			ctx := context.Background()
+			current, _ := repo.GetChannelTypingJob(ctx, job)
+			app.receiveFeedback(ctx, current.Stored, current.Message)
+			awaitResponse(t, sender, "create")
+			app.receiveFeedback(ctx, current.Stored, current.Message)
+			current, _ = repo.GetChannelTypingJob(ctx, job)
+			if current.Response.Phase != "ready" || current.Response.MessageID != "card" || current.Response.ReactionID != "" {
+				t.Fatal("receipt lost or invented a reaction", current.Response)
+			}
+			progress, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
+			defer stop()
+			awaitResponse(t, sender, "update:card:")
+			progress.(ChannelResponseProgress).UpdateChannelResponse(ctx, job, ChannelResponsePreview{Answer: "partial answer", Summary: "公开摘要", Status: "正在调用工具"})
+			awaitResponse(t, sender, "update:card:partial answer")
+			stop()
+			current, _ = repo.GetChannelTypingJob(ctx, job)
+			encoded, _ := json.Marshal(current.Response)
+			if strings.Contains(string(encoded), "partial answer") {
+				t.Fatal("answer draft persisted in response handles")
+			}
+			result := app.sendResponse(ctx, &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, InboxID: current.InboxID, ResponseRevision: current.ResponseRevision, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "complete answer", sender)
+			if result.State != "sent" || result.MessageID != "card" {
+				t.Fatal(result)
+			}
+			awaitResponse(t, sender, "final:card:complete answer")
+			select {
+			case extra := <-sender.events:
+				t.Fatal("extra receipt, reaction or duplicate answer", extra)
+			default:
+			}
+		})
 	}
-	progress, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
-	defer stop()
-	awaitResponse(t, sender, "update:card:")
-	progress.(ChannelResponseProgress).UpdateChannelResponse(ctx, job, ChannelResponsePreview{Answer: "partial answer", Summary: "公开摘要", Status: "正在调用工具"})
-	awaitResponse(t, sender, "update:card:partial answer")
-	stop()
-	current, _ = repo.GetChannelTypingJob(ctx, job)
-	encoded, _ := json.Marshal(current.Response)
-	if strings.Contains(string(encoded), "partial answer") {
-		t.Fatal("answer draft persisted in response handles")
-	}
-	result := app.sendResponse(ctx, &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, InboxID: current.InboxID, ResponseRevision: current.ResponseRevision, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "complete answer", sender)
-	if result.State != "sent" || result.MessageID != "card" {
-		t.Fatal(result)
-	}
-	awaitResponse(t, sender, "final:card:complete answer")
-	select {
-	case extra := <-sender.events:
-		t.Fatal("extra receipt, reaction or duplicate answer", extra)
-	default:
-	}
+
 }
 
-func TestDingTalkReceiptUnknownCreationNeverAutomaticallyDuplicates(t *testing.T) {
-	app, repo, sender, job := dingTalkResponseApplicationFixture()
-	sender.createState = "outcome_unknown"
-	ctx := context.Background()
-	current, _ := repo.GetChannelTypingJob(ctx, job)
-	app.receiveFeedback(ctx, current.Stored, current.Message)
-	awaitResponse(t, sender, "create")
-	app.receiveFeedback(ctx, current.Stored, current.Message)
-	_, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
-	stop()
-	current, _ = repo.GetChannelTypingJob(ctx, job)
-	encoded, _ := json.Marshal(current.Response)
-	result := app.sendResponse(ctx, &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "final", sender)
-	if result.State != "outcome_unknown" {
-		t.Fatal("uncertain receipt auto-resent", result)
+func TestChannelResponseReceiptUnknownCreationNeverAutomaticallyDuplicates(t *testing.T) {
+	for _, provider := range []string{"dingtalk", "wecom"} {
+		t.Run(provider, func(t *testing.T) {
+			app, repo, sender, job := responseApplicationFixture(provider)
+			sender.createState = "outcome_unknown"
+			ctx := context.Background()
+			current, _ := repo.GetChannelTypingJob(ctx, job)
+			app.receiveFeedback(ctx, current.Stored, current.Message)
+			awaitResponse(t, sender, "create")
+			app.receiveFeedback(ctx, current.Stored, current.Message)
+			_, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
+			stop()
+			current, _ = repo.GetChannelTypingJob(ctx, job)
+			encoded, _ := json.Marshal(current.Response)
+			result := app.sendResponse(ctx, &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "final", sender)
+			if result.State != "outcome_unknown" {
+				t.Fatal("uncertain receipt auto-resent", result)
+			}
+			select {
+			case extra := <-sender.events:
+				t.Fatal("unsafe operation", extra)
+			default:
+			}
+		})
 	}
-	select {
-	case extra := <-sender.events:
-		t.Fatal("unsafe operation", extra)
-	default:
-	}
+
 }
 
 func TestDingTalkTerminalFallbackOnlyOnDefiniteCardRejection(t *testing.T) {
@@ -353,18 +382,23 @@ func TestDingTalkTerminalFallbackOnlyOnDefiniteCardRejection(t *testing.T) {
 	}
 }
 
-func TestDingTalkWaitingCardDoesNotExposeActionDetails(t *testing.T) {
-	app, repo, sender, job := dingTalkResponseApplicationFixture()
-	repo.current.Running = false
-	repo.current.Response = ChannelResponseState{Phase: "ready", MessageID: "card"}
-	_, stop := app.TrackResponse(context.Background(), job, &responseNoopProgress{})
-	defer stop()
-	awaitResponse(t, sender, "update:card:")
-	preview := <-sender.updates
-	if preview.Status != "等待工作流拥有者处理" || preview.Answer != "" {
-		t.Fatal("waiting card lost fixed safe status", preview)
+func TestChannelResponseWaitingCardDoesNotExposeActionDetails(t *testing.T) {
+	for _, provider := range []string{"dingtalk", "wecom"} {
+		t.Run(provider, func(t *testing.T) {
+			app, repo, sender, job := responseApplicationFixture(provider)
+			repo.current.Running = false
+			repo.current.Response = ChannelResponseState{Phase: "ready", MessageID: "card"}
+			_, stop := app.TrackResponse(context.Background(), job, &responseNoopProgress{})
+			defer stop()
+			awaitResponse(t, sender, "update:card:")
+			preview := <-sender.updates
+			if preview.Status != "等待工作流拥有者处理" || preview.Answer != "" {
+				t.Fatal("waiting card lost fixed safe status", preview)
+			}
+			stop()
+		})
 	}
-	stop()
+
 }
 
 func TestChannelResponseFastTerminalWaitsForReceiptWithoutSendingAgain(t *testing.T) {
@@ -392,4 +426,138 @@ func TestChannelResponseFastTerminalWaitsForReceiptWithoutSendingAgain(t *testin
 		t.Fatal(result)
 	}
 	awaitResponse(t, sender, "final:receipt-card:final")
+}
+
+func TestChannelResponseStreamExpiryFallbackOnlyForWeCom(t *testing.T) {
+	for _, provider := range []string{"wecom", "dingtalk"} {
+		for _, code := range []string{"provider_stream_expired", "provider_reply_expired"} {
+			for _, update := range []bool{false, true} {
+				app, repo, sender, job := responseApplicationFixture(provider)
+				current, _ := repo.GetChannelTypingJob(context.Background(), job)
+				state := ChannelResponseState{Phase: "received"}
+				if update {
+					state.Phase, state.MessageID = "ready", "stream"
+					sender.updateState, sender.updateCode = "expired", code
+				} else {
+					sender.createState, sender.createCode = "expired", code
+				}
+				encoded, _ := json.Marshal(state)
+				result := app.sendResponse(context.Background(), &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "final", sender)
+				if update {
+					awaitResponse(t, sender, "update")
+				} else {
+					awaitResponse(t, sender, "create")
+				}
+				if provider == "wecom" && code == "provider_stream_expired" {
+					awaitResponse(t, sender, "send")
+					if result.State != "sent" {
+						t.Fatal(result)
+					}
+				} else if result.State != "expired" {
+					t.Fatal("reply expiry bypassed", provider, code, result)
+				}
+				select {
+				case extra := <-sender.events:
+					t.Fatal("unexpected operation", extra)
+				default:
+				}
+			}
+		}
+	}
+}
+
+func TestWeComLegacyInboxRetainsOrdinaryMarkdownDelivery(t *testing.T) {
+	app, repo, sender, job := responseApplicationFixture("wecom")
+	current, _ := repo.GetChannelTypingJob(context.Background(), job)
+	current.Message.Reply = nil
+	result := app.sendResponse(context.Background(), &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: []byte(`{}`), Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "final", sender)
+	if result.State != "sent" {
+		t.Fatal(result)
+	}
+	awaitResponse(t, sender, "send")
+	select {
+	case extra := <-sender.events:
+		t.Fatal("legacy inbox opened a stream", extra)
+	default:
+	}
+}
+
+func TestChannelResponseDecryptsBoundCallbackBeforeWorkerUpdates(t *testing.T) {
+	app, repo, sender, job := responseApplicationFixture("wecom")
+	repo.current.Message.Reply = nil
+	repo.current.Response = ChannelResponseState{Phase: "ready", MessageID: "stream"}
+	sender.receivedReplies = make(chan string, 10)
+	_, stop := app.TrackResponse(context.Background(), job, &responseNoopProgress{})
+	defer stop()
+	awaitResponse(t, sender, "update:stream:")
+	if reqID := <-sender.receivedReplies; reqID != "callback" {
+		t.Fatal("worker lost encrypted original callback", reqID)
+	}
+}
+
+func TestChannelResponseCorruptCallbackNeverReachesTransport(t *testing.T) {
+	app, repo, sender, job := responseApplicationFixture("wecom")
+	repo.current.ReplyCiphertext = []byte("corrupt")
+	repo.current.Response = ChannelResponseState{Phase: "ready", MessageID: "stream"}
+	_, stop := app.TrackResponse(context.Background(), job, &responseNoopProgress{})
+	stop()
+	select {
+	case event := <-sender.events:
+		t.Fatal("invalid callback was sent", event)
+	default:
+	}
+}
+
+func TestWeComCallbackCapabilityParticipatesInExactSecretRedaction(t *testing.T) {
+	values := ChannelReplySecrets(map[string]string{"req_id": "protected-callback"})
+	if len(values) != 1 || string(values[0]) != "protected-callback" {
+		t.Fatal("callback capability omitted from shared redaction")
+	}
+}
+
+func (r *responseTestRepository) ReceiveChannelMessage(_ context.Context, _ ChannelStored, m domain.ChannelMessage, reply []byte) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.current.Message = m
+	r.current.ReplyCiphertext = append([]byte(nil), reply...)
+	return true, nil
+}
+
+func TestWeComDurableReceiveRehydratesCallbackForImmediateFeedback(t *testing.T) {
+	app, repo, sender, job := responseApplicationFixture("wecom")
+	stored := repo.current.Stored
+	stored.Channel.Enabled = true
+	stored.Channel.Audience = domain.ChannelAudience{SenderIDs: []string{"alice"}, AllowDirect: true}
+	repo.current.Stored = stored
+	sender.receivedReplies = make(chan string, 10)
+	m := domain.ChannelMessage{EventID: "event", MessageID: "msg", SenderID: "alice", ChatID: "alice", Text: "question", OccurredAt: time.Now(), Reply: map[string]string{"req_id": "protected-callback", "received_at": "123"}}
+	if err := app.Receive(context.Background(), stored, m); err != nil {
+		t.Fatal(err)
+	}
+	awaitResponse(t, sender, "create")
+	if reqID := <-sender.receivedReplies; reqID != "protected-callback" {
+		t.Fatal("durable receive stripped immediate reply capability", reqID)
+	}
+	current, _ := repo.GetChannelTypingJob(context.Background(), job)
+	if current.Message.Reply != nil || !strings.Contains(string(current.ReplyCiphertext), "protected-callback") {
+		t.Fatal("repository boundary did not protect callback")
+	}
+	encoded, _ := json.Marshal(current.Response)
+	if strings.Contains(string(encoded), "protected-callback") {
+		t.Fatal("callback capability leaked into response state")
+	}
+}
+
+func TestChannelResponseCheckpointsConfirmedProviderStreamClosure(t *testing.T) {
+	app, repo, sender, job := responseApplicationFixture("wecom")
+	repo.current.Response = ChannelResponseState{Phase: "ready", MessageID: "stream"}
+	sender.updateID = "stream.closed"
+	_, stop := app.TrackResponse(context.Background(), job, &responseNoopProgress{})
+	defer stop()
+	awaitResponse(t, sender, "update:stream:")
+	stop()
+	current, _ := repo.GetChannelTypingJob(context.Background(), job)
+	if current.Response.MessageID != "stream.closed" {
+		t.Fatal("confirmed stream closure lost", current.Response)
+	}
 }

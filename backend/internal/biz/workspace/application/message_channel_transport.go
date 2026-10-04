@@ -78,7 +78,7 @@ type ChannelReactionSender interface {
 }
 type ChannelResponseSender interface {
 	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, ChannelResponsePreview, bool) ChannelSendResult
-	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, string, ChannelResponsePreview, bool) ChannelSendResult
+	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, ChannelResponsePreview, bool) ChannelSendResult
 }
 
 // ChannelResponsePreview contains public progress and redacted final-member text.
@@ -106,7 +106,7 @@ type ChannelTransport struct {
 	Sender          ChannelSender
 	Typing          ChannelTypingSender
 	Response        ChannelResponseSender
-	// Used only after a definite card rejection, never after an unknown send.
+	// Used after a definite rejection or a locally expired WeCom stream, never an unknown send.
 	ResponseFallback ChannelSender
 }
 

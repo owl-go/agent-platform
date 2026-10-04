@@ -83,11 +83,11 @@ func TestDingTalkResponseReceiptStreamAndFinalTargetSameCard(t *testing.T) {
 				t.Fatal(receipt)
 			}
 			preview := application.ChannelResponsePreview{Answer: "**正在输出**", Summary: "公开摘要", Status: "正在调用工具", ToolsCompleted: 3, ElapsedSeconds: 65}
-			if result := a.UpdateResponse(ctx, s, c, receipt.MessageID, preview, false); result.State != "sent" || result.MessageID != receipt.MessageID {
+			if result := a.UpdateResponse(ctx, s, c, domain.ChannelMessage{}, receipt.MessageID, preview, false); result.State != "sent" || result.MessageID != receipt.MessageID {
 				t.Fatal(result)
 			}
 			preview.Answer = "**最终答案**\n\n- 完成"
-			if result := a.UpdateResponse(ctx, s, c, receipt.MessageID, preview, true); result.State != "sent" || calls != 3 {
+			if result := a.UpdateResponse(ctx, s, c, domain.ChannelMessage{}, receipt.MessageID, preview, true); result.State != "sent" || calls != 3 {
 				t.Fatal(result)
 			}
 		})
@@ -119,7 +119,7 @@ func TestDingTalkCardFailuresDistinguishCreationUncertaintyFromSafeUpdateRetry(t
 			}))}
 			s, c, m := dingTalkResponseFixture()
 			create := a.CreateResponse(context.Background(), s, c, m, "inbox", application.ChannelResponsePreview{}, false)
-			update := a.UpdateResponse(context.Background(), s, c, strings.Repeat("a", 64)+".4102444800000", application.ChannelResponsePreview{}, false)
+			update := a.UpdateResponse(context.Background(), s, c, domain.ChannelMessage{}, strings.Repeat("a", 64)+".4102444800000", application.ChannelResponsePreview{}, false)
 			if create.State != test.create || update.State != test.update || strings.Contains(create.Code+update.Code, "protected") || create.MessageID != "" {
 				t.Fatalf("unsafe classification: %v %v", create, update)
 			}
@@ -150,7 +150,7 @@ func TestDingTalkCardCannotExtendReplyDeadlineOrChangeIdentity(t *testing.T) {
 	}
 	s, c, _ := dingTalkResponseFixture()
 	for _, handle := range []string{"invalid", strings.Repeat("a", 64) + ".1", strings.Repeat("z", 64) + ".4102444800000"} {
-		if a.UpdateResponse(context.Background(), s, c, handle, application.ChannelResponsePreview{}, false).State == "sent" {
+		if a.UpdateResponse(context.Background(), s, c, domain.ChannelMessage{}, handle, application.ChannelResponsePreview{}, false).State == "sent" {
 			t.Fatal("unsafe update")
 		}
 	}
