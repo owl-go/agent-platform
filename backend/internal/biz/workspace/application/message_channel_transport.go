@@ -72,7 +72,7 @@ type ChannelResponseState struct {
 type ChannelResponseSender interface {
 	React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error)
 	ClearReaction(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) error
-	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) ChannelSendResult
+	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, ChannelResponsePreview, bool) ChannelSendResult
 	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, string, ChannelResponsePreview, bool) ChannelSendResult
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
 	"sync"
 	"time"
 
@@ -149,7 +148,7 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 				if state.Phase == "" || state.Phase == "received" {
 					state.Phase = "creating"
 					if repository.SaveChannelResponse(requestCtx, current, state) == nil {
-						result := transport.CreateResponse(requestCtx, current.Stored, c, current.Message, current.InboxID)
+						result := transport.CreateResponse(requestCtx, current.Stored, c, current.Message, current.InboxID, recorder.latest(), false)
 						state.MessageID, state.Phase = result.MessageID, "ready"
 						if result.State != "sent" {
 							state.Phase = result.State
@@ -226,10 +225,7 @@ func (s *MessageChannels) sendResponse(ctx context.Context, job *ChannelSendJob,
 		if state.Phase == "creating" || state.Phase == "outcome_unknown" {
 			return ChannelSendResult{State: "outcome_unknown", Code: "provider_send_unconfirmed"}
 		}
-		if strings.TrimSpace(preview.Summary) != "" {
-			text = "思考摘要\n" + preview.Summary + "\n\n回答\n" + text
-		}
-		return sender.Send(ctx, job.Stored, c, job.Message, text, job.Delivery.ID)
+		return response.CreateResponse(ctx, job.Stored, c, job.Message, job.Delivery.ID, preview, true)
 	}
 	return response.UpdateResponse(ctx, job.Stored, c, state.MessageID, preview, true)
 }

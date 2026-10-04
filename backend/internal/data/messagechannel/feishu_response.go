@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/application"
@@ -63,8 +62,9 @@ func feishuCardPreview(preview application.ChannelResponsePreview, final bool) s
 			text += "\n\n正在生成更多内容…"
 		}
 	}
-	if summary != "" {
-		text = "思考摘要\n" + summary + "\n\n回答\n" + text
+	elements := []any{}
+	markdown := func(content string) map[string]string {
+		return map[string]string{"tag": "markdown", "content": content}
 	}
 	if !final {
 		status := preview.Status
@@ -73,30 +73,41 @@ func feishuCardPreview(preview application.ChannelResponsePreview, final bool) s
 		}
 		title = status
 		progress := fmt.Sprintf("当前进度：%s · 本步骤已完成 %d 次工具调用 · 已运行 %d 分 %d 秒", status, preview.ToolsCompleted, preview.ElapsedSeconds/60, preview.ElapsedSeconds%60)
-		text = progress + "\n\n" + text
+		elements = append(elements, markdown(feishuMarkdown(progress)))
 	}
-	// Dynamic answer Markdown must not embed provider images or mass mentions.
-	text = strings.ReplaceAll(text, "<", "&lt;")
-	text = strings.ReplaceAll(text, ">", "&gt;")
+	if summary != "" {
+		elements = append(elements, markdown("**思考摘要**\n\n"+feishuMarkdown(summary)))
+	}
+	if text != "" {
+		answer := feishuMarkdown(text)
+		if summary != "" {
+			answer = "**回答**\n\n" + answer
+		}
+		elements = append(elements, markdown(answer))
+	}
 	card, _ := json.Marshal(map[string]any{
-		"config":   map[string]bool{"wide_screen_mode": true, "update_multi": true},
-		"header":   map[string]any{"title": map[string]string{"tag": "plain_text", "content": title}},
-		"elements": []any{map[string]any{"tag": "div", "text": map[string]string{"tag": "plain_text", "content": text}}},
+		"schema": "2.0",
+		"config": map[string]any{"width_mode": "fill", "update_multi": true},
+		"header": map[string]any{"title": map[string]string{"tag": "plain_text", "content": title}},
+		"body":   map[string]any{"elements": elements},
 	})
 	return string(card)
 }
 func feishuCard(text string, final bool) string {
 	return feishuCardPreview(application.ChannelResponsePreview{Answer: text}, final)
 }
-func (a *Feishu) CreateResponse(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage, key string) application.ChannelSendResult {
-	return a.sendCard(ctx, s, c, m, "正在处理你的消息…", key, false)
+func (a *Feishu) CreateResponse(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage, key string, preview application.ChannelResponsePreview, final bool) application.ChannelSendResult {
+	return a.sendCardPreview(ctx, s, c, m, preview, key, final)
 }
 func (a *Feishu) sendCard(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage, text, key string, final bool) application.ChannelSendResult {
+	return a.sendCardPreview(ctx, s, c, m, application.ChannelResponsePreview{Answer: text}, key, final)
+}
+func (a *Feishu) sendCardPreview(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage, preview application.ChannelResponsePreview, key string, final bool) application.ChannelSendResult {
 	token, err := a.token(ctx, c, s.Channel.Region)
 	if err != nil {
 		return application.ChannelSendResult{State: "retry_wait", Code: "provider_authentication_failed", RetryAfter: time.Minute}
 	}
-	body := map[string]any{"msg_type": "interactive", "content": feishuCard(text, final), "uuid": key}
+	body := map[string]any{"msg_type": "interactive", "content": feishuCardPreview(preview, final), "uuid": key}
 	if m.ThreadID != "" {
 		body["reply_in_thread"] = true
 	}

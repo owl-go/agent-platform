@@ -45,7 +45,12 @@ func (r *responseTestSender) ClearReaction(ctx context.Context, _ ChannelStored,
 	r.events <- "clear"
 	return nil
 }
-func (r *responseTestSender) CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) ChannelSendResult {
+func (r *responseTestSender) CreateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, _ domain.ChannelMessage, _ string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	if final {
+		r.updates <- preview
+		r.events <- "send"
+		return ChannelSendResult{State: "sent", MessageID: "card"}
+	}
 	r.events <- "create"
 	if r.createState != "" {
 		return ChannelSendResult{State: r.createState}
@@ -202,5 +207,18 @@ func TestChannelResponseRetainsSummaryWhenRunEndsBeforeNextTick(t *testing.T) {
 	recorder.UpdateChannelResponse(ctx, ExecutionJob{ID: "another-run"}, ChannelResponsePreview{Summary: "wrong conversation"})
 	if recorder.latest().Summary != "公开思考摘要" {
 		t.Fatal("cross-Run progress accepted")
+	}
+}
+
+func TestChannelResponseFastRunCreatesStructuredTerminalPreview(t *testing.T) {
+	app, _, sender, _ := responseFixture()
+	result := app.sendResponse(context.Background(), &ChannelSendJob{Stored: ChannelStored{Channel: domain.MessageChannel{Provider: "feishu"}}, Response: []byte(`{"phase":"received","summary":"公开摘要"}`), Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "**最终回答**", sender)
+	if result.State != "sent" {
+		t.Fatal(result)
+	}
+	awaitResponse(t, sender, "send")
+	preview := <-sender.updates
+	if preview.Summary != "公开摘要" || preview.Answer != "**最终回答**" {
+		t.Fatal("flattened summary into answer", preview)
 	}
 }
