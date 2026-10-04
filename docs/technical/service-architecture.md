@@ -45,7 +45,13 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 ## API
 
-Workflow Message Channel 已实现全部 13 个目标渠道的文本收发；owner 管理使用 Proto API，Telegram/Slack/WhatsApp 回调是独立供应商认证的自定义 HTTP Handler。Workspace Application 分别定义 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver` 和 `ChannelSender` port，`ChannelTransport` 静态注册每个渠道的唯一接收方式与独立发送器，QQ WebSocket 通过可选 `ChannelStreamHealthReceiver` 报告真实握手健康，不创建用户消息；可选 `ChannelTypingSender`/`ChannelTypingSession` 只处理执行期的瞬态输入状态，失败不影响 Run 或 Delivery；Data Adapter 各自实现供应商协议，Migration 000066 保存配置/Inbox/Conversation/Delivery，000067 扩展 provider 并追加加密接收游标。Matrix、Signal、BlueBubbles 使用 Administrator 批准的精确 HTTPS Endpoint；显式私网访问不扩展 Sandbox Egress。Inbox 准入复用 Workflow Queue 与 Credits，终态 Event/Credits/Outbox 同事务提交；Worker 持有进程级 Advisory Lock，连接与发送使用独立有界循环。渠道凭证只供 host 运输与执行脱敏，不进入 Runtime env/Snapshot。配置默认关闭，2026-10-03 已部署并开启平台级配置，迁移和渠道循环通过部署检查；真实账号闭环与完整 Production Conformance 尚未取得。部署证据见 [验证记录](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)，配置和限制见 [接入设计](workflow-message-channels.md)。
+Workflow Message Channel 的账号、受众配对、收发验证、原聊天回复与恢复设计见 [接入设计](workflow-message-channels.md)，产品边界见 [产品规格](../product/agent-workspace-requirements.md)。当前全部 13 个目标渠道有文本 Adapter；真实账号验收与部署健康检查分别记录，后者不能证明外部 IM 闭环可用。
+
+Workspace Application 定义 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver`、`ChannelSender`，通过 `ChannelTransport` 静态注册唯一接收方式与独立发送器。`ChannelStreamHealthReceiver` 仅报告可信连接健康；飞书、钉钉与企业微信临时发送者配对复用已认证接收连接，只生成由 owner 确认的受众候选，不创建 Inbox 或 Run。供应商错误映射为固定公共分类，可保留数值错误码，不传播凭据或原始错误内容。Matrix、Signal、BlueBubbles 的精确 HTTPS Endpoint 继续由 Administrator 批准，host 运输权限不扩展 Sandbox Egress。
+
+可选 `ChannelTypingSender`/`ChannelTypingSession` 管理瞬态输入状态；`ChannelResponseSender` 管理共享回复的创建与更新，`ChannelReactionSender` 是独立可选的表情能力。Worker 的 `TrackResponse` 经 Application 端口接收公开预览，Runtime Executor 在已提交事件之后提取固定进度及已脱敏最终成员摘要/答案，供应商调用留在 Data Adapter，失败不改变 Run 结果。更新端口同时接收原 `ChannelMessage` 与 opaque handle；Application 在当前 owner、Audience、配置与 generation 检查后解密 Inbox 的 Reply，临时使用原回调信息，不把回调能力放入普通回复状态。飞书、钉钉和企业微信的动态回复、截止时间、Markdown 与备用发送边界以接入设计为准。
+
+Migration `000066` 保存配置/Inbox/Conversation/Delivery，`000067` 扩展 provider 与加密接收游标，`000068` 冻结 Run 的渠道来源，`000069` 添加回复状态与 revision fence。回复句柄、创建意图和有界公开摘要可持久化，暂定答案只在内存；不确定创建遵守显式恢复规则。Inbox 准入复用 Workflow Queue 与 Credits，终态 Event/Credits/Outbox 同事务提交。Worker 持有进程级 Advisory Lock，连接、回执读取、进度和发送分别沿有界循环运行；渠道凭据与回复能力只用于 host 运输及执行脱敏，不进入 Runtime env/Snapshot。接入设计包含日期化发布证据；初次平台启用记录见 [部署记录](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)，完整 Production Conformance 与真实账号能力仍按各项证据单独判定。
 
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 

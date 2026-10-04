@@ -28,22 +28,24 @@
 | `backend/internal/biz/workspace` | Session、Workflow、Run、Expert、Extension 与设置领域和用例 |
 | `backend/internal/data/account` | Keycloak、Token Verifier 与账号 GORM Adapter |
 | `backend/internal/data/workspace` | Agent Workspace GORM Repository 与 Runtime Executor |
+| `backend/internal/data/messagechannel` | 消息渠道供应商账号、Receiver、Sender 与动态回复 Adapter |
 | `backend/internal/infrastructure/gormdb` | GORM 连接池与不可变 PostgreSQL Migration 启动装配 |
 | `backend/internal/platformconfig` | API/Worker 共用的严格 YAML 配置加载与校验 |
-| `backend/internal/agentruntime` | Runtime 公共契约、四 Driver、Container Process 与脱敏事件 |
+| `backend/internal/agentruntime` | Runtime 公共契约、各 Runtime Driver、Container Process 与脱敏事件 |
 | `backend/internal/workspacefs` | Workflow Workspace 路径、配额和文件安全边界 |
 | `backend/internal/skillstore` | Git/ZIP Skill 校验、规范化和对象存储 |
 | `backend/internal/credentials` | 单次任务凭证物化、清理和精确字节脱敏 |
 | `backend/internal/objectstore` | MinIO/阿里云 OSS 统一接口、校验与签名下载 |
-| `deploy/runtimes` | 四个固定版本、非 root、单 Runtime 镜像及公共 Entrypoint |
+| `deploy/runtimes` | 固定版本 CLI 的统一 Runtime 镜像、公共 Entrypoint 与 CLI Builder |
 | `deploy/sandbox` | Linux Worker 公网 Egress 网络策略配置 |
 | `scripts/conformance` | Smoke、Linux Sandbox、存储和完整 Production Conformance 脚本 |
-| `testdata/production-conformance` | 四种 Runtime 共用且彼此独立恢复的黑盒 Fixture |
+| `testdata/production-conformance` | 各 Runtime 共用且彼此独立恢复的黑盒 Fixture |
 
 ## 文档路由
 
 - **领域命名或模型关系**：读 `CONTEXT.md`。修改术语、实体边界或持久语义时同步更新它。
 - **产品行为、账号、会话、工作流或界面边界**：读 `docs/product/agent-workspace-requirements.md`。
+- **Workflow Message Channel 账号接入、发送者配对、收发验证、动态回复或重试**：读 `docs/technical/workflow-message-channels.md`；部署检查与真实账号验收以其中的日期化证据分别判定。
 - **前端视觉、布局、组件状态或无障碍**：读 `docs/standards/frontend-ui.md`；只实现当前产品契约已有的数据与操作，不用占位数据伪造目标能力。
 - **Runtime 契约、事件、错误或恢复**：读 `docs/technical/runtime-adapter.md`。
 - **CLI 参数、镜像版本或 Capability**：读 `docs/technical/runtime-images.md`，同时检查对应 Driver、Dockerfile 和镜像测试。
@@ -80,7 +82,7 @@
 
 ### Runtime Contract 变更
 
-从 `internal/agentruntime/contract.go` 开始，逐一检查 ContractSink、Runtime fake、Worker Runner、四个 Adapter、Conformance Runner 和技术规格。新增事件或错误分类时测试顺序、终态、取消和下游失败路径。
+从 `backend/internal/agentruntime/contract.go` 开始，逐一检查 ContractSink、Runtime fake、Worker Runner、各 Runtime Adapter、Conformance Runner 和技术规格。新增事件或错误分类时测试顺序、终态、取消和下游失败路径。
 
 ### Sandbox 或凭证变更
 
@@ -117,6 +119,8 @@ make web-build
 ```
 
 - 纯 Go 改动至少运行目标包测试；公共契约、安全或跨模块改动运行 `make test` 和 `make build`。
+- PostgreSQL 集成测试需要 `WORKSPACE_TEST_POSTGRES_DSN`；未配置时会 Skip，不能记为数据库集成验证通过。
+- 仅文档改动校验受影响路径/链接、`git diff --check` 和 `cmp -s AGENTS.md CLAUDE.md`；代码门禁按实际受影响实现选择。
 - Web 改动运行 `make web-typecheck` 和 `make web-build`。首次使用前执行 `pnpm install`。
 - Runtime 镜像改动在 Docker 可用时运行 `make runtime-image-smoke`。
 - MinIO 本地集成使用 `make minio-conformance`；Aliyun OSS 测试依赖技术规格中列出的真实环境变量。
