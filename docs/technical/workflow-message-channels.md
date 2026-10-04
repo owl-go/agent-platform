@@ -276,3 +276,20 @@ Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provi
 接入权限：接收消息和 `im:message:send_as_bot` 沿用已有配置；表情需要 `im:message.reactions:write_only`（或更宽的 `im:message`），开通后发布应用。卡片 PATCH 接受已有的 `im:message:send_as_bot`，也可用 `im:message:update` 或 `im:message`；不要求额外扩大已有发消息权限。接口更新窗口为 14 天、单消息 5 QPS，平台更新不超过每秒一次。
 
 协议依据：[飞书添加表情](https://open.feishu.cn/document/server-docs/im-v1/message-reaction/create)、[删除表情](https://open.feishu.cn/document/server-docs/im-v1/message-reaction/delete)、[更新消息卡片](https://open.feishu.cn/document/server-docs/im-v1/message-card/patch)、[官方 CLI 表情类型与请求结构](https://github.com/larksuite/cli/blob/main/skills/lark-im/references/lark-im-reactions.md)。本轮提供本地协议、生命周期、跨片段脱敏和 PostgreSQL 持久化验证；尚未取得真实飞书显示、取消及长答案闭环验收，不将本地测试记为线上验收。
+
+#### 本轮发布证据
+
+2026-10-04 从 `main_temp` 的 `2130f9ae4816a6e950aea8d20dca7a5fbb541fc8`（功能提交 `4179488`）发布 `feishu-streaming-replies-20261004-1`。用户已确认发送、删除表情权限开通并发布；这属于用户确认，不替代实际飞书收发验收。
+
+| 项目 | 实际证据 |
+|---|---|
+| API Image ID | `sha256:4b7a0c12048b5e6fe972a87d56a4f8ff847f670f8afd551c4e4cfeffb9e9b0b9` |
+| Worker Image ID | `sha256:0c4f989e559fb361b96122c17bfdbae2f21499d5c0d5b372ac8ac013d31f5f7f` |
+| Migration 000069 SHA-256 | `a61de993daaedc576aa5df3f201c77bf24f9bccaac5e0418a7c099291ce2d8a7` |
+| 前端 index.html SHA-256 | `5d345fbc97f696371c83c36effe722e23dffb522d10ff9a6b73931445424d522` |
+
+已执行目标包测试、带独立 PostgreSQL 16 的 `make test`、四个受影响包的 `go test -race`、`make build`、受影响包 `go vet`、`make verify-generated`、前端 584 项测试、`make web-typecheck` 和 `make web-build`；发布前按生产 OIDC 地址重建前端。独立测试数据库已清理。未执行 Linux + runsc Sandbox/Production Conformance，本次未改变 Runtime 镜像或开启新的 Runtime Capability。
+
+发布服务器 `/opt/agent-platform/backups/pre-feishu-streaming-replies-20261004-1` 保存业务/身份数据库备份、受保护配置和旧版本指针，备份校验与 restore-list 检查通过。候选 API readyz 通过，原迁移 checksum 全部保持，仅新增 000069；配置 checksum 保持不变，切换前活动 Run/Assistant Response 数为 0。服务健康及 Worker `9090/readyz` 通过；公网 `https://47-237-108-63.sslip.io/api/healthz`、`/api/readyz` 和 OIDC metadata 返回有效 JSON，首页及关键 JS 与本地生产构建逐字节匹配，匿名配对 API 保持 401。现场证据在 `/opt/agent-platform/evidence/feishu-streaming-replies-20261004-1`。
+
+前端切换中曾因宿主机绝对 symlink 不可被 Caddy 容器解析而出现 404，已改成 `web/current -> releases/feishu-streaming-replies-20261004-1` 的相对链接后重跑并通过公网检查；`web/previous` 同样使用相对链接。应用回滚可切回 `feishu-sender-pairing-20261004-1` 的镜像和前端，新增列保留，不需要破坏性回滚数据库。
