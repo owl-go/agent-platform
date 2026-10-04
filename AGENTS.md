@@ -25,7 +25,7 @@
 | `backend/cmd/api` | Wire 装配的 Kratos HTTP 控制面入口 |
 | `backend/cmd/worker` | Wire 装配的 Kratos Worker 入口 |
 | `backend/internal/biz/account` | User 与 Administrator 账号领域、OIDC 身份和用例 |
-| `backend/internal/biz/workspace` | Session、Workflow、Run、Expert、Extension 与设置领域和用例 |
+| `backend/internal/biz/workspace` | Session、Workflow、Run、Expert、Connector 与设置领域和用例 |
 | `backend/internal/data/account` | Keycloak、Token Verifier 与账号 GORM Adapter |
 | `backend/internal/data/workspace` | Agent Workspace GORM Repository 与 Runtime Executor |
 | `backend/internal/data/messagechannel` | 消息渠道供应商账号、Receiver、Sender 与动态回复 Adapter |
