@@ -17,6 +17,8 @@ func (r *Repository) GetChannelTypingJob(ctx context.Context, job application.Ex
 		ConfigVersion            int64
 		Message, ReplyCiphertext []byte
 		RunState                 string
+		Response                 []byte
+		ResponseRevision         int64
 	}
 	err := r.db.WithContext(ctx).Table("message_channel_inbox AS inbox").Select("inbox.*, run.state AS run_state").
 		Joins("JOIN runs run ON run.id=inbox.run_id AND run.message_channel_id=inbox.channel_id").
@@ -42,5 +44,9 @@ func (r *Repository) GetChannelTypingJob(ctx context.Context, job application.Ex
 	if !stored.Channel.Enabled || stored.Channel.ConfigVersion != source.ConfigVersion || !stored.Channel.Audience.Allows(message) {
 		return nil, nil
 	}
-	return &application.ChannelTypingJob{Stored: stored, Message: message, ReplyCiphertext: source.ReplyCiphertext, Running: source.RunState == "running"}, nil
+	var response application.ChannelResponseState
+	if err := json.Unmarshal(source.Response, &response); err != nil {
+		return nil, err
+	}
+	return &application.ChannelTypingJob{InboxID: source.ID, Stored: stored, Message: message, ReplyCiphertext: source.ReplyCiphertext, Running: source.RunState == "running", Response: response, ResponseRevision: source.ResponseRevision}, nil
 }

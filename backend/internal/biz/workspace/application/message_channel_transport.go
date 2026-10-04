@@ -60,6 +60,26 @@ type ChannelTypingSession interface {
 	Stop(context.Context) error
 }
 
+// Responses reuse one provider message throughout a Run. State contains only
+// provider identifiers; creation intent is persisted before the network call.
+type ChannelResponseState struct {
+	Phase      string `json:"phase,omitempty"`
+	MessageID  string `json:"message_id,omitempty"`
+	ReactionID string `json:"reaction_id,omitempty"`
+}
+type ChannelResponseSender interface {
+	React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error)
+	ClearReaction(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) error
+	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) ChannelSendResult
+	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, string, string, bool) ChannelSendResult
+}
+
+// The Runtime executor supplies only cumulative, redacted final-member answer
+// text. Raw Runtime events, tools and reasoning are never passed to this port.
+type ChannelResponseProgress interface {
+	UpdateChannelResponse(context.Context, ExecutionJob, string)
+}
+
 // ChannelTransport explicitly registers one receive mode and an independent sender.
 // A provider can reuse an implementation across roles without a combined interface
 // or unsupported-method stubs. Registration is fixed at process startup.
@@ -69,6 +89,7 @@ type ChannelTransport struct {
 	StreamReceiver  ChannelStreamReceiver
 	Sender          ChannelSender
 	Typing          ChannelTypingSender
+	Response        ChannelResponseSender
 }
 
 func (t ChannelTransport) receiver() ChannelReceiver {

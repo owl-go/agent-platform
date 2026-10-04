@@ -54,6 +54,8 @@ func (r channelRecord) stored() (application.ChannelStored, error) {
 }
 
 type channelInboxRecord struct {
+	Response                             []byte `gorm:"type:jsonb;default:'{}'"`
+	ResponseRevision                     int64
 	ID, ChannelID                        string
 	ConfigVersion, Generation            int64
 	EventID, MessageID, ChatID, SenderID string
@@ -486,7 +488,19 @@ func enqueueChannelDelivery(tx *gorm.DB, c channelRecord, inbox channelInboxReco
 	if err != nil {
 		return err
 	}
-	for index, chunk := range domain.SplitChannelText(text) {
+	chunks := domain.SplitChannelText(text)
+	if c.Provider == "feishu" && kind != "validation" {
+		// The first terminal chunk replaces the streaming card; continuation
+		// cards preserve the entire answer within the provider's payload limit.
+		chunks = nil
+		runes := []rune(text)
+		for len(runes) > 0 {
+			end := min(2500, len(runes))
+			chunks = append(chunks, string(runes[:end]))
+			runes = runes[end:]
+		}
+	}
+	for index, chunk := range chunks {
 		row := channelDeliveryRecord{ID: uuid.NewString(), ChannelID: c.ID, InboxID: inbox.ID, RunID: inbox.RunID, Kind: kind, Chunk: index + 1, Payload: chunk, ConfigVersion: c.ConfigVersion, State: "pending", RetryAt: now, Deadline: now.Add(24 * time.Hour), CreatedAt: now}
 		if err := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "inbox_id"}, {Name: "kind"}, {Name: "chunk"}}, DoNothing: true}).Create(&row).Error; err != nil {
 			return err
@@ -534,8 +548,8 @@ func enqueueRunChannelDelivery(tx *gorm.DB, id string) error {
 		text = "执行失败，请联系工作流拥有者 / Execution failed; please contact the Workflow owner."
 	}
 	// Private download capabilities must stay within the authenticated product.
-	for _, marker := range []string{"/api/v1/", "X-Amz-Signature=", "x-oss-signature="} {
-		if strings.Contains(text, marker) {
+	for _, marker := range []string{"/api/v1/", "x-amz-signature=", "x-oss-signature="} {
+		if strings.Contains(strings.ToLower(text), marker) {
 			text = "执行完成，请联系工作流拥有者查看结果 / Completed; please contact the Workflow owner to view the result."
 			break
 		}
@@ -637,7 +651,7 @@ func (r *Repository) ClaimChannelDelivery(ctx context.Context) (*application.Cha
 		}
 		candidate.State = "sending"
 		candidate.Attempts++
-		job = &application.ChannelSendJob{Delivery: candidate.projection(), Stored: stored, Message: message, ReplyCiphertext: inbox.ReplyCiphertext, InboxID: inbox.ID, Text: candidate.Payload, Lease: lease}
+		job = &application.ChannelSendJob{Delivery: candidate.projection(), Stored: stored, Message: message, ReplyCiphertext: inbox.ReplyCiphertext, InboxID: inbox.ID, Text: candidate.Payload, Lease: lease, Response: inbox.Response, ResponseRevision: inbox.ResponseRevision}
 		return nil
 	})
 	return job, err
@@ -715,6 +729,13 @@ func (r *Repository) RetryChannelDelivery(ctx context.Context, owner, workflow, 
 		}
 		if row.State == "outcome_unknown" && !confirm {
 			return domain.ErrInvalid
+		}
+		if row.State == "outcome_unknown" && confirm {
+			// An owner-confirmed resend releases only unconfirmed card creation.
+			// Known card IDs continue to receive idempotent replacements.
+			if err := tx.Exec(`UPDATE message_channel_inbox SET response=jsonb_set(response,'{phase}','"received"'::jsonb), response_revision=response_revision+1 WHERE id=? AND response->>'phase' IN ('creating','reacting','outcome_unknown') AND COALESCE(response->>'message_id','')=''`, row.InboxID).Error; err != nil {
+				return err
+			}
 		}
 		if err := tx.Model(&row).Updates(map[string]any{"state": "pending", "retry_at": time.Now(), "attempts": 0, "error_code": ""}).Error; err != nil {
 			return err

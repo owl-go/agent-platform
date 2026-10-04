@@ -44,6 +44,6 @@ func NewTransports(transport http.RoundTripper, options ...TransportOptions) map
 		"slack":       {Account: slack, WebhookReceiver: slack, Sender: slack},
 		"discord":     {Account: discord, StreamReceiver: discord, Sender: discord},
 		"dingtalk":    {Account: dingtalk, StreamReceiver: dingtalk, Sender: dingtalk},
-		"feishu":      {Account: feishu, StreamReceiver: feishu, Sender: feishu},
+		"feishu":      {Account: feishu, StreamReceiver: feishu, Sender: feishu, Response: feishu},
 	}
 }

@@ -75,7 +75,7 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 | 受保护渠道凭证 | 绑定 owner/channel/version 的密文；bot token、app secret、签名密钥、reply context/session webhook 等临时回复能力分别管理 |
 | 归一化入站消息 | channel、account/tenant、external_event_id、external_message_id、sender_id、chat_id、chat_kind、thread/topic、received_at、text、is_bot、mention、受保护 reply target reference |
 | Message Channel Conversation | owner/workflow/channel、外部 conversation key、conversation generation、根 Run ID；sender 属于隔离 key |
-| 入站记录 | dedup key、归一化消息、received/admitted/rejected/ignored 状态、原因、Run ID、Config Version、generation |
+| 入站记录 | dedup key、归一化消息、received/admitted/rejected/ignored 状态、原因、Run ID、Config Version、generation、带 revision 的非敏感 reaction/card message ID 与创建状态 |
 | Message Channel Delivery | channel、Run 或入站记录、kind（answer/status/validation/waiting）、destination reference、config/audience revision、不可变已脱敏 payload、chunk 顺序、state、attempt、retry_at、deadline、provider message ID |
 
 完整目标的 provider 枚举：`telegram`、`discord`、`slack`、`matrix`、`whatsapp`、`signal`、`dingtalk`、`feishu`（region 为 feishu/lark）、`wecom`、`wechat`、`qqbot`、`bluebubbles`、`yuanbao`。全部枚举均有文本 Adapter，具体私聊、群 @ 与运输边界见下表；保存后仍须当前账号真实收发验证才能启用。未实现通用动态 Capability 注册表；媒体、加密房间与编辑执行均不开放。
@@ -221,7 +221,7 @@ SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go 
 
 平台的可靠恢复边界从 Inbox 提交开始：已持久化消息幂等创建 Run，发送 lease 过期进入 outcome_unknown。未持久化的 Gateway 消息不承诺跨进程补收，Discord resume 仅依赖进程内 SDK，未实现持久化 session cursor。钉钉官方协议说明机器人回调采用 fire-forgot 模式，不应把失败 ACK 或断线重连当作保证补发。真实账号的权限、掉线与补收窗口必须实测。
 
-当前不支持附件、卡片、流式回复、公开受众、群共享历史、跨渠道合并、自动审批或主动广播。全部 13 个渠道的实现边界见下一节。已经领取的网络发送可能在停用后到达；后续领取、入队和重发重新校验授权。连接健康不代表真实模型闭环已验收。
+飞书/Lark 支持 Typing 表情和动态回复卡片；其他渠道仍发送完整文本。不支持附件、公开受众、群共享历史、跨渠道合并、自动审批或主动广播。全部 13 个渠道的实现边界见下一节。已经领取的网络发送可能在停用后到达；后续领取、入队和重发重新校验授权。连接健康不代表真实模型闭环已验收。
 
 
 ## 10. 新增八个渠道的实现边界
@@ -264,3 +264,15 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 协议依据：[腾讯官方 WebSocket SDK](https://github.com/tencent-connect/qqbot-agent-sdk/blob/main/src/qqbot_agent_sdk/websocket.py)。
 
 账号接入错误区分应用认证、机器人信息、机器人未启用、企业信息权限拒绝与企业身份查询失败。HTTP 响应仅返回固定的错误分类与数值型供应商错误码/状态，不转发供应商原始消息、Token 或 App Secret；界面显示对应的操作建议，未知错误仍使用通用提示。2026-10-04 用户在诊断改进发布后重试并确认账号连接成功；未取得旧失败的步骤和供应商响应，不能将原始失败归因于缺权限。该确认仅覆盖账号接入，真实收发仍需单独验证。
+
+### 飞书处理反馈与动态回复卡片（2026-10-04）
+
+通过去重、当前授权和受众检查的启用渠道消息持久化后，先尝试对原消息添加 `Typing` 表情；验证消息、配对消息、重复和未授权消息不触发此反馈。Worker 领取后，通过可选 `ChannelTransport.Response` 创建 `update_multi=true` 的共享卡片，以 Inbox ID 作为稳定 UUID；每秒合并一次累计回答并 PATCH 同一 message ID。该方案使用 IM 消息卡片更新接口，不依赖 CardKit 实体或新增 CardKit 权限。
+
+只接入最后一个 Expert 阶段的回答事件；Runtime reasoning、命令、工具结果和其他阶段不进入该 port。发送前先拼接再对全部执行凭证精确脱敏，并保留至少最长 Secret 长度的尾部，避免跨 delta 泄露。流式预览在链接前截断；终态回复继续经过私有文件/签名链接门禁。更新颗粒度取决于实际 Runtime：只有完整消息事件时，卡片按消息更新，不宣称逐 Token 输出。预览最多 2,500 字符；终态按 2,500 字符拆分，第一段覆盖原卡片，其余仍通过有序 Delivery 发送，保留完整答案。卡片使用 plain_text 避免模型内容触发动态图片和群体提及。
+
+Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provider message/reaction ID、创建状态和 revision，不保存凭证、Runtime 原始事件或草稿。每次创建前保存 intent；更新使用 revision fencing。Worker 重启后复用已确认 message ID；创建中断或发送结果不确定时进入 `outcome_unknown`，不能自动创建第二张卡，只有拥有者明确确认重发才释放未知创建状态。已知卡片的累计内容替换可安全重试；终态答案仍通过原 Run 终态事务入队，与 Credits 和 Run 状态一致。每次刷新重新检查 owner、Workflow、Run、Inbox、配置、generation 和受众；清除表情使用有界独立 context。反馈或预览失败不改变执行结果；未创建卡片时终态 Delivery 仍可独立发送。供应商拒绝、凭证销毁或不确定表情创建可能阻止清除，不能承诺外部反馈一定移除。
+
+接入权限：接收消息和 `im:message:send_as_bot` 沿用已有配置；表情需要 `im:message.reactions:write_only`（或更宽的 `im:message`），开通后发布应用。卡片 PATCH 接受已有的 `im:message:send_as_bot`，也可用 `im:message:update` 或 `im:message`；不要求额外扩大已有发消息权限。接口更新窗口为 14 天、单消息 5 QPS，平台更新不超过每秒一次。
+
+协议依据：[飞书添加表情](https://open.feishu.cn/document/server-docs/im-v1/message-reaction/create)、[删除表情](https://open.feishu.cn/document/server-docs/im-v1/message-reaction/delete)、[更新消息卡片](https://open.feishu.cn/document/server-docs/im-v1/message-card/patch)、[官方 CLI 表情类型与请求结构](https://github.com/larksuite/cli/blob/main/skills/lark-im/references/lark-im-reactions.md)。本轮提供本地协议、生命周期、跨片段脱敏和 PostgreSQL 持久化验证；尚未取得真实飞书显示、取消及长答案闭环验收，不将本地测试记为线上验收。
