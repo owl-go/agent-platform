@@ -37,4 +37,6 @@
 
 ## 验收边界
 
-真实已保存微信账号的空消息长轮询在修复后被正常接受。正式账号当时没有渠道 Run，公网检查不伪造模型执行记录。完整真实验证消息接收、原聊天回复及正式问题的模型执行仍需 owner 在手机微信发送消息验证；已通过的协议回归和临时 PostgreSQL 集成不能替代这一步。没有新增 Runtime Digest、Linux/gVisor 或 Production Conformance 证据。
+真实已保存微信账号的空消息长轮询在修复后被正常接受。发布后 owner 刷新页面、重新发起验证并从手机微信发送新验证文案，明确确认已收到机器人回复。数据库核对该账号 validation_state=passed、health=connected、error_code 为空，validation 类型的已发送回复数为 1；真实验证消息接收和原聊天回复已经完成。该账号仍保持未启用，启用由 owner 在正常产品界面控制。
+
+正式账号当时没有渠道 Run，公网检查不伪造模型执行记录；正常问题的模型执行和运行来源以 PostgreSQL 集成及前端测试为证，尚无该正式账号的模型 Run 验收。没有新增 Runtime Digest、Linux/gVisor 或 Production Conformance 证据。
