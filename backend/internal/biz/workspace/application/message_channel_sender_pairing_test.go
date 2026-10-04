@@ -37,6 +37,9 @@ func (r *pairingTestRepository) ControlMessageChannel(context.Context, string, s
 type pairingTestAccount struct{}
 
 func (pairingTestAccount) Identify(_ context.Context, c ChannelCredentials, region string) (ChannelIdentity, error) {
+	if c["bot_id"] != "" {
+		return ChannelIdentity{ID: c["bot_id"], Name: "Bot", BindingID: c["bot_id"]}, nil
+	}
 	if c["client_id"] != "" {
 		return ChannelIdentity{ID: c["client_id"], Name: "Bot", BindingID: c["client_id"]}, nil
 	}
@@ -59,7 +62,7 @@ func (r *pairingTestReceiver) Connect(ctx context.Context, s ChannelStored, c Ch
 	return r.ConnectWithHealth(ctx, s, c, sink, nil)
 }
 func (r *pairingTestReceiver) ConnectWithHealth(ctx context.Context, s ChannelStored, c ChannelCredentials, sink ChannelMessageSink, health ChannelConnectionHealthSink) error {
-	if c["app_secret"] != "secret" && c["client_secret"] != "secret" {
+	if c["app_secret"] != "secret" && c["client_secret"] != "secret" && c["bot_secret"] != "secret" {
 		return domain.ErrInvalid
 	}
 	connection := pairingConnection{ctx: ctx, stored: s, receive: sink, health: health, fail: make(chan struct{})}
@@ -80,6 +83,7 @@ func senderPairingFixture(t *testing.T) (*MessageChannels, *pairingTestRepositor
 	sender := &transportTestSender{}
 	app.transports["feishu"] = ChannelTransport{Account: pairingTestAccount{}, StreamReceiver: receiver, Sender: sender}
 	app.transports["dingtalk"] = ChannelTransport{Account: pairingTestAccount{}, StreamReceiver: receiver, Sender: sender}
+	app.transports["wecom"] = ChannelTransport{Account: pairingTestAccount{}, StreamReceiver: receiver, Sender: sender}
 	lifetime, cancel := context.WithCancel(context.Background())
 	app.SetPairingContext(lifetime)
 	t.Cleanup(cancel)
@@ -92,6 +96,9 @@ func pairLogin(t *testing.T, app *MessageChannels, region string) ChannelLogin {
 	if region == "dingtalk" {
 		provider, region = "dingtalk", ""
 		credentials = ChannelCredentials{"client_id": "app", "client_secret": "secret"}
+	} else if region == "wecom" {
+		provider, region = "wecom", ""
+		credentials = ChannelCredentials{"bot_id": "bot", "bot_secret": "secret"}
 	}
 	login, err := app.StartLogin(context.Background(), "owner", "workflow", provider, region, "credentials", "", 0, credentials)
 	if err != nil {
@@ -137,7 +144,7 @@ func pairDone(t *testing.T, entry *channelLoginSession) {
 	}
 }
 func TestSenderPairingRequiresHandshakeThenRecognizesExactlyOneDirectSender(t *testing.T) {
-	for _, region := range []string{"feishu", "lark", "dingtalk"} {
+	for _, region := range []string{"feishu", "lark", "dingtalk", "wecom"} {
 		t.Run(region, func(t *testing.T) {
 			app, repo, receiver, sender := senderPairingFixture(t)
 			login := pairLogin(t, app, region)
@@ -150,7 +157,7 @@ func TestSenderPairingRequiresHandshakeThenRecognizesExactlyOneDirectSender(t *t
 			}
 			conn := pairConnection(t, receiver)
 			expectedTenant, expectedRegion := "tenant", region
-			if region == "dingtalk" {
+			if region == "dingtalk" || region == "wecom" {
 				expectedTenant, expectedRegion = "", ""
 			}
 			if conn.stored.Channel.TenantID != expectedTenant || conn.stored.Channel.Region != expectedRegion || repo.checkedProvider != conn.stored.Channel.Provider {
@@ -215,7 +222,7 @@ func TestSenderPairingRequiresHandshakeThenRecognizesExactlyOneDirectSender(t *t
 	}
 }
 func TestSenderPairingCancellationExpiryFailureAndShutdownReleaseConnection(t *testing.T) {
-	for _, provider := range []string{"feishu", "dingtalk"} {
+	for _, provider := range []string{"feishu", "dingtalk", "wecom"} {
 		t.Run(provider, func(t *testing.T) {
 			for _, action := range []string{"cancel", "expiry", "failure", "shutdown", "save"} {
 				t.Run(action, func(t *testing.T) {
@@ -270,74 +277,87 @@ func TestSenderPairingCancellationExpiryFailureAndShutdownReleaseConnection(t *t
 	}
 }
 func TestSenderPairingRejectsForeignScopeAndCompetingReceivers(t *testing.T) {
-	app, repo, receiver, _ := senderPairingFixture(t)
-	login := pairLogin(t, app, "feishu")
-	for _, args := range []struct {
-		owner, workflow, login, channel string
-		version                         int64
-	}{{"other", "workflow", login.ID, "", 0}, {"owner", "other", login.ID, "", 0}, {"owner", "workflow", login.ID, "injected", 0}, {"owner", "workflow", login.ID, "", 1}} {
-		if _, err := app.StartSenderPairing(context.Background(), args.owner, args.workflow, args.login, args.channel, args.version); err == nil {
-			t.Fatal("pair crossed owner/workflow/configuration scope")
-		}
-	}
-	repo.receiving = true
-	if _, err := app.StartSenderPairing(context.Background(), "owner", "workflow", login.ID, "", 0); !errors.Is(err, domain.ErrConflict) {
-		t.Fatal("active receiver accepted")
-	}
-	repo.receiving = false
-	_, err := app.StartSenderPairing(context.Background(), "owner", "workflow", login.ID, "", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	conn := pairConnection(t, receiver)
-	_ = conn.health(conn.ctx, "connected")
-	second := pairLogin(t, app, "feishu")
-	if _, err = app.StartSenderPairing(context.Background(), "owner", "workflow", second.ID, "", 0); !errors.Is(err, domain.ErrConflict) {
-		t.Fatal("same app took a second receiver")
-	}
-	repo.saved.Channel = domain.MessageChannel{ID: "channel", Provider: "feishu", BindingID: "feishu:app", Version: 1}
-	if _, err = app.Control(context.Background(), "owner", "workflow", "channel", 1, "enable"); !errors.Is(err, domain.ErrConflict) || repo.controls != 0 {
-		t.Fatal("permanent reception started during pairing")
-	}
-	if _, err = app.StartSenderPairing(context.Background(), "owner", "workflow", login.ID, "", 0); !errors.Is(err, domain.ErrConflict) {
-		t.Fatal("active nonce replaced")
+	for _, provider := range []string{"feishu", "dingtalk", "wecom"} {
+		t.Run(provider, func(t *testing.T) {
+			app, repo, receiver, _ := senderPairingFixture(t)
+			login := pairLogin(t, app, provider)
+			for _, args := range []struct {
+				owner, workflow, login, channel string
+				version                         int64
+			}{{"other", "workflow", login.ID, "", 0}, {"owner", "other", login.ID, "", 0}, {"owner", "workflow", login.ID, "injected", 0}, {"owner", "workflow", login.ID, "", 1}} {
+				if _, err := app.StartSenderPairing(context.Background(), args.owner, args.workflow, args.login, args.channel, args.version); err == nil {
+					t.Fatal("pair crossed owner/workflow/configuration scope")
+				}
+			}
+			repo.receiving = true
+			if _, err := app.StartSenderPairing(context.Background(), "owner", "workflow", login.ID, "", 0); !errors.Is(err, domain.ErrConflict) {
+				t.Fatal("active receiver accepted")
+			}
+			repo.receiving = false
+			_, err := app.StartSenderPairing(context.Background(), "owner", "workflow", login.ID, "", 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn := pairConnection(t, receiver)
+			_ = conn.health(conn.ctx, "connected")
+			second := pairLogin(t, app, provider)
+			if _, err = app.StartSenderPairing(context.Background(), "owner", "workflow", second.ID, "", 0); !errors.Is(err, domain.ErrConflict) {
+				t.Fatal("same app took a second receiver")
+			}
+			repo.saved.Channel = domain.MessageChannel{ID: "channel", Provider: provider, BindingID: conn.stored.Channel.BindingID, Version: 1}
+			if _, err = app.Control(context.Background(), "owner", "workflow", "channel", 1, "enable"); !errors.Is(err, domain.ErrConflict) || repo.controls != 0 {
+				t.Fatal("permanent reception started during pairing")
+			}
+			if _, err = app.StartSenderPairing(context.Background(), "owner", "workflow", login.ID, "", 0); !errors.Is(err, domain.ErrConflict) {
+				t.Fatal("active nonce replaced")
+			}
+		})
 	}
 }
+
 func TestSenderPairingSavedChannelAndCodeRotation(t *testing.T) {
-	app, repo, receiver, _ := senderPairingFixture(t)
-	login := pairLogin(t, app, "feishu")
-	channel := domain.MessageChannel{Provider: "feishu", Region: "feishu", Name: "Bot", Audience: domain.ChannelAudience{SenderIDs: []string{"ou_manual"}, AllowDirect: true}}
-	saved, err := app.SaveWithLogin(context.Background(), "owner", "workflow", "", 0, channel, login.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	repo.saved.Channel.Version = 3
-	if _, err = app.StartSenderPairing(context.Background(), "owner", "workflow", "", saved.ID, 2); !errors.Is(err, domain.ErrConflict) {
-		t.Fatal("stale saved channel accepted")
-	}
-	pair, err := app.StartSenderPairing(context.Background(), "owner", "workflow", "", saved.ID, 3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	conn := pairConnection(t, receiver)
-	_ = conn.health(conn.ctx, "connected")
-	first := pairPoll(t, app, pair.ID)
-	_ = conn.receive(conn.ctx, pairMessage(first.PairingCode, "ou_first"))
-	entry, _ := app.findLogin("owner", "workflow", pair.ID)
-	pairDone(t, entry)
-	rotated, err := app.StartSenderPairing(context.Background(), "owner", "workflow", pair.ID, "", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	next := pairConnection(t, receiver)
-	_ = next.health(next.ctx, "connected")
-	second := pairPoll(t, app, rotated.ID)
-	if first.PairingCode == second.PairingCode {
-		t.Fatal("nonce reused")
-	}
-	_ = next.receive(next.ctx, pairMessage(first.PairingCode, "ou_replay"))
-	if pairPoll(t, app, pair.ID).SuggestedSenderID != "" {
-		t.Fatal("old code survived rotation")
+	for _, provider := range []string{"feishu", "dingtalk", "wecom"} {
+		t.Run(provider, func(t *testing.T) {
+			loginRegion := ""
+			if provider == "feishu" {
+				loginRegion = "feishu"
+			}
+			app, repo, receiver, _ := senderPairingFixture(t)
+			login := pairLogin(t, app, provider)
+			channel := domain.MessageChannel{Provider: provider, Region: loginRegion, Name: "Bot", Audience: domain.ChannelAudience{SenderIDs: []string{"ou_manual"}, AllowDirect: true}}
+			saved, err := app.SaveWithLogin(context.Background(), "owner", "workflow", "", 0, channel, login.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			repo.saved.Channel.Version = 3
+			if _, err = app.StartSenderPairing(context.Background(), "owner", "workflow", "", saved.ID, 2); !errors.Is(err, domain.ErrConflict) {
+				t.Fatal("stale saved channel accepted")
+			}
+			pair, err := app.StartSenderPairing(context.Background(), "owner", "workflow", "", saved.ID, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn := pairConnection(t, receiver)
+			_ = conn.health(conn.ctx, "connected")
+			first := pairPoll(t, app, pair.ID)
+			_ = conn.receive(conn.ctx, pairMessage(first.PairingCode, "ou_first"))
+			entry, _ := app.findLogin("owner", "workflow", pair.ID)
+			pairDone(t, entry)
+			rotated, err := app.StartSenderPairing(context.Background(), "owner", "workflow", pair.ID, "", 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			next := pairConnection(t, receiver)
+			_ = next.health(next.ctx, "connected")
+			second := pairPoll(t, app, rotated.ID)
+			if first.PairingCode == second.PairingCode {
+				t.Fatal("nonce reused")
+			}
+			_ = next.receive(next.ctx, pairMessage(first.PairingCode, "ou_replay"))
+			if pairPoll(t, app, pair.ID).SuggestedSenderID != "" {
+				t.Fatal("old code survived rotation")
+			}
+		})
 	}
 }
 
@@ -447,7 +467,7 @@ func TestDingTalkSenderPairingRequiresEnterpriseOnNewAccount(t *testing.T) {
 
 func TestSenderPairingBindingAndReceptionAdmissionAreProviderScoped(t *testing.T) {
 	app, repo, _, _ := senderPairingFixture(t)
-	for _, provider := range []string{"feishu", "dingtalk"} {
+	for _, provider := range []string{"feishu", "dingtalk", "wecom"} {
 		p := &channelSenderPairing{id: provider, provider: provider, binding: "shared-binding"}
 		if err := app.reserveSenderPairing(context.Background(), p); err != nil || repo.checkedProvider != provider {
 			t.Fatalf("provider scope %s: %v", provider, err)
@@ -457,7 +477,7 @@ func TestSenderPairingBindingAndReceptionAdmissionAreProviderScoped(t *testing.T
 			t.Fatal("permanent reception competed with provider pairing")
 		}
 	}
-	if len(app.pairings) != 2 {
+	if len(app.pairings) != 3 {
 		t.Fatal("different providers collided on a binding")
 	}
 	if err := app.reserveSenderPairing(context.Background(), &channelSenderPairing{id: "again", provider: "dingtalk", binding: "shared-binding"}); !errors.Is(err, domain.ErrConflict) {
