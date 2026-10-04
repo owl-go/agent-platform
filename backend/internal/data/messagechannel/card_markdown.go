@@ -9,10 +9,10 @@ import (
 )
 
 // Keep Markdown syntax, including code literals, but make model-provided HTML
-// and image syntax inert. Feishu's HTML extensions can otherwise mention users
+// and image syntax inert. Card providers' HTML extensions can otherwise mention users
 // or embed provider resources. CommonMark parsing identifies actual code spans
 // and nested/unfinished fences; regex matching cannot reliably do that.
-func feishuMarkdown(source string) string {
+func safeCardMarkdown(source string) string {
 	data := []byte(source)
 	code := make([]bool, len(data))
 	mark := func(start, end int) {

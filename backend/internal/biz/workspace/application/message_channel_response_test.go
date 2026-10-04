@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,6 +33,9 @@ type responseTestSender struct {
 	events      chan string
 	updates     chan ChannelResponsePreview
 	createState string
+	createCode  string
+	updateState string
+	updateCode  string
 }
 
 func (r *responseTestSender) React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error) {
@@ -47,18 +51,26 @@ func (r *responseTestSender) ClearReaction(ctx context.Context, _ ChannelStored,
 }
 func (r *responseTestSender) CreateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, _ domain.ChannelMessage, _ string, preview ChannelResponsePreview, final bool) ChannelSendResult {
 	if final {
+		if r.createState != "" {
+			r.events <- "create"
+			return ChannelSendResult{State: r.createState, Code: r.createCode}
+		}
 		r.updates <- preview
 		r.events <- "send"
 		return ChannelSendResult{State: "sent", MessageID: "card"}
 	}
 	r.events <- "create"
 	if r.createState != "" {
-		return ChannelSendResult{State: r.createState}
+		return ChannelSendResult{State: r.createState, Code: r.createCode}
 	}
 	return ChannelSendResult{State: "sent", MessageID: "card"}
 }
 func (r *responseTestSender) UpdateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
 	r.updates <- preview
+	if r.updateState != "" {
+		r.events <- "update"
+		return ChannelSendResult{State: r.updateState, Code: r.updateCode}
+	}
 	if final {
 		r.events <- "final:" + id + ":" + preview.Answer
 	} else {
@@ -221,4 +233,163 @@ func TestChannelResponseFastRunCreatesStructuredTerminalPreview(t *testing.T) {
 	if preview.Summary != "公开摘要" || preview.Answer != "**最终回答**" {
 		t.Fatal("flattened summary into answer", preview)
 	}
+}
+
+func dingTalkResponseApplicationFixture() (*MessageChannels, *responseTestRepository, *responseTestSender, ExecutionJob) {
+	app, repo, sender, job := responseFixture()
+	repo.current.Stored.Channel.Provider = "dingtalk"
+	// This wrapper implements cards, without inventing unsupported reactions.
+	app.transports = map[string]ChannelTransport{"dingtalk": {Sender: sender, Response: cardOnlyResponse{sender}, ResponseFallback: sender}}
+	return app, repo, sender, job
+}
+
+type cardOnlyResponse struct{ sender *responseTestSender }
+
+func (r cardOnlyResponse) CreateResponse(ctx context.Context, s ChannelStored, c ChannelCredentials, m domain.ChannelMessage, key string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	return r.sender.CreateResponse(ctx, s, c, m, key, preview, final)
+}
+func (r cardOnlyResponse) UpdateResponse(ctx context.Context, s ChannelStored, c ChannelCredentials, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	return r.sender.UpdateResponse(ctx, s, c, id, preview, final)
+}
+
+func TestDingTalkFeedbackCreatesOneReceiptThenStreamsAndFinalizesIt(t *testing.T) {
+	app, repo, sender, job := dingTalkResponseApplicationFixture()
+	ctx := context.Background()
+	current, _ := repo.GetChannelTypingJob(ctx, job)
+	app.receiveFeedback(ctx, current.Stored, current.Message)
+	awaitResponse(t, sender, "create")
+	app.receiveFeedback(ctx, current.Stored, current.Message)
+	current, _ = repo.GetChannelTypingJob(ctx, job)
+	if current.Response.Phase != "ready" || current.Response.MessageID != "card" || current.Response.ReactionID != "" {
+		t.Fatal("receipt lost or invented a reaction", current.Response)
+	}
+	progress, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
+	defer stop()
+	awaitResponse(t, sender, "update:card:")
+	progress.(ChannelResponseProgress).UpdateChannelResponse(ctx, job, ChannelResponsePreview{Answer: "partial answer", Summary: "公开摘要", Status: "正在调用工具"})
+	awaitResponse(t, sender, "update:card:partial answer")
+	stop()
+	current, _ = repo.GetChannelTypingJob(ctx, job)
+	encoded, _ := json.Marshal(current.Response)
+	if strings.Contains(string(encoded), "partial answer") {
+		t.Fatal("answer draft persisted in response handles")
+	}
+	result := app.sendResponse(ctx, &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, InboxID: current.InboxID, ResponseRevision: current.ResponseRevision, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "complete answer", sender)
+	if result.State != "sent" || result.MessageID != "card" {
+		t.Fatal(result)
+	}
+	awaitResponse(t, sender, "final:card:complete answer")
+	select {
+	case extra := <-sender.events:
+		t.Fatal("extra receipt, reaction or duplicate answer", extra)
+	default:
+	}
+}
+
+func TestDingTalkReceiptUnknownCreationNeverAutomaticallyDuplicates(t *testing.T) {
+	app, repo, sender, job := dingTalkResponseApplicationFixture()
+	sender.createState = "outcome_unknown"
+	ctx := context.Background()
+	current, _ := repo.GetChannelTypingJob(ctx, job)
+	app.receiveFeedback(ctx, current.Stored, current.Message)
+	awaitResponse(t, sender, "create")
+	app.receiveFeedback(ctx, current.Stored, current.Message)
+	_, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
+	stop()
+	current, _ = repo.GetChannelTypingJob(ctx, job)
+	encoded, _ := json.Marshal(current.Response)
+	result := app.sendResponse(ctx, &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "final", sender)
+	if result.State != "outcome_unknown" {
+		t.Fatal("uncertain receipt auto-resent", result)
+	}
+	select {
+	case extra := <-sender.events:
+		t.Fatal("unsafe operation", extra)
+	default:
+	}
+}
+
+func TestDingTalkTerminalFallbackOnlyOnDefiniteCardRejection(t *testing.T) {
+	for _, update := range []bool{false, true} {
+		for _, test := range []struct {
+			state, code string
+			fallback    bool
+		}{
+			{"failed", "provider_rejected", true},
+			{"failed", "provider_reply_invalid", false},
+			{"retry_wait", "provider_rate_limited", false},
+			{"outcome_unknown", "provider_send_unconfirmed", false},
+		} {
+			app, repo, sender, job := dingTalkResponseApplicationFixture()
+			current, _ := repo.GetChannelTypingJob(context.Background(), job)
+			state := ChannelResponseState{Phase: "received"}
+			if update {
+				state.Phase, state.MessageID = "ready", "card"
+				sender.updateState, sender.updateCode = test.state, test.code
+			} else {
+				sender.createState, sender.createCode = test.state, test.code
+			}
+			encoded, _ := json.Marshal(state)
+			result := app.sendResponse(context.Background(), &ChannelSendJob{Stored: current.Stored, Message: current.Message, Response: encoded, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}, ChannelCredentials{}, "final", sender)
+			if update {
+				awaitResponse(t, sender, "update")
+			} else {
+				awaitResponse(t, sender, "create")
+			}
+			if test.fallback {
+				awaitResponse(t, sender, "send")
+				if result.State != "sent" {
+					t.Fatal(result)
+				}
+			} else if result.State != test.state {
+				t.Fatal("uncertain/invalid card escaped via fallback", result)
+			}
+			select {
+			case extra := <-sender.events:
+				t.Fatal("unexpected operation", extra)
+			default:
+			}
+		}
+	}
+}
+
+func TestDingTalkWaitingCardDoesNotExposeActionDetails(t *testing.T) {
+	app, repo, sender, job := dingTalkResponseApplicationFixture()
+	repo.current.Running = false
+	repo.current.Response = ChannelResponseState{Phase: "ready", MessageID: "card"}
+	_, stop := app.TrackResponse(context.Background(), job, &responseNoopProgress{})
+	defer stop()
+	awaitResponse(t, sender, "update:card:")
+	preview := <-sender.updates
+	if preview.Status != "等待工作流拥有者处理" || preview.Answer != "" {
+		t.Fatal("waiting card lost fixed safe status", preview)
+	}
+	stop()
+}
+
+func TestChannelResponseFastTerminalWaitsForReceiptWithoutSendingAgain(t *testing.T) {
+	app, repo, sender, job := dingTalkResponseApplicationFixture()
+	current, _ := repo.GetChannelTypingJob(context.Background(), job)
+	delivery := &ChannelSendJob{Stored: current.Stored, Message: current.Message, Delivery: domain.ChannelDelivery{Kind: "answer", Chunk: 1}}
+	for _, started := range []int64{time.Now().UnixMilli(), time.Now().Add(-time.Minute).UnixMilli(), 0} {
+		delivery.Response, _ = json.Marshal(ChannelResponseState{Phase: "creating", CreatingAt: started})
+		result := app.sendResponse(context.Background(), delivery, ChannelCredentials{}, "final", sender)
+		if started == 0 || time.Since(time.UnixMilli(started)) > 15*time.Second {
+			if result.State != "outcome_unknown" {
+				t.Fatal("stale or legacy intent lost uncertainty", result)
+			}
+		} else if result.State != "retry_wait" || result.Code != "provider_send_pending" {
+			t.Fatal("in-flight receipt blocked a fast terminal answer", result)
+		}
+	}
+	select {
+	case extra := <-sender.events:
+		t.Fatal("intent wait sent another message", extra)
+	default:
+	}
+	delivery.Response, _ = json.Marshal(ChannelResponseState{Phase: "ready", MessageID: "receipt-card"})
+	if result := app.sendResponse(context.Background(), delivery, ChannelCredentials{}, "final", sender); result.State != "sent" {
+		t.Fatal(result)
+	}
+	awaitResponse(t, sender, "final:receipt-card:final")
 }

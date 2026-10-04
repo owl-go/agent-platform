@@ -66,56 +66,61 @@ func TestChannelResponseHandlesPersistAndRevisionFence(t *testing.T) {
 	}
 }
 
-func TestFeishuTerminalCardsPreserveCompleteAnswerAndConfirmedRecovery(t *testing.T) {
-	f := newChannelFixture(t)
-	f.enable(t)
-	ctx := context.Background()
-	f.receive(t, "long-card-question", "alice", "question")
-	var inbox channelInboxRecord
-	if err := f.db.Where("event_id=?", "long-card-question").Take(&inbox).Error; err != nil {
-		t.Fatal(err)
-	}
-	var channel channelRecord
-	if err := f.db.Where("id=?", f.channel.ID).Take(&channel).Error; err != nil {
-		t.Fatal(err)
-	}
-	channel.Provider = "feishu"
-	text := strings.Repeat("完整答案🙂", 1500)
-	if err := enqueueChannelDelivery(f.db, channel, inbox, "answer", text); err != nil {
-		t.Fatal(err)
-	}
-	var deliveries []channelDeliveryRecord
-	if err := f.db.Where("inbox_id=? AND kind='answer'", inbox.ID).Order("chunk").Find(&deliveries).Error; err != nil {
-		t.Fatal(err)
-	}
-	var reconstructed string
-	for _, delivery := range deliveries {
-		if len([]rune(delivery.Payload)) > 1800 {
-			t.Fatal("oversized card")
-		}
-		reconstructed += delivery.Payload
-	}
-	if len(deliveries) != 5 || reconstructed != text {
-		t.Fatal("final answer was truncated")
-	}
-	current, err := f.repo.GetChannelResponseReceipt(ctx, f.stored(t), f.message("long-card-question", "alice", "question"))
-	if err != nil || current == nil {
-		t.Fatal(err)
-	}
-	if err := f.repo.SaveChannelResponse(ctx, current, application.ChannelResponseState{Phase: "outcome_unknown", Summary: "公开的执行摘要"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.db.Model(&channelDeliveryRecord{}).Where("id=?", deliveries[0].ID).Update("state", "outcome_unknown").Error; err != nil {
-		t.Fatal(err)
-	}
-	if err := f.repo.RetryChannelDelivery(ctx, f.owner, f.workflow, f.channel.ID, deliveries[0].ID, f.channel.Version, false); !errors.Is(err, domain.ErrInvalid) {
-		t.Fatal("unknown resend did not require confirmation", err)
-	}
-	if err := f.repo.RetryChannelDelivery(ctx, f.owner, f.workflow, f.channel.ID, deliveries[0].ID, f.channel.Version, true); err != nil {
-		t.Fatal(err)
-	}
-	current, err = f.repo.GetChannelResponseReceipt(ctx, f.stored(t), f.message("long-card-question", "alice", "question"))
-	if err != nil || current.Response.Phase != "received" || current.Response.Summary != "公开的执行摘要" {
-		t.Fatal("confirmed recovery did not release creation", err)
+func TestResponseTerminalCardsPreserveCompleteAnswerAndConfirmedRecovery(t *testing.T) {
+	for _, provider := range []string{"feishu", "dingtalk"} {
+		t.Run(provider, func(t *testing.T) {
+			f := newChannelFixture(t)
+			f.enable(t)
+			ctx := context.Background()
+			f.receive(t, "long-card-question", "alice", "question")
+			var inbox channelInboxRecord
+			if err := f.db.Where("event_id=?", "long-card-question").Take(&inbox).Error; err != nil {
+				t.Fatal(err)
+			}
+			var channel channelRecord
+			if err := f.db.Where("id=?", f.channel.ID).Take(&channel).Error; err != nil {
+				t.Fatal(err)
+			}
+			channel.Provider = provider
+			text := strings.Repeat("完整答案🙂", 1500)
+			if err := enqueueChannelDelivery(f.db, channel, inbox, "answer", text); err != nil {
+				t.Fatal(err)
+			}
+			var deliveries []channelDeliveryRecord
+			if err := f.db.Where("inbox_id=? AND kind='answer'", inbox.ID).Order("chunk").Find(&deliveries).Error; err != nil {
+				t.Fatal(err)
+			}
+			var reconstructed string
+			for _, delivery := range deliveries {
+				if len([]rune(delivery.Payload)) > 1800 {
+					t.Fatal("oversized card")
+				}
+				reconstructed += delivery.Payload
+			}
+			if len(deliveries) != 5 || reconstructed != text {
+				t.Fatal("final answer was truncated")
+			}
+			current, err := f.repo.GetChannelResponseReceipt(ctx, f.stored(t), f.message("long-card-question", "alice", "question"))
+			if err != nil || current == nil {
+				t.Fatal(err)
+			}
+			if err := f.repo.SaveChannelResponse(ctx, current, application.ChannelResponseState{Phase: "outcome_unknown", Summary: "公开的执行摘要"}); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.db.Model(&channelDeliveryRecord{}).Where("id=?", deliveries[0].ID).Update("state", "outcome_unknown").Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := f.repo.RetryChannelDelivery(ctx, f.owner, f.workflow, f.channel.ID, deliveries[0].ID, f.channel.Version, false); !errors.Is(err, domain.ErrInvalid) {
+				t.Fatal("unknown resend did not require confirmation", err)
+			}
+			if err := f.repo.RetryChannelDelivery(ctx, f.owner, f.workflow, f.channel.ID, deliveries[0].ID, f.channel.Version, true); err != nil {
+				t.Fatal(err)
+			}
+			current, err = f.repo.GetChannelResponseReceipt(ctx, f.stored(t), f.message("long-card-question", "alice", "question"))
+			if err != nil || current.Response.Phase != "received" || current.Response.Summary != "公开的执行摘要" {
+				t.Fatal("confirmed recovery did not release creation", err)
+			}
+
+		})
 	}
 }
