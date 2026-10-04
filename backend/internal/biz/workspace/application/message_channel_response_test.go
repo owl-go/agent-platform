@@ -30,6 +30,7 @@ func (r *responseTestRepository) SaveChannelResponse(_ context.Context, job *Cha
 
 type responseTestSender struct {
 	events      chan string
+	updates     chan ChannelResponsePreview
 	createState string
 }
 
@@ -51,11 +52,12 @@ func (r *responseTestSender) CreateResponse(context.Context, ChannelStored, Chan
 	}
 	return ChannelSendResult{State: "sent", MessageID: "card"}
 }
-func (r *responseTestSender) UpdateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, id, text string, final bool) ChannelSendResult {
+func (r *responseTestSender) UpdateResponse(_ context.Context, _ ChannelStored, _ ChannelCredentials, id string, preview ChannelResponsePreview, final bool) ChannelSendResult {
+	r.updates <- preview
 	if final {
-		r.events <- "final:" + id + ":" + text
+		r.events <- "final:" + id + ":" + preview.Answer
 	} else {
-		r.events <- "update:" + id + ":" + text
+		r.events <- "update:" + id + ":" + preview.Answer
 	}
 	return ChannelSendResult{State: "sent", MessageID: id}
 }
@@ -68,7 +70,7 @@ func responseFixture() (*MessageChannels, *responseTestRepository, *responseTest
 	typing.current.InboxID = "inbox"
 	typing.current.Stored.Channel.Provider = "feishu"
 	repo := &responseTestRepository{typing}
-	sender := &responseTestSender{events: make(chan string, 100)}
+	sender := &responseTestSender{events: make(chan string, 100), updates: make(chan ChannelResponsePreview, 100)}
 	app.repository = repo
 	app.transports = map[string]ChannelTransport{"feishu": {Sender: sender, Response: sender}}
 	return app, repo, sender, job
@@ -94,7 +96,8 @@ func TestChannelResponseReceiptStreamAndTerminalShareOneCard(t *testing.T) {
 	progress, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
 	defer stop()
 	awaitResponse(t, sender, "create")
-	progress.(ChannelResponseProgress).UpdateChannelResponse(ctx, job, "public answer")
+	awaitResponse(t, sender, "update:card:")
+	progress.(ChannelResponseProgress).UpdateChannelResponse(ctx, job, ChannelResponsePreview{Answer: "public answer", Summary: "公开摘要"})
 	awaitResponse(t, sender, "update:card:public answer")
 	stop()
 	awaitResponse(t, sender, "clear")
@@ -106,6 +109,15 @@ func TestChannelResponseReceiptStreamAndTerminalShareOneCard(t *testing.T) {
 		t.Fatal(result)
 	}
 	awaitResponse(t, sender, "final:card:final answer")
+	for {
+		preview := <-sender.updates
+		if preview.Answer == "final answer" {
+			if preview.Summary != "公开摘要" {
+				t.Fatal("terminal card lost summary", preview)
+			}
+			break
+		}
+	}
 	select {
 	case extra := <-sender.events:
 		t.Fatal("duplicate operation", extra)
@@ -166,4 +178,29 @@ func TestChannelResponseInFlightReactionDoesNotBlockTerminalAnswer(t *testing.T)
 		t.Fatal("a reaction was treated as unknown answer creation", result)
 	}
 	awaitResponse(t, sender, "send")
+}
+
+func TestChannelResponseRetainsSummaryWhenRunEndsBeforeNextTick(t *testing.T) {
+	app, repo, sender, job := responseFixture()
+	ctx := context.Background()
+	progress, stop := app.TrackResponse(ctx, job, &responseNoopProgress{})
+	awaitResponse(t, sender, "create")
+	awaitResponse(t, sender, "update:card:")
+	progress.(ChannelResponseProgress).UpdateChannelResponse(ctx, job, ChannelResponsePreview{Summary: "公开思考摘要", Status: "正在调用工具"})
+	stop()
+	current, _ := repo.GetChannelTypingJob(ctx, job)
+	if current.Response.Summary != "公开思考摘要" {
+		t.Fatal("lost public summary at shutdown", current.Response)
+	}
+	// A restarted Delivery can recover the summary without retaining an answer draft.
+	encoded, _ := json.Marshal(current.Response)
+	var recovered ChannelResponseState
+	if json.Unmarshal(encoded, &recovered) != nil || recovered.Summary != "公开思考摘要" {
+		t.Fatal(string(encoded))
+	}
+	recorder := progress.(*channelResponseRecorder)
+	recorder.UpdateChannelResponse(ctx, ExecutionJob{ID: "another-run"}, ChannelResponsePreview{Summary: "wrong conversation"})
+	if recorder.latest().Summary != "公开思考摘要" {
+		t.Fatal("cross-Run progress accepted")
+	}
 }

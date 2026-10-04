@@ -12,13 +12,19 @@ import (
 	"agent-platform/backend/internal/biz/workspace/application"
 )
 
-type responseProgress struct{ texts []string }
+type responseProgress struct {
+	texts    []string
+	previews []application.ChannelResponsePreview
+}
 
 func (p *responseProgress) RecordProgress(context.Context, application.ExecutionJob, application.ExecutionEvent) error {
 	return nil
 }
-func (p *responseProgress) UpdateChannelResponse(_ context.Context, _ application.ExecutionJob, text string) {
-	p.texts = append(p.texts, text)
+func (p *responseProgress) UpdateChannelResponse(_ context.Context, _ application.ExecutionJob, preview application.ChannelResponsePreview) {
+	p.previews = append(p.previews, preview)
+	if preview.Answer != "" {
+		p.texts = append(p.texts, preview.Answer)
+	}
 }
 
 type responseEventSink struct{ fail bool }
@@ -84,8 +90,68 @@ func TestChannelResponseDoesNotExposeURLsReasoningOrOtherMembers(t *testing.T) {
 		p := &responseProgress{}
 		sink := newChannelResponseSink(responseEventSink{fail: final}, p, application.ExecutionJob{Kind: application.JobWorkflow, ID: "run"}, nil, final)
 		_ = sink.Publish(context.Background(), agentruntime.Event{RunID: "run", Kind: agentruntime.EventMessageDelta, Payload: []byte(`{"delta":"a very long answer that cannot bypass a failing persistence boundary"}`)})
-		if len(p.texts) != 0 {
+		if len(p.previews) != 0 {
 			t.Fatal("intermediate member or rejected event was streamed")
 		}
+	}
+}
+
+func TestChannelResponseProjectsPublicSummaryAndRealActivity(t *testing.T) {
+	p := &responseProgress{}
+	job := application.ExecutionJob{Kind: application.JobWorkflow, ID: "run"}
+	sink := newChannelResponseSink(responseEventSink{}, p, job, [][]byte{[]byte("private-credential")}, true, "步骤 2/2")
+	events := []struct {
+		kind    agentruntime.EventKind
+		payload string
+	}{
+		{agentruntime.EventRuntimeStarted, `{}`},
+		{agentruntime.EventReasoningSummary, `{"summary":"先检查连接状态 private-credential，再确认消息路径。https://private.test/download"}`},
+		{agentruntime.EventCommandRequested, `{"command":"internal command private-credential","input":"private arguments"}`},
+		{agentruntime.EventCommandCompleted, `{"result":"private tool output"}`},
+		{agentruntime.EventMessageDelta, `{"delta":"这是独立的最终回答。后续文字保持足够长度以通过安全缓冲区。This answer is public and remains separate."}`},
+	}
+	for _, event := range events {
+		if err := sink.Publish(context.Background(), agentruntime.Event{RunID: "run", Kind: event.kind, Payload: []byte(event.payload)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	last := p.previews[len(p.previews)-1]
+	if last.Summary != "先检查连接状态 [REDACTED]，再确认消息路径。" || last.ToolsCompleted != 1 || last.Status != "步骤 2/2 · 正在整理回答" || !strings.Contains(last.Answer, "独立的最终回答") {
+		t.Fatalf("incorrect public projection: %+v", last)
+	}
+	for _, preview := range p.previews {
+		encoded, _ := json.Marshal(preview)
+		for _, forbidden := range []string{"private-credential", "private arguments", "private tool output", "internal command", "https://"} {
+			if strings.Contains(string(encoded), forbidden) {
+				t.Fatal("leaked", forbidden)
+			}
+		}
+	}
+	// Earlier Team Members expose activity labels, without answer or summary text.
+	p = &responseProgress{}
+	sink = newChannelResponseSink(responseEventSink{}, p, job, nil, false)
+	_ = sink.Publish(context.Background(), agentruntime.Event{RunID: "run", Kind: agentruntime.EventReasoningSummary, Payload: []byte(`{"summary":"another member's private draft"}`)})
+	if len(p.previews) != 1 || p.previews[0].Summary != "" || p.previews[0].Answer != "" {
+		t.Fatal(p.previews)
+	}
+}
+
+func TestChannelResponseSummaryIsBoundedAndRedactedBeforeCropping(t *testing.T) {
+	p := &responseProgress{}
+	job := application.ExecutionJob{Kind: application.JobWorkflow, ID: "run"}
+	secret := "sensitive-value-at-crop-boundary"
+	sink := newChannelResponseSink(responseEventSink{}, p, job, [][]byte{[]byte(secret)}, true)
+	summary := strings.Repeat("字", 595) + secret + strings.Repeat("公开", 50)
+	payload, _ := json.Marshal(map[string]string{"summary": summary})
+	if err := sink.Publish(context.Background(), agentruntime.Event{RunID: "run", Kind: agentruntime.EventReasoningSummary, Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+	got := p.previews[len(p.previews)-1].Summary
+	if len([]rune(got)) != 600 || strings.Contains(got, "sensi") || !utf8.ValidString(got) {
+		t.Fatal(got)
+	}
+	_ = sink.Publish(context.Background(), agentruntime.Event{RunID: "other-run", Kind: agentruntime.EventCommandCompleted, Payload: []byte(`{}`)})
+	if len(p.previews) != 1 {
+		t.Fatal("cross-Run progress accepted")
 	}
 }
