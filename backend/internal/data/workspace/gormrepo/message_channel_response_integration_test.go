@@ -22,7 +22,7 @@ func TestChannelResponseHandlesPersistAndRevisionFence(t *testing.T) {
 		t.Fatal("receipt unavailable", err)
 	}
 	stale := *current
-	state := application.ChannelResponseState{Phase: "ready", MessageID: "card", ReactionID: "reaction"}
+	state := application.ChannelResponseState{Phase: "ready", MessageID: "card", ReactionID: "reaction", Summary: "已检查配置的公开摘要"}
 	if err := f.repo.SaveChannelResponse(ctx, current, state); err != nil {
 		t.Fatal(err)
 	}
@@ -90,19 +90,19 @@ func TestFeishuTerminalCardsPreserveCompleteAnswerAndConfirmedRecovery(t *testin
 	}
 	var reconstructed string
 	for _, delivery := range deliveries {
-		if len([]rune(delivery.Payload)) > 2500 {
+		if len([]rune(delivery.Payload)) > 1800 {
 			t.Fatal("oversized card")
 		}
 		reconstructed += delivery.Payload
 	}
-	if len(deliveries) != 3 || reconstructed != text {
+	if len(deliveries) != 5 || reconstructed != text {
 		t.Fatal("final answer was truncated")
 	}
 	current, err := f.repo.GetChannelResponseReceipt(ctx, f.stored(t), f.message("long-card-question", "alice", "question"))
 	if err != nil || current == nil {
 		t.Fatal(err)
 	}
-	if err := f.repo.SaveChannelResponse(ctx, current, application.ChannelResponseState{Phase: "outcome_unknown"}); err != nil {
+	if err := f.repo.SaveChannelResponse(ctx, current, application.ChannelResponseState{Phase: "outcome_unknown", Summary: "公开的执行摘要"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.db.Model(&channelDeliveryRecord{}).Where("id=?", deliveries[0].ID).Update("state", "outcome_unknown").Error; err != nil {
@@ -115,7 +115,7 @@ func TestFeishuTerminalCardsPreserveCompleteAnswerAndConfirmedRecovery(t *testin
 		t.Fatal(err)
 	}
 	current, err = f.repo.GetChannelResponseReceipt(ctx, f.stored(t), f.message("long-card-question", "alice", "question"))
-	if err != nil || current.Response.Phase != "received" {
+	if err != nil || current.Response.Phase != "received" || current.Response.Summary != "公开的执行摘要" {
 		t.Fatal("confirmed recovery did not release creation", err)
 	}
 }

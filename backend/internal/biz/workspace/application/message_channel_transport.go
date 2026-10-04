@@ -61,23 +61,34 @@ type ChannelTypingSession interface {
 }
 
 // Responses reuse one provider message throughout a Run. State contains only
-// provider identifiers; creation intent is persisted before the network call.
+// provider identifiers and a bounded, redacted public summary; creation intent
+// is persisted before the network call. Answer drafts are never stored here.
 type ChannelResponseState struct {
 	Phase      string `json:"phase,omitempty"`
 	MessageID  string `json:"message_id,omitempty"`
 	ReactionID string `json:"reaction_id,omitempty"`
+	Summary    string `json:"summary,omitempty"`
 }
 type ChannelResponseSender interface {
 	React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error)
 	ClearReaction(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) error
 	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) ChannelSendResult
-	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, string, string, bool) ChannelSendResult
+	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, string, ChannelResponsePreview, bool) ChannelSendResult
 }
 
-// The Runtime executor supplies only cumulative, redacted final-member answer
-// text. Raw Runtime events, tools and reasoning are never passed to this port.
+// ChannelResponsePreview contains public progress and redacted final-member text.
+// Tool arguments/output, raw events and private reasoning never cross this port.
+type ChannelResponsePreview struct {
+	Answer         string
+	Summary        string
+	Status         string
+	ToolsCompleted int
+	ElapsedSeconds int64
+}
+
+// The executor projects approved public summaries and fixed activity labels.
 type ChannelResponseProgress interface {
-	UpdateChannelResponse(context.Context, ExecutionJob, string)
+	UpdateChannelResponse(context.Context, ExecutionJob, ChannelResponsePreview)
 }
 
 // ChannelTransport explicitly registers one receive mode and an independent sender.

@@ -269,9 +269,9 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 
 通过去重、当前授权和受众检查的启用渠道消息持久化后，先尝试对原消息添加 `Typing` 表情；验证消息、配对消息、重复和未授权消息不触发此反馈。Worker 领取后，通过可选 `ChannelTransport.Response` 创建 `update_multi=true` 的共享卡片，以 Inbox ID 作为稳定 UUID；每秒合并一次累计回答并 PATCH 同一 message ID。该方案使用 IM 消息卡片更新接口，不依赖 CardKit 实体或新增 CardKit 权限。
 
-只接入最后一个 Expert 阶段的回答事件；Runtime reasoning、命令、工具结果和其他阶段不进入该 port。发送前先拼接再对全部执行凭证精确脱敏，并保留至少最长 Secret 长度的尾部，避免跨 delta 泄露。流式预览在链接前截断；终态回复继续经过私有文件/签名链接门禁。更新颗粒度取决于实际 Runtime：只有完整消息事件时，卡片按消息更新，不宣称逐 Token 输出。预览最多 2,500 字符；终态按 2,500 字符拆分，第一段覆盖原卡片，其余仍通过有序 Delivery 发送，保留完整答案。卡片使用 plain_text 避免模型内容触发动态图片和群体提及。
+最后一个 Expert 阶段提供回答和公开思考摘要；其他阶段只提供固定活动标签。原始 reasoning、命令参数和工具结果不进入该 port。发送前先拼接再对全部执行凭证精确脱敏，并保留至少最长 Secret 长度的尾部，避免跨 delta 泄露。流式预览在链接前截断；终态回复继续经过私有文件/签名链接门禁。更新颗粒度取决于实际 Runtime：只有完整消息事件时，卡片按消息更新，不宣称逐 Token 输出。回答预览最多 1,800 字符，公开摘要最多 600 字符；终态按 1,800 字符拆分，第一段覆盖原卡片，其余仍通过有序 Delivery 发送，保留完整答案。卡片使用 plain_text 避免模型内容触发动态图片和群体提及。
 
-Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provider message/reaction ID、创建状态和 revision，不保存凭证、Runtime 原始事件或草稿。每次创建前保存 intent；更新使用 revision fencing。Worker 重启后复用已确认 message ID；创建中断或发送结果不确定时进入 `outcome_unknown`，不能自动创建第二张卡，只有拥有者明确确认重发才释放未知创建状态。已知卡片的累计内容替换可安全重试；终态答案仍通过原 Run 终态事务入队，与 Credits 和 Run 状态一致。每次刷新重新检查 owner、Workflow、Run、Inbox、配置、generation 和受众；清除表情使用有界独立 context。反馈或预览失败不改变执行结果；未创建卡片时终态 Delivery 仍可独立发送。供应商拒绝、凭证销毁或不确定表情创建可能阻止清除，不能承诺外部反馈一定移除。
+Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provider message/reaction ID、创建状态、revision 和最多 600 字的脱敏公开思考摘要，不保存凭证、Runtime 原始事件或草稿。每次创建前保存 intent；更新使用 revision fencing。Worker 重启后复用已确认 message ID；创建中断或发送结果不确定时进入 `outcome_unknown`，不能自动创建第二张卡，只有拥有者明确确认重发才释放未知创建状态。已知卡片的累计内容替换可安全重试；终态答案仍通过原 Run 终态事务入队，与 Credits 和 Run 状态一致。每次刷新重新检查 owner、Workflow、Run、Inbox、配置、generation 和受众；清除表情使用有界独立 context。反馈或预览失败不改变执行结果；未创建卡片时终态 Delivery 仍可独立发送。供应商拒绝、凭证销毁或不确定表情创建可能阻止清除，不能承诺外部反馈一定移除。
 
 接入权限：接收消息和 `im:message:send_as_bot` 沿用已有配置；表情需要 `im:message.reactions:write_only`（或更宽的 `im:message`），开通后发布应用。卡片 PATCH 接受已有的 `im:message:send_as_bot`，也可用 `im:message:update` 或 `im:message`；不要求额外扩大已有发消息权限。接口更新窗口为 14 天、单消息 5 QPS，平台更新不超过每秒一次。
 
@@ -293,3 +293,11 @@ Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provi
 发布服务器 `/opt/agent-platform/backups/pre-feishu-streaming-replies-20261004-1` 保存业务/身份数据库备份、受保护配置和旧版本指针，备份校验与 restore-list 检查通过。候选 API readyz 通过，原迁移 checksum 全部保持，仅新增 000069；配置 checksum 保持不变，切换前活动 Run/Assistant Response 数为 0。服务健康及 Worker `9090/readyz` 通过；公网 `https://47-237-108-63.sslip.io/api/healthz`、`/api/readyz` 和 OIDC metadata 返回有效 JSON，首页及关键 JS 与本地生产构建逐字节匹配，匿名配对 API 保持 401。现场证据在 `/opt/agent-platform/evidence/feishu-streaming-replies-20261004-1`。
 
 前端切换中曾因宿主机绝对 symlink 不可被 Caddy 容器解析而出现 404，已改成 `web/current -> releases/feishu-streaming-replies-20261004-1` 的相对链接后重跑并通过公网检查；`web/previous` 同样使用相对链接。应用回滚可切回 `feishu-sender-pairing-20261004-1` 的镜像和前端，新增列保留，不需要破坏性回滚数据库。
+
+### 飞书公开思考摘要与执行进度（2026-10-04）
+
+动态卡片通过 `ChannelResponsePreview` 分开展示公开思考摘要与回答，同时显示当前 Execution Stage 的位置、活动、该步骤已结束的工具调用次数和本次 Worker 执行耗时。准备执行环境、分析任务、调用工具、更新文件、整理回答、校验并保存结果来自固定标签和真实事件；没有可计算的总工作量时不显示百分比。无新事件时耗时仍每秒刷新。等待操作、取消和失败沿用权威状态投递，不伪造成功。
+
+仅接受公共契约 `reasoning.summary` 的完整公开摘要；不读取原始 thinking、工具参数/输出或内部错误。最终成员的摘要经过本次全部凭证的精确值脱敏、链接截止和 600 字限制；之前成员只提供固定进度标签。摘要并非所有 Runtime 都会产生，缺少时继续展示实际活动与耗时。答案继续使用累计安全缓冲，跨 delta 凭证脱敏边界保持不变。
+
+Inbox 的既有 `response` JSONB 保存最新公开摘要，答复草稿仍仅在内存。停止监视前在当前授权下刷新摘要，覆盖短于一次刷新周期的执行；成功终态第一张卡保留摘要，后续卡仅包含答案。Feishu 非验证 Delivery 每段最多 1800 字，为摘要和进度留出 30 KB 请求预算，完整答案按原顺序续发。配置撤销、generation、revision fencing 和发送结果不确定的恢复规则保持适用。本轮不改变 Migration 或 Runtime 镜像；真实飞书显示与各 Runtime 摘要粒度仍需现场验收。

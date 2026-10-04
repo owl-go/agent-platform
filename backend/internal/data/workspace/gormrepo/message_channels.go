@@ -495,7 +495,8 @@ func enqueueChannelDelivery(tx *gorm.DB, c channelRecord, inbox channelInboxReco
 		chunks = nil
 		runes := []rune(text)
 		for len(runes) > 0 {
-			end := min(2500, len(runes))
+			// Reserve room for the retained public summary and progress labels.
+			end := min(1800, len(runes))
 			chunks = append(chunks, string(runes[:end]))
 			runes = runes[end:]
 		}

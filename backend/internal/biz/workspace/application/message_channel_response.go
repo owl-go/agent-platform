@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,9 +55,9 @@ func (s *MessageChannels) receiveFeedback(ctx context.Context, stored ChannelSto
 
 type channelResponseRecorder struct {
 	ProgressRecorder
-	mu    sync.Mutex
-	text  string
-	runID string
+	mu      sync.Mutex
+	preview ChannelResponsePreview
+	runID   string
 }
 
 func (r *channelResponseRecorder) RecordStageSettlement(ctx context.Context, job ExecutionJob, stage domain.ExpertStage, settlement CreditSettlement) error {
@@ -69,18 +70,20 @@ func (r *channelResponseRecorder) RecordStageSettlement(ctx context.Context, job
 	return delegate.RecordStageSettlement(ctx, job, stage, settlement)
 }
 
-func (r *channelResponseRecorder) UpdateChannelResponse(ctx context.Context, job ExecutionJob, text string) {
+func (r *channelResponseRecorder) UpdateChannelResponse(ctx context.Context, job ExecutionJob, preview ChannelResponsePreview) {
 	if ctx.Err() != nil || job.ID != r.runID {
 		return
 	}
 	r.mu.Lock()
-	r.text = text
+	summary := []rune(preview.Summary)
+	preview.Summary = string(summary[:min(600, len(summary))])
+	r.preview = preview
 	r.mu.Unlock()
 }
-func (r *channelResponseRecorder) latest() string {
+func (r *channelResponseRecorder) latest() ChannelResponsePreview {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.text
+	return r.preview
 }
 
 // Network updates are coalesced outside the Runtime progress path. A slow card
@@ -91,21 +94,34 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 	if !s.enabled || job.Kind != JobWorkflow || !ok || !typingOK {
 		return progress, func() {}
 	}
-	recorder := &channelResponseRecorder{ProgressRecorder: progress, runID: job.ID}
+	recorder := &channelResponseRecorder{ProgressRecorder: progress, runID: job.ID, preview: ChannelResponsePreview{Status: "正在准备执行环境"}}
 	activityCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
-		lastText := ""
+		lastPreview := ChannelResponsePreview{}
+		started := time.Now()
 		var last *ChannelTypingJob
 		defer func() {
+			// Flush the final public summary even for Runs shorter than one tick.
+			// Query current authorization again; stale state cannot grant access.
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.WithoutCancel(ctx), channelTypingRequestTimeout)
+			defer cleanupCancel()
+			current, err := typingRepository.GetChannelTypingJob(cleanupCtx, job)
+			if err == nil && current != nil {
+				state := current.Response
+				summary := recorder.latest().Summary
+				if state.Summary != summary {
+					state.Summary = summary
+					_ = repository.SaveChannelResponse(cleanupCtx, current, state)
+				}
+				last = current
+			}
 			if last == nil || last.Response.ReactionID == "" {
 				return
 			}
-			cleanupCtx, cleanupCancel := context.WithTimeout(context.WithoutCancel(ctx), channelTypingRequestTimeout)
-			defer cleanupCancel()
 			s.clearResponseReaction(cleanupCtx, repository, last)
 		}()
 		for activityCtx.Err() == nil {
@@ -144,11 +160,20 @@ func (s *MessageChannels) TrackResponse(ctx context.Context, job ExecutionJob, p
 					}
 				}
 				if current.Response.Phase == "ready" {
-					text := recorder.latest()
-					if text != "" && text != lastText {
-						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Response.MessageID, text, false)
+					preview := recorder.latest()
+					preview.ElapsedSeconds = int64(time.Since(started) / time.Second)
+					if preview.Summary != current.Response.Summary {
+						state := current.Response
+						state.Summary = preview.Summary
+						if repository.SaveChannelResponse(requestCtx, current, state) != nil {
+							requestCancel()
+							return
+						}
+					}
+					if preview != lastPreview {
+						result := transport.UpdateResponse(requestCtx, current.Stored, c, current.Response.MessageID, preview, false)
 						if result.State == "sent" {
-							lastText = text
+							lastPreview = preview
 						}
 					}
 				}
@@ -193,11 +218,18 @@ func (s *MessageChannels) sendResponse(ctx context.Context, job *ChannelSendJob,
 	}
 	current := &ChannelTypingJob{InboxID: job.InboxID, Stored: job.Stored, Message: job.Message, Response: state, ResponseRevision: job.ResponseRevision}
 	s.clearResponseReaction(ctx, repository, current)
+	preview := ChannelResponsePreview{Answer: text}
+	if job.Delivery.Kind == "answer" {
+		preview.Summary = state.Summary
+	}
 	if state.MessageID == "" {
 		if state.Phase == "creating" || state.Phase == "outcome_unknown" {
 			return ChannelSendResult{State: "outcome_unknown", Code: "provider_send_unconfirmed"}
 		}
+		if strings.TrimSpace(preview.Summary) != "" {
+			text = "思考摘要\n" + preview.Summary + "\n\n回答\n" + text
+		}
 		return sender.Send(ctx, job.Stored, c, job.Message, text, job.Delivery.ID)
 	}
-	return response.UpdateResponse(ctx, job.Stored, c, state.MessageID, text, true)
+	return response.UpdateResponse(ctx, job.Stored, c, state.MessageID, preview, true)
 }

@@ -159,7 +159,7 @@ The link between one Workflow Message Channel's external conversation scope and 
 _Avoid_: External Conversation, Session, Native Session
 
 **Message Channel Delivery**:
-The record of returning one Run's answer or bounded status message to its originating external chat. Its delivery outcome is independent of the Run's execution outcome.
+The record of returning one Run's answer or bounded status message to its originating external chat. Its delivery outcome is independent of the Run's execution outcome. Where supported, the reply may retain a bounded public reasoning summary separate from the answer; it never exposes private model reasoning.
 _Avoid_: Runtime Event, Run retry, Artifact
 
 **Run Conversation**:

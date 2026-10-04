@@ -62,7 +62,7 @@ func TestFeishuReactionAndSingleMutableCard(t *testing.T) {
 		t.Fatal(result)
 	}
 	for _, final := range []bool{false, true} {
-		if result := adapter.UpdateResponse(ctx, s, c, "card", "answer", final); result.State != "sent" || result.MessageID != "card" {
+		if result := adapter.UpdateResponse(ctx, s, c, "card", application.ChannelResponsePreview{Answer: "answer", Summary: "公开摘要", Status: "正在调用工具", ToolsCompleted: 2, ElapsedSeconds: 65}, final); result.State != "sent" || result.MessageID != "card" {
 			t.Fatal(result)
 		}
 	}
@@ -84,11 +84,11 @@ func TestFeishuCardUncertaintyAndSize(t *testing.T) {
 	if r := adapter.CreateResponse(context.Background(), application.ChannelStored{}, c, domain.ChannelMessage{MessageID: "source"}, "uuid"); r.State != "outcome_unknown" {
 		t.Fatal(r)
 	}
-	if r := adapter.UpdateResponse(context.Background(), application.ChannelStored{}, c, "card", "answer", true); r.State != "retry_wait" {
+	if r := adapter.UpdateResponse(context.Background(), application.ChannelStored{}, c, "card", application.ChannelResponsePreview{Answer: "answer"}, true); r.State != "retry_wait" {
 		t.Fatal(r)
 	}
 	for _, text := range []string{strings.Repeat("中文🙂", 10000), strings.Repeat("\x00\"\\<at>\n", 10000)} {
-		card := feishuCard(text, true)
+		card := feishuCardPreview(application.ChannelResponsePreview{Answer: text, Summary: text, Status: "步骤 2/2 · 正在调用工具", ToolsCompleted: 23, ElapsedSeconds: 125}, false)
 		request, _ := json.Marshal(map[string]any{"content": card, "msg_type": "interactive", "uuid": "uuid"})
 		if len(request) > 30*1024 || !utf8.ValidString(card) || !json.Valid([]byte(card)) {
 			t.Fatal("invalid or oversized card", len(request))
@@ -96,5 +96,28 @@ func TestFeishuCardUncertaintyAndSize(t *testing.T) {
 	}
 	if NewTransports(nil)["feishu"].Response == nil {
 		t.Fatal("response capability not registered")
+	}
+}
+
+func TestFeishuCardKeepsPublicSummarySeparateFromAnswer(t *testing.T) {
+	preview := application.ChannelResponsePreview{Answer: "最终回答", Summary: "先检查配置，再验证连接", Status: "步骤 1/2 · 正在调用工具", ToolsCompleted: 3, ElapsedSeconds: 65}
+	for _, final := range []bool{false, true} {
+		var card struct {
+			Header   struct{ Title struct{ Content string } }
+			Elements []struct{ Text struct{ Content string } }
+		}
+		if json.Unmarshal([]byte(feishuCardPreview(preview, final)), &card) != nil {
+			t.Fatal("invalid card")
+		}
+		text := card.Elements[0].Text.Content
+		if !strings.Contains(text, "思考摘要\n先检查配置，再验证连接\n\n回答\n最终回答") {
+			t.Fatal(text)
+		}
+		if !final && (!strings.Contains(text, "3 次工具调用") || !strings.Contains(text, "1 分 5 秒") || !strings.Contains(card.Header.Title.Content, "步骤 1/2")) {
+			t.Fatal(card)
+		}
+		if final && (card.Header.Title.Content != "回复" || strings.Contains(text, "当前进度")) {
+			t.Fatal(card)
+		}
 	}
 }
