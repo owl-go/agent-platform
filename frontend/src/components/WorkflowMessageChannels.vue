@@ -221,7 +221,10 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
       <section class="channel-account-setup">
         <h3>{{ t('channels.accountSetup') }}</h3>
         <p class="muted">{{ t(`channels.setup.${form.provider}`) }}</p>
-        <a :href="setup.docs" target="_blank" rel="noopener noreferrer">{{ t('channels.setupGuide') }}</a>
+        <div class="channel-actions">
+          <a v-if="form.provider === 'telegram'" class="channel-botfather-link" href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">{{ t('channels.botFather') }}</a>
+          <a :href="setup.docs" target="_blank" rel="noopener noreferrer">{{ t('channels.setupGuide') }}</a>
+        </div>
         <el-form-item v-if="form.provider === 'feishu'" :label="t('channels.region')"><el-select v-model="form.region" :disabled="busy || Boolean(login)" @change="reconnect"><el-option value="feishu" :label="t('channels.providers.feishu')" /><el-option value="lark" label="Lark" /></el-select></el-form-item>
         <template v-if="authenticated">
           <p role="status">{{ t(editing && !reconnecting ? 'channels.savedAccount' : 'channels.accountConnected') }} · {{ login?.account_name || editing?.account_name || login?.account_id || editing?.account_id }}</p>
@@ -293,6 +296,7 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 .channel-provider-card:focus-visible { outline:2px solid var(--aw-primary); outline-offset:2px; }
 .channel-provider-card:disabled { cursor:not-allowed; opacity:.55; }
 .channel-config-form { max-height:min(65vh,640px); overflow-y:auto; padding-inline-end:var(--aw-space-2); }
+.channel-botfather-link { font-weight:600; }
 .channel-account-setup,.channel-message-setup { display:grid; gap:var(--aw-space-3); }
 .channel-message-setup { margin-top:var(--aw-space-4); padding-top:var(--aw-space-4); border-top:1px solid var(--aw-n4); }
 .channel-qr { width:240px; max-width:100%; }
