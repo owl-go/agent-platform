@@ -335,3 +335,11 @@ Stream 由这对凭证在官方网关认证；机器人 CALLBACK 必须匹配 `r
 已有配置保留其企业约束，旧 `corp_id` 不再参与凭证认证；停用后重新保存会开启新的受控验证绑定流程。不新增通讯录权限、Migration、Runtime Capability 或公开回调路由。真实账号的企业身份绑定与收发仍需现场验证。协议依据：[官方企业 accessToken 响应模型](https://github.com/alibabacloud-go/dingtalk/blob/master/oauth2_1_0/client.go)、[官方 Stream 认证协议](https://open-dingtalk.github.io/developerpedia/docs/learn/stream/protocol/)和[官方机器人消息模型](https://github.com/open-dingtalk/dingtalk-stream-sdk-go/blob/main/chatbot/model.go)。
 
 本轮已通过 Adapter、Domain、Application 与 GORM Repository 目标包测试（使用独立 PostgreSQL 16）、`make test`、`make build`、Adapter/Domain/Application 的 `go test -race`，以及 DingTalk 绑定和渠道验证的 PostgreSQL race 测试。`go vet` 覆盖 Adapter、Domain 与 Repository；前端 `make web-typecheck`、`make web-build` 和全部 585 项测试通过（包含双凭证连接及目标组件 32 项测试）。独立数据库仅用于本地测试，不替代真实钉钉收发、Linux + runsc Sandbox/Production Conformance；本轮未改变 Runtime 镜像。
+
+#### 钉钉自动企业绑定发布证据
+
+2026-10-04 从 `main_temp` 的 `e130809344e32a5a1fa2c62fef0c34ab014b719e`（功能提交 `846c90e`）发布 `dingtalk-auto-corp-20261004-1`，集成 tree 与已验证功能 tree 一致。API Image ID 为 `sha256:5ef356d9687d76901fdac8b50d481732a435ddedeabc6cca98e4448af51d76bd`，Worker Image ID 为 `sha256:e3ce74aff5e36342ace8228336fb5cf502ceeef1b2f1ce9236d9da11ef509cbe`；前端按生产 OIDC 地址重建，index.html SHA-256 为 `2e43a09ab9b794490c1df7de87271eb84f40a6064f8c76b48cf8daa1e35fdbe6`。
+
+服务器备份目录 `/opt/agent-platform/backups/pre-dingtalk-auto-corp-20261004-1` 保存业务/身份数据库、配置和旧指针；checksum 与 restore-list 检查通过，未执行完整恢复演练。候选 API readyz、配置 checksum、切换前后完整 migration ledger 不变检查通过，活动执行数为 0。发布后 API/Worker healthy，Worker readyz 通过；公网 API healthz/readyz、OIDC metadata 和匿名配对 API 401 检查通过，首页及关键 JS 与生产构建逐字节一致。发布脚本确认实际 Bundle 的钉钉字段仅为 Client ID/Secret，并包含中英文自动识别说明；真实钉钉企业绑定和收发仍未验收。现场证据位于 `/opt/agent-platform/evidence/dingtalk-auto-corp-20261004-1`，独立测试数据库已清理。
+
+前端使用相对 symlink `web/current -> releases/dingtalk-auto-corp-20261004-1`，上一版为 `feishu-streaming-replies-20261004-1`。可切回 `feishu-markdown-cards-20261004-1` 后端镜像及上一版前端，数据库无破坏性回滚；本版本新建的钉钉配置不含旧版必需的 `corp_id` 凭证，若回退旧后端，须停用这些配置并通过旧表单重新提供企业 ID，不能宣称新旧钉钉配置完全兼容。
