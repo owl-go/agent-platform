@@ -361,3 +361,5 @@ Telegram 账号接入表单提供「打开 BotFather 创建 / 管理机器人」
 按用户要求移除消息渠道区域顶部「接收外部文本问题，通过工作流执行并回复原聊天。」说明，以及不再引用的中英文本地化键。配置入口、账号接入步骤和渠道操作保持既有契约。仅涉及前端与行为文档，不修改后端、数据库或 Runtime。
 
 已通过消息渠道组件 32 项测试、`make web-typecheck` 和 `make web-build`。本次文案删除未新增测试，复用现有组件回归；Go、数据库及 Linux + runsc 门禁未受影响，未重复运行。
+
+2026-10-04 从 `main_temp` 的 `fd05d85c4b7f2105afb51015d657c717f15ed4a0`（功能提交 `34611d6`）经 `make web-deploy` 发布静态前端 `channel-description-removal-20261004-1`。集成 tree 与已验证功能 tree 一致，使用生产 OIDC 地址重建。公网首页 SHA-256 为 `960940158a9166ed02e8bd7b22902475cd0aa808b102403e343cd2ea5654458c`；首页及关键 JS 与本地产物逐字节匹配，Workflow Bundle 不再引用 `channels.description`，i18n Bundle 不再包含原说明。API healthz/readyz、OIDC metadata、匿名配对 401 校验通过；API/Worker Image ID 与 healthy 状态、受保护配置 checksum 均未改变。`web/current -> releases/channel-description-removal-20261004-1`，上一版相对链接保留为 `web/previous -> releases/telegram-botfather-20261004-1`，可回滚静态资源。现场证据位于 `/opt/agent-platform/evidence/channel-description-removal-20261004-1`；本轮不作为任何渠道真实收发或 Runtime Conformance 的验收证据。
