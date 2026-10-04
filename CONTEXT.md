@@ -151,15 +151,39 @@ An optional hourly, daily, or weekly schedule that starts a Workflow from its fi
 _Avoid_: API call, Webhook, file watcher
 
 **Workflow Message Channel**:
-A User-owned configuration bound to one Workflow that accepts authorized external chat messages and returns that Workflow's answers to their originating chat. It identifies one messaging service account and its permitted audience without granting external participants a product User identity. A DingTalk internal application is bound by its authenticated Client ID; its enterprise identity is pinned from an allowed participant’s authenticated Stream validation message before enablement, rather than supplied by the User.
+A User-owned configuration bound to one Workflow that accepts external messages under a Message Channel Audience and returns that Workflow's answers to their originating chat. Its authenticated account, reception scope, and enablement are separate from the Workflow's execution configuration and do not grant external participants a product User identity.
 _Avoid_: Connector Authorization, Workflow API Credential, notification-only Webhook
 
+**Message Channel Account**:
+The authenticated bot or messaging-service identity used by one Workflow Message Channel, including its enterprise scope where applicable. It is distinct from an external sender identity and from a User's Connector Authorization.
+_Avoid_: User, allowed sender, Connector Authorization
+
+**Message Channel Audience**:
+The explicit sender identities and permitted private or group chat scope for one Workflow Message Channel. An allowed group message also requires an allowed sender and a mention of the channel's bot; a display name or group membership alone grants no access.
+_Avoid_: Identity Group, Department membership, anonymous public access
+
+**Message Channel Sender Pairing**:
+A temporary, one-use exchange that identifies a candidate external sender through an authenticated Message Channel Account. Recognition changes no permission until the owning User explicitly adds the candidate to the Audience and saves it; pairing is separate from channel validation and Workflow execution.
+_Avoid_: Connector Authorization, channel enablement, automatic permission grant
+
+**Message Channel Validation**:
+A time-bounded proof that an allowed sender can deliver the expected validation message through the current channel configuration and receive its confirmation in the originating chat. It is required before enablement and is distinct from account authentication, connection health, Sender Pairing, and a Workflow Run.
+_Avoid_: credential check, connection health, model validation Run
+
+**Message Channel Inbox**:
+The durable receipt of an external message that passed the channel's initial authentication and Audience checks, recording its identity and subsequent admission outcome. Receipt alone does not create a Run: validation messages, revoked access, and unsuccessful Workflow admission retain different outcomes.
+_Avoid_: Workflow Queue, Run Conversation, Message Channel Delivery
+
 **Message Channel Conversation**:
-The link between one Workflow Message Channel's external conversation scope and one Run Conversation. It preserves continuity for the same participant and chat without sharing history with another participant or channel.
+The link between one Workflow Message Channel's external conversation scope and one Run Conversation. Its scope includes the account and enterprise identity, sender, chat, and thread, preserving continuity without sharing history with another participant or channel.
 _Avoid_: External Conversation, Session, Native Session
 
+**Message Channel Response**:
+An optional ongoing reply in the originating external chat that presents execution activity, a bounded public reasoning summary, a provisional answer, and eventually a terminal result or status where the messaging service supports it. A provisional answer is not a successful Run result, and the response never exposes private model reasoning or raw tool output.
+_Avoid_: Message Channel Delivery, Runtime Event, private reasoning, completed Run result
+
 **Message Channel Delivery**:
-The record of returning one Run's answer or bounded status message to its originating external chat. Its delivery outcome is independent of the Run's execution outcome. Where supported, the reply may retain a bounded public reasoning summary separate from the answer; it never exposes private model reasoning.
+The record of returning an answer, bounded status, or validation confirmation to the originating external chat, with an outcome independent of any Run's execution outcome. Retrying a Delivery does not rerun the Workflow, and an uncertain send outcome requires explicit confirmation before a potentially duplicate resend.
 _Avoid_: Runtime Event, Run retry, Artifact
 
 **Run Conversation**:
@@ -182,6 +206,10 @@ _Avoid_: model chain-of-thought, Workflow definition, command approval
 One user-visible unit in an Execution Plan whose state is pending, running, completed, skipped, or failed. Worker-owned transitions project actual execution progress and are not inferred from generated prose.
 _Avoid_: Runtime Event, Expert Stage Snapshot, hidden reasoning step
 
+**Execution Activity**:
+A bounded, redacted account of actual execution progress visible with a Session response or Run. It may contain public reasoning summaries and permitted activity details, but is distinct from an Execution Plan, retained Evidence, raw Runtime output, and private reasoning.
+_Avoid_: Plan Step, Evidence, raw tool output, model chain-of-thought
+
 **Deleted Workflow Record**:
 The read-only name, Run history, and unexpired Artifacts retained after a Workflow and its Workspace are permanently deleted.
 _Avoid_: Restorable Workflow, archived Workflow
@@ -199,8 +227,6 @@ _Avoid_: AI Customer Service, Expert, Session, Workflow
 **Smart Assistant FAQ**:
 An ordered, User-authored question and Markdown answer attached to one Smart Assistant. A direct selection returns its safety-checked answer without a model invocation; uncertain free-text questions may be classified against enabled FAQs before Knowledge Base retrieval.
 _Avoid_: Knowledge Document, canned Session message, generated answer
-
-_Avoid_: Smart Assistant, Avatar-only upload, Expert
 
 **Answer Safety Policy**:
 The ordered, platform-enforced and Assistant-configurable boundary that decides whether a request may proceed to FAQ matching, Knowledge Base retrieval, or model answering. Platform safety categories cannot be disabled, and a rejected request receives the fixed localized refusal without exposing the matched category or sensitive source text.
@@ -227,7 +253,7 @@ The task-specific image-generation tool nested under AI Applications. It owns no
 _Avoid_: AI Creation, Smart Assistant, Image Artifact
 
 **Retrieval Provider**:
-The optional indexing and recall boundary used by a Knowledge Base. It does not own User permissions, Document Revisions, Assistant bindings, or retained Knowledge Citations; the platform currently has no active Retrieval Provider and preserves this seam for a future verified implementation.
+The optional, replaceable indexing and recall service used by Knowledge Base Ingestion and retrieval. Knowledge ownership, current permissions, Document Revisions, Knowledge Index Generations, Assistant bindings, and retained Knowledge Citations remain platform-owned.
 _Avoid_: Knowledge Base, RAG application, Provider Model
 
 **Image Model**:
@@ -272,6 +298,10 @@ _Avoid_: Repository Binding, Source Control Provider, Review Branch
 An immutable final deliverable generated by one successful Session response or added or changed by one successful Run, stored separately from a Workflow's mutable Workspace. A final Artifact path is removed from the persistent Workflow Workspace after capture; intermediate files remain available for later Runs. Final text or JSON remains part of its Session or Run Conversation and is not an Artifact.
 _Avoid_: Run result, Workspace file, Run Event, temporary output
 
+**Attachment**:
+An immutable reference to a User-uploaded file frozen onto one accepted conversation turn. It supplies input to that turn and remains distinct from a generated Artifact or a mutable Workspace file.
+_Avoid_: Artifact, Workspace file, filename mention
+
 **File Reference**:
 A message's explicit reference to an attachment or Artifact from its own conversation, or to a file in its Workflow's Workspace. An accepted reference preserves the file content supplied with that message independently of later source changes or expiry.
 _Avoid_: Mutable Workspace path, signed download URL, filename mention
@@ -301,11 +331,11 @@ A durable, idempotent task that performs one Knowledge Document Revision's extra
 _Avoid_: Run, background goroutine, upload request
 
 **Knowledge Selection**:
-The set of one or more Knowledge Bases configured on a Workflow for retrieval. A Run freezes the selection in its Workflow Snapshot so later Workflow edits do not change that Run's intended knowledge scope.
+The set of Knowledge Bases chosen for retrieval by a Workflow or Smart Assistant. A Run freezes its selection in the initiating Workflow Snapshot, while each accepted Smart Assistant turn uses the Assistant's current selection under current source permissions.
 _Avoid_: Runtime Engine setting, Conversation Selection, dynamic folder lookup
 
 **Retrieval Context**:
-A bounded set of source excerpts returned for one Run from its frozen Knowledge Selection, including provenance such as Knowledge Base, Category, document, source location, and a relevance score. Its redacted citation summary is retained in Run history, but it is not an Artifact or a replacement for the original document.
+A bounded set of authorized Knowledge Base excerpts returned for a retrieval preview, Run, or Smart Assistant answer, carrying source identity, location, and relevance. A Run uses its frozen Knowledge Selection and retains a redacted citation summary; the excerpts are not an Artifact or a replacement for the original document.
 _Avoid_: Model memory, full document dump, Artifact
 
 **Knowledge Index Generation**:
@@ -394,6 +424,10 @@ _Avoid_: Extension, Skill, Runtime Engine
 An immutable, versioned distributable containing `connector-meta.json`, `icon.svg`, exactly one mode manifest (`mcp.json` or `cli.json`), and at least one Skill directory with a required `SKILL.md`. It may enter the platform as an uploaded ZIP or be assembled through a guided creation flow, but both paths produce the same validated package contract. The package describes how its external capability is connected; its Skills explain how an Agent should use that capability. A package cannot declare both MCP and CLI modes.
 _Avoid_: Skill-only package, Runtime image, credential bundle
 
+**Connector Publication**:
+The Administrator-managed catalog record that selects one active Connector Revision for a package source and declares it available or disabled. Publication creates neither a Connector Installation nor a Connector Authorization and owns no User credentials.
+_Avoid_: Connector Installation, Connector Authorization, package upload
+
 **Connector Installation**:
 A User- or platform-scoped record that a validated Connector Package revision is available in the isolated installation area. Installation does not grant an external account authorization and does not imply that the Connector is connected.
 _Avoid_: Connector Authorization, active Runtime process, package upload
@@ -403,7 +437,7 @@ A User-private grant that lets one installed Connector access an external identi
 _Avoid_: Connector Installation, permanent permission, shared platform credential
 
 **Connector Revision**:
-An immutable installed revision identified by its Connector source, semantic version, package checksum, and exact runtime policy. New executions resolve the active revision, while historical execution snapshots continue to reference the revision they originally used. A selected MCP or CLI Connector carries the companion Skills of that same frozen revision.
+An immutable package revision identified by its Connector source, semantic version, package checksum, and exact runtime policy, separately referenced by a Connector Publication and each Connector Installation. Execution snapshots retain their selected revision and its companion Skills even when a Publication or Installation later changes its active revision.
 _Avoid_: Mutable Connector configuration, authorization version, latest tag
 
 **Connector Invocation Result**:
