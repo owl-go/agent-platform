@@ -15,7 +15,10 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 )
 
-type QQBot struct{ *HTTP }
+type QQBot struct {
+	*HTTP
+	dial channelSocketDialer
+}
 
 func qqKey(secret string) ed25519.PrivateKey {
 	if secret == "" {
@@ -89,8 +92,16 @@ func (a *QQBot) Callback(_ context.Context, s application.ChannelStored, c appli
 		result.Response = map[string]any{"op": 11, "d": sequence}
 		return result, nil
 	}
-	if payload.Op != 0 || (payload.Type != "GROUP_AT_MESSAGE_CREATE" && payload.Type != "C2C_MESSAGE_CREATE") {
+	if payload.Op != 0 {
 		return result, nil
+	}
+	result.Messages, err = normalizeQQ(s, payload.Type, payload.Data)
+	return result, err
+}
+
+func normalizeQQ(s application.ChannelStored, eventType string, data json.RawMessage) ([]domain.ChannelMessage, error) {
+	if eventType != "GROUP_AT_MESSAGE_CREATE" && eventType != "C2C_MESSAGE_CREATE" {
+		return nil, nil
 	}
 	var event struct {
 		ID        string    `json:"id"`
@@ -103,23 +114,22 @@ func (a *QQBot) Callback(_ context.Context, s application.ChannelStored, c appli
 			Bot      bool   `json:"bot"`
 		} `json:"author"`
 	}
-	if json.Unmarshal(payload.Data, &event) != nil {
-		return result, providerError("provider_payload_invalid")
+	if json.Unmarshal(data, &event) != nil {
+		return nil, providerError("provider_payload_invalid")
 	}
-	group := payload.Type == "GROUP_AT_MESSAGE_CREATE"
+	group := eventType == "GROUP_AT_MESSAGE_CREATE"
 	sender, chat := event.Author.UserID, event.Author.UserID
 	if group {
 		sender, chat = event.Author.MemberID, event.GroupID
 	}
 	if event.Author.Bot || sender == s.Channel.AccountID {
-		return result, nil
+		return nil, nil
 	}
 	text := strings.TrimSpace(event.Content)
 	if group {
 		text = strings.TrimSpace(strings.ReplaceAll(text, "<@!"+s.Channel.AccountID+">", ""))
 	}
-	result.Messages = []domain.ChannelMessage{{EventID: event.ID, MessageID: event.ID, SenderID: sender, ChatID: chat, Group: group, Mentioned: group, Text: text, OccurredAt: event.Timestamp, Reply: map[string]string{"expires_at": strconv.FormatInt(event.Timestamp.Add(5*time.Minute).Unix(), 10)}}}
-	return result, nil
+	return []domain.ChannelMessage{{EventID: event.ID, MessageID: event.ID, SenderID: sender, ChatID: chat, Group: group, Mentioned: group, Text: text, OccurredAt: event.Timestamp, Reply: map[string]string{"expires_at": strconv.FormatInt(event.Timestamp.Add(5*time.Minute).Unix(), 10)}}}, nil
 }
 func (a *QQBot) Send(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage, text, key string) application.ChannelSendResult {
 	expires, err := strconv.ParseInt(m.Reply["expires_at"], 10, 64)

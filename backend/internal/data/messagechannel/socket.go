@@ -23,7 +23,7 @@ type channelSocketDialer func(context.Context, string, http.Header) (channelSock
 
 func dialChannelSocket(ctx context.Context, target string, headers http.Header) (channelSocket, error) {
 	u, err := url.Parse(target)
-	if err != nil || u.Scheme != "wss" || u.User != nil || u.Fragment != "" || u.RawQuery != "" || (u.Host != "openws.work.weixin.qq.com" && u.Host != "bot-wss.yuanbao.tencent.com") {
+	if err != nil || u.Scheme != "wss" || u.User != nil || u.Fragment != "" || u.RawQuery != "" || (u.Host != "openws.work.weixin.qq.com" && u.Host != "bot-wss.yuanbao.tencent.com" && u.Host != "api.sgroup.qq.com") {
 		return nil, providerError("provider_endpoint_invalid")
 	}
 	dialer := websocket.Dialer{HandshakeTimeout: 15 * time.Second, NetDialContext: dialPublicProvider}

@@ -137,7 +137,7 @@ func TestWhatsAppSignatureTenantChallengeAndReplyWindow(t *testing.T) {
 }
 func TestQQSignatureChallengeAndStablePassiveReplySequence(t *testing.T) {
 	secret := "qq-secret"
-	a := &QQBot{NewHTTP(nil)}
+	a := &QQBot{HTTP: NewHTTP(nil)}
 	c := application.ChannelCredentials{"app_id": "app", "app_secret": secret}
 	stamp := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte(`{"op":13,"d":{"plain_token":"plain","event_ts":"100"}}`)

@@ -24,6 +24,15 @@ const button = (wrapper: ReturnType<typeof widget>, text: string) => wrapper.fin
 const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input");
 vi.mock("qrcode", () => ({ default:{toDataURL:vi.fn(async()=>"data:image/png;base64,cXJjb2Rl")} }));
 describe("Workflow message channels",()=>{
+  it("guides QQ QR binding into real WebSocket verification without a callback URL", async()=>{
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider:"qqbot",health:"connected",callback_url:""}]}))});
+    await flushPromises();
+    expect(wrapper.get('.channel-card').text()).toContain("已配置");
+    await wrapper.get('[data-provider="qqbot"]').trigger("click");await flushPromises();
+    expect(wrapper.text()).toContain("验证接入");expect(wrapper.text()).toContain("长连接");
+    expect(wrapper.text()).not.toContain("设置回调");expect(wrapper.find('.channel-card').text()).not.toContain("回调地址");
+    wrapper.unmount();
+  });
   it("shows all thirteen provider configuration entries before any account is saved", async () => {
     const wrapper = mount(WorkflowMessageChannels, {
       props: { workflowId: "workflow" },

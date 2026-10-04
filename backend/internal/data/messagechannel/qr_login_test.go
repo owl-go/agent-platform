@@ -21,7 +21,7 @@ func TestQQQRBindingDecryptsAuthenticatedSecretAndRejectsTampering(t *testing.T)
 	for _, tamper := range []bool{false, true} {
 		t.Run(map[bool]string{false: "confirmed", true: "tampered"}[tamper], func(t *testing.T) {
 			var key []byte
-			adapter := &QQBot{NewHTTP(roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			adapter := &QQBot{HTTP: NewHTTP(roundTripFunc(func(r *http.Request) (*http.Response, error) {
 				var body map[string]string
 				if json.NewDecoder(r.Body).Decode(&body) != nil {
 					t.Fatal("missing request")

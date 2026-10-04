@@ -36,6 +36,14 @@ type ChannelStreamReceiver interface {
 	Connect(context.Context, ChannelStored, ChannelCredentials, ChannelMessageSink) error
 }
 
+// Native authenticated handshakes can report transport health without inventing
+// an incoming user message. Only connecting and connected are accepted.
+type ChannelConnectionHealthSink func(context.Context, string) error
+type ChannelStreamHealthReceiver interface {
+	ChannelStreamReceiver
+	ConnectWithHealth(context.Context, ChannelStored, ChannelCredentials, ChannelMessageSink, ChannelConnectionHealthSink) error
+}
+
 // Sending never invokes reception or starts a Run. The key is stable per Delivery.
 type ChannelSender interface {
 	Send(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, string) ChannelSendResult

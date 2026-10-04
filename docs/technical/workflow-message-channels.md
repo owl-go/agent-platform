@@ -61,7 +61,7 @@ Workspace Domain 定义归一化消息；Application 的 `message_channel_transp
 | `ChannelStreamReceiver` | `Connect` 管理受 `context.Context` 控制的长连接，通过 `ChannelMessageSink` 提交归一化消息；sink 失败不得成功 ACK，消息 deadline 必须传播到持久化 |
 | `ChannelSender` | `Send` 使用保存的答案、原聊天目标和稳定 Delivery key，返回安全发送状态；不执行模型或调用接收器 |
 
-Telegram/Slack/WhatsApp/QQ 注册 Webhook 接收器，其余渠道注册长连接或轮询接收器；13 个渠道各自实现发送 Interface，不再需要实现不支持的 Webhook 方法。公共接收和发送循环仅依赖自己的角色；保存/验证配置要求账号、发送器和唯一接收方式齐备，缺少或同时注册两种接收方式的配置不开放。注册在进程启动时固定，Application 持有注册表副本；它是静态运输装配，不是产品动态 Capability 注册表。HTTP 认证绕过仍由 Service 的精确 Telegram/Slack/WhatsApp/QQ POST 及 WhatsApp GET 验证路由限制，新渠道不能仅靠注册自动开放公开入口。
+Telegram/Slack/WhatsApp 注册 Webhook 接收器，其余渠道注册长连接或轮询接收器；13 个渠道各自实现发送 Interface，不再需要实现不支持的 Webhook 方法。公共接收和发送循环仅依赖自己的角色；保存/验证配置要求账号、发送器和唯一接收方式齐备，缺少或同时注册两种接收方式的配置不开放。注册在进程启动时固定，Application 持有注册表副本；它是静态运输装配，不是产品动态 Capability 注册表。HTTP 认证绕过仍由 Service 的精确 Telegram/Slack/WhatsApp POST 及 WhatsApp GET 验证路由限制，新渠道不能仅靠注册自动开放公开入口。
 
 供应商认证、消息解析与归一化由各自 Receiver 完成，入站准入、限流、脱敏、工作流执行和 Delivery 恢复复用公共链路。不要给 `agentruntime.Adapter` 增加 IM 方法，也不要让渠道 Adapter 管理 Docker、Credits 或直接创建 Run。
 
@@ -86,9 +86,9 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 - `POST` 同一路径：新建关闭状态配置；传 `channel_id` 和 `version` 更新已有配置。启用时禁止编辑，凭证写入不回显；全部留空沿用已有凭证，替换时提供完整凭证。
 - `POST .../{channel_id}/actions`：Version CAS 控制 `validate`、`enable`、`disable`、`delete`、`reset`。reset 切换整个渠道的 generation，已接收消息保留原 generation。
 - `GET .../{channel_id}/deliveries`、`POST .../{channel_id}/deliveries/{delivery_id}/retry`：最多展示最近 100 个发送记录；只恢复已保存的回答，unknown 重发要求 `confirm_possible_duplicate=true`。
-- `POST /api/v1/message-channel-callbacks/{provider}/{channel_id}`：只开放 Telegram、Slack、WhatsApp 与 QQ 的供应商认证，不能用 OIDC/Workflow JWT 代替；路径不可预测性不替代签名。Body 上限 64 KiB，认证失败返回 401，持久化/处理失败返回 503，超过上限返回 413。
+- `POST /api/v1/message-channel-callbacks/{provider}/{channel_id}`：只开放 Telegram、Slack、WhatsApp 的供应商认证（历史 QQ 回调路由不再注册接收器，拒绝请求），不能用 OIDC/Workflow JWT 代替；路径不可预测性不替代签名。Body 上限 64 KiB，认证失败返回 401，持久化/处理失败返回 503，超过上限返回 413。
 
-账号接入与受众/收发验证分开。`ChannelAccount` 可选实现 `ChannelQRLogin`，扫码能力不混入接收/发送接口。微信使用 [腾讯 iLink QR 协议](https://github.com/Tencent/openclaw-weixin/blob/main/docs/protocol.md)；QQ 使用腾讯发布的 [`@tencent-connect/qqbot-connector` 1.2.0](https://www.npmjs.com/package/@tencent-connect/qqbot-connector) 的绑定协议，创建任务时生成 32 字节随机 AES-GCM Key，确认时验证并解密 App Secret。QQ 当前仍用 HTTP 回调接收，扫码绑定不自动配置供应商事件回调，也不等同于个人 QQ 账号登录。
+账号接入与受众/收发验证分开。`ChannelAccount` 可选实现 `ChannelQRLogin`，扫码能力不混入接收/发送接口。微信使用 [腾讯 iLink QR 协议](https://github.com/Tencent/openclaw-weixin/blob/main/docs/protocol.md)；QQ 使用腾讯发布的 [`@tencent-connect/qqbot-connector` 1.2.0](https://www.npmjs.com/package/@tencent-connect/qqbot-connector) 的绑定协议，创建任务时生成 32 字节随机 AES-GCM Key，确认时验证并解密 App Secret。QQ 使用官方 WebSocket Gateway 接收；扫码是机器人绑定，不是个人 QQ 账号登录。保存后执行“验证接入”启动十分钟测试连接，通过后启用；未验证或停用的账号不保持连接。
 
 - `POST /api/v1/workflows/{workflow_id}/channel-logins`：固定 provider/region/编辑 channel/version，以 `qr` 或 `credentials` 开始。非扫码渠道仅调用已有 Account Identify；未注册 QR 的 Account 不接受 `qr`。编辑先校验 owner、provider、version 与 disabled 状态。
 - `POST .../channel-logins/{login_id}/poll`：返回 waiting/scanned/verification_required/connected/expired/failed；微信可提交短期配对码。二维码本地编码成 PNG，供应商内容不作为远程图片或可执行 HTML。
@@ -231,7 +231,7 @@ SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go 
 | Signal | 管理员批准的专用 signal-cli HTTP daemon，要求多账号模式及认证 HTTPS reverse proxy；Bridge Token 由代理验证，原生 daemon 无平台 Token 验证。`listAccounts` 取得 ACI，在连接建立和发送前重查身份，JSON-RPC 原账号发送；SSE 接收、Last-Event-ID 提交后恢复。按 ACI 隔离，原生 mentions 识别群 @；忽略 sync、view-once、disappearing 消息。上游 SSE 缓存为有限内存记录（当前文档 1000 个），桥接重启或超出缓存的离线间隔不能保证补收。平台不部署 Bridge，也不管理其账号密钥。 |
 | WeCom | 企业微信 API 模式智能机器人 Bot ID/Secret；官方固定 WSS `aibot_subscribe` 鉴权、心跳、原生文本 callback；私聊 userid，群 chatid。群 callback 为机器人 @ 事件。独立 Sender 使用 `aibot_send_msg` 和 req_id 回执，失联等待重连；写后未确认进入 unknown。协议没有独立持久化 Inbox ACK，不声称服务断线一定补收。 |
 | WeChat | 腾讯 iLink 2.4.8 公共协议；owner 在平台 QR 界面授权，取得的 bot_token、ilink_bot_id（account_id）、ilink_user_id（user_id）与服务端确认身份一起加密保存；只接受受信任官方 HTTPS API 域。实际收到的 to_user_id 必须匹配已保存账号才能完成验证。getupdates 长轮询、get_updates_buf 加密恢复；getupdates/sendmessage 的成功响应允许省略 ret/errcode，显式字段必须为数值 0，非零或格式错误仍拒绝。只接收完成的私聊文本，忽略生成中/删除消息，同 ID 更新由 Inbox 去重。原消息 context_token 加密持久化并用于 sendmessage，client_id 使用 Delivery UUID；缺失 context_token 拒绝发送，不承诺群聊。 |
-| QQ Bot | App ID/Secret 获取 Access Token，官方用户接口绑定 Bot。HTTP callback 按官方 seed 规则以 Ed25519 验证 timestamp + raw body，支持签名 challenge/heartbeat；只接收 C2C_MESSAGE_CREATE 与 GROUP_AT_MESSAGE_CREATE，暂不支持频道/Guild DM。原 user_openid/member_openid/group_openid 路由，5 分钟被动窗口。msg_seq=1 留给 validation/waiting，终态 rejection/failure 的 status 使用 2（与 answer 互斥），answer 第 1..4 段使用 2..5，重试保持序号；超过预算明确失败，不改成主动发送。 |
+| QQ Bot | App ID/Secret 获取 Access Token，官方用户接口绑定 Bot。官方 `/gateway` 返回的精确 `wss://api.sgroup.qq.com/websocket[/]` 经公网 DNS 校验拨号。HELLO 后以 QQBot Token、Intents=1<<25 和 shard=[0,1] Identify，READY/RESUMED 才报告 connected；心跳按供应商间隔的 80% 发送，缺少下一次 ACK 时断开。进程内最多六次指数退避重连，并尝试 Resume；Sequence 只在 Inbox 提交或安全忽略后推进。非 resumable Invalid Session 清空状态，身份改变和非法帧拒绝，取消关闭 Socket。只接收 C2C_MESSAGE_CREATE 与 GROUP_AT_MESSAGE_CREATE，暂不支持频道/Guild DM。原 user_openid/member_openid/group_openid 路由，5 分钟被动窗口。msg_seq=1 留给 validation/waiting，终态 rejection/failure 的 status 使用 2（与 answer 互斥），answer 第 1..4 段使用 2..5，重试保持序号；超过预算明确失败，不改成主动发送。 |
 | BlueBubbles | 管理员批准 HTTPS 专用 macOS 服务，Server Password 只用于认证请求；`server/info` 返回 computer_id 与 detected_imessage，并在轮询/发送前重查账号，账号变化拒绝。消息查询以官方返回的 originalROWID 建立插入游标，固定 MAX(ROWID) 上界分页并使用 Inbox 去重；不依赖主机时钟或消息发送时间，初次只保存当前最大行基线。查询结构为代码内固定 SQL 与绑定数值参数，不接受外部消息输入；行号回退报 history_reset 并保留游标。每批最多 1000 条，超过容量保留游标并报 backlog。只接受单一 participant 的文本；发送用 apple-script + 稳定 tempGuid，不访问宿主机数据库或启用 Private API。桥接不可用/换号与 Mac 环境仍需真实验收。 |
 | Yuanbao | 腾讯官方插件公开的 sign-token HMAC、ConnMsg/Head 与文本业务 Protobuf Schema；固定 HTTPS/WSS。auth-bind 验证返回 bot_id，定期心跳、Token 到期前释放连接并重新鉴权；不设置自动抢占确认。push 只有 Inbox sink 成功后 ACK；独立 Sender 关联 msg_id 回执，私聊原 sender，群使用 group_code/ref_msg_id/to_account，TIMCustomElem 1002 提及才触发。没有 Runtime 引擎或 OpenClaw 安装依赖。 |
 
@@ -250,3 +250,9 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 `ChannelTransport.Typing` 是独立可选 port，当前只注册 WeChat，完整文本答案仍使用原 Delivery Outbox。Worker 领取 Run 后异步跟踪执行，不阻塞模型启动；每次输入状态刷新前通过 owner/Workflow/Run/Inbox 联结重新检查当前授权、配置版本、generation、受众和运行状态。排队和终态不显示；等待 owner 操作时停止，恢复执行后重新获取 ticket。
 
 使用实际入站 sender 与加密保存的 context_token 调用 `getconfig`，只将返回的 typing_ticket 保留在本次执行的 host transport session，再调用 `sendtyping`：status=1 开始/每五秒刷新，status=2 清除。getconfig 不再承担账号身份门禁。所有调用有三秒上下文边界；取消后清理使用独立的三秒 context，先停止输入状态再提交终态，避免下一轮启动后上一轮迟到的清除覆盖它。票据缺失、格式错误、供应商非零返回或网络失败只结束输入状态，不改变 Run、Credits、渠道健康或答案投递。日志仅记录 provider 和固定 lifecycle event，不记录外部 ID、票据、context_token 或原始错误。真实手机显示仍以发布后的现场验收为准。
+
+### QQ Gateway 修复（2026-10-04）
+
+原 QQ HTTP callback Adapter 的签名逻辑保留协议测试，但不注册为产品接收方式；供应商侧既有 callback 配置须切换为 WebSocket 模式。账号保存仍保持未验证且停用，只有验证窗口或启用状态会被连接监督器选择。`ChannelStreamHealthReceiver` 可选扩展报告 connecting/connected，Application 验证固定状态后按配置版本保存；READY 不能伪造用户消息、验证成功或 Run。QQ Gateway Resume 仅限当前连接监督生命周期；Worker 重启及配置替换不承诺补收未提交消息，既有持久 Inbox 仍幂等恢复。
+
+协议依据：[腾讯官方 WebSocket SDK](https://github.com/tencent-connect/qqbot-agent-sdk/blob/main/src/qqbot_agent_sdk/websocket.py)。
