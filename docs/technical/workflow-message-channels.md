@@ -206,10 +206,12 @@ message_channels:
 省略数值或设置为 0 使用上述默认值。连接数上限 1000；backlog 1..10000、sender/minute 1..100、正文 128..10000 bytes、次数 1..32、发送间隔 3s..1m。一个 Workflow 最多十六个未删除配置，能够同时容纳全部 13 种渠道；相同接收身份（包括关闭配置）只允许一条绑定。飞书通过 region+App ID、钉钉通过 Client ID 约束，不允许修改自报企业 ID 绕过重复绑定。
 
 1. 在供应商控制台建立应用机器人、启用正确事件与权限。平台不支持仅有发送能力的群 Webhook。
-2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书填写 Open ID、Chat ID、Tenant Key 并选择飞书/Lark；钉钉填写 Staff ID、Conversation ID、Corp ID。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
+2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书选择飞书/Lark，只需填写 App ID、App Secret，以及允许的发送者 Open ID 和可选群 Chat ID；Tenant Key 由平台通过应用凭证自动查询，不要求手动配置。钉钉填写 Staff ID、Conversation ID、Corp ID。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
 3. 保存。Telegram 验证时注册当前回调并拒绝已有其他 Webhook 的 Bot；Slack 需将展示的回调填入 Events API，并订阅 `app_mention`、`message.im`，至少具有接收对应范围与 `chat:write` 权限。Discord Bot 需启用适用的 Message Content Intent；钉钉选择 Stream；飞书选择长连接 `im.message.receive_v1`。
 4. 点击验证，从允许的发送者/聊天发送展示的 `verify ...`，群聊需 @ Bot。仅固定回复成功发送后标记 passing，不创建 Run、不读 Workspace、不消耗 Credits；窗口十分钟。
 5. 启用后发送两次真实问题，在 Run History 检查来源与连续回合，再验证回复和 Credits。断线、unknown、停用、删除与重启应按执行计划逐个供应商记录证据。发送 history 仅显示投递元数据；重发不调用模型。
+
+飞书自建应用通过 App ID/Secret 获取 `tenant_access_token`，再调用[获取企业信息](https://open.feishu.cn/document/server-docs/tenant-v2/query)取得 `data.tenant.tenant_key`，保存为已认证的企业身份。查询失败或返回空 Tenant Key 时拒绝保存；旧凭证中的手填 Tenant Key 不作为身份依据。接入验证重新查询并匹配已保存的企业身份，接收消息继续同时校验事件 Header 与 Sender 的 Tenant Key。已有配置若曾填错 Tenant Key，需停用后重新保存以取得正确身份，并重新验证收发。此自动查询路径仅有本地协议测试，真实飞书/Lark 账号权限与端到端验收仍待验证。
 
 SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go SDK v3.12.0。Telegram/Slack 使用有界 HTTP Adapter。HTTP 仅允许官方精确域、TLS、无重定向与公共解析地址；钉钉 Stream 限定官方 WSS 网关及公共解析地址，ticket 正确 URL 编码。Discord/飞书连接端点由官方 SDK 认证握手获得，不允许 owner 输入任意服务器地址；尚未取得实际网络恢复验收。
 

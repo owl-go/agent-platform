@@ -24,6 +24,20 @@ const button = (wrapper: ReturnType<typeof widget>, text: string) => wrapper.fin
 const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input");
 vi.mock("qrcode", () => ({ default:{toDataURL:vi.fn(async()=>"data:image/png;base64,cXJjb2Rl")} }));
 describe("Workflow message channels",()=>{
+  it.each(["zh-CN", "en-US"] as const)("connects Feishu with only application credentials in %s",async(locale)=>{
+    const start=vi.fn(async()=>connectedLogin("feishu")), save=vi.fn(async()=>channel), cancel=vi.fn(async()=>{});
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start,saveMessageChannel:save,cancelChannelLogin:cancel},locale);
+    await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
+    expect(wrapper.text()).not.toContain("Tenant Key");
+    await field(wrapper,"App ID").setValue("app");await field(wrapper,"App Secret").setValue("secret");
+    await button(wrapper,locale==="zh-CN" ? "连接账号" : "Connect account").trigger("click");await flushPromises();
+    expect(start).toHaveBeenCalledWith("workflow",expect.objectContaining({provider:"feishu",region:"feishu",method:"credentials",credentials:{app_id:"app",app_secret:"secret"}}),expect.any(AbortSignal));
+    await field(wrapper,locale==="zh-CN" ? "名称" : "Name").setValue("Feishu bot");
+    await field(wrapper,locale==="zh-CN" ? "允许的发送者" : "Allowed senders").setValue("ou_sender");
+    await button(wrapper,locale==="zh-CN" ? "保存" : "Save").trigger("click");await flushPromises();
+    expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({provider:"feishu",region:"feishu",credentials:{},login_id:"login"}),expect.any(AbortSignal));
+    wrapper.unmount();
+  });
   it("guides QQ QR binding into real WebSocket verification without a callback URL", async()=>{
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider:"qqbot",health:"connected",callback_url:""}]}))});
     await flushPromises();
@@ -108,7 +122,7 @@ describe("Workflow message channels",()=>{
 
   it.each([
     ["telegram", "Telegram", ["Bot Token"]], ["discord", "Discord", ["Bot Token"]], ["slack", "Slack", ["Bot Token", "Signing Secret"]],
-    ["dingtalk", "DingTalk", ["Client ID", "Client Secret", "Enterprise Corp ID"]], ["feishu", "Feishu", ["App ID", "App Secret", "Tenant Key"]],
+    ["dingtalk", "DingTalk", ["Client ID", "Client Secret", "Enterprise Corp ID"]], ["feishu", "Feishu", ["App ID", "App Secret"]],
     ["matrix", "Matrix", ["HTTPS endpoint", "Access Token"]], ["whatsapp", "WhatsApp", ["Access Token", "App Secret", "Verify Token", "Phone Number ID", "Business Account ID"]],
     ["signal", "Signal", ["HTTPS endpoint", "Bridge Token", "Account ID"]], ["wecom", "WeCom", ["Bot ID", "Bot Secret"]],
     ["qqbot", "QQ Bot", ["App ID", "App Secret"]],
