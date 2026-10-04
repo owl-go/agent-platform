@@ -349,3 +349,9 @@ Stream 由这对凭证在官方网关认证；机器人 CALLBACK 必须匹配 `r
 Telegram 账号接入表单提供「打开 BotFather 创建 / 管理机器人」，直接链接到官方 `https://t.me/BotFather`，在新标签页打开并设置 `noopener noreferrer`，当前配置草稿保持。表单中英文说明包含首次点击 Start、通过 `/newbot` 创建名称与以 bot 结尾的用户名、复制 Token 回平台连接，以及通过 `/mybots` → API Token 获取已有机器人凭证。原官方接入指南链接继续可用；其他供应商不显示 BotFather。账号认证、受众、Webhook 注册及验证启用行为保持既有契约。依据：[Telegram 官方 BotFather 说明](https://core.telegram.org/bots/features#botfather)。
 
 本轮仅修改前端与行为文档；已执行 `pnpm install`、消息渠道组件 32 项测试、`make web-typecheck` 和 `make web-build`，全部通过。不重跑未受影响的 Go/Runtime 门禁；未进行真实 Telegram 机器人创建与收发验收。
+
+#### Telegram BotFather 入口发布证据
+
+2026-10-04 从 `main_temp` 的 `fb1caa18e537fe90d7cc0833939d890319a80eff`（功能提交 `0f1a37f`）经 `make web-deploy` 发布前端 `telegram-botfather-20261004-1`，集成 tree 与已验证功能 tree 一致；使用生产 OIDC 配置重建。公网 index.html SHA-256 为 `58714db2e27564abb90e11d3da5cd372ebe26226d668b65ebdc1e0f248a58b44`，首页及 Workflow/client/i18n JS 与本地构建逐字节匹配，Bundle 包含 BotFather 官方链接、中英文入口标签以及 `/newbot`、`/mybots` 操作说明。API healthz/readyz、OIDC metadata 和匿名配对 API 401 校验通过。
+
+本次只发布静态前端，API/Worker Image ID 与 healthy 状态在发布前后完全一致，受保护配置 checksum 不变。`web/current -> releases/telegram-botfather-20261004-1`、`web/previous -> releases/dingtalk-auto-corp-20261004-1` 均为相对链接，上一版静态资源保留以支持回滚。现场证据在 `/opt/agent-platform/evidence/telegram-botfather-20261004-1`。未在真实 Telegram 客户端创建机器人或完成收发验收；本次未改变 Go、Migration 或 Runtime 镜像，未重复执行未受影响的后端或 Linux + runsc 门禁。
