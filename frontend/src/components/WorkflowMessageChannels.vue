@@ -187,7 +187,6 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 
 <template>
   <section class="message-channels" :aria-label="t('channels.title')">
-    <p class="muted">{{ t('channels.description') }}</p>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-alert v-if="!loading && !available && !error" :title="t('channels.platformDisabled')" type="info" :closable="false" />
     <div class="channel-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">{{ t('common.refresh') }}</el-button></div>
