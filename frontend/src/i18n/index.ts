@@ -660,21 +660,31 @@ Object.assign((en as unknown as { channels: { setup: Record<string, string> } })
 });
 
 Object.assign((zh as unknown as { channels: Record<string, unknown> }).channels, { loginErrors: {
+  wecom_credentials_invalid: "请填写同一企业微信智能机器人的 Bot ID 和 Bot Secret。",
+  wecom_connection_failed: "无法建立企业微信长连接，请稍后重试；如仍失败，请联系管理员检查服务器网络。",
+  wecom_authentication_timeout: "等待企业微信认证回执超时，请稍后重试。",
+  wecom_authentication_rejected: "企业微信拒绝了机器人认证。请确认机器人已选择 API 模式并保存“使用长连接”，核对该页面的 Bot ID 和 Secret。",
+  wecom_authentication_invalid: "企业微信认证回执异常，请重试；如仍失败，请联系管理员。",
   feishu_credentials_rejected: "飞书拒绝了应用凭证，请检查 App ID、App Secret 和区域。",
   feishu_authentication_unavailable: "无法完成飞书应用认证，请检查应用凭证和区域后重试。",
   feishu_bot_unavailable: "无法获取飞书机器人信息，请确认自建应用已开启机器人，并发布可用版本。",
   feishu_bot_inactive: "飞书机器人尚未启用，请在开发者后台启用机器人并发布应用版本。",
   feishu_tenant_permission_required: "飞书拒绝查询企业信息，请确认获取企业信息权限（tenant:tenant:readonly）已开通且发布生效，并检查应用可用范围。",
   feishu_tenant_unavailable: "飞书企业身份查询失败，请重试；如仍失败，请提供本次请求的错误码。",
-}, providerErrorCode: "（飞书错误码：{code}）" });
+}, wecomErrorCode: "（企业微信错误码：{code}）", providerErrorCode: "（飞书错误码：{code}）" });
 Object.assign((en as unknown as { channels: Record<string, unknown> }).channels, { loginErrors: {
+  wecom_credentials_invalid: "Enter the Bot ID and Bot Secret for the same WeCom smart bot.",
+  wecom_connection_failed: "Unable to connect to WeCom. Retry; if this persists, ask an administrator to check the server network.",
+  wecom_authentication_timeout: "Timed out waiting for WeCom authentication. Retry shortly.",
+  wecom_authentication_rejected: "WeCom rejected bot authentication. Save the bot in API mode with a persistent connection, then check the Bot ID and Secret from that page.",
+  wecom_authentication_invalid: "Unexpected WeCom authentication receipt. Retry; if this persists, contact an administrator.",
   feishu_credentials_rejected: "Feishu rejected the application credentials. Check App ID, App Secret, and region.",
   feishu_authentication_unavailable: "Feishu application authentication failed. Check credentials and region, then retry.",
   feishu_bot_unavailable: "Feishu bot information is unavailable. Enable the bot in your custom app and publish an available version.",
   feishu_bot_inactive: "The Feishu bot is inactive. Enable the bot in the developer console and publish the application version.",
   feishu_tenant_permission_required: "Feishu denied the company lookup. Enable and publish the company information permission (tenant:tenant:readonly), and check the app's availability scope.",
   feishu_tenant_unavailable: "Feishu company identity lookup failed. Retry; if it still fails, provide this request's error code.",
-}, providerErrorCode: "(Feishu error code: {code})" });
+}, wecomErrorCode: "(WeCom error code: {code})", providerErrorCode: "(Feishu error code: {code})" });
 
 Object.assign((zh as unknown as { channels: Record<string, unknown> }).channels, { pairing: {
   generate: "自动识别发送者", connecting: "正在连接飞书机器人…", waiting: "等待配对消息", recognized: "已识别发送者，请确认加入允许名单。", expired: "配对码已过期，请重新生成。", failed: "配对连接失败。请确认应用已开启长连接和接收私聊事件，且当前未启用或验证接入；稍后重试。",

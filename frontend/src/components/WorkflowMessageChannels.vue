@@ -138,10 +138,10 @@ async function connectAccount() {
     await applyLogin(result, generation);
   } catch (failure) {
     if (!disposed && generation === loginGeneration) {
-      const codes = ["feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable"];
-      const knownFailure = form.provider === "feishu" && failure instanceof ApiError && codes.includes(failure.code);
+      const codes = ["feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable", "wecom_credentials_invalid", "wecom_connection_failed", "wecom_authentication_timeout", "wecom_authentication_rejected", "wecom_authentication_invalid"];
+      const knownFailure = failure instanceof ApiError && codes.includes(failure.code) && failure.code.startsWith(`${form.provider}_`);
       error.value = t(knownFailure ? `channels.loginErrors.${failure.code}` : "channels.loginFailed");
-      if (knownFailure && failure.providerCode) error.value += ` ${t("channels.providerErrorCode", { code: failure.providerCode })}`;
+      if (knownFailure && failure.providerCode) error.value += ` ${t(form.provider === "wecom" ? "channels.wecomErrorCode" : "channels.providerErrorCode", { code: failure.providerCode })}`;
     }
   }
   finally { if (generation === loginGeneration) busy.value = false; }

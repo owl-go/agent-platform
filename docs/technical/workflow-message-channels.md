@@ -4,6 +4,12 @@
 
 需求跟踪：[Issue #62](https://github.com/owl-go/agent-platform/issues/62)；实施顺序见 [执行计划](../tickets/workflow-message-channels-execution.md)。
 
+## 企业微信账号认证诊断（2026-10-04）
+
+企业微信智能机器人采用 API 长连接模式，凭据为该机器人页面的 Bot ID 与 Secret。认证请求沿用 `aibot_subscribe` 的 `body.bot_id` / `body.secret`；仅无 `cmd` 且 `headers.req_id` 匹配本次请求的回执可确认认证成功。回调与无关回执不直接作为认证结果；等待总时限最多 15 秒且不超过请求 Deadline，读取最多 32 帧，失败与取消均关闭连接。协议参考：[官方 SDK WebSocket 实现](https://github.com/WecomTeam/aibot-node-sdk/blob/main/src/ws.ts)。
+
+账号失败使用 `ChannelAccountFailure`，固定分类为 `wecom_credentials_invalid`、`wecom_connection_failed`、`wecom_authentication_timeout`、`wecom_authentication_rejected`、`wecom_authentication_invalid`。认证拒绝保留数值 `errcode`，HTTP 公共错误及中英文界面仅返回分类、固定操作提示和数值错误码，不传播 `errmsg`、原始帧、网络错误详情或凭据。未知分类仍退回固定通用错误。上述本地协议测试不证明用户本次真实凭据有效，也不代替真实收发和接入验证。
+
 ## 1. 目标与现状
 
 闭环是「外部聊天问题 → Workflow → Run → 原聊天回答」，同时支持连续追问。渠道属于 Workflow 配置，不是 Agent 调用的 MCP/CLI Connector，也不依赖特定 Runtime Engine 的内置聊天插件。

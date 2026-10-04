@@ -47,7 +47,7 @@ func TestOnlyAuthenticatedProviderCallbackRoutesBypassOIDC(t *testing.T) {
 }
 
 func TestChannelAccountFailureHasSafePublicReason(t *testing.T) {
-	for _, code := range []string{"feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable"} {
+	for _, code := range []string{"feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable", "wecom_credentials_invalid", "wecom_connection_failed", "wecom_authentication_timeout", "wecom_authentication_rejected", "wecom_authentication_invalid"} {
 		t.Run(code, func(t *testing.T) {
 			err := publicError(fmt.Errorf("private-wrapper-detail: %w", &workspaceapplication.ChannelAccountFailure{Code: code, ProviderCode: 99991672, HTTPStatus: 403}))
 			result := kratoserrors.FromError(err)
