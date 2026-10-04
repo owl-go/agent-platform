@@ -343,3 +343,9 @@ Stream 由这对凭证在官方网关认证；机器人 CALLBACK 必须匹配 `r
 服务器备份目录 `/opt/agent-platform/backups/pre-dingtalk-auto-corp-20261004-1` 保存业务/身份数据库、配置和旧指针；checksum 与 restore-list 检查通过，未执行完整恢复演练。候选 API readyz、配置 checksum、切换前后完整 migration ledger 不变检查通过，活动执行数为 0。发布后 API/Worker healthy，Worker readyz 通过；公网 API healthz/readyz、OIDC metadata 和匿名配对 API 401 检查通过，首页及关键 JS 与生产构建逐字节一致。发布脚本确认实际 Bundle 的钉钉字段仅为 Client ID/Secret，并包含中英文自动识别说明；真实钉钉企业绑定和收发仍未验收。现场证据位于 `/opt/agent-platform/evidence/dingtalk-auto-corp-20261004-1`，独立测试数据库已清理。
 
 前端使用相对 symlink `web/current -> releases/dingtalk-auto-corp-20261004-1`，上一版为 `feishu-streaming-replies-20261004-1`。可切回 `feishu-markdown-cards-20261004-1` 后端镜像及上一版前端，数据库无破坏性回滚；本版本新建的钉钉配置不含旧版必需的 `corp_id` 凭证，若回退旧后端，须停用这些配置并通过旧表单重新提供企业 ID，不能宣称新旧钉钉配置完全兼容。
+
+### Telegram 创建机器人入口（2026-10-04）
+
+Telegram 账号接入表单提供「打开 BotFather 创建 / 管理机器人」，直接链接到官方 `https://t.me/BotFather`，在新标签页打开并设置 `noopener noreferrer`，当前配置草稿保持。表单中英文说明包含首次点击 Start、通过 `/newbot` 创建名称与以 bot 结尾的用户名、复制 Token 回平台连接，以及通过 `/mybots` → API Token 获取已有机器人凭证。原官方接入指南链接继续可用；其他供应商不显示 BotFather。账号认证、受众、Webhook 注册及验证启用行为保持既有契约。依据：[Telegram 官方 BotFather 说明](https://core.telegram.org/bots/features#botfather)。
+
+本轮仅修改前端与行为文档；已执行 `pnpm install`、消息渠道组件 32 项测试、`make web-typecheck` 和 `make web-build`，全部通过。不重跑未受影响的 Go/Runtime 门禁；未进行真实 Telegram 机器人创建与收发验收。

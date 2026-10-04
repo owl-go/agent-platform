@@ -229,6 +229,14 @@ describe("Workflow message channels",()=>{
       expect(dialog).not.toBeNull();
       expect(dialog.textContent).toContain(`Configure ${name}`);
       for (const label of labels) expect(dialog.textContent).toContain(label);
+      if (provider === "telegram") {
+        const botFather = dialog.querySelector<HTMLAnchorElement>('a[href="https://t.me/BotFather"]')!;
+        expect(botFather.textContent).toContain("Open BotFather");
+        expect(botFather.target).toBe("_blank");
+        expect(botFather.rel).toContain("noopener");
+        expect(dialog.textContent).toContain("/newbot");
+        expect(dialog.textContent).toContain("/mybots");
+      } else expect(dialog.querySelector('a[href="https://t.me/BotFather"]')).toBeNull();
       if (provider === "dingtalk") expect(dialog.querySelectorAll("input")).toHaveLength(2);
       const secret = dialog.querySelector<HTMLInputElement>('input[type="password"]')!;
       expect(secret).not.toBeNull();
