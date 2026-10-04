@@ -110,6 +110,21 @@ describe("Workflow message channels",()=>{
     expect(button(wrapper,locale==="zh-CN"?"保存":"Save").attributes("disabled")).toBeDefined();
     wrapper.unmount();
   });
+  it.each(["zh-CN", "en-US"] as const)("shows safe WeCom authentication diagnostics in %s", async(locale)=>{
+    const start=vi.fn().mockRejectedValue(Object.assign(new ApiError("validation",422,"wecom_authentication_rejected","request",853000), { message: "private-provider-message" }));
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start},locale);
+    await flushPromises(); await wrapper.get('[data-provider="wecom"]').trigger("click"); await flushPromises();
+    await field(wrapper,"Bot ID").setValue("bot"); await field(wrapper,"Bot Secret").setValue("private-secret");
+    await button(wrapper,locale==="zh-CN"?"连接账号":"Connect account").trigger("click"); await flushPromises();
+    const alert=wrapper.get('[role="alert"]').text();
+    expect(alert).toContain("853000");
+    expect(alert).toContain(locale==="zh-CN" ? "API 模式" : "API mode");
+    expect(alert).toContain(locale==="zh-CN" ? "企业微信错误码" : "WeCom error code");
+    expect(wrapper.text()).not.toContain("private-provider-message");
+    expect(wrapper.text()).not.toContain("private-secret");
+    expect(button(wrapper,locale==="zh-CN"?"保存":"Save").attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
   it.each(["zh-CN", "en-US"] as const)("connects Feishu with only application credentials in %s",async(locale)=>{
     const start=vi.fn(async()=>connectedLogin("feishu")), save=vi.fn(async()=>channel), cancel=vi.fn(async()=>{});
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start,saveMessageChannel:save,cancelChannelLogin:cancel},locale);

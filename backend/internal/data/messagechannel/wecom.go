@@ -3,6 +3,8 @@ package messagechannel
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"time"
 
@@ -29,31 +31,71 @@ func wecomRequest(cmd, key string, body any) []byte {
 	data, _ := json.Marshal(map[string]any{"cmd": cmd, "headers": map[string]string{"req_id": key}, "body": body})
 	return data
 }
+func wecomAccountFailure(code string, providerCode int) error {
+	return &application.ChannelAccountFailure{Code: code, ProviderCode: providerCode}
+}
+func wecomConnectionFailure(ctx context.Context, err error) error {
+	var networkError net.Error
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) || (errors.As(err, &networkError) && networkError.Timeout()) {
+		return wecomAccountFailure("wecom_authentication_timeout", 0)
+	}
+	return wecomAccountFailure("wecom_connection_failed", 0)
+}
 func (a *WeCom) open(ctx context.Context, c application.ChannelCredentials) (channelSocket, error) {
 	if c["bot_id"] == "" || c["bot_secret"] == "" {
-		return nil, providerError("wecom_credentials_invalid")
+		return nil, wecomAccountFailure("wecom_credentials_invalid", 0)
 	}
 	socket, err := a.dial(ctx, "wss://openws.work.weixin.qq.com", http.Header{})
 	if err != nil {
-		return nil, err
+		return nil, wecomConnectionFailure(ctx, err)
 	}
+	authenticated := false
+	defer func() {
+		if !authenticated {
+			socket.Close()
+		}
+	}()
 	socket.SetReadLimit(65536)
 	stop := context.AfterFunc(ctx, func() { socket.Close() })
 	defer stop()
-	_ = socket.SetReadDeadline(time.Now().Add(15 * time.Second))
-	_ = socket.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	deadline := time.Now().Add(15 * time.Second)
+	if parent, ok := ctx.Deadline(); ok && parent.Before(deadline) {
+		deadline = parent
+	}
+	if err := socket.SetReadDeadline(deadline); err != nil {
+		return nil, wecomConnectionFailure(ctx, err)
+	}
+	if err := socket.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return nil, wecomConnectionFailure(ctx, err)
+	}
 	key := uuid.NewString()
 	if err := socket.WriteMessage(websocket.TextMessage, wecomRequest("aibot_subscribe", key, map[string]string{"bot_id": c["bot_id"], "secret": c["bot_secret"]})); err != nil {
-		socket.Close()
-		return nil, providerError("provider_identity_failed")
+		return nil, wecomConnectionFailure(ctx, err)
 	}
-	_, data, err := socket.ReadMessage()
-	var frame wecomFrame
-	if err != nil || json.Unmarshal(data, &frame) != nil || frame.Headers.ID != key || frame.Code == nil || *frame.Code != 0 {
-		socket.Close()
-		return nil, providerError("provider_identity_failed")
+	// Callbacks and unrelated receipts are not authentication results. Bound both
+	// time and frame count while waiting for our own subscription receipt.
+	for attempt := 0; attempt < 32; attempt++ {
+		_, data, err := socket.ReadMessage()
+		if err != nil {
+			return nil, wecomConnectionFailure(ctx, err)
+		}
+		var frame wecomFrame
+		if json.Unmarshal(data, &frame) != nil {
+			return nil, wecomAccountFailure("wecom_authentication_invalid", 0)
+		}
+		if frame.Cmd != "" || frame.Headers.ID != key {
+			continue
+		}
+		if frame.Code == nil {
+			return nil, wecomAccountFailure("wecom_authentication_invalid", 0)
+		}
+		if *frame.Code != 0 {
+			return nil, wecomAccountFailure("wecom_authentication_rejected", *frame.Code)
+		}
+		authenticated = true
+		return socket, nil
 	}
-	return socket, nil
+	return nil, wecomAccountFailure("wecom_authentication_invalid", 0)
 }
 func (a *WeCom) Identify(ctx context.Context, c application.ChannelCredentials, _ string) (application.ChannelIdentity, error) {
 	socket, err := a.open(ctx, c)
