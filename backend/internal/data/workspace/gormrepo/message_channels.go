@@ -472,7 +472,7 @@ func (r *Repository) AdmitChannelMessage(ctx context.Context) (bool, error) {
 			}
 			return err
 		}
-		if err := tx.Model(&runRecord{}).Where("id=?", runID).Updates(map[string]any{"message_channel_id": channel.ID, "message_channel_name": stored.Channel.Name}).Error; err != nil {
+		if err := tx.Model(&runRecord{}).Where("id=?", runID).Updates(map[string]any{"message_channel_id": channel.ID, "message_channel_name": stored.Channel.Name, "message_channel_provider": stored.Channel.Provider}).Error; err != nil {
 			return err
 		}
 

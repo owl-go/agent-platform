@@ -41,6 +41,23 @@ func (a *WeChat) call(ctx context.Context, c application.ChannelCredentials, pat
 func wechatUIN(random []byte) string {
 	return base64.StdEncoding.EncodeToString([]byte(strconv.FormatUint(uint64(binary.BigEndian.Uint32(random)), 10)))
 }
+
+// iLink omits success codes in getupdates and sendmessage responses. An
+// explicitly present code must still be a numeric zero; malformed codes fail.
+func wechatMessageSuccess(result map[string]json.RawMessage) bool {
+	if result == nil {
+		return false
+	}
+	for _, key := range []string{"ret", "errcode"} {
+		if value, ok := result[key]; ok {
+			var code *int64
+			if json.Unmarshal(value, &code) != nil || code == nil || *code != 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
 func (a *WeChat) Identify(ctx context.Context, c application.ChannelCredentials, _ string) (application.ChannelIdentity, error) {
 	if c["bot_token"] == "" || c["account_id"] == "" || c["user_id"] == "" {
 		return application.ChannelIdentity{}, providerError("wechat_credentials_invalid")
@@ -107,7 +124,7 @@ func normalizeWeChat(s application.ChannelStored, e wechatMessage) (domain.Chann
 func (a *WeChat) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink) error {
 	return pollMessages(ctx, s, a.cursor, sink, func(ctx context.Context, cursor string) ([]domain.ChannelMessage, string, error) {
 		result, status, _, err := a.call(ctx, c, "/ilink/bot/getupdates", map[string]any{"get_updates_buf": cursor})
-		if err != nil || status != 200 || result["ret"] == nil || rawNumber(result["ret"]) != 0 || rawNumber(result["errcode"]) != 0 {
+		if err != nil || status != 200 || !wechatMessageSuccess(result) {
 			return nil, "", providerError("provider_receive_failed")
 		}
 		var events []wechatMessage
@@ -129,7 +146,7 @@ func (a *WeChat) Send(ctx context.Context, s application.ChannelStored, c applic
 	}
 	body := map[string]any{"msg": map[string]any{"from_user_id": "", "to_user_id": m.SenderID, "client_id": key, "message_type": 2, "message_state": 2, "context_token": m.Reply["context_token"], "item_list": []any{map[string]any{"type": 1, "text_item": map[string]string{"text": text}}}}}
 	result, status, retry, err := a.call(ctx, c, "/ilink/bot/sendmessage", body)
-	if err != nil || status != 200 || result["ret"] == nil || rawNumber(result["ret"]) != 0 {
+	if err != nil || status != 200 || !wechatMessageSuccess(result) {
 		if status == 200 {
 			status = 400
 		}

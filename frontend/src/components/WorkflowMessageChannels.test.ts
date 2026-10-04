@@ -44,8 +44,28 @@ describe("Workflow message channels",()=>{
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[channel]})),controlMessageChannel:control}); await flushPromises();
     const enable=wrapper.findAll("button").find(b=>b.text()==="启用")!;await enable.trigger("click");expect(control).not.toHaveBeenCalled();expect(wrapper.find(".confirmation").text()).toContain("共享文件");await wrapper.get(".confirm").trigger("click");await flushPromises();expect(control).toHaveBeenCalledWith("workflow","channel",3,"enable",expect.any(AbortSignal));wrapper.unmount();
   });
-  it("warns about duplicate sends for an unconfirmed delivery and never reruns",async()=>{
-    const retry=vi.fn(async()=>{}); const active={...channel,enabled:true}; const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[active]})),listChannelDeliveries:vi.fn(async()=>[{id:"delivery",state:"outcome_unknown",chunk:1,created_at:"2026-10-03T00:00:00Z"} as never]),retryChannelDelivery:retry});await flushPromises();await wrapper.findAll("button").find(b=>b.text()==="回复记录")!.trigger("click");await flushPromises();await wrapper.findAll("button").find(b=>b.text()==="重新发送")!.trigger("click");expect(wrapper.find(".confirmation").text()).toContain("可能产生重复回复");expect(retry).not.toHaveBeenCalled();await wrapper.get(".confirm").trigger("click");await flushPromises();expect(retry).toHaveBeenCalledWith("workflow","channel","delivery",3,true,expect.any(AbortSignal));wrapper.unmount();
+  it("marks a saved provider configured, opens its account and omits reply history", async () => {
+    const listDeliveries = vi.fn(async () => []);
+    const wrapper = widget({ listMessageChannels: vi.fn(async () => ({ available: true, items: [channel] })), listChannelDeliveries: listDeliveries });
+    await flushPromises();
+    expect(wrapper.get('[data-provider="telegram"]').text()).toContain("已配置");
+    expect(wrapper.get('.channel-card').text()).toContain("已配置");
+    expect(wrapper.text()).not.toContain("回复记录");
+    expect(wrapper.find('.channel-deliveries').exists()).toBe(false);
+    expect(listDeliveries).not.toHaveBeenCalled();
+    await wrapper.get('[data-provider="telegram"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain("已保存的账号");
+    expect(wrapper.findAll('input[type="password"]')).toHaveLength(0);
+    wrapper.unmount();
+  });
+  it("uses direct-only verification guidance for WeChat", async () => {
+    const wrapper = widget({ listMessageChannels: vi.fn(async () => ({ available: true, items: [{ ...channel, provider: "wechat", validation_state: "testing", validation_code: "verify example", validation_until: "2026-10-04T08:00:00Z" }] })) });
+    await flushPromises();
+    expect(wrapper.get('.channel-card').text()).toContain("在允许的私聊中向机器人发送");
+    expect(wrapper.get('.channel-card').text()).not.toContain("群聊");
+    expect(wrapper.text()).not.toContain("Invalid Date");
+    wrapper.unmount();
   });
   it("shows all providers but disables their configuration when the service is unavailable",async()=>{
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:false,items:[]}))},"en-US");await flushPromises();expect(wrapper.text()).toContain("The administrator has not enabled");expect(wrapper.findAll(".channel-provider-card")).toHaveLength(13);for(const button of wrapper.findAll(".channel-provider-card"))expect(button.attributes("disabled")).toBeDefined();expect(wrapper.text()).not.toContain("channels.configure");wrapper.unmount();

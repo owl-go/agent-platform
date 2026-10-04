@@ -3841,6 +3841,7 @@ export interface components {
             execution_plan?: components["schemas"]["v1ExecutionPlan"];
             message_channel_id?: string;
             message_channel_name?: string;
+            message_channel_provider?: string;
         };
         v1RuntimeEngineStatus: {
             name?: string;

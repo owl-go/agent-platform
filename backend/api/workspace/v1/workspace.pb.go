@@ -10873,34 +10873,35 @@ func (x *DecideRunExecutionPlanRequest) GetExpectedVersion() int64 {
 }
 
 type Run struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	WorkflowId         string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	WorkflowName       string                 `protobuf:"bytes,3,opt,name=workflow_name,json=workflowName,proto3" json:"workflow_name,omitempty"`
-	Trigger            string                 `protobuf:"bytes,4,opt,name=trigger,proto3" json:"trigger,omitempty"`
-	State              string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
-	TextInput          *string                `protobuf:"bytes,6,opt,name=text_input,json=textInput,proto3,oneof" json:"text_input,omitempty"`
-	JsonInput          *structpb.Struct       `protobuf:"bytes,7,opt,name=json_input,json=jsonInput,proto3,oneof" json:"json_input,omitempty"`
-	FinalText          *string                `protobuf:"bytes,8,opt,name=final_text,json=finalText,proto3,oneof" json:"final_text,omitempty"`
-	FinalJson          *structpb.Struct       `protobuf:"bytes,9,opt,name=final_json,json=finalJson,proto3,oneof" json:"final_json,omitempty"`
-	Error              *string                `protobuf:"bytes,10,opt,name=error,proto3,oneof" json:"error,omitempty"`
-	QueuedAt           *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=queued_at,json=queuedAt,proto3" json:"queued_at,omitempty"`
-	StartedAt          *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	EndedAt            *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=ended_at,json=endedAt,proto3,oneof" json:"ended_at,omitempty"`
-	ElapsedMs          int64                  `protobuf:"varint,14,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`
-	WorkflowSnapshot   *structpb.Struct       `protobuf:"bytes,15,opt,name=workflow_snapshot,json=workflowSnapshot,proto3,oneof" json:"workflow_snapshot,omitempty"`
-	ConversationId     string                 `protobuf:"bytes,16,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
-	TurnNumber         int32                  `protobuf:"varint,17,opt,name=turn_number,json=turnNumber,proto3" json:"turn_number,omitempty"`
-	Attachments        []*Attachment          `protobuf:"bytes,18,rep,name=attachments,proto3" json:"attachments,omitempty"`
-	ExpertStages       []*ExpertStage         `protobuf:"bytes,19,rep,name=expert_stages,json=expertStages,proto3" json:"expert_stages,omitempty"`
-	CreditConsumption  *CreditConsumption     `protobuf:"bytes,20,opt,name=credit_consumption,json=creditConsumption,proto3,oneof" json:"credit_consumption,omitempty"`
-	QueuePosition      int32                  `protobuf:"varint,21,opt,name=queue_position,json=queuePosition,proto3" json:"queue_position,omitempty"`
-	Evidence           []*Evidence            `protobuf:"bytes,22,rep,name=evidence,proto3" json:"evidence,omitempty"`
-	ExecutionPlan      *ExecutionPlan         `protobuf:"bytes,23,opt,name=execution_plan,json=executionPlan,proto3,oneof" json:"execution_plan,omitempty"`
-	MessageChannelId   string                 `protobuf:"bytes,24,opt,name=message_channel_id,json=messageChannelId,proto3" json:"message_channel_id,omitempty"`
-	MessageChannelName string                 `protobuf:"bytes,25,opt,name=message_channel_name,json=messageChannelName,proto3" json:"message_channel_name,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorkflowId             string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	WorkflowName           string                 `protobuf:"bytes,3,opt,name=workflow_name,json=workflowName,proto3" json:"workflow_name,omitempty"`
+	Trigger                string                 `protobuf:"bytes,4,opt,name=trigger,proto3" json:"trigger,omitempty"`
+	State                  string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	TextInput              *string                `protobuf:"bytes,6,opt,name=text_input,json=textInput,proto3,oneof" json:"text_input,omitempty"`
+	JsonInput              *structpb.Struct       `protobuf:"bytes,7,opt,name=json_input,json=jsonInput,proto3,oneof" json:"json_input,omitempty"`
+	FinalText              *string                `protobuf:"bytes,8,opt,name=final_text,json=finalText,proto3,oneof" json:"final_text,omitempty"`
+	FinalJson              *structpb.Struct       `protobuf:"bytes,9,opt,name=final_json,json=finalJson,proto3,oneof" json:"final_json,omitempty"`
+	Error                  *string                `protobuf:"bytes,10,opt,name=error,proto3,oneof" json:"error,omitempty"`
+	QueuedAt               *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=queued_at,json=queuedAt,proto3" json:"queued_at,omitempty"`
+	StartedAt              *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	EndedAt                *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=ended_at,json=endedAt,proto3,oneof" json:"ended_at,omitempty"`
+	ElapsedMs              int64                  `protobuf:"varint,14,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`
+	WorkflowSnapshot       *structpb.Struct       `protobuf:"bytes,15,opt,name=workflow_snapshot,json=workflowSnapshot,proto3,oneof" json:"workflow_snapshot,omitempty"`
+	ConversationId         string                 `protobuf:"bytes,16,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
+	TurnNumber             int32                  `protobuf:"varint,17,opt,name=turn_number,json=turnNumber,proto3" json:"turn_number,omitempty"`
+	Attachments            []*Attachment          `protobuf:"bytes,18,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	ExpertStages           []*ExpertStage         `protobuf:"bytes,19,rep,name=expert_stages,json=expertStages,proto3" json:"expert_stages,omitempty"`
+	CreditConsumption      *CreditConsumption     `protobuf:"bytes,20,opt,name=credit_consumption,json=creditConsumption,proto3,oneof" json:"credit_consumption,omitempty"`
+	QueuePosition          int32                  `protobuf:"varint,21,opt,name=queue_position,json=queuePosition,proto3" json:"queue_position,omitempty"`
+	Evidence               []*Evidence            `protobuf:"bytes,22,rep,name=evidence,proto3" json:"evidence,omitempty"`
+	ExecutionPlan          *ExecutionPlan         `protobuf:"bytes,23,opt,name=execution_plan,json=executionPlan,proto3,oneof" json:"execution_plan,omitempty"`
+	MessageChannelId       string                 `protobuf:"bytes,24,opt,name=message_channel_id,json=messageChannelId,proto3" json:"message_channel_id,omitempty"`
+	MessageChannelName     string                 `protobuf:"bytes,25,opt,name=message_channel_name,json=messageChannelName,proto3" json:"message_channel_name,omitempty"`
+	MessageChannelProvider string                 `protobuf:"bytes,26,opt,name=message_channel_provider,json=messageChannelProvider,proto3" json:"message_channel_provider,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Run) Reset() {
@@ -11104,6 +11105,13 @@ func (x *Run) GetMessageChannelId() string {
 func (x *Run) GetMessageChannelName() string {
 	if x != nil {
 		return x.MessageChannelName
+	}
+	return ""
+}
+
+func (x *Run) GetMessageChannelProvider() string {
+	if x != nil {
+		return x.MessageChannelProvider
 	}
 	return ""
 }
@@ -24077,8 +24085,7 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"workflowId\x12\x15\n" +
 	"\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x1a\n" +
 	"\bdecision\x18\x03 \x01(\tR\bdecision\x12)\n" +
-	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"\xc8\n" +
-	"\n" +
+	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"\x82\v\n" +
 	"\x03Run\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -24113,7 +24120,8 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\bevidence\x18\x16 \x03(\v2\x16.workspace.v1.EvidenceR\bevidence\x12G\n" +
 	"\x0eexecution_plan\x18\x17 \x01(\v2\x1b.workspace.v1.ExecutionPlanH\tR\rexecutionPlan\x88\x01\x01\x12,\n" +
 	"\x12message_channel_id\x18\x18 \x01(\tR\x10messageChannelId\x120\n" +
-	"\x14message_channel_name\x18\x19 \x01(\tR\x12messageChannelNameB\r\n" +
+	"\x14message_channel_name\x18\x19 \x01(\tR\x12messageChannelName\x128\n" +
+	"\x18message_channel_provider\x18\x1a \x01(\tR\x16messageChannelProviderB\r\n" +
 	"\v_text_inputB\r\n" +
 	"\v_json_inputB\r\n" +
 	"\v_final_textB\r\n" +

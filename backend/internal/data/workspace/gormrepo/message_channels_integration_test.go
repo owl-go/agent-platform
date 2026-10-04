@@ -390,8 +390,31 @@ func TestChannelUsesExistingWorkerAndPriorAnswers(t *testing.T) {
 	var rows []runRecord
 	f.db.Find(&rows)
 	for _, run := range rows {
-		if run.MessageChannelID == nil || *run.MessageChannelID != f.channel.ID || run.MessageChannelName != "Test bot" || run.State != "succeeded" {
+		if run.MessageChannelID == nil || *run.MessageChannelID != f.channel.ID || run.MessageChannelName != "Test bot" || run.MessageChannelProvider != "telegram" || runDomain(run).MessageChannelProvider != "telegram" || run.State != "succeeded" {
 			t.Fatal("source or terminal missing")
+		}
+	}
+	f.stored(t)
+	f.channel, err = f.app.Control(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, "disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	renamed := f.channel
+	renamed.Name = "Renamed bot"
+	f.channel, err = f.app.Save(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, renamed, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.app.Control(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, "delete"); err != nil {
+		t.Fatal(err)
+	}
+	history, err := f.repo.ListRuns(ctx, f.owner, f.workflow)
+	if err != nil || len(history) != 3 {
+		t.Fatalf("history after deletion: count=%d error=%v", len(history), err)
+	}
+	for _, run := range history {
+		if run.MessageChannelName != "Test bot" || run.MessageChannelProvider != "telegram" || run.Trigger != "message_channel" {
+			t.Fatalf("channel edit rewrote Run origin: %#v", run)
 		}
 	}
 }
