@@ -181,7 +181,11 @@ func (a *DingTalk) Send(ctx context.Context, _ application.ChannelStored, _ appl
 	if !validDingTalkReply(target) {
 		return application.ChannelSendResult{State: "failed", Code: "provider_reply_invalid"}
 	}
-	result, status, retry, err := a.request(ctx, http.MethodPost, target, "", map[string]any{"msgtype": "text", "text": map[string]string{"content": text}, "at": map[string]any{"atUserIds": []string{m.SenderID}, "isAtAll": false}})
+	result, status, retry, err := a.request(ctx, http.MethodPost, target, "", map[string]any{
+		"msgtype":  "markdown",
+		"markdown": map[string]string{"title": "回复", "text": safeCardMarkdown(text)},
+		"at":       map[string]any{"atUserIds": []string{m.SenderID}, "isAtAll": false},
+	})
 	if err != nil || status != 200 || result["errcode"] == nil || rawNumber(result["errcode"]) != 0 {
 		if status == 200 {
 			status = 400
