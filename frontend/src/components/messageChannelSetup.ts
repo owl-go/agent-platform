@@ -20,7 +20,7 @@ export const channelSetups: Record<string, ChannelSetup> = {
   signal: { fields: ["endpoint", "bridge_token", "account_id"], audience: "both", receive: "connection", docs: "https://github.com/AsamK/signal-cli", sender: "Signal ACI", group: "Signal Group ID" },
   wecom: { fields: ["bot_id", "bot_secret"], audience: "both", receive: "connection", docs: "https://cloud.tencent.com/document/product/1831/137051", sender: "User ID", group: "Chat ID" },
   wechat: { fields: [], qr: true, audience: "direct", receive: "polling", docs: "https://github.com/Tencent/openclaw-weixin/blob/main/docs/protocol.md", sender: "iLink User ID" },
-  qqbot: { fields: ["app_id", "app_secret"], qr: true, audience: "both", receive: "webhook", docs: "https://bot.q.qq.com/wiki/develop/api-v2/", sender: "user_openid / member_openid", group: "group_openid" },
+  qqbot: { fields: ["app_id", "app_secret"], qr: true, audience: "both", receive: "connection", docs: "https://bot.q.qq.com/wiki/develop/api-v2/", sender: "user_openid / member_openid", group: "group_openid" },
   bluebubbles: { fields: ["endpoint", "password"], audience: "direct", receive: "polling", docs: "https://docs.bluebubbles.app/server/developer-guides/rest-api-and-webhooks", sender: "iMessage handle address" },
   yuanbao: { fields: ["app_key", "app_secret"], audience: "both", receive: "connection", docs: "https://github.com/Tencent/yuanbao-openclaw-plugin", sender: "from_account", group: "group_code" },
 };

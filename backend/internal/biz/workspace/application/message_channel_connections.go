@@ -91,7 +91,7 @@ func (m *ChannelConnections) ProcessNext(ctx context.Context) (bool, error) {
 			}
 			if err == nil {
 				_ = m.channels.repository.SetChannelHealth(child, stored.Channel.ID, stored.Channel.ConfigVersion, "connecting", "")
-				err = receiver.Connect(child, stored, c, func(receiveCtx context.Context, message domain.ChannelMessage) error {
+				sink := func(receiveCtx context.Context, message domain.ChannelMessage) error {
 					if child.Err() != nil {
 						return child.Err()
 					}
@@ -99,7 +99,20 @@ func (m *ChannelConnections) ProcessNext(ctx context.Context) (bool, error) {
 						return err
 					}
 					return m.channels.repository.SetChannelHealth(receiveCtx, stored.Channel.ID, stored.Channel.ConfigVersion, "connected", "")
-				})
+				}
+				if observed, ok := receiver.(ChannelStreamHealthReceiver); ok {
+					err = observed.ConnectWithHealth(child, stored, c, sink, func(healthCtx context.Context, state string) error {
+						if child.Err() != nil {
+							return child.Err()
+						}
+						if state != "connecting" && state != "connected" {
+							return domain.ErrInvalid
+						}
+						return m.channels.repository.SetChannelHealth(healthCtx, stored.Channel.ID, stored.Channel.ConfigVersion, state, "")
+					})
+				} else {
+					err = receiver.Connect(child, stored, c, sink)
+				}
 			}
 			if child.Err() == nil {
 				_ = m.channels.repository.SetChannelHealth(child, stored.Channel.ID, stored.Channel.ConfigVersion, "disconnected", "provider_connection_failed")
