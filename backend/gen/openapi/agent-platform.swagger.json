@@ -5067,6 +5067,44 @@
         ]
       }
     },
+    "/api/v1/workflows/{workflow_id}/channel-sender-pairings": {
+      "post": {
+        "operationId": "AgentWorkspaceService_StartChannelSenderPairing",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ChannelLogin"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceStartChannelSenderPairingBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/workflows/{workflow_id}/git-source": {
       "put": {
         "operationId": "AgentWorkspaceService_ConfigureWorkflowGitSource",
@@ -6351,6 +6389,21 @@
         }
       }
     },
+    "AgentWorkspaceServiceStartChannelSenderPairingBody": {
+      "type": "object",
+      "properties": {
+        "login_id": {
+          "type": "string"
+        },
+        "channel_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
     "AgentWorkspaceServiceStopImageGenerationBody": {
       "type": "object"
     },
@@ -7105,6 +7158,16 @@
           "type": "string"
         },
         "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pairing_code": {
+          "type": "string"
+        },
+        "pairing_status": {
+          "type": "string"
+        },
+        "pairing_expires_at": {
           "type": "string",
           "format": "date-time"
         }

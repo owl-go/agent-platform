@@ -134,19 +134,47 @@ func (silentLogger) Info(context.Context, ...interface{})  {}
 func (silentLogger) Warn(context.Context, ...interface{})  {}
 func (silentLogger) Error(context.Context, ...interface{}) {}
 func (a *Feishu) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink) error {
+	return a.ConnectWithHealth(ctx, s, c, receive, nil)
+}
+func (a *Feishu) ConnectWithHealth(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, receive application.ChannelMessageSink, health application.ChannelConnectionHealthSink) error {
+	connectionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	failures := make(chan error, 1)
+	reportFailure := func(err error) {
+		if err != nil {
+			select {
+			case failures <- err:
+			default:
+			}
+			cancel()
+		}
+	}
+	setHealth := func(state string) {
+		if health != nil && connectionCtx.Err() == nil {
+			reportFailure(health(connectionCtx, state))
+		}
+	}
 	handler := dispatcher.NewEventDispatcher("", "").OnP2MessageReceiveV1(func(callbackCtx context.Context, e *larkim.P2MessageReceiveV1) error {
 		if e != nil && e.EventV2Base != nil && e.EventV2Base.Header != nil && e.EventV2Base.Header.AppID != c["app_id"] {
 			return nil
 		}
 		if m, ok := normalizeFeishu(s, e); ok {
-			return receive(callbackCtx, m)
+			err := receive(callbackCtx, m)
+			reportFailure(err)
+			return err
 		}
 		return nil
 	})
 	handler.Config.Logger = silentLogger{}
-	ws := larkws.NewClient(c["app_id"], c["app_secret"], larkws.WithDomain(feishuBase(s.Channel.Region)), larkws.WithLogger(silentLogger{}), larkws.WithEventHandler(handler))
+	ws := larkws.NewClient(c["app_id"], c["app_secret"], larkws.WithDomain(feishuBase(s.Channel.Region)), larkws.WithLogger(silentLogger{}), larkws.WithEventHandler(handler), larkws.WithOnReady(func() { setHealth("connected") }), larkws.WithOnReconnected(func() { setHealth("connected") }), larkws.WithOnDisconnected(func() { setHealth("connecting") }))
 	defer ws.Close()
-	if err := ws.Start(ctx); err != nil && ctx.Err() == nil {
+	err := ws.Start(connectionCtx)
+	select {
+	case failure := <-failures:
+		return failure
+	default:
+	}
+	if err != nil && ctx.Err() == nil {
 		return providerError("provider_connection_failed")
 	}
 	return ctx.Err()

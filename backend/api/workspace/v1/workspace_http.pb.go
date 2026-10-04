@@ -166,6 +166,7 @@ const OperationAgentWorkspaceServiceSetUserEnabled = "/workspace.v1.AgentWorkspa
 const OperationAgentWorkspaceServiceSetUserRoles = "/workspace.v1.AgentWorkspaceService/SetUserRoles"
 const OperationAgentWorkspaceServiceStageConnectorPackage = "/workspace.v1.AgentWorkspaceService/StageConnectorPackage"
 const OperationAgentWorkspaceServiceStartChannelLogin = "/workspace.v1.AgentWorkspaceService/StartChannelLogin"
+const OperationAgentWorkspaceServiceStartChannelSenderPairing = "/workspace.v1.AgentWorkspaceService/StartChannelSenderPairing"
 const OperationAgentWorkspaceServiceStopImageGeneration = "/workspace.v1.AgentWorkspaceService/StopImageGeneration"
 const OperationAgentWorkspaceServiceSubmitImageGeneration = "/workspace.v1.AgentWorkspaceService/SubmitImageGeneration"
 const OperationAgentWorkspaceServiceSyncIdentityGroups = "/workspace.v1.AgentWorkspaceService/SyncIdentityGroups"
@@ -339,6 +340,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	SetUserRoles(context.Context, *SetUserRolesRequest) (*UserAccount, error)
 	StageConnectorPackage(context.Context, *StageConnectorPackageRequest) (*ConnectorRevision, error)
 	StartChannelLogin(context.Context, *StartChannelLoginRequest) (*ChannelLogin, error)
+	StartChannelSenderPairing(context.Context, *StartChannelSenderPairingRequest) (*ChannelLogin, error)
 	StopImageGeneration(context.Context, *StopImageGenerationRequest) (*ImageGenerationRecord, error)
 	SubmitImageGeneration(context.Context, *SubmitImageGenerationRequest) (*ImageGenerationRecord, error)
 	SyncIdentityGroups(context.Context, *SyncIdentityGroupsRequest) (*ListIdentityGroupsResponse, error)
@@ -430,6 +432,7 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/channel-logins", _AgentWorkspaceService_StartChannelLogin0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}/poll", _AgentWorkspaceService_PollChannelLogin0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/workflows/{workflow_id}/channel-logins/{login_id}", _AgentWorkspaceService_CancelChannelLogin0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/workflows/{workflow_id}/channel-sender-pairings", _AgentWorkspaceService_StartChannelSenderPairing0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/actions", _AgentWorkspaceService_ControlMessageChannel0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries", _AgentWorkspaceService_ListChannelDeliveries0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/workflows/{workflow_id}/message-channels/{channel_id}/deliveries/{delivery_id}/retry", _AgentWorkspaceService_RetryChannelDelivery0_HTTP_Handler(srv))
@@ -1874,6 +1877,28 @@ func _AgentWorkspaceService_CancelChannelLogin0_HTTP_Handler(srv AgentWorkspaceS
 			return err
 		}
 		reply := out.(*DeleteResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_StartChannelSenderPairing0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in StartChannelSenderPairingRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceStartChannelSenderPairing)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.StartChannelSenderPairing(ctx, req.(*StartChannelSenderPairingRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ChannelLogin)
 		return ctx.Result(200, reply)
 	}
 }
@@ -4264,6 +4289,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	SetUserRoles(ctx context.Context, req *SetUserRolesRequest, opts ...http.CallOption) (rsp *UserAccount, err error)
 	StageConnectorPackage(ctx context.Context, req *StageConnectorPackageRequest, opts ...http.CallOption) (rsp *ConnectorRevision, err error)
 	StartChannelLogin(ctx context.Context, req *StartChannelLoginRequest, opts ...http.CallOption) (rsp *ChannelLogin, err error)
+	StartChannelSenderPairing(ctx context.Context, req *StartChannelSenderPairingRequest, opts ...http.CallOption) (rsp *ChannelLogin, err error)
 	StopImageGeneration(ctx context.Context, req *StopImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	SubmitImageGeneration(ctx context.Context, req *SubmitImageGenerationRequest, opts ...http.CallOption) (rsp *ImageGenerationRecord, err error)
 	SyncIdentityGroups(ctx context.Context, req *SyncIdentityGroupsRequest, opts ...http.CallOption) (rsp *ListIdentityGroupsResponse, err error)
@@ -6745,6 +6771,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) StartChannelLogin(ctx context.Cont
 		http.Accept("application/protojson"),
 		http.ContentType("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceStartChannelLogin),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) StartChannelSenderPairing(ctx context.Context, in *StartChannelSenderPairingRequest, opts ...http.CallOption) (*ChannelLogin, error) {
+	var out ChannelLogin
+	pattern := "/api/v1/workflows/{workflow_id}/channel-sender-pairings"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceStartChannelSenderPairing),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)

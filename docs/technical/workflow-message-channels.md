@@ -99,6 +99,10 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 
 微信官方 QR `confirmed` 响应确认 Bot 身份；`getconfig` 是会话配置接口，真实扫码后也可能返回 `ret=-4`，不能把它作为 QR 授权的附加身份门禁。Adapter 仅在可信 HTTPS QR 返回成功、完整凭证且 baseurl 合法时写入 `_platform_wechat_qr_account_id`，与临时凭证及保存凭证一起加密。Account Identify 对该服务端证明校验 account_id 和可信 baseurl，保存、保留凭证编辑及收发 Configure 使用同一身份，不调用 getconfig。所有原始账号接入和渠道保存入口拒绝客户端提交 `_platform_` 命名空间；只有 owner/Workflow/login 绑定的服务端密文可以携带它。旧有无证明凭证仍需原身份校验。保存仍关闭且未验证，真实入站 `to_user_id` 与已保存账号匹配、允许的测试消息与回复通过后才可启用。
 
+飞书/Lark 可在账号连接后通过一次性消息识别 Sender Open ID。`POST .../channel-sender-pairings` 接受当前 `login_id`，或 owner 的已停用 `channel_id` 与当前 `version`（由服务端解密并重新认证保存的凭证）；两种输入互斥。临时配对复用 owner/Workflow/配置绑定的加密 ChannelLogin，不建立新持久化实体。使用 128 位随机码，完整消息为 `pair <32 位十六进制随机码>`；最长两分钟且不超过五分钟登录期限。只有飞书官方 SDK 的已认证连接建立后才显示消息；断线时隐藏、重连后恢复，到期或终态清除。状态为 connecting/waiting/recognized/expired/failed。一个应用 BindingID 同时最多一个临时配对连接，全局最多 16 个，沿用每 owner 四个临时登录上限。启用或正在接入验证的同一应用拒绝配对；API 开启验证/启用时同样检查配对占用。只读接收占用查询不获取 Worker claim lock，也不读取凭证。
+
+配对连接只接收当前 App ID 的 `im.message.receive_v1`，沿用事件 Header 与 Sender 双重 Tenant Key 检查；只接受有效、近期、私聊 user 文本及完整配对消息。群聊、Bot、错误码、过期消息、重复消息和其他应用/企业不产生候选。第一个匹配事件原子消耗配对码、停止连接并返回建议 Open ID。owner 点击“加入允许的发送者”后才修改表单，保存才持久化 Audience；保存重新认证并匹配登录时的账号、企业与 BindingID。配对不会调用常规 Receive/Inbox，不发送消息，不创建 Run，也不消耗 Credits。取消、关闭/离开界面、登录到期、保存和 API 关闭均停止临时连接；请求取消和配对异常释放容量。API 重启及多副本限制与现有临时登录相同。未配置消息事件、长连接或私聊权限时需在飞书开发者后台补齐并发布；手工 Open ID 输入继续可用。真实飞书/Lark 配对仍需发布后人工验收。
+
 前端统一将 API Timestamp 的 `_at` 字段及渠道 `validation_until` 转换为 ISO 时间，验证窗口截止时间必须显示为有效本地时间。前端为 13 个渠道分别声明凭证字段、消息接收方式、身份标签和接入指南。WeChat 默认只显示扫码；QQ 默认扫码，可切换已有应用凭证。账号确认后才配置受众：微信/WhatsApp/BlueBubbles 只显示发送者，Matrix 明确要求 Room ID；其他渠道保留私聊与群/频道范围。微信和 QQ 扫码返回的稳定 User ID 仅建议为发送者，owner 可编辑。已有配置修改受众可保留凭证，重新授权必须重新完成真实 Identify。保存始终关闭、未验证，启用仍要求真实测试消息与回复证据；未实现的 OAuth、Socket Mode、个人 WhatsApp 扫码或 Signal 设备绑定不显示为平台操作。
 
 ## 4. 准入、连续性与隔离
@@ -206,7 +210,7 @@ message_channels:
 省略数值或设置为 0 使用上述默认值。连接数上限 1000；backlog 1..10000、sender/minute 1..100、正文 128..10000 bytes、次数 1..32、发送间隔 3s..1m。一个 Workflow 最多十六个未删除配置，能够同时容纳全部 13 种渠道；相同接收身份（包括关闭配置）只允许一条绑定。飞书通过 region+App ID、钉钉通过 Client ID 约束，不允许修改自报企业 ID 绕过重复绑定。
 
 1. 在供应商控制台建立应用机器人、启用正确事件与权限。平台不支持仅有发送能力的群 Webhook。
-2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书选择飞书/Lark，只需填写 App ID、App Secret，以及允许的发送者 Open ID 和可选群 Chat ID；Tenant Key 由平台通过应用凭证自动查询，不要求手动配置。钉钉填写 Staff ID、Conversation ID、Corp ID。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
+2. Workflow Settings → 消息渠道直接展示全部 13 个渠道入口，无账号时也可选择具体渠道，打开该渠道的凭证与 Audience 表单；仅浏览入口不会创建配置。填写完整凭证与稳定 Sender ID；需要群问答时同时填写群/频道 ID。飞书选择飞书/Lark，只需填写 App ID、App Secret，发送者可通过一次性私聊配对识别 Open ID 并确认加入，也可手动填写，群 Chat ID 可选；Tenant Key 由平台通过应用凭证自动查询，不要求手动配置。钉钉填写 Staff ID、Conversation ID、Corp ID。已保存的账号配置在入口下方单独管理，新增入口可继续添加同一供应商的其他账号。配置不带模型执行凭证到外部。
 3. 保存。Telegram 验证时注册当前回调并拒绝已有其他 Webhook 的 Bot；Slack 需将展示的回调填入 Events API，并订阅 `app_mention`、`message.im`，至少具有接收对应范围与 `chat:write` 权限。Discord Bot 需启用适用的 Message Content Intent；钉钉选择 Stream；飞书选择长连接 `im.message.receive_v1`。
 4. 点击验证，从允许的发送者/聊天发送展示的 `verify ...`，群聊需 @ Bot。仅固定回复成功发送后标记 passing，不创建 Run、不读 Workspace、不消耗 Credits；窗口十分钟。
 5. 启用后发送两次真实问题，在 Run History 检查来源与连续回合，再验证回复和 Credits。断线、unknown、停用、删除与重启应按执行计划逐个供应商记录证据。发送 history 仅显示投递元数据；重发不调用模型。

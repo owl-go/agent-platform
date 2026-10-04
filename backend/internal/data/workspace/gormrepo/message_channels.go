@@ -742,6 +742,12 @@ func (r *Repository) SetChannelHealth(ctx context.Context, id string, version in
 	return r.db.WithContext(ctx).Model(&channelRecord{}).Where("id=? AND config_version=? AND deleted_at IS NULL", id, version).Updates(map[string]any{"health": health, "error_code": code}).Error
 }
 
+func (r *Repository) ChannelAccountReceiving(ctx context.Context, provider, binding string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&channelRecord{}).Where("deleted_at IS NULL AND provider=? AND binding_id=? AND (enabled OR (validation_state='testing' AND validation_until>now()))", provider, binding).Count(&count).Error
+	return count > 0, err
+}
+
 func enqueueChannelWaiting(tx *gorm.DB, runID string) error {
 	var inbox channelInboxRecord
 	if err := tx.Where("run_id=?", runID).Take(&inbox).Error; errors.Is(err, gorm.ErrRecordNotFound) {
