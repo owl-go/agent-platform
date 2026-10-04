@@ -4,6 +4,13 @@ import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 describe("Agent Workspace API client", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("normalizes the message channel validation deadline before rendering", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ available: true, items: [{ id: "channel", provider: "wechat", version: 1, config_version: 1, validation_until: { seconds: "1791032700", nanos: 120000000 }, audience: {} }] }), { status: 200 })));
+    const { items } = await createPlatformApi(() => "token").listMessageChannels("workflow");
+    expect(items[0]?.validation_until).toBe(new Date(1791032700120).toISOString());
+    expect(new Date(items[0]!.validation_until!).toLocaleTimeString()).not.toBe("Invalid Date");
+  });
+
   it("loads the metadata-only Home overview and normalizes omitted collections", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ recent_tasks: [{ kind: "session", id: "session-1", title: "Report", state: "completed", updated_at: "2026-09-28T00:00:00Z" }] }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);

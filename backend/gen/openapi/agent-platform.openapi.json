@@ -12511,6 +12511,9 @@
           },
           "message_channel_name": {
             "type": "string"
+          },
+          "message_channel_provider": {
+            "type": "string"
           }
         }
       },

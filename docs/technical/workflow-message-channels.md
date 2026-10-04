@@ -99,7 +99,7 @@ Signal 与 BlueBubbles 使用专用外部 Bridge；平台只连接受信 Bridge 
 
 微信官方 QR `confirmed` 响应确认 Bot 身份；`getconfig` 是会话配置接口，真实扫码后也可能返回 `ret=-4`，不能把它作为 QR 授权的附加身份门禁。Adapter 仅在可信 HTTPS QR 返回成功、完整凭证且 baseurl 合法时写入 `_platform_wechat_qr_account_id`，与临时凭证及保存凭证一起加密。Account Identify 对该服务端证明校验 account_id 和可信 baseurl，保存、保留凭证编辑及收发 Configure 使用同一身份，不调用 getconfig。所有原始账号接入和渠道保存入口拒绝客户端提交 `_platform_` 命名空间；只有 owner/Workflow/login 绑定的服务端密文可以携带它。旧有无证明凭证仍需原身份校验。保存仍关闭且未验证，真实入站 `to_user_id` 与已保存账号匹配、允许的测试消息与回复通过后才可启用。
 
-前端为 13 个渠道分别声明凭证字段、消息接收方式、身份标签和接入指南。WeChat 默认只显示扫码；QQ 默认扫码，可切换已有应用凭证。账号确认后才配置受众：微信/WhatsApp/BlueBubbles 只显示发送者，Matrix 明确要求 Room ID；其他渠道保留私聊与群/频道范围。微信和 QQ 扫码返回的稳定 User ID 仅建议为发送者，owner 可编辑。已有配置修改受众可保留凭证，重新授权必须重新完成真实 Identify。保存始终关闭、未验证，启用仍要求真实测试消息与回复证据；未实现的 OAuth、Socket Mode、个人 WhatsApp 扫码或 Signal 设备绑定不显示为平台操作。
+前端统一将 API Timestamp 的 `_at` 字段及渠道 `validation_until` 转换为 ISO 时间，验证窗口截止时间必须显示为有效本地时间。前端为 13 个渠道分别声明凭证字段、消息接收方式、身份标签和接入指南。WeChat 默认只显示扫码；QQ 默认扫码，可切换已有应用凭证。账号确认后才配置受众：微信/WhatsApp/BlueBubbles 只显示发送者，Matrix 明确要求 Room ID；其他渠道保留私聊与群/频道范围。微信和 QQ 扫码返回的稳定 User ID 仅建议为发送者，owner 可编辑。已有配置修改受众可保留凭证，重新授权必须重新完成真实 Identify。保存始终关闭、未验证，启用仍要求真实测试消息与回复证据；未实现的 OAuth、Socket Mode、个人 WhatsApp 扫码或 Signal 设备绑定不显示为平台操作。
 
 ## 4. 准入、连续性与隔离
 
@@ -228,7 +228,7 @@ SDK 固定为 discordgo v0.29.0、DingTalk frame/model v0.9.1、飞书官方 Go 
 | WhatsApp | access_token、App Secret、Verify Token、Phone Number ID、WABA ID、明确 Graph API version；查询 phone 与 WABA 归属。GET challenge 核验 verify token，POST 以原始 body HMAC-SHA256 验签并匹配 WABA/phone。只处理用户发起的文本私聊，在原消息 24 小时窗口内回复。没有模板、群聊、主动广播或自动人工升级；部署前须核实实际账号资格、地区、权限与现行平台政策，本轮不作许可结论。 |
 | Signal | 管理员批准的专用 signal-cli HTTP daemon，要求多账号模式及认证 HTTPS reverse proxy；Bridge Token 由代理验证，原生 daemon 无平台 Token 验证。`listAccounts` 取得 ACI，在连接建立和发送前重查身份，JSON-RPC 原账号发送；SSE 接收、Last-Event-ID 提交后恢复。按 ACI 隔离，原生 mentions 识别群 @；忽略 sync、view-once、disappearing 消息。上游 SSE 缓存为有限内存记录（当前文档 1000 个），桥接重启或超出缓存的离线间隔不能保证补收。平台不部署 Bridge，也不管理其账号密钥。 |
 | WeCom | 企业微信 API 模式智能机器人 Bot ID/Secret；官方固定 WSS `aibot_subscribe` 鉴权、心跳、原生文本 callback；私聊 userid，群 chatid。群 callback 为机器人 @ 事件。独立 Sender 使用 `aibot_send_msg` 和 req_id 回执，失联等待重连；写后未确认进入 unknown。协议没有独立持久化 Inbox ACK，不声称服务断线一定补收。 |
-| WeChat | 腾讯 iLink 2.4.8 公共协议；owner 在官方 QR 流程取得 bot_token、ilink_bot_id（account_id）、ilink_user_id（user_id），仅固定官方 API 域；不使用返回的任意 base URL。getconfig 验证 Token 可用，但协议无 whoami，因此实际收到的 to_user_id 必须匹配声明的 bot ID 才能完成验证。getupdates 长轮询、get_updates_buf 加密恢复；只接收完成的私聊文本，忽略生成中/删除消息，同 ID 更新由 Inbox 去重。原消息 context_token 加密持久化并用于 sendmessage，client_id 使用 Delivery UUID；缺失 context_token 拒绝发送。没有平台内 QR 界面或群聊承诺。 |
+| WeChat | 腾讯 iLink 2.4.8 公共协议；owner 在平台 QR 界面授权，取得的 bot_token、ilink_bot_id（account_id）、ilink_user_id（user_id）与服务端确认身份一起加密保存；只接受受信任官方 HTTPS API 域。实际收到的 to_user_id 必须匹配已保存账号才能完成验证。getupdates 长轮询、get_updates_buf 加密恢复；getupdates/sendmessage 的成功响应允许省略 ret/errcode，显式字段必须为数值 0，非零或格式错误仍拒绝。只接收完成的私聊文本，忽略生成中/删除消息，同 ID 更新由 Inbox 去重。原消息 context_token 加密持久化并用于 sendmessage，client_id 使用 Delivery UUID；缺失 context_token 拒绝发送，不承诺群聊。 |
 | QQ Bot | App ID/Secret 获取 Access Token，官方用户接口绑定 Bot。HTTP callback 按官方 seed 规则以 Ed25519 验证 timestamp + raw body，支持签名 challenge/heartbeat；只接收 C2C_MESSAGE_CREATE 与 GROUP_AT_MESSAGE_CREATE，暂不支持频道/Guild DM。原 user_openid/member_openid/group_openid 路由，5 分钟被动窗口。msg_seq=1 留给 validation/waiting，终态 rejection/failure 的 status 使用 2（与 answer 互斥），answer 第 1..4 段使用 2..5，重试保持序号；超过预算明确失败，不改成主动发送。 |
 | BlueBubbles | 管理员批准 HTTPS 专用 macOS 服务，Server Password 只用于认证请求；`server/info` 返回 computer_id 与 detected_imessage，并在轮询/发送前重查账号，账号变化拒绝。消息查询以官方返回的 originalROWID 建立插入游标，固定 MAX(ROWID) 上界分页并使用 Inbox 去重；不依赖主机时钟或消息发送时间，初次只保存当前最大行基线。查询结构为代码内固定 SQL 与绑定数值参数，不接受外部消息输入；行号回退报 history_reset 并保留游标。每批最多 1000 条，超过容量保留游标并报 backlog。只接受单一 participant 的文本；发送用 apple-script + 稳定 tempGuid，不访问宿主机数据库或启用 Private API。桥接不可用/换号与 Mac 环境仍需真实验收。 |
 | Yuanbao | 腾讯官方插件公开的 sign-token HMAC、ConnMsg/Head 与文本业务 Protobuf Schema；固定 HTTPS/WSS。auth-bind 验证返回 bot_id，定期心跳、Token 到期前释放连接并重新鉴权；不设置自动抢占确认。push 只有 Inbox sink 成功后 ACK；独立 Sender 关联 msg_id 回执，私聊原 sender，群使用 group_code/ref_msg_id/to_account，TIMCustomElem 1002 提及才触发。没有 Runtime 引擎或 OpenClaw 安装依赖。 |
@@ -238,3 +238,7 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 所有新增 credential Secret 与 context_token 使用同一精确字节脱敏集合，覆盖入站文本、Runtime 事件/文件/结果持久化和最终外发答案。`delivery_chunk`/`delivery_kind` 为 Application 写入的内部元数据，覆盖外部自报值；QQ 用它们保留稳定回复预算。Webhook challenge 不创建 Inbox/Run，公开 OIDC 绕过仅覆盖明确的供应商方法与 UUID 路径。
 
 本地协议测试是实现验证。真实接收→Runtime→原聊天回答、各平台账号资格、Bridge 版本及重启恢复、Linux Sandbox/Production Conformance 仍需要独立现场证据；启用仍须 owner 实际收发验证。
+
+### 渠道配置与 Run History 展示（2026-10-04）
+
+账号授权和受众保存后，对应 provider 入口及已保存账号显示“已配置”；点击已配置入口编辑现有账号。接收验证、启用/停用及错误保持真实状态。“回复记录”入口与面板暂时从渠道配置移除，既有 Delivery 状态、去重及安全重试契约不变。每条通过准入的渠道问题沿用现有 Workflow Queue 创建一个 Run；渠道对话逐个 Run 展示运行记录，连续追问不再合并成一行，打开任一条仍读取同一根 Run Conversation 的完整上下文。历史和最近运行的触发方式显示具体 provider 与渠道名称。Migration `000068_message_channel_run_origin.sql` 回填已有渠道 Run 的 provider，新 Run 在准入事务内冻结 provider 与渠道名称；重命名/软删除不改写历史。旧响应缺少 provider 时继续显示已有渠道名称，不推测来源。验证消息只验证原聊天回复，不运行模型，也不伪造 Run。

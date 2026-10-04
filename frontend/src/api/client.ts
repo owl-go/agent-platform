@@ -68,7 +68,7 @@ export interface SessionWorkflowDraft { suggested_name: string; suggested_goal: 
 export interface SessionWorkflowFileDecision { source_key: string; destination: "workspace" | "exclude" }
 export interface SessionWorkflowCreation { workflow: Workflow; validation_run: Run; link: SessionWorkflowLink; replayed: boolean }
 export interface Workflow extends WorkflowInput { id: string; git_source?: GitSource; api_credential_configured: boolean; deleted: boolean; created_at: string; updated_at: string; version: number; origin?: SessionWorkflowLink; next_scheduled_at?: string; upcoming_schedule_times?: string[]; last_run_state?: Run["state"]; last_run_at?: string; last_run_id?: string; run_count_30d?: number; succeeded_run_count_30d?: number; needs_attention?: boolean }
-export interface Run { message_channel_id?: string; message_channel_name?: string; id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion" | "message_channel"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
+export interface Run { message_channel_id?: string; message_channel_name?: string; message_channel_provider?: string; id: string; conversation_id: string; turn_number: number; workflow_id: string; workflow_name: string; trigger: "manual" | "scheduled" | "api" | "session_conversion" | "message_channel"; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; text_input?: string; json_input?: Record<string, unknown>; attachments?: Attachment[]; final_text?: string; final_json?: Record<string, unknown>; error?: string; queued_at: string; queue_position?: number; started_at?: string; ended_at?: string; elapsed_ms: number; workflow_snapshot?: Record<string, unknown>; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; evidence?: Evidence[]; execution_plan?: ExecutionPlan }
 export interface RunEvent { sequence: number; type: string; payload: Record<string, unknown>; raw: string }
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
@@ -858,7 +858,7 @@ function normalizeTimestamps<T>(value: T): T {
   if (!value || typeof value !== "object") return value;
   const normalized: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(value)) {
-    normalized[key] = key.endsWith("_at") ? timestampString(item) : normalizeTimestamps(item);
+    normalized[key] = (key.endsWith("_at") || key === "validation_until") ? timestampString(item) : normalizeTimestamps(item);
   }
   return normalized as T;
 }

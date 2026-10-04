@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { channelSetups } from "../components/messageChannelSetup";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder, PanelRightOpen } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
@@ -355,9 +356,10 @@ function maskCredential(value: string) {
 }
 function copyIntegrationCommand(value: string, target: "token" | "run" | "stream" | "full") { void copyValue(value, target); }
 async function removeWorkflow() { if (!workflow.value) return; await api.deleteWorkflow(workflowID.value); confirmWorkflowDelete.value = false; await router.push("/workflows"); }
-async function cancelRun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const active = turns.find((turn) => turn.state === "queued" || turn.state === "running" || turn.state === "waiting_for_user"); if (active) await api.cancelRun(workflowID.value, active.id); runs.value = await api.listRuns(workflowID.value); }
-async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.id); const latest = turns.at(-1); if (!latest) return; const created = await api.rerunWorkflow(workflowID.value, latest.id); runs.value = [created, ...(await api.listRuns(workflowID.value)).filter((run) => run.id !== created.id)]; await openRun(created); }
+async function cancelRun(item: Run) { if (item.message_channel_id) { await api.cancelRun(workflowID.value, item.id); runs.value = await api.listRuns(workflowID.value); return; } const turns = await api.listRunTurns(workflowID.value, item.id); const active = turns.find((turn) => turn.state === "queued" || turn.state === "running" || turn.state === "waiting_for_user"); if (active) await api.cancelRun(workflowID.value, active.id); runs.value = await api.listRuns(workflowID.value); }
+async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.conversation_id || item.id); const latest = item.message_channel_id ? turns.find(turn => turn.id === item.id) : turns.at(-1); if (!latest) return; const created = await api.rerunWorkflow(workflowID.value, latest.id); runs.value = [created, ...(await api.listRuns(workflowID.value)).filter((run) => run.id !== created.id)]; await openRun(created); }
 async function openRun(item: Run) {
+	item = { ...item, id: item.conversation_id || item.id };
 	eventController?.abort();
 	stopRunReveal();
 	selectedRun.value = item;
@@ -588,7 +590,12 @@ function triggerBrowserDownload(url: string, name: string) { const anchor = docu
 function stateLabel(state: Run["state"]) { return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "running" ? t("common.running") : state === "waiting_for_user" ? t("common.waitingForUser") : state === "queued" ? t("common.queued") : state; }
 function stageStateLabel(state: string) { return state === "succeeded" ? t("common.success") : state === "failed" ? t("common.failed") : state === "cancelled" ? t("common.cancelled") : state === "running" ? t("common.running") : state; }
 function triggerLabel(trigger: Run["trigger"]) { return t(`workflows.${trigger}`); }
-function runTriggerLabel(run: Run) { const label = triggerLabel(run.trigger); return run.trigger === "message_channel" && run.message_channel_name ? `${label} · ${run.message_channel_name}` : label; }
+function runTriggerLabel(run: Run) {
+  if (run.trigger !== "message_channel") return triggerLabel(run.trigger);
+  const provider = run.message_channel_provider;
+  const label = provider && Object.hasOwn(channelSetups, provider) ? t(`channels.providers.${provider}`) : triggerLabel(run.trigger);
+  return run.message_channel_name && run.message_channel_name !== label ? `${label} · ${run.message_channel_name}` : label;
+}
 function parentPath() { const parts = workspacePath.value.split("/").filter(Boolean); parts.pop(); return parts.join("/"); }
 function decodeBase64(value: string) { try { return decodeURIComponent(escape(atob(value))); } catch { return atob(value); } }
 </script>

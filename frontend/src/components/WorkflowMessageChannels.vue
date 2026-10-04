@@ -4,7 +4,7 @@ import { ElForm, ElFormItem } from "element-plus";
 import "element-plus/theme-chalk/el-form.css";
 import "element-plus/theme-chalk/el-form-item.css";
 import { useI18n } from "vue-i18n";
-import { platformApiKey, type ChannelDelivery, type MessageChannel, type MessageChannelInput, type ChannelLogin } from "../api/client";
+import { platformApiKey, type MessageChannel, type MessageChannelInput, type ChannelLogin } from "../api/client";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import QRCode from "qrcode";
 import { channelSetups } from "./messageChannelSetup";
@@ -20,9 +20,7 @@ const busy = ref(false);
 const error = ref("");
 const dialog = ref(false);
 const editing = ref<MessageChannel>();
-const deliveries = ref<ChannelDelivery[]>([]);
-const deliveryChannel = ref<MessageChannel>();
-const confirmation = ref<{ channel: MessageChannel; action: string; delivery?: ChannelDelivery }>();
+const confirmation = ref<{ channel: MessageChannel; action: string }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
 const providers = Object.keys(channelSetups);
 const setup = computed(() => channelSetups[form.provider]!);
@@ -54,7 +52,6 @@ async function refresh() {
     const result = await api.listMessageChannels(props.workflowId, abort.signal);
     if (disposed) return;
     items.value = result.items; available.value = result.available;
-    if (deliveryChannel.value) deliveryChannel.value = items.value.find(c => c.id === deliveryChannel.value?.id);
     error.value = "";
   } catch { if (!disposed) error.value = t("errors.generic"); }
   finally {
@@ -140,21 +137,11 @@ async function control(channel: MessageChannel, action: string) {
   catch { if (!disposed) error.value = t("channels.actionFailed"); }
   finally { busy.value = false; }
 }
-async function showDeliveries(channel: MessageChannel) {
-  busy.value = true; error.value = "";
-  try { deliveries.value = await api.listChannelDeliveries(props.workflowId, channel.id, abort.signal); deliveryChannel.value = channel; }
-  catch { if (!disposed) error.value = t("errors.generic"); }
-  finally { busy.value = false; }
-}
 async function confirm() {
-  const pending = confirmation.value; if (!pending) return;
-  if (!pending.delivery) { await control(pending.channel, pending.action); return; }
-  busy.value = true;
-  try { await api.retryChannelDelivery(props.workflowId, pending.channel.id, pending.delivery.id, pending.channel.version, pending.delivery.state === "outcome_unknown", abort.signal); confirmation.value = undefined; await showDeliveries(pending.channel); }
-  catch { if (!disposed) error.value = t("channels.actionFailed"); }
-  finally { busy.value = false; }
+  const pending = confirmation.value;
+  if (pending) await control(pending.channel, pending.action);
 }
-const confirmText = computed(() => confirmation.value?.delivery ? t(confirmation.value.delivery.state === "outcome_unknown" ? "channels.unknownHint" : "channels.retryHint") : t(`channels.${confirmation.value?.action ?? "enable"}Hint`));
+const confirmText = computed(() => t(`channels.${confirmation.value?.action ?? "enable"}Hint`));
 onMounted(refresh);
 onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); clearLogin(); clearSecrets(); });
 </script>
@@ -166,36 +153,27 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
     <el-alert v-if="!loading && !available && !error" :title="t('channels.platformDisabled')" type="info" :closable="false" />
     <div class="channel-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">{{ t('common.refresh') }}</el-button></div>
     <div class="channel-provider-grid">
-      <button v-for="provider in providers" :key="provider" type="button" class="channel-provider-card" :data-provider="provider" :disabled="!available || busy || loading" :aria-label="t('channels.configureProvider', { provider: t(`channels.providers.${provider}`) })" @click="edit(undefined, provider)">
+      <button v-for="provider in providers" :key="provider" type="button" class="channel-provider-card" :data-provider="provider" :disabled="!available || busy || loading" :aria-label="t('channels.configureProvider', { provider: t(`channels.providers.${provider}`) })" @click="edit(items.find(channel => channel.provider === provider), provider)">
         <span class="channel-provider-identity"><MessageChannelIcon :provider="provider" /><strong>{{ t(`channels.providers.${provider}`) }}</strong></span>
-        <span class="channel-provider-action">{{ t('channels.configure') }}</span>
+        <span class="channel-provider-action">{{ t(items.some(channel => channel.provider === provider) ? 'channels.configured' : 'channels.configure') }}</span>
       </button>
     </div>
     <p v-if="loading && !items.length" role="status">{{ t('common.loading') }}</p>
     <article v-for="channel in items" :key="channel.id" class="channel-card">
-      <div class="channel-heading"><MessageChannelIcon :provider="channel.provider" :size="24" /><strong>{{ channel.name }}</strong><span>{{ t(`channels.providers.${channel.provider}`) }} · {{ channel.account_name }}</span><el-tag>{{ t(channel.enabled ? 'common.enabled' : 'common.disabled') }}</el-tag></div>
-      <p>{{ t(`channels.states.${channel.validation_state}`) }} · {{ t(`channels.health.${channel.health}`) }}</p>
+      <div class="channel-heading"><MessageChannelIcon :provider="channel.provider" :size="24" /><strong>{{ channel.name }}</strong><span>{{ t(`channels.providers.${channel.provider}`) }} · {{ channel.account_name }}</span><el-tag>{{ t('channels.configured') }}</el-tag></div>
+      <p v-if="!channel.enabled">{{ t(`channels.states.${channel.validation_state}`) }}</p>
       <p v-if="channel.error_code" class="muted">{{ t('channels.connectionError') }}</p>
       <p v-if="channel.callback_url" class="channel-callback">{{ t('channels.callback') }} <code>{{ channel.callback_url }}</code></p>
-      <p v-if="channel.validation_state === 'testing'" role="status">{{ t('channels.verifyInstruction') }} <code>{{ channel.validation_code }}</code> · {{ channel.validation_until ? new Date(channel.validation_until).toLocaleTimeString() : '' }}</p>
+      <p v-if="channel.validation_state === 'testing'" role="status">{{ t(channelSetups[channel.provider]?.audience === 'direct' ? 'channels.verifyDirectInstruction' : 'channels.verifyInstruction') }} <code>{{ channel.validation_code }}</code> · {{ channel.validation_until ? new Date(channel.validation_until).toLocaleTimeString() : '' }}</p>
       <div class="channel-actions">
         <el-button :disabled="busy || channel.enabled || !available" @click="edit(channel)">{{ t('common.edit') }}</el-button>
         <el-button :disabled="busy || channel.enabled || !available" @click="control(channel,'validate')">{{ t('channels.validate') }}</el-button>
         <el-button v-if="!channel.enabled" :disabled="busy || !available || channel.validation_state !== 'passed'" @click="confirmation = {channel,action:'enable'}">{{ t('channels.enable') }}</el-button>
         <el-button v-else :disabled="busy" @click="control(channel,'disable')">{{ t('channels.disable') }}</el-button>
-        <el-button :disabled="busy" @click="showDeliveries(channel)">{{ t('channels.deliveries') }}</el-button>
         <el-button :disabled="busy" @click="confirmation = {channel,action:'reset'}">{{ t('channels.reset') }}</el-button>
         <el-button type="danger" :disabled="busy" @click="confirmation = {channel,action:'delete'}">{{ t('common.delete') }}</el-button>
       </div>
     </article>
-    <section v-if="deliveryChannel" class="channel-deliveries">
-      <strong>{{ deliveryChannel.name }} · {{ t('channels.deliveries') }}</strong><p class="muted">{{ t('channels.retryHint') }}</p>
-      <el-empty v-if="!deliveries.length" :description="t('common.empty')" />
-      <div v-for="delivery in deliveries" :key="delivery.id" class="channel-delivery">
-        <span>{{ t(`channels.deliveryStates.${delivery.state}`) }} · {{ t('channels.chunk', {number:delivery.chunk}) }} · {{ new Date(delivery.created_at).toLocaleString() }}</span>
-        <el-button v-if="delivery.state === 'failed' || delivery.state === 'outcome_unknown'" :disabled="busy || !deliveryChannel.enabled" @click="confirmation = {channel:deliveryChannel,action:'retry',delivery}">{{ t('channels.retry') }}</el-button>
-      </div>
-    </section>
   </section>
   <el-dialog v-model="dialog" :title="t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) })" width="min(720px, calc(100vw - 32px))" align-center append-to-body :close-on-click-modal="!busy" :close-on-press-escape="!busy" :show-close="!busy" @close="clearLogin" @closed="clearSecrets">
     <template #header="{ titleId, titleClass }"><h2 :id="titleId" :class="[titleClass, 'channel-dialog-title']"><MessageChannelIcon :provider="form.provider" :size="24" />{{ t('channels.configureProvider', { provider: t(`channels.providers.${form.provider}`) }) }}</h2></template>
@@ -244,7 +222,7 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
     </el-form>
     <template #footer><el-button :disabled="busy" @click="closeConfiguration">{{ t('common.cancel') }}</el-button><el-button type="primary" :loading="busy" :disabled="!canSave" @click="save">{{ t('common.save') }}</el-button></template>
   </el-dialog>
-  <ConfirmDialog :open="Boolean(confirmation)" :title="t(confirmation?.delivery ? 'channels.retry' : `channels.${confirmation?.action ?? 'enable'}`)" :message="confirmText" :confirm-label="t('common.confirm')" :cancel-label="t('common.cancel')" :busy="busy" :danger="confirmation?.action === 'delete'" @confirm="confirm" @cancel="confirmation = undefined" />
+  <ConfirmDialog :open="Boolean(confirmation)" :title="t(`channels.${confirmation?.action ?? 'enable'}`)" :message="confirmText" :confirm-label="t('common.confirm')" :cancel-label="t('common.cancel')" :busy="busy" :danger="confirmation?.action === 'delete'" @confirm="confirm" @cancel="confirmation = undefined" />
 </template>
 
 <style scoped>
@@ -266,5 +244,4 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 .channel-actions,.channel-heading { display:flex; flex-wrap:wrap; align-items:center; gap:var(--aw-space-2); }
 .channel-card { padding:var(--aw-space-4); border:1px solid var(--aw-n4); border-radius:var(--aw-radius-card); }
 .channel-callback { overflow-wrap:anywhere; }
-.channel-delivery { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--aw-space-2); padding-block:var(--aw-space-2); }
 </style>

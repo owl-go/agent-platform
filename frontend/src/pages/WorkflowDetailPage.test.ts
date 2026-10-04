@@ -73,10 +73,43 @@ async function mountPage(api = apiStub(), path = `/workflows/${workflow.id}?tab=
 }
 
 describe("WorkflowDetailPage", () => {
-  it("identifies the configured channel in Run History", async () => {
-    const channelRun: Run = { ...run, trigger: "message_channel", message_channel_id: "channel-1", message_channel_name: "Telegram 问答" };
+  it.each([
+    ["telegram", "Telegram"], ["discord", "Discord"], ["slack", "Slack"], ["matrix", "Matrix"], ["whatsapp", "WhatsApp"],
+    ["signal", "Signal"], ["dingtalk", "钉钉"], ["feishu", "飞书"], ["wecom", "企业微信"], ["wechat", "微信"],
+    ["qqbot", "QQ Bot"], ["bluebubbles", "BlueBubbles (iMessage)"], ["yuanbao", "元宝"],
+  ])("identifies %s as the trigger in Run History", async (provider, label) => {
+    const channelRun: Run = { ...run, trigger: "message_channel", message_channel_id: "channel-1", message_channel_name: "客服机器人", message_channel_provider: provider };
     const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [channelRun]) }));
-    expect(wrapper.get('.run-row[role="button"]').text()).toContain("消息渠道 · Telegram 问答");
+    expect(wrapper.get('.run-row[role="button"]').text()).toContain(`${label} · 客服机器人`);
+    wrapper.unmount();
+  });
+  it("retains the channel name for older responses without a provider", async () => {
+    const legacyRun: Run = { ...run, trigger: "message_channel", message_channel_name: "历史机器人" };
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [legacyRun]) }));
+    expect(wrapper.get('.run-row[role="button"]').text()).toContain("消息渠道 · 历史机器人");
+    wrapper.unmount();
+  });
+  it("opens a channel follow-up through its root conversation and reruns the selected turn", async () => {
+    const root: Run = { ...run, message_channel_id: "channel", message_channel_provider: "wechat", trigger: "message_channel" };
+    const followUp: Run = { ...root, id: "follow-up", turn_number: 2, state: "failed" };
+    const listTurns = vi.fn(async () => [root, followUp]);
+    const rerun = vi.fn(async () => ({ ...run, id: "rerun", conversation_id: "rerun" }));
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [followUp, root]), listRunTurns: listTurns, rerunWorkflow: rerun }));
+    await wrapper.get('.run-row[role="button"] .run-actions button').trigger("click");
+    await flushPromises();
+    expect(listTurns).toHaveBeenCalledWith(workflow.id, root.id);
+    expect(rerun).toHaveBeenCalledWith(workflow.id, followUp.id);
+    wrapper.unmount();
+  });
+  it("cancels the selected channel Run without cancelling a different turn", async () => {
+    const queued: Run = { ...run, id: "queued-turn", turn_number: 2, trigger: "message_channel", message_channel_id: "channel", state: "queued" };
+    const cancel = vi.fn(async () => ({ ...queued, state: "cancelled" as const }));
+    const listTurns = vi.fn(async () => [run]);
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [queued]), cancelRun: cancel, listRunTurns: listTurns }));
+    await wrapper.get('.run-row[role="button"] .run-actions button').trigger("click");
+    await flushPromises();
+    expect(cancel).toHaveBeenCalledWith(workflow.id, queued.id);
+    expect(listTurns).not.toHaveBeenCalled();
     wrapper.unmount();
   });
   beforeEach(() => {
