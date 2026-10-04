@@ -229,3 +229,19 @@ func TestQQGatewayRejectsInvalidFramesAndEndpoints(t *testing.T) {
 		})
 	}
 }
+
+func TestQQGatewayCloseRecovery(t *testing.T) {
+	for _, c := range []struct {
+		code            int
+		fatal, identify bool
+	}{
+		{4004, true, false}, {4014, true, false}, {4914, true, false},
+		{4006, false, true}, {4007, false, true}, {4900, false, true}, {4913, false, true},
+		{4008, false, false}, {4009, false, false}, {1006, false, false},
+	} {
+		fatal, identify := qqGatewayClose(c.code)
+		if fatal != c.fatal || identify != c.identify {
+			t.Errorf("wrong recovery for close %d", c.code)
+		}
+	}
+}

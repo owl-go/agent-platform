@@ -46,10 +46,11 @@ func (a *QQBot) ConnectWithHealth(ctx context.Context, s application.ChannelStor
 		}
 		var closeErr *websocket.CloseError
 		if errors.As(err, &closeErr) {
-			switch closeErr.Code {
-			case 4004, 4013, 4014, 4914, 4915:
+			fatal, identify := qqGatewayClose(closeErr.Code)
+			if fatal {
 				return providerError("provider_authentication_failed")
-			case 4007, 4009:
+			}
+			if identify {
 				resume.session = ""
 				resume.sequence.Store(-1)
 			}
@@ -70,11 +71,21 @@ func (a *QQBot) ConnectWithHealth(ctx context.Context, s application.ChannelStor
 	return providerError("provider_connection_failed")
 }
 
+func qqGatewayClose(code int) (fatal, identify bool) {
+	switch code {
+	case 4001, 4002, 4004, 4010, 4011, 4012, 4013, 4014, 4914, 4915:
+		return true, false
+	case 4006, 4007:
+		return false, true
+	}
+	return false, code >= 4900 && code <= 4913
+}
+
 var errQQInbox = errors.New("qq_inbox_unavailable")
 
 func qqGatewayURL(target string) bool {
 	u, err := url.Parse(target)
-	return err == nil && u.Scheme == "wss" && u.Host == "api.sgroup.qq.com" && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (u.Path == "/websocket" || u.Path == "/websocket/")
+	return err == nil && u.Scheme == "wss" && u.Host == "api.sgroup.qq.com" && u.User == nil && u.RawQuery == "" && !u.ForceQuery && u.Fragment == "" && u.RawPath == "" && (u.Path == "/websocket" || u.Path == "/websocket/")
 }
 
 func (a *QQBot) gatewayConnection(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink, health application.ChannelConnectionHealthSink, resume *qqGatewayResume) error {
