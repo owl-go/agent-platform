@@ -394,6 +394,24 @@ func TestChannelUsesExistingWorkerAndPriorAnswers(t *testing.T) {
 			t.Fatal("source or terminal missing")
 		}
 	}
+	history, err := f.repo.ListRuns(ctx, f.owner, f.workflow)
+	if err != nil || len(history) != 2 {
+		t.Fatalf("one history entry per participant: count=%d error=%v", len(history), err)
+	}
+	var totalTurns int
+	for _, summary := range history {
+		if summary.ID != summary.ConversationID {
+			t.Fatal("history entry is not the stable conversation root")
+		}
+		turns, err := f.repo.ListRunTurns(ctx, f.owner, f.workflow, summary.ID)
+		if err != nil || len(turns) != int(summary.TurnNumber) {
+			t.Fatalf("conversation lost turns: count=%d latest=%d error=%v", len(turns), summary.TurnNumber, err)
+		}
+		totalTurns += len(turns)
+	}
+	if totalTurns != 3 {
+		t.Fatalf("grouped history lost executions: %d", totalTurns)
+	}
 	f.stored(t)
 	f.channel, err = f.app.Control(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, "disable")
 	if err != nil {
@@ -408,8 +426,8 @@ func TestChannelUsesExistingWorkerAndPriorAnswers(t *testing.T) {
 	if _, err = f.app.Control(ctx, f.owner, f.workflow, f.channel.ID, f.channel.Version, "delete"); err != nil {
 		t.Fatal(err)
 	}
-	history, err := f.repo.ListRuns(ctx, f.owner, f.workflow)
-	if err != nil || len(history) != 3 {
+	history, err = f.repo.ListRuns(ctx, f.owner, f.workflow)
+	if err != nil || len(history) != 2 {
 		t.Fatalf("history after deletion: count=%d error=%v", len(history), err)
 	}
 	for _, run := range history {

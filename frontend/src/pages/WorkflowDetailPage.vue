@@ -356,8 +356,8 @@ function maskCredential(value: string) {
 }
 function copyIntegrationCommand(value: string, target: "token" | "run" | "stream" | "full") { void copyValue(value, target); }
 async function removeWorkflow() { if (!workflow.value) return; await api.deleteWorkflow(workflowID.value); confirmWorkflowDelete.value = false; await router.push("/workflows"); }
-async function cancelRun(item: Run) { if (item.message_channel_id) { await api.cancelRun(workflowID.value, item.id); runs.value = await api.listRuns(workflowID.value); return; } const turns = await api.listRunTurns(workflowID.value, item.id); const active = turns.find((turn) => turn.state === "queued" || turn.state === "running" || turn.state === "waiting_for_user"); if (active) await api.cancelRun(workflowID.value, active.id); runs.value = await api.listRuns(workflowID.value); }
-async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.conversation_id || item.id); const latest = item.message_channel_id ? turns.find(turn => turn.id === item.id) : turns.at(-1); if (!latest) return; const created = await api.rerunWorkflow(workflowID.value, latest.id); runs.value = [created, ...(await api.listRuns(workflowID.value)).filter((run) => run.id !== created.id)]; await openRun(created); }
+async function cancelRun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.conversation_id || item.id); const active = turns.find((turn) => turn.state === "queued" || turn.state === "running" || turn.state === "waiting_for_user"); if (active) await api.cancelRun(workflowID.value, active.id); runs.value = await api.listRuns(workflowID.value); }
+async function rerun(item: Run) { const turns = await api.listRunTurns(workflowID.value, item.conversation_id || item.id); const latest = turns.at(-1); if (!latest) return; const created = await api.rerunWorkflow(workflowID.value, latest.id); runs.value = [created, ...(await api.listRuns(workflowID.value)).filter((run) => run.id !== created.id)]; await openRun(created); }
 async function openRun(item: Run) {
 	item = { ...item, id: item.conversation_id || item.id };
 	eventController?.abort();

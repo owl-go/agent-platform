@@ -122,6 +122,27 @@ func TestSummarizeRunConversationsUsesLatestTurnProjection(t *testing.T) {
 	}
 }
 
+func TestSummarizeChannelRunConversationsKeepsOneEntryPerParticipant(t *testing.T) {
+	queued := time.Date(2026, 10, 4, 1, 33, 0, 0, time.UTC)
+	channelID := "wechat-channel"
+	rows := []runRecord{
+		{ID: "alice-root", ConversationID: "alice-root", TurnNumber: 1, Trigger: "message_channel", MessageChannelID: &channelID, MessageChannelProvider: "wechat", MessageChannelName: "Support", State: "succeeded", QueuedAt: queued},
+		{ID: "alice-follow-up", ConversationID: "alice-root", TurnNumber: 2, Trigger: "message_channel", MessageChannelID: &channelID, MessageChannelProvider: "wechat", MessageChannelName: "Support", State: "running", QueuedAt: queued.Add(time.Minute)},
+		{ID: "bob-root", ConversationID: "bob-root", TurnNumber: 1, Trigger: "message_channel", MessageChannelID: &channelID, MessageChannelProvider: "wechat", MessageChannelName: "Support", State: "succeeded", QueuedAt: queued.Add(time.Second)},
+	}
+	summaries := summarizeRunConversations(rows)
+	if len(summaries) != 2 {
+		t.Fatalf("same participant's follow-up created extra conversation entries: got %d, want 2", len(summaries))
+	}
+	alice := summaries[0]
+	if alice.ID != "alice-root" || alice.ConversationID != "alice-root" || alice.TurnNumber != 2 || alice.State != "running" || alice.QueuePositionID != "alice-follow-up" || alice.MessageChannelProvider != "wechat" || alice.Trigger != "message_channel" {
+		t.Fatalf("latest channel conversation projection = %#v", alice)
+	}
+	if summaries[1].ID != "bob-root" {
+		t.Fatalf("another participant lost its conversation: %#v", summaries[1])
+	}
+}
+
 func TestPauseScheduleAfterThreeConsecutiveScheduledFailures(t *testing.T) {
 	db := conversationTestDatabase(t)
 	ownerID, workflowID := uuid.NewString(), uuid.NewString()
