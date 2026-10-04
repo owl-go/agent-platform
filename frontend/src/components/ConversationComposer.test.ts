@@ -47,6 +47,29 @@ async function setup(options: { fail?: boolean; initial?: boolean; initialConnec
 afterEach(() => { localStorage.clear(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 
 describe("ConversationComposer", () => {
+ it.each([{ session_id: "session-1" }, { workflow_id: "workflow-1", run_id: "run-1" }])("uses catalog names for legacy managed MCP labels in %j", async (scope) => {
+  const connectors = [{ id: "mindbye", name: "明白律师" }, { id: "pkulaw", name: "北大法宝" }, { id: "caoliao", name: "草料二维码" }];
+  const initial = { ...emptySelection(), mcp_servers: [{ id: "mindbye", name: "mindbye", revision: "1" }, { id: "private-search", name: "保留的私人检索名称", revision: "1" }] };
+  const api = {
+   ...conversationApiStub(initial),
+   listExperts: vi.fn(async () => []), listExpertTeams: vi.fn(async () => []),
+   listMCPServers: vi.fn(async () => connectors.map(item => ({ id: item.id, name: item.id, managed_installation: true, tested: item.id !== "pkulaw", test_error: item.id === "pkulaw" ? "authorization required" : "" }))),
+   listConnectorInstallations: vi.fn(async () => [...connectors.map(item => ({ ...item, source: item.id, mode: "mcp", state: "active", authorized: item.id !== "pkulaw", version: 1 })), { id: "private-search", source: "private-search", name: "当前私人检索名称", mode: "mcp", state: "active", authorized: true, version: 2 }]),
+  } as unknown as PlatformApi;
+  const router = createAppRouter(createMemoryHistory()); await router.push("/sessions");
+  const wrapper = mount(ConversationComposer, { props: { scope, submit: vi.fn(async () => {}) }, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+  try {
+   await flushPromises();
+   expect(wrapper.find('.composer-connector[aria-label="明白律师"]').exists()).toBe(true);
+   expect(wrapper.find('.composer-connector[aria-label="保留的私人检索名称"]').exists()).toBe(true);
+   await wrapper.get(".composer-plus").trigger("click");
+   await wrapper.findAll(".composer-menu button").find(button => button.text() === "连接器")!.trigger("click");
+   const rows = wrapper.findAll(".composer-connector-option");
+   expect(rows.map(row => row.get("button").text())).toEqual(["明白律师", "北大法宝连接器当前不可用", "草料二维码"]);
+   expect(rows[1]!.get("button").attributes("disabled")).toBeDefined();
+   expect(api.resolveConversationSelection).not.toHaveBeenCalled();
+  } finally { wrapper.unmount(); }
+ });
  it("launches a managed connector with an editable focused draft without submitting", async () => {
   const { wrapper, api, submit } = await setup({ managed: true, managedAuthorized: true, initialConnector: { kind: "cli", id: "installation-1" }, initialPrompt: "搜索飞书群聊" });
   expect(api.resolveConversationSelection).toHaveBeenCalledWith({ session_id: "session-1" }, expect.objectContaining({ cli_connector_ids: ["installation-1"] }));

@@ -21,6 +21,8 @@ Status: implemented with local validation. Production and exact-image conformanc
 
 ## Resource Selection
 
+- Managed MCP Connector choices and new execution snapshots use the active package's display name, consistent with the Connector catalog; the stable package source is only a fallback for older packages without a declared name. Existing conversation labels that contain only that source display the installed package name without refreshing selection revisions or changing execution inputs. Other retained names remain unchanged, and unavailable Connectors remain disabled.
+
 - An Expert's own Skills remain available while that Expert is selected. Clearing explicit Skill tokens after a message does not clear Expert-owned Skills. Deduplicate the same Skill identity within an Execution Stage.
 - An Expert's own Connectors are selected by default. The User may disable them for the conversation without editing the reusable Expert. Switching specialists replaces specialist-derived defaults while retaining the User's explicit Connector additions and exclusions; an explicit exclusion takes precedence over an inherited default.
 - Explicitly added Skills and Connectors apply to every Team Member in the current turn. Each member otherwise receives only its own Expert's default resources; another member's default resources are not implicitly shared. The composer has no member-by-member assignment controls.

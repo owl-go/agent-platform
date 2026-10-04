@@ -63,15 +63,19 @@ const filteredSkills = computed(() => skills.value.filter((item) => matches(item
 const filteredExperts = computed(() => experts.value.filter((item) => matches(`${item.name} ${item.introduction}`)));
 const filteredTeams = computed(() => teams.value.filter((item) => matches(`${item.name} ${item.introduction}`)));
 const filteredFiles = computed(() => files.value.filter((item) => matches(`${item.name} ${item.path}`)).sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name)));
+function connectorDisplayName(item: { id: string; name: string }): string {
+  const installation = managedInstallation(item.id);
+  return installation && item.name === installation.source ? installation.name || item.name : item.name;
+}
 const connectorRows = computed(() => [
-  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: item.name, icon: item.icon, available: item.tested && !item.test_error, active: item.tested && !item.test_error })),
-  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: item.name, icon: item.icon, available: item.state === "available" || (item.managed_installation && managedInstallation(item.id)?.state === "disabled"), active: cliActivationIsOn(item.id), definition: item })),
+  ...mcp.value.map((item) => ({ id: item.id, key: `mcp:${item.id}`, kind: "mcp" as const, name: connectorDisplayName(item), icon: item.icon, available: item.tested && !item.test_error, active: item.tested && !item.test_error })),
+  ...cli.value.map((item) => ({ id: item.id, key: `cli:${item.id}`, kind: "cli" as const, name: connectorDisplayName(item), icon: item.icon, available: item.state === "available" || (item.managed_installation && managedInstallation(item.id)?.state === "disabled"), active: cliActivationIsOn(item.id), definition: item })),
 ]);
 const visibleConnectors = computed(() => {
   const value = selection.value; if (!value) return [];
   const rows = [...value.inherited_mcp_servers, ...value.mcp_servers].map((item) => ({ ...item, kind: "mcp" as const, key: `mcp:${item.id}` }));
   const all = [...rows, ...[...value.inherited_cli_connectors, ...value.cli_connectors].map((item) => ({ ...item, kind: "cli" as const, key: `cli:${item.id}` }))];
-  return all.filter((item, index) => all.findIndex((other) => other.key === item.key) === index);
+  return all.filter((item, index) => all.findIndex((other) => other.key === item.key) === index).map((item) => ({ ...item, name: connectorDisplayName(item) }));
 });
 function isWorkspaceFile(file?: ConversationFile): boolean { return file?.kind === "workspace" || file?.kind === "directory"; }
 function connectorEnabled(key: string): boolean { return !!selection.value && visibleConnectors.value.some((item) => item.key === key) && !selection.value.disabled_connectors.includes(key); }
