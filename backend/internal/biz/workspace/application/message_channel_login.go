@@ -27,6 +27,18 @@ type ChannelLogin struct {
 	ID, Provider, Status, QRContent, AccountID, AccountName, SuggestedSenderID string
 	ExpiresAt                                                                  time.Time
 }
+
+// ChannelAccountFailure carries only a stable code and numeric provider diagnostics.
+// Provider response messages and credentials must never enter this error.
+type ChannelAccountFailure struct {
+	Code         string
+	ProviderCode int
+	HTTPStatus   int
+}
+
+func (e *ChannelAccountFailure) Error() string { return e.Code }
+func (e *ChannelAccountFailure) Unwrap() error { return domain.ErrInvalid }
+
 type channelLoginSession struct {
 	mu                               sync.Mutex
 	owner, workflow, region, channel string

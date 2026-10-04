@@ -24,13 +24,29 @@ func feishuBase(region string) string {
 	}
 	return "https://open.feishu.cn"
 }
+func feishuResponseCode(result map[string]json.RawMessage) (int, bool) {
+	var code *int
+	if json.Unmarshal(result["code"], &code) != nil || code == nil {
+		return 0, false
+	}
+	return *code, true
+}
+func feishuAccountFailure(code string, result map[string]json.RawMessage, status int) error {
+	providerCode, _ := feishuResponseCode(result)
+	return &application.ChannelAccountFailure{Code: code, ProviderCode: providerCode, HTTPStatus: status}
+}
 func (a *Feishu) token(ctx context.Context, c application.ChannelCredentials, region string) (string, error) {
 	if c["app_id"] == "" || c["app_secret"] == "" {
 		return "", providerError("feishu_credentials_invalid")
 	}
 	result, status, _, err := a.request(ctx, http.MethodPost, feishuBase(region)+"/open-apis/auth/v3/tenant_access_token/internal", "", map[string]string{"app_id": c["app_id"], "app_secret": c["app_secret"]})
-	if err != nil || status != 200 || result["code"] == nil || rawNumber(result["code"]) != 0 || rawString(result["tenant_access_token"]) == "" {
-		return "", providerError("provider_identity_failed")
+	code, valid := feishuResponseCode(result)
+	if err != nil || status != http.StatusOK || !valid || code != 0 || rawString(result["tenant_access_token"]) == "" {
+		failure := "feishu_authentication_unavailable"
+		if err == nil && valid && (code == 10003 || code == 10014) {
+			failure = "feishu_credentials_rejected"
+		}
+		return "", feishuAccountFailure(failure, result, status)
 	}
 	return rawString(result["tenant_access_token"]), nil
 }
@@ -45,18 +61,26 @@ func (a *Feishu) Identify(ctx context.Context, c application.ChannelCredentials,
 		Name   string `json:"app_name"`
 		Status int    `json:"activate_status"`
 	}
-	if err != nil || status != 200 || result["code"] == nil || rawNumber(result["code"]) != 0 || json.Unmarshal(result["bot"], &bot) != nil || bot.OpenID == "" || bot.Status != 2 {
-		return application.ChannelIdentity{}, providerError("provider_identity_failed")
+	code, valid := feishuResponseCode(result)
+	if err != nil || status != http.StatusOK || !valid || code != 0 || json.Unmarshal(result["bot"], &bot) != nil || bot.OpenID == "" {
+		return application.ChannelIdentity{}, feishuAccountFailure("feishu_bot_unavailable", result, status)
+	}
+	if bot.Status != 2 {
+		return application.ChannelIdentity{}, feishuAccountFailure("feishu_bot_inactive", result, status)
 	}
 	result, status, _, err = a.request(ctx, http.MethodGet, feishuBase(region)+"/open-apis/tenant/v2/tenant/query", "Bearer "+token, nil)
-	var code *int
 	var data struct {
 		Tenant struct {
 			Key string `json:"tenant_key"`
 		} `json:"tenant"`
 	}
-	if err != nil || status != http.StatusOK || json.Unmarshal(result["code"], &code) != nil || code == nil || *code != 0 || json.Unmarshal(result["data"], &data) != nil || strings.TrimSpace(data.Tenant.Key) == "" {
-		return application.ChannelIdentity{}, providerError("provider_identity_failed")
+	code, valid = feishuResponseCode(result)
+	if err != nil || status != http.StatusOK || !valid || code != 0 || json.Unmarshal(result["data"], &data) != nil || strings.TrimSpace(data.Tenant.Key) == "" {
+		failure := "feishu_tenant_unavailable"
+		if err == nil && valid && (code == 99991672 || code == 99991679 || code == 1184001) {
+			failure = "feishu_tenant_permission_required"
+		}
+		return application.ChannelIdentity{}, feishuAccountFailure(failure, result, status)
 	}
 	return application.ChannelIdentity{ID: bot.OpenID, BindingID: feishuBase(region) + ":" + c["app_id"], Name: bot.Name, TenantID: data.Tenant.Key}, nil
 }

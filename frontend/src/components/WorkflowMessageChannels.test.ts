@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type MessageChannel, type PlatformApi, type ChannelLogin } from "../api/client";
+import { ApiError, platformApiKey, type MessageChannel, type PlatformApi, type ChannelLogin } from "../api/client";
 import { createAppI18n } from "../i18n";
 import WorkflowMessageChannels from "./WorkflowMessageChannels.vue";
 
@@ -24,6 +24,18 @@ const button = (wrapper: ReturnType<typeof widget>, text: string) => wrapper.fin
 const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input");
 vi.mock("qrcode", () => ({ default:{toDataURL:vi.fn(async()=>"data:image/png;base64,cXJjb2Rl")} }));
 describe("Workflow message channels",()=>{
+  it.each(["zh-CN", "en-US"] as const)("shows actionable Feishu tenant permission failure in %s", async(locale)=>{
+    const start=vi.fn().mockRejectedValue(new ApiError("validation",422,"feishu_tenant_permission_required","request",99991672));
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start},locale);
+    await flushPromises(); await wrapper.get('[data-provider="feishu"]').trigger("click"); await flushPromises();
+    await field(wrapper,"App ID").setValue("app"); await field(wrapper,"App Secret").setValue("private-secret");
+    await button(wrapper,locale==="zh-CN"?"连接账号":"Connect account").trigger("click"); await flushPromises();
+    expect(wrapper.get('[role="alert"]').text()).toContain("tenant:tenant:readonly");
+    expect(wrapper.get('[role="alert"]').text()).toContain("99991672");
+    expect(wrapper.text()).not.toContain("private-secret");
+    expect(button(wrapper,locale==="zh-CN"?"保存":"Save").attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
   it.each(["zh-CN", "en-US"] as const)("connects Feishu with only application credentials in %s",async(locale)=>{
     const start=vi.fn(async()=>connectedLogin("feishu")), save=vi.fn(async()=>channel), cancel=vi.fn(async()=>{});
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start,saveMessageChannel:save,cancelChannelLogin:cancel},locale);

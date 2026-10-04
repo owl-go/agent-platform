@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -202,6 +203,18 @@ func (service *Service) validateExpertInputAvailability(ctx context.Context, inp
 
 func publicError(err error) error {
 	var providerFailure *aicreationapplication.ProviderFailure
+	var channelFailure *workspaceapplication.ChannelAccountFailure
+	if errors.As(err, &channelFailure) {
+		switch channelFailure.Code {
+		case "feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable":
+			return kratoserrors.New(http.StatusUnprocessableEntity, channelFailure.Code, channelFailure.Code).WithMetadata(map[string]string{
+				"provider_code":        strconv.Itoa(channelFailure.ProviderCode),
+				"provider_http_status": strconv.Itoa(channelFailure.HTTPStatus),
+			})
+		default:
+			return kratoserrors.New(http.StatusUnprocessableEntity, "invalid_input", "channel account connection failed")
+		}
+	}
 	switch {
 	case errors.Is(err, accountdomain.ErrUnauthenticated):
 		return kratoserrors.New(http.StatusUnauthorized, "authentication_required", "authentication required")
