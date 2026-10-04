@@ -269,7 +269,7 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 
 通过去重、当前授权和受众检查的启用渠道消息持久化后，先尝试对原消息添加 `Typing` 表情；验证消息、配对消息、重复和未授权消息不触发此反馈。Worker 领取后，通过可选 `ChannelTransport.Response` 创建 `update_multi=true` 的共享卡片，以 Inbox ID 作为稳定 UUID；每秒合并一次累计回答并 PATCH 同一 message ID。该方案使用 IM 消息卡片更新接口，不依赖 CardKit 实体或新增 CardKit 权限。
 
-最后一个 Expert 阶段提供回答和公开思考摘要；其他阶段只提供固定活动标签。原始 reasoning、命令参数和工具结果不进入该 port。发送前先拼接再对全部执行凭证精确脱敏，并保留至少最长 Secret 长度的尾部，避免跨 delta 泄露。流式预览在链接前截断；终态回复继续经过私有文件/签名链接门禁。更新颗粒度取决于实际 Runtime：只有完整消息事件时，卡片按消息更新，不宣称逐 Token 输出。回答预览最多 1,800 字符，公开摘要最多 600 字符；终态按 1,800 字符拆分，第一段覆盖原卡片，其余仍通过有序 Delivery 发送，保留完整答案。卡片使用 plain_text 避免模型内容触发动态图片和群体提及。
+最后一个 Expert 阶段提供回答和公开思考摘要；其他阶段只提供固定活动标签。原始 reasoning、命令参数和工具结果不进入该 port。发送前先拼接再对全部执行凭证精确脱敏，并保留至少最长 Secret 长度的尾部，避免跨 delta 泄露。流式预览在链接前截断；终态回复继续经过私有文件/签名链接门禁。更新颗粒度取决于实际 Runtime：只有完整消息事件时，卡片按消息更新，不宣称逐 Token 输出。回答预览最多 1,800 字符，公开摘要最多 600 字符；终态按 1,800 字符拆分，第一段覆盖原卡片，其余仍通过有序 Delivery 发送，保留完整答案。卡片使用 JSON 2.0 的 `markdown` 正文组件，标题保持 `plain_text`；模型 HTML 和图片语法经过处理，避免触发动态图片和群体提及。
 
 Migration `000069_message_channel_responses.sql` 在 Inbox 保存非敏感 provider message/reaction ID、创建状态、revision 和最多 600 字的脱敏公开思考摘要，不保存凭证、Runtime 原始事件或草稿。每次创建前保存 intent；更新使用 revision fencing。Worker 重启后复用已确认 message ID；创建中断或发送结果不确定时进入 `outcome_unknown`，不能自动创建第二张卡，只有拥有者明确确认重发才释放未知创建状态。已知卡片的累计内容替换可安全重试；终态答案仍通过原 Run 终态事务入队，与 Credits 和 Run 状态一致。每次刷新重新检查 owner、Workflow、Run、Inbox、配置、generation 和受众；清除表情使用有界独立 context。反馈或预览失败不改变执行结果；未创建卡片时终态 Delivery 仍可独立发送。供应商拒绝、凭证销毁或不确定表情创建可能阻止清除，不能承诺外部反馈一定移除。
 
@@ -309,3 +309,11 @@ Inbox 的既有 `response` JSONB 保存最新公开摘要，答复草稿仍仅�
 实际执行并通过：四个受影响包测试、独立 PostgreSQL 16 的 `make test`、四包 `go test -race`、`make build`、四包 `go vet`、新增边界测试以及集成后的四包 PostgreSQL 测试。覆盖公开摘要/答案分离、摘要裁剪前脱敏、链接排除、阶段与 Run 隔离、真实工具计数、短任务收尾保存、卡片请求预算、数据库恢复/revision fencing 和完整长答案续发。独立数据库已清理。未运行 Web 门禁（未改前端），未运行 Linux + runsc Sandbox/Production Conformance；不声称真实飞书显示或所有 Runtime 摘要粒度已经验收。
 
 服务器备份目录为 `/opt/agent-platform/backups/pre-feishu-public-progress-20261004-1`，数据库备份 checksum 与 restore-list 通过（未执行完整恢复演练）；候选 API readyz、配置 checksum、完整迁移 ledger 不变检查通过。切换前活动 Run/Assistant Response 合计 0；切换后 API/Worker healthy，Worker 9090 readyz 通过，启用 Feishu 连接聚合为 `connected|1`。公网 API healthz/readyz、OIDC metadata、首页和关键 JS 校验通过，匿名配对请求保持 401。现场证据位于 `/opt/agent-platform/evidence/feishu-public-progress-20261004-1`。可回退上一版 API/Worker 镜像，不需要数据库或静态资源回滚。
+
+### 飞书 Markdown 卡片正文（2026-10-04）
+
+旧实现将所有正文放在 `div.text.tag=plain_text`，导致 Markdown 被当作字面文本；仅切换为 `lark_md` 也不能完整展示标题、引用和表格。当前创建、动态 PATCH、成功终态及续发卡片统一声明 `schema=2.0`，使用 `body.elements[].tag=markdown`，共享设置保持 `update_multi=true`，宽度配置使用 2.0 的 `width_mode=fill`。进度、公开摘要和答案分开成组件，摘要中的未闭合代码块不会覆盖后续答案。客户端需要飞书 7.20 及以上版本，旧客户端由飞书提供升级占位提示；不新增 CardKit 权限。
+
+正文保留标题、加粗/斜体/删除线、列表、引用、表格、代码和链接语法。Goldmark CommonMark Parser 仅用于识别代码内容，不将回复转换为 HTML；代码块和行内代码中的比较符、HTML 示例和图片字面文本原样保留。代码以外的 HTML 起始符和实体入口转义，图片语法的 `!` 转成文字实体，阻止模型内容触发飞书人员提及或资源图片。回答仍经过既有凭证脱敏与私有链接门禁，卡片大小预算和稳定消息 ID 更新规则保持适用。
+
+验证采用真实卡片生成与 POST/PATCH 协议 seam；最小 `**重点**` 载荷在旧实现未声明 Markdown 组件时失败，修复后通过。CommonMark 渲染验证覆盖标题、列表、引用、表格、代码原文及 HTML/图片不生效；请求预算覆盖中文、控制字符、实体和图片符号的最坏展开。协议依据：[卡片 2.0 结构](https://open.feishu.cn/document/feishu-cards/card-json-v2-structure)、[2.0 Markdown 组件](https://open.feishu.cn/document/feishu-cards/card-json-v2-components/content-components/rich-text)与[更新消息卡片](https://open.feishu.cn/document/server-docs/im-v1/message-card/patch)。真实客户端显示仍须现场确认。
