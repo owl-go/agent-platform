@@ -89,27 +89,38 @@ describe("WorkflowDetailPage", () => {
     expect(wrapper.get('.run-row[role="button"]').text()).toContain("消息渠道 · 历史机器人");
     wrapper.unmount();
   });
-  it("opens a channel follow-up through its root conversation and reruns the selected turn", async () => {
+  it("opens one channel conversation with all turns and reruns its latest turn", async () => {
     const root: Run = { ...run, message_channel_id: "channel", message_channel_provider: "wechat", trigger: "message_channel" };
-    const followUp: Run = { ...root, id: "follow-up", turn_number: 2, state: "failed" };
+    const followUp: Run = { ...root, id: "follow-up", turn_number: 2, state: "failed", text_input: "同一用户的追问", final_text: "后续答案" };
+    const summary: Run = { ...root, turn_number: 2, state: "failed" };
     const listTurns = vi.fn(async () => [root, followUp]);
     const rerun = vi.fn(async () => ({ ...run, id: "rerun", conversation_id: "rerun" }));
-    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [followUp, root]), listRunTurns: listTurns, rerunWorkflow: rerun }));
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [summary]), listRunTurns: listTurns, rerunWorkflow: rerun }));
+    expect(wrapper.findAll('.run-row[role="button"]')).toHaveLength(1);
+    await wrapper.get('.run-row[role="button"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain(root.text_input);
+    expect(wrapper.text()).toContain(followUp.text_input);
+    expect(wrapper.text()).toContain("后续答案");
+    await wrapper.get(".run-conversation-head .back-link").trigger("click");
     await wrapper.get('.run-row[role="button"] .run-actions button').trigger("click");
     await flushPromises();
     expect(listTurns).toHaveBeenCalledWith(workflow.id, root.id);
     expect(rerun).toHaveBeenCalledWith(workflow.id, followUp.id);
     wrapper.unmount();
   });
-  it("cancels the selected channel Run without cancelling a different turn", async () => {
-    const queued: Run = { ...run, id: "queued-turn", turn_number: 2, trigger: "message_channel", message_channel_id: "channel", state: "queued" };
-    const cancel = vi.fn(async () => ({ ...queued, state: "cancelled" as const }));
-    const listTurns = vi.fn(async () => [run]);
-    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [queued]), cancelRun: cancel, listRunTurns: listTurns }));
+  it("cancels the active turn of a channel conversation instead of its terminal root", async () => {
+    const root: Run = { ...run, trigger: "message_channel", message_channel_id: "channel" };
+    const active: Run = { ...root, id: "active-turn", turn_number: 2, state: "running" };
+    const queued: Run = { ...root, id: "queued-turn", turn_number: 3, state: "queued" };
+    const summary: Run = { ...root, turn_number: 3, state: "queued" };
+    const cancel = vi.fn(async () => ({ ...active, state: "cancelled" as const }));
+    const listTurns = vi.fn(async () => [root, active, queued]);
+    const wrapper = await mountPage(apiStub({ listRuns: vi.fn(async () => [summary]), cancelRun: cancel, listRunTurns: listTurns }));
     await wrapper.get('.run-row[role="button"] .run-actions button').trigger("click");
     await flushPromises();
-    expect(cancel).toHaveBeenCalledWith(workflow.id, queued.id);
-    expect(listTurns).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledWith(workflow.id, active.id);
+    expect(listTurns).toHaveBeenCalledWith(workflow.id, root.id);
     wrapper.unmount();
   });
   beforeEach(() => {

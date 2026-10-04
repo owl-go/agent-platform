@@ -1048,18 +1048,8 @@ func (repository *Repository) ListRuns(ctx context.Context, ownerID, workflowID 
 func summarizeRunConversations(rows []runRecord) []runRecord {
 	roots := make(map[string]runRecord)
 	latest := make(map[string]runRecord)
-	channelConversations := make(map[string]bool)
-	for _, row := range rows {
-		if row.Trigger == "message_channel" {
-			channelConversations[row.ConversationID] = true
-		}
-	}
 	summaries := make([]runRecord, 0, len(rows))
 	for _, row := range rows {
-		if channelConversations[row.ConversationID] {
-			summaries = append(summaries, row)
-			continue
-		}
 		if row.ID == row.ConversationID {
 			roots[row.ConversationID] = row
 		}
