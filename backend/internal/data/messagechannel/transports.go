@@ -36,7 +36,7 @@ func NewTransports(transport http.RoundTripper, options ...TransportOptions) map
 		"whatsapp":    {Account: whatsapp, WebhookReceiver: whatsapp, Sender: whatsapp},
 		"signal":      {Account: signal, StreamReceiver: signal, Sender: signal},
 		"wecom":       {Account: wecom, StreamReceiver: wecom, Sender: wecom},
-		"wechat":      {Account: wechat, StreamReceiver: wechat, Sender: wechat},
+		"wechat":      {Account: wechat, StreamReceiver: wechat, Sender: wechat, Typing: wechat},
 		"qqbot":       {Account: qqbot, WebhookReceiver: qqbot, Sender: qqbot},
 		"bluebubbles": {Account: bluebubbles, StreamReceiver: bluebubbles, Sender: bluebubbles},
 		"yuanbao":     {Account: yuanbao, StreamReceiver: yuanbao, Sender: yuanbao},

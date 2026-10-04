@@ -120,6 +120,7 @@ type Worker struct {
 	executor         Executor
 	connectorBuilder *cliconnector.Builder
 	analytics        productanalytics.Observer
+	channels         *MessageChannels
 }
 
 const cancellationPollInterval = 200 * time.Millisecond
@@ -139,6 +140,10 @@ func (worker *Worker) EnableProductAnalytics(observer productanalytics.Observer)
 	if observer != nil {
 		worker.analytics = observer
 	}
+}
+
+func (worker *Worker) EnableMessageChannels(channels *MessageChannels) {
+	worker.channels = channels
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -176,9 +181,15 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	executionCtx, cancel := context.WithCancel(ctx)
 	monitorDone := make(chan struct{})
 	go worker.monitorCancellation(executionCtx, *job, cancel, monitorDone)
+	stopTyping := func() {}
+	if worker.channels != nil {
+		stopTyping = worker.channels.TrackExecution(executionCtx, *job)
+		defer stopTyping()
+	}
 	result, executeErr := worker.executor.Execute(executionCtx, *job, worker.repository)
 	close(monitorDone)
 	cancel()
+	stopTyping()
 	if executeErr != nil {
 		discardSuccessCommit(result)
 		if ctx.Err() != nil {

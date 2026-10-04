@@ -154,3 +154,36 @@ func (a *WeChat) Send(ctx context.Context, s application.ChannelStored, c applic
 	}
 	return application.ChannelSendResult{State: "sent", MessageID: key}
 }
+
+// Typing uses the actual incoming participant and context, not the QR scanner's
+// account identity. The ticket remains only in this execution's transport session.
+func (a *WeChat) BeginTyping(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage) (application.ChannelTypingSession, error) {
+	if m.Group || m.SenderID == "" || m.Reply["context_token"] == "" {
+		return nil, providerError("typing_unavailable")
+	}
+	result, status, _, err := a.call(ctx, c, "/ilink/bot/getconfig", map[string]any{"ilink_user_id": m.SenderID, "context_token": m.Reply["context_token"]})
+	if err != nil || status != http.StatusOK || !wechatMessageSuccess(result) {
+		return nil, providerError("typing_unavailable")
+	}
+	ticket := rawString(result["typing_ticket"])
+	if ticket == "" || len(ticket) > 4096 {
+		return nil, providerError("typing_unavailable")
+	}
+	return &wechatTypingSession{adapter: a, credentials: c, userID: m.SenderID, ticket: ticket}, nil
+}
+
+type wechatTypingSession struct {
+	adapter        *WeChat
+	credentials    application.ChannelCredentials
+	userID, ticket string
+}
+
+func (s *wechatTypingSession) set(ctx context.Context, state int) error {
+	result, status, _, err := s.adapter.call(ctx, s.credentials, "/ilink/bot/sendtyping", map[string]any{"ilink_user_id": s.userID, "typing_ticket": s.ticket, "status": state})
+	if err != nil || status != http.StatusOK || !wechatMessageSuccess(result) {
+		return providerError("typing_unavailable")
+	}
+	return nil
+}
+func (s *wechatTypingSession) Refresh(ctx context.Context) error { return s.set(ctx, 1) }
+func (s *wechatTypingSession) Stop(ctx context.Context) error    { return s.set(ctx, 2) }

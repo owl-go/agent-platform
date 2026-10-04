@@ -242,3 +242,9 @@ BlueBubbles 查询与行号字段依据官方 [MessageRouter](https://github.com
 ### 渠道配置与 Run History 展示（2026-10-04）
 
 账号授权和受众保存后，对应 provider 入口及已保存账号显示“已配置”；点击已配置入口编辑现有账号。接收验证、启用/停用及错误保持真实状态。“回复记录”入口与面板暂时从渠道配置移除，既有 Delivery 状态、去重及安全重试契约不变。每条通过准入的渠道问题沿用现有 Workflow Queue 创建一个 Run；运行记录按 Run Conversation 汇总，同一渠道、账号、聊天、线程及发送者的连续问题只显示一个稳定会话入口，状态和时间随最新一轮更新；打开后按顺序展示全部问题和答案。不同发送者或聊天仍隔离，显式重置会话后创建新的入口。列表取消读取会话中的活动 Run，重新运行使用最新一轮，不对已终态的根 Run 执行取消或重开。历史和最近运行的触发方式显示具体 provider 与渠道名称。Migration `000068_message_channel_run_origin.sql` 回填已有渠道 Run 的 provider，新 Run 在准入事务内冻结 provider 与渠道名称；重命名/软删除不改写历史。旧响应缺少 provider 时继续显示已有渠道名称，不推测来源。验证消息只验证原聊天回复，不运行模型，也不伪造 Run。
+
+### 微信输入状态（2026-10-04）
+
+`ChannelTransport.Typing` 是独立可选 port，当前只注册 WeChat，完整文本答案仍使用原 Delivery Outbox。Worker 领取 Run 后异步跟踪执行，不阻塞模型启动；每次输入状态刷新前通过 owner/Workflow/Run/Inbox 联结重新检查当前授权、配置版本、generation、受众和运行状态。排队和终态不显示；等待 owner 操作时停止，恢复执行后重新获取 ticket。
+
+使用实际入站 sender 与加密保存的 context_token 调用 `getconfig`，只将返回的 typing_ticket 保留在本次执行的 host transport session，再调用 `sendtyping`：status=1 开始/每五秒刷新，status=2 清除。getconfig 不再承担账号身份门禁。所有调用有三秒上下文边界；取消后清理使用独立的三秒 context，先停止输入状态再提交终态，避免下一轮启动后上一轮迟到的清除覆盖它。票据缺失、格式错误、供应商非零返回或网络失败只结束输入状态，不改变 Run、Credits、渠道健康或答案投递。日志仅记录 provider 和固定 lifecycle event，不记录外部 ID、票据、context_token 或原始错误。真实手机显示仍以发布后的现场验收为准。

@@ -41,6 +41,17 @@ type ChannelSender interface {
 	Send(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, string) ChannelSendResult
 }
 
+// Typing is optional, transient provider activity, independent of answer delivery.
+// Its session retains any provider ticket only until the execution ends.
+type ChannelTypingSender interface {
+	BeginTyping(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (ChannelTypingSession, error)
+}
+
+type ChannelTypingSession interface {
+	Refresh(context.Context) error
+	Stop(context.Context) error
+}
+
 // ChannelTransport explicitly registers one receive mode and an independent sender.
 // A provider can reuse an implementation across roles without a combined interface
 // or unsupported-method stubs. Registration is fixed at process startup.
@@ -49,6 +60,7 @@ type ChannelTransport struct {
 	WebhookReceiver ChannelWebhookReceiver
 	StreamReceiver  ChannelStreamReceiver
 	Sender          ChannelSender
+	Typing          ChannelTypingSender
 }
 
 func (t ChannelTransport) receiver() ChannelReceiver {
