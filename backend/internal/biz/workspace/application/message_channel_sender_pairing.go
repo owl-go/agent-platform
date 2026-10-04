@@ -132,7 +132,7 @@ func (s *MessageChannels) StartSenderPairing(ctx context.Context, owner, workflo
 }
 
 func supportsSenderPairing(provider string) bool {
-	return provider == "feishu" || provider == "dingtalk"
+	return provider == "feishu" || provider == "dingtalk" || provider == "wecom"
 }
 func senderPairingBinding(provider, binding string) string {
 	return provider + ":" + binding

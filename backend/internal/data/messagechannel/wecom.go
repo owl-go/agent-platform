@@ -142,6 +142,9 @@ func normalizeWeCom(s application.ChannelStored, frame wecomFrame) (domain.Chann
 	return domain.ChannelMessage{EventID: event.ID, MessageID: event.ID, SenderID: event.From.ID, ChatID: chat, Group: group, Mentioned: group, Text: event.Text.Content, OccurredAt: timestamp, Reply: map[string]string{}}, true
 }
 func (a *WeCom) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink) error {
+	return a.ConnectWithHealth(ctx, s, c, sink, nil)
+}
+func (a *WeCom) ConnectWithHealth(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink, health application.ChannelConnectionHealthSink) error {
 	socket, err := a.open(ctx, c)
 	if err != nil {
 		return err
@@ -152,8 +155,16 @@ func (a *WeCom) Connect(ctx context.Context, s application.ChannelStored, c appl
 	stop := context.AfterFunc(child, func() { socket.Close() })
 	defer stop()
 	session := newSocketSession(child, socket)
-	remove := a.bindings.add(s, session)
-	defer remove()
+	// Temporary sender pairing has no saved channel and cannot send replies.
+	if s.Channel.ID != "" {
+		remove := a.bindings.add(s, session)
+		defer remove()
+	}
+	if health != nil {
+		if err := health(child, "connected"); err != nil {
+			return err
+		}
+	}
 	go session.heartbeat(websocket.TextMessage, 25*time.Second, func() []byte { return wecomRequest("ping", uuid.NewString(), nil) })
 	for child.Err() == nil {
 		_ = socket.SetReadDeadline(time.Now().Add(90 * time.Second))

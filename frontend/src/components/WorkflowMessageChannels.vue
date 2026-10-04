@@ -24,7 +24,7 @@ const confirmation = ref<{ channel: MessageChannel; action: string }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
 const providers = Object.keys(channelSetups);
 const setup = computed(() => channelSetups[form.provider]!);
-const senderPairingAvailable = computed(() => ["feishu", "dingtalk"].includes(form.provider));
+const senderPairingAvailable = computed(() => ["feishu", "dingtalk", "wecom"].includes(form.provider));
 const fields = computed(() => setup.value.fields);
 const login = ref<ChannelLogin>();
 const qrImage = ref("");

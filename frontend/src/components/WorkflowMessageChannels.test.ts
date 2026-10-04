@@ -38,18 +38,19 @@ describe("Workflow message channels",()=>{
   });
 
   it.each([
-    ["zh-CN", "feishu"], ["en-US", "feishu"], ["zh-CN", "dingtalk"], ["en-US", "dingtalk"],
+    ["zh-CN", "feishu"], ["en-US", "feishu"], ["zh-CN", "dingtalk"], ["en-US", "dingtalk"], ["zh-CN", "wecom"], ["en-US", "wecom"],
   ] as const)("pairs a sender in %s for %s and requires owner confirmation", async(locale,provider)=>{
     vi.useFakeTimers();
     const zh=locale==="zh-CN";
     const base=connectedLogin(provider);
+    const senderID=provider==="dingtalk" ? "staff_identified" : provider==="wecom" ? "wecom_user_identified" : "ou_identified";
     const waiting:ChannelLogin={...base,pairing_status:"waiting",pairing_code:"pair 0123456789abcdef0123456789abcdef",pairing_expires_at:new Date(Date.now()+120000).toISOString()};
-    const pair=vi.fn(async()=>waiting),poll=vi.fn(async()=>({...waiting,pairing_status:"recognized" as const,pairing_code:"",suggested_sender_id:provider==="dingtalk" ? "staff_identified" : "ou_identified"}));
+    const pair=vi.fn(async()=>waiting),poll=vi.fn(async()=>({...waiting,pairing_status:"recognized" as const,pairing_code:"",suggested_sender_id:senderID}));
     const save=vi.fn(async()=>channel),cancel=vi.fn(async()=>{});
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:vi.fn(async()=>base),startChannelSenderPairing:pair,pollChannelLogin:poll,saveMessageChannel:save,cancelChannelLogin:cancel},locale);
     try {
       await flushPromises();await wrapper.get(`[data-provider="${provider}"]`).trigger("click");await flushPromises();
-      await field(wrapper,provider==="dingtalk" ? "Client ID" : "App ID").setValue("app");await field(wrapper,provider==="dingtalk" ? "Client Secret" : "App Secret").setValue("secret");
+      await field(wrapper,provider==="dingtalk" ? "Client ID" : provider==="wecom" ? "Bot ID" : "App ID").setValue("app");await field(wrapper,provider==="dingtalk" ? "Client Secret" : provider==="wecom" ? "Bot Secret" : "App Secret").setValue("secret");
       await button(wrapper,zh?"连接账号":"Connect account").trigger("click");await flushPromises();
       await button(wrapper,zh?"自动识别发送者":"Identify sender automatically").trigger("click");await flushPromises();
       expect(pair).toHaveBeenCalledWith("workflow",{login_id:"login"},expect.any(AbortSignal));
@@ -59,12 +60,12 @@ describe("Workflow message channels",()=>{
       expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe("");
       expect(button(wrapper,zh?"保存":"Save").attributes("disabled")).toBeDefined();expect(save).not.toHaveBeenCalled();
       await button(wrapper,zh?"加入允许的发送者":"Add allowed sender").trigger("click");await flushPromises();
-      expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe(provider==="dingtalk" ? "staff_identified" : "ou_identified");
+      expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe(senderID);
       await button(wrapper,zh?"保存":"Save").trigger("click");await flushPromises();
-      expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({login_id:"login",credentials:{},audience:{sender_ids:[provider==="dingtalk" ? "staff_identified" : "ou_identified"],group_ids:[],allow_direct:true}}),expect.any(AbortSignal));
+      expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({login_id:"login",credentials:{},audience:{sender_ids:[senderID],group_ids:[],allow_direct:true}}),expect.any(AbortSignal));
     } finally {wrapper.unmount();vi.useRealTimers();}
   });
-  it.each(["feishu", "dingtalk"])("pairs an existing saved %s account without exposing credentials and preserves its audience", async(provider)=>{
+  it.each(["feishu", "dingtalk", "wecom"])("pairs an existing saved %s account without exposing credentials and preserves its audience", async(provider)=>{
     const pair=vi.fn(async()=>({...connectedLogin(provider),pairing_status:"recognized" as const,suggested_sender_id:"ou_new"})),cancel=vi.fn(async()=>{});
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider,region:provider==="feishu" ? "feishu" : "",audience:{sender_ids:["ou_old"],group_ids:[],allow_direct:true}}]})),startChannelSenderPairing:pair,cancelChannelLogin:cancel});
     await flushPromises();await wrapper.get(`[data-provider="${provider}"]`).trigger("click");await flushPromises();
