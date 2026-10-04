@@ -96,3 +96,7 @@ Product Analytics 使用追加式 Migration `000057_product_analytics.sql`。事
 企业治理使用追加式 Migration `000064_enterprise_governance.sql`：移除单一 Administrator 索引，增加唯一 Bootstrap Administrator、Resource Publisher、Identity Group/Membership、Governance Audit Event，以及 Knowledge Base scope/group 外键。Migration 将既有最早 Administrator 标为 Bootstrap Administrator，把既有 public Platform Knowledge Base 回填为 platform scope，并把旧的 Administrator-private Platform Knowledge Base 收敛为 owner-private scope；不会猜测 Department 或成员关系。完整 Migration 链与治理边界已在一次性 PostgreSQL 17 验证，生产 Migration 和真实 Keycloak 同步仍需单独证据。
 
 Smart Assistant 受控发布使用追加式 Migration `000065_smart_assistant_controlled_publication.sql`：为 Assistant 保存当前版本的 Publication Validation，并将旧版不满足严格 Origin、正数每日上限和数据处理确认的 Share Configuration 全部撤销。Application 层只把当前版本的 passing validation 视为可服务状态；任何配置更新先使旧验证失效，开启和更新路径通过同一 Publication Check 检查配置、模型、FAQ、安全可检索知识、引用资源、Credits 和分享控制。Token 轮换只更换访问 secret，并把刚验证的配置结果绑定到新版本。当前分享默认允许自由提问，不提供自由提问开关或每日次数上限；历史配置字段仅兼容为 true/0，不参与发布校验或请求准入，已启用的分享无需重存或轮换 Token。Migration 000065 的历史撤销结果不自动恢复。Repository 的三十天发布统计只聚合 visitor conversation/turn 状态和 Credit Ledger，不读取或返回对话内容、FAQ、检索片段或访客身份。
+
+## Connector Authorization 续期
+
+Application 的 `ConnectorAuthorizationRenewal` 使用窄 Repository、Cipher 和供应商 Refresh port；Worker 装配当前飞书 OAuth Adapter，并通过独立分钟循环和渠道 Inbox 准入前检查调用。HTTP 不进入 GORM 事务，凭证明文只在 host 调用期间存在。Repository 负责 selected grant/owner/Installation/Publication 校验、会话 advisory lock、版本化保存及 Audit 原子性；API 手动刷新共享该锁，并在供应商调用前拒绝过期的 expected_version。没有自动扫码、账号切换或审批权限扩大。

@@ -19,6 +19,7 @@ import (
 	analyticsrepo "agent-platform/backend/internal/data/productanalytics"
 	workspacerepo "agent-platform/backend/internal/data/workspace/gormrepo"
 	"agent-platform/backend/internal/data/workspace/runtimeexecutor"
+	"agent-platform/backend/internal/feishucli"
 	"agent-platform/backend/internal/infrastructure/gormdb"
 	"agent-platform/backend/internal/knowledgebase/ingestion"
 	"agent-platform/backend/internal/knowledgebase/ragflow"
@@ -42,14 +43,15 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 }
 
 type Worker struct {
-	ingestion          *ingestion.Processor
-	legacy             *ingestion.LegacyProcessor
-	knowledgeProvider  *ragflow.Client
-	knowledgeSources   func(context.Context) (bool, error)
-	workspace          *workspaceapplication.Worker
-	aicreation         *aicreationapplication.Service
-	channels           *workspaceapplication.MessageChannels
-	channelConnections *workspaceapplication.ChannelConnections
+	ingestion            *ingestion.Processor
+	legacy               *ingestion.LegacyProcessor
+	knowledgeProvider    *ragflow.Client
+	knowledgeSources     func(context.Context) (bool, error)
+	workspace            *workspaceapplication.Worker
+	aicreation           *aicreationapplication.Service
+	channels             *workspaceapplication.MessageChannels
+	channelConnections   *workspaceapplication.ChannelConnections
+	authorizationRenewal *workspaceapplication.ConnectorAuthorizationRenewal
 }
 
 func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
@@ -190,6 +192,15 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 			logger.Warn("message channel typing", "provider", provider, "event", event)
 		}
 	})
+	registrar := feishucli.NewRegistrar(nil)
+	renewal := workspaceapplication.NewConnectorAuthorizationRenewal(repository, box, func(ctx context.Context, appID, appSecret, token string) (workspaceapplication.ConnectorRenewalGrant, error) {
+		grant, err := registrar.RefreshAuthorization(ctx, appID, appSecret, token)
+		return workspaceapplication.ConnectorRenewalGrant{ExternalID: grant.ExternalID, AccessToken: grant.AccessToken, RefreshToken: grant.RefreshToken, Scopes: grant.Scopes, ExpiresAt: grant.ExpiresAt}, err
+	}, func(event string) {
+		logger.Info("connector authorization renewal", "provider", "feishu", "event", event)
+	})
+	worker.authorizationRenewal = renewal
+	channels.EnableAuthorizationRenewal(renewal)
 	workspaceWorker.EnableMessageChannels(channels)
 	worker.channels = channels
 	worker.channelConnections = workspaceapplication.NewChannelConnections(channels, config.MessageChannels.MaxConnections)
@@ -329,6 +340,11 @@ func NewServers(database *gormdb.Database, worker *Worker, warm *containerproces
 	if err != nil {
 		return nil, err
 	}
+	renewalLoop, err := workerserver.NewLoopWithState("connector-authorization-renewal", time.Minute, worker.authorizationRenewal.ProcessNext, state)
+	if err != nil {
+		return nil, err
+	}
+	servers = append(servers, renewalLoop)
 	servers = append(servers, maintenance)
 	return append(servers, management, reaper, contentReaper), nil
 }
