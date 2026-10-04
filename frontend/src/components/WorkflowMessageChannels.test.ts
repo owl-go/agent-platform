@@ -24,6 +24,19 @@ const button = (wrapper: ReturnType<typeof widget>, text: string) => wrapper.fin
 const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input, textarea");
 vi.mock("qrcode", () => ({ default:{toDataURL:vi.fn(async()=>"data:image/png;base64,cXJjb2Rl")} }));
 describe("Workflow message channels",()=>{
+  it("connects DingTalk with just Client ID and Client Secret", async()=>{
+    const start=vi.fn(async()=>connectedLogin("dingtalk"));
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start,cancelChannelLogin:vi.fn(async()=>{})});
+    try {
+      await flushPromises();await wrapper.get('[data-provider="dingtalk"]').trigger("click");await flushPromises();
+      await field(wrapper,"Client ID").setValue("app");await field(wrapper,"Client Secret").setValue("secret");
+      expect(button(wrapper,"连接账号").attributes("disabled")).toBeUndefined();
+      await button(wrapper,"连接账号").trigger("click");await flushPromises();
+      expect(start).toHaveBeenCalledWith("workflow",expect.objectContaining({provider:"dingtalk",credentials:{client_id:"app",client_secret:"secret"}}),expect.any(AbortSignal));
+      expect(wrapper.text()).toContain("允许的发送者");
+    } finally {wrapper.unmount();}
+  });
+
   it.each(["zh-CN", "en-US"] as const)("pairs a Feishu sender and requires owner confirmation in %s", async(locale)=>{
     vi.useFakeTimers();
     const zh=locale==="zh-CN";
@@ -195,7 +208,7 @@ describe("Workflow message channels",()=>{
 
   it.each([
     ["telegram", "Telegram", ["Bot Token"]], ["discord", "Discord", ["Bot Token"]], ["slack", "Slack", ["Bot Token", "Signing Secret"]],
-    ["dingtalk", "DingTalk", ["Client ID", "Client Secret", "Enterprise Corp ID"]], ["feishu", "Feishu", ["App ID", "App Secret"]],
+    ["dingtalk", "DingTalk", ["Client ID", "Client Secret"]], ["feishu", "Feishu", ["App ID", "App Secret"]],
     ["matrix", "Matrix", ["HTTPS endpoint", "Access Token"]], ["whatsapp", "WhatsApp", ["Access Token", "App Secret", "Verify Token", "Phone Number ID", "Business Account ID"]],
     ["signal", "Signal", ["HTTPS endpoint", "Bridge Token", "Account ID"]], ["wecom", "WeCom", ["Bot ID", "Bot Secret"]],
     ["qqbot", "QQ Bot", ["App ID", "App Secret"]],
@@ -216,6 +229,7 @@ describe("Workflow message channels",()=>{
       expect(dialog).not.toBeNull();
       expect(dialog.textContent).toContain(`Configure ${name}`);
       for (const label of labels) expect(dialog.textContent).toContain(label);
+      if (provider === "dingtalk") expect(dialog.querySelectorAll("input")).toHaveLength(2);
       const secret = dialog.querySelector<HTMLInputElement>('input[type="password"]')!;
       expect(secret).not.toBeNull();
       secret.value = "secret-draft";secret.dispatchEvent(new Event("input", { bubbles: true }));await flushPromises();
