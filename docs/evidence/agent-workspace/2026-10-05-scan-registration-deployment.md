@@ -58,3 +58,22 @@ Broker client secret 和 RSA 2048 PKCS8 签名 Key 在主机上生成，只写�
 在目标 Linux 执行 `make production-conformance-preflight`，因缺少专用 Git Fixture、Work/Evidence Root、Sandbox 探测配置、五个 Runtime 模型凭证和专用对象存储配置而失败；没有执行完整 Production/Sandbox Conformance，也未新增或开启 Runtime Capability。
 
 前一源码和 Web 为 `wecom-streaming-replies-20261004-1`；前一 Theme 为 `login-theme-da5b8c5f86fc`。回退先关闭 Registration Methods，再评估迁移后的 schema 兼容性，使用备份中的 API/Worker 镜像、env/YAML 和源码指针。恢复 Theme 指针需重新创建身份容器；恢复原 User Profile/服务角色需使用保护备份和部署管理员权限，不撤销其他并发授权。Web 可使用 `scripts/deploy-web.sh activate wecom-streaming-replies-20261004-1`。不得删除持久卷，不能盲目用旧二进制覆盖迁移后的数据库。
+
+## 保存请求 HTTP 400 修复发布
+
+同日管理员报告保存失败。线上微信配置 PUT 在约 2 ms 内返回 400，配置表没有写入记录。Web 的 `updateRegistrationMethod` 直接发送字符串 body，遗漏 JSON Content-Type，浏览器因此使用 `text/plain;charset=UTF-8`。真实生成的 Kratos HTTP Router 测试确认该类型返回 400 且未进入保存用例；相同 JSON body 使用 `application/json` 则返回 200 并正确绑定 provider 和字段。这解释了本次保存失败，尚不能证明真实供应商凭证有效。
+
+新增微信和飞书请求回归测试，修复前两项均以实际 Request 的 `text/plain;charset=UTF-8` 失败；改用既有统一 JSON 请求构造器后通过。功能分支提交 `72e10c6`，从 `main_temp` 的 `004cffc66d45a93d3579c14439efe1b0cc710740` 发布。目标 API/管理员组件测试 44 项通过，功能分支完整前端 595 项、集成分支完整前端 604 项通过；两处分支均执行 Web typecheck、生产构建、`go -C backend test ./internal/service/workspace/...`、`git diff --check` 和指引文件一致性检查。生产构建仍有既有 embed chunk 大小提示。
+
+持有主机发布锁，使用 `scripts/deploy-web.sh` 发布 `scan-registration-save-20261005-1`；仅切换 Web，API/Worker 镜像、数据库及身份配置未更新。旧 Web 保留，切换前指针和入口文件备份于 `/opt/agent-platform/backups/pre-scan-registration-save-20261005-1`。当前 `/opt/agent-platform/web/current` 指向新 release，API/Worker 保持 healthy。
+
+公网 HTML、API client、账号管理页及入口 JS 与生产构建逐字节相同；Health、Readiness、公开失败页和 OIDC Discovery 均 200，匿名管理员 API 为 401。产物 SHA-256：
+
+| 产物 | SHA-256 |
+|---|---|
+| `index.html` | `32e145d6b55f595a3aeb60dab2060974064ccc5fe705dd210343acff297b768e` |
+| `client-tdIlFTlL.js` | `a79232a102adcdd5d35a3bf1fff52121dfc1c19ee5cc8f7f951003abbd850865` |
+| `UsersPage-ITNWFshb.js` | `1efb27706532d2b008173913a4751e3c65a9263c6d1dd02f79c684acb7f1e95c` |
+| `index-EUb5SjPG.js` | `10c69e2f28d6dc965c9cd0b7a754ac4568c7178242fa4ce016dd13ea0a99bfb9` |
+
+发布日志与公网校验记录为 `/tmp/aw-registration-save-web-release.log`、`/tmp/aw-registration-save-public-evidence.json`。未使用生产管理员凭证提交真实注册配置，供应商校验、真实扫码和微信服务器握手仍待验收；本次没有执行完整 Runtime/数据库集成门禁。Web 可单独回退到 `scan-registration-20261005-1`，不涉及数据库回退。
