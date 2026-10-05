@@ -55,7 +55,7 @@ python3 scripts/configure-registration-identity.py check
 普通 JSON API 的契约位于 `backend/api/workspace/v1/workspace.proto`：
 
 - `GET /api/v1/admin/registration-methods`：Administrator 专用，返回可用性和两种方法的配置投影，秘密只返回 configured 标记。
-- `PUT /api/v1/admin/registration-methods/{provider}`：Administrator、expected_version 和 reason 必需。配置与 Governance Audit Event 同事务提交；供应商和 Keycloak HTTP 在事务外运行。
+- `PUT /api/v1/admin/registration-methods/{provider}`：Administrator、expected_version 和 reason 必需；JSON 请求须声明 `Content-Type: application/json`，Web 使用统一 JSON 请求构造器。浏览器字符串请求体默认的 `text/plain` 会在 HTTP 解码阶段返回 400，尚未进入凭证验证或写库。配置与 Governance Audit Event 同事务提交；供应商和 Keycloak HTTP 在事务外运行。
 
 配置先提交 `ready=false`，再同步唯一平台 IdP，最后按版本标记 Ready。Keycloak 故障或并发变更保留 pending 版本，Broker 拒绝开始/确认/兑换；管理员刷新后重新保存。关闭配置立即在 Broker 生效，即使 Keycloak 页面暂时保留旧入口也不能认证。空密钥只在 App ID 不变时保留旧值。
 

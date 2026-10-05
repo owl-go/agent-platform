@@ -817,7 +817,7 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listCommandApprovals(signal) { return (await call<{ items: CommandApproval[] }>("/api/v1/command-approvals", { signal })).items ?? []; },
     decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
     async getRegistrationSettings(signal) { const result = await call<RegistrationSettings>("/api/v1/admin/registration-methods", { signal }); return { ...result, items: result.items ?? [] }; },
-    async updateRegistrationMethod(provider, input, signal) { return call<RegistrationMethod>(`/api/v1/admin/registration-methods/${provider}`, { method: "PUT", body: JSON.stringify(input), signal }); },
+    async updateRegistrationMethod(provider, input, signal) { return call<RegistrationMethod>(`/api/v1/admin/registration-methods/${provider}`, json("PUT", input, signal)); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },
     createUser(input, signal) { return call("/api/v1/admin/users", json("POST", input, signal)); },
     setUserEnabled(id, enabled, version, reason, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version, reason }, signal)); },
