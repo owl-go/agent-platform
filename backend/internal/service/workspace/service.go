@@ -38,6 +38,7 @@ import (
 )
 
 type Service struct {
+	registration *registrationBroker
 	workspacev1.UnimplementedAgentWorkspaceServiceServer
 	accounts                 *accountapplication.Service
 	credits                  *creditsapplication.Service
@@ -60,6 +61,7 @@ type Service struct {
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
+	server.Handle("/api/v1/registration/{provider}/{operation}", http.HandlerFunc(service.registrationHTTP))
 	server.Handle(pixsoOAuthCallbackPath, http.HandlerFunc(service.pixsoOAuthCallback))
 	server.Handle(tianyanchaOAuthCallbackPath, http.HandlerFunc(service.tianyanchaOAuthCallback))
 	server.Handle(linearOAuthCallbackPath, http.HandlerFunc(service.linearOAuthCallback))

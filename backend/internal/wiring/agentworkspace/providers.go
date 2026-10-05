@@ -12,6 +12,7 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	accountrepo "agent-platform/backend/internal/data/account/gormrepo"
 	"agent-platform/backend/internal/data/account/keycloak"
+	registrationgateway "agent-platform/backend/internal/data/account/registration"
 	"agent-platform/backend/internal/data/account/tokenverifier"
 	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	"agent-platform/backend/internal/data/aiapplication/modelchat"
@@ -143,6 +144,10 @@ func NewSkillStore(objects objectstore.Provider) (*skillstore.Store, error) {
 	return skillstore.New(objects)
 }
 
-func NewHTTPHandlers(service *workspaceservice.Service, authentication kratoshttp.FilterFunc) (platformserver.HTTPHandlers, error) {
+func NewHTTPHandlers(service *workspaceservice.Service, authentication kratoshttp.FilterFunc, accounts *accountapplication.Service, database *gormdb.Database, box *secretcrypto.Box, identity *keycloak.Provider, config platformconfig.Config) (platformserver.HTTPHandlers, error) {
+	registration := accountapplication.NewRegistration(accounts, accountrepo.NewRegistration(database.ORM(), box), identity, registrationgateway.New(nil), config.Accounts.RegistrationBroker.PublicURL, config.Authentication.Issuer, config.Accounts.RegistrationBroker.ClientSecret)
+	if err := service.EnableRegistration(registration, config.Accounts.RegistrationBroker.SigningKey); err != nil {
+		return platformserver.HTTPHandlers{}, err
+	}
 	return platformserver.NewWorkspaceHTTPHandlers(service, authentication)
 }

@@ -125,6 +125,10 @@ export interface CLIConnectorEnablement { id: string; definition_id: string; sta
 export interface CLIConnectorAuthorization { id: string; enablement_id: string; identity: "user" | "bot"; external_identity_id: string; external_display_name: string; scopes: string[]; state: "active" | "invalid" | "disconnected"; expires_at?: string; version: number }
 export interface CLIConnectorAuthorizationFlow { id: string; enablement_id: string; identity: "user"; scopes: string[]; state: "waiting_for_user" | "completed" | "invalid"; action_url?: string; expires_at?: string; authorization?: CLIConnectorAuthorization }
 export interface CommandApproval { id: string; execution_kind: "session" | "run"; execution_id: string; connector_name: string; operation: string; target: string; redacted_arguments: string; state: "pending" | "approved" | "rejected" | "consumed" | "expired" | "closed"; identity?: "user" | "bot"; expires_at: string; version: number }
+export type RegistrationProvider = "wechat_official" | "feishu";
+export interface RegistrationMethod { provider: RegistrationProvider; enabled: boolean; ready: boolean; app_id: string; app_secret_configured: boolean; tenant_key: string; official_account_id: string; verification_token_configured: boolean; encoding_aes_key_configured: boolean; version: number; callback_url: string }
+export interface RegistrationSettings { available: boolean; items: RegistrationMethod[] }
+export interface RegistrationMethodInput { enabled: boolean; app_id: string; app_secret: string; official_account_id: string; verification_token: string; encoding_aes_key: string; expected_version: number; reason: string }
 export interface UserAccount { id: string; username: string; email: string; display_name: string; administrator: boolean; bootstrap_administrator?: boolean; resource_publisher?: boolean; groups?: IdentityGroup[]; enabled: boolean; created_at: string; version: number; credit_balance?: CreditBalance }
 export type RuntimeEngine = "claude" | "codex" | "hermes" | "openclaw" | "pi";
 
@@ -352,6 +356,8 @@ export interface PlatformApi {
   disconnectCLIConnectorAuthorization(id: string, version: number, signal?: AbortSignal): Promise<CLIConnectorAuthorization>;
   listCommandApprovals(signal?: AbortSignal): Promise<CommandApproval[]>;
   decideCommandApproval(id: string, decision: "approved" | "rejected", identity: "user" | "bot" | undefined, version: number, signal?: AbortSignal): Promise<CommandApproval>;
+  getRegistrationSettings(signal?: AbortSignal): Promise<RegistrationSettings>;
+  updateRegistrationMethod(provider: RegistrationProvider, input: RegistrationMethodInput, signal?: AbortSignal): Promise<RegistrationMethod>;
   listUsers(signal?: AbortSignal): Promise<UserAccount[]>;
   createUser(input: { username: string; email: string; display_name: string }, signal?: AbortSignal): Promise<{ user: UserAccount; temporary_password: string }>;
   setUserEnabled(id: string, enabled: boolean, version: number, reason: string, signal?: AbortSignal): Promise<UserAccount>;
@@ -810,6 +816,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     disconnectCLIConnectorAuthorization(id, version, signal) { return call(`/api/v1/connectors/cli/authorizations/${encodeURIComponent(id)}/disconnect`, json("POST", { expected_version: version }, signal)); },
     async listCommandApprovals(signal) { return (await call<{ items: CommandApproval[] }>("/api/v1/command-approvals", { signal })).items ?? []; },
     decideCommandApproval(id, decision, identity, version, signal) { return call(`/api/v1/command-approvals/${encodeURIComponent(id)}/decision`, json("POST", { decision, identity, expected_version: version }, signal)); },
+    async getRegistrationSettings(signal) { const result = await call<RegistrationSettings>("/api/v1/admin/registration-methods", { signal }); return { ...result, items: result.items ?? [] }; },
+    async updateRegistrationMethod(provider, input, signal) { return call<RegistrationMethod>(`/api/v1/admin/registration-methods/${provider}`, { method: "PUT", body: JSON.stringify(input), signal }); },
     async listUsers(signal) { return (await call<{ items: UserAccount[] }>("/api/v1/admin/users", { signal })).items ?? []; },
     createUser(input, signal) { return call("/api/v1/admin/users", json("POST", input, signal)); },
     setUserEnabled(id, enabled, version, reason, signal) { return call(`/api/v1/admin/users/${encodeURIComponent(id)}/enabled`, json("PATCH", { enabled, expected_version: version, reason }, signal)); },

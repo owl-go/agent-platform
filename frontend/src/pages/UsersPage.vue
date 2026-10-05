@@ -6,6 +6,7 @@ import { useI18n } from "vue-i18n";
 import { platformApiKey, type CreditPolicy, type GovernanceAuditEvent, type IdentityGroup, type UserAccount } from "../api/client";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import AdminRegistration from "../components/AdminRegistration.vue";
 import AdminCredits from "../components/AdminCredits.vue";
 
 const api = inject(platformApiKey)!;
@@ -32,8 +33,8 @@ const transferForm = ref({ from: "", to: "", reason: "" });
 const creditUser = ref<UserAccount>();
 const creditForm = ref({ daily: 600, adjustment: 0, reason: "" });
 const policyForm = ref({ defaultDaily: 600, warning: 80, redemptionCodes: false });
-const tab = ref<"users" | "groups" | "audit" | "rates" | "codes">("users");
-const tabs = computed(() => policy.value?.redemption_codes_enabled ? (["users", "groups", "audit", "rates", "codes"] as const) : (["users", "groups", "audit", "rates"] as const));
+const tab = ref<"users" | "groups" | "audit" | "rates" | "codes" | "registration">("users");
+const tabs = computed(() => policy.value?.redemption_codes_enabled ? (["users", "registration", "groups", "audit", "rates", "codes"] as const) : (["users", "registration", "groups", "audit", "rates"] as const));
 const credits = (value?: number) => (Number(value ?? 0) / 100).toFixed(2);
 const utilization = (item: UserAccount) => item.credit_balance?.daily_allocation_hundredths ? Math.round(Number(item.credit_balance.today_consumed_hundredths) / Number(item.credit_balance.daily_allocation_hundredths) * 100) : 0;
 const groupMembers = (group: IdentityGroup) => users.value.filter((user) => user.groups?.some((item) => item.id === group.id));
@@ -161,6 +162,7 @@ async function transferResources() {
     <ToastMessage v-if="error" kind="error" :title="t('common.failed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
     <el-card v-if="revealed" class="secret-banner" shadow="never"><div><p class="eyebrow">{{ t('users.temporary') }}</p><code>{{ revealed }}</code><small>{{ t('users.forceChange') }}</small></div><el-button size="small" @click="copy">{{ t('common.copy') }}</el-button><el-button size="small" text @click="revealed = ''">×</el-button></el-card>
 
+    <AdminRegistration v-if="tab === 'registration'" />
     <template v-if="tab === 'users'">
       <el-card v-if="policy" class="credit-policy-card" shadow="never"><template #header><div><strong>{{ t('users.creditPolicy') }}</strong><small>{{ t('users.creditPolicyHint') }}</small></div></template><el-form inline><el-form-item :label="t('users.defaultDailyLimit')"><el-input-number v-model="policyForm.defaultDaily" :min="0" :precision="2" /></el-form-item><el-form-item :label="t('users.warningThreshold')"><el-input-number v-model="policyForm.warning" :min="1" :max="99" /><span>%</span></el-form-item><el-form-item><el-checkbox v-model="policyForm.redemptionCodes">{{ t('users.enableCodes') }}</el-checkbox></el-form-item><el-button type="primary" @click="savePolicy">{{ t('common.save') }}</el-button></el-form></el-card>
       <el-table :data="users" class="user-table" stripe>

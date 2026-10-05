@@ -15,6 +15,8 @@ service AgentWorkspaceService {
   rpc ListConversationFiles(ListConversationFilesRequest) returns (ListConversationFilesResponse) { option (google.api.http) = {get: "/api/v1/conversation-files"}; }
   rpc GetSkillDocument(GetSkillDocumentRequest) returns (SkillDocument) { option (google.api.http) = {get: "/api/v1/skills/{skill_id}/document"}; }
   rpc GetCurrentUser(GetCurrentUserRequest) returns (CurrentUser) { option (google.api.http) = {get: "/api/v1/me"}; }
+  rpc GetRegistrationSettings(GetRegistrationSettingsRequest) returns (RegistrationSettingsResponse) { option (google.api.http) = {get: "/api/v1/admin/registration-methods"}; }
+  rpc UpdateRegistrationSettings(UpdateRegistrationSettingsRequest) returns (RegistrationMethod) { option (google.api.http) = {put: "/api/v1/admin/registration-methods/{provider}" body: "*"}; }
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) { option (google.api.http) = {get: "/api/v1/admin/users"}; }
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) { option (google.api.http) = {post: "/api/v1/admin/users" body: "*"}; }
   rpc SetUserEnabled(SetUserEnabledRequest) returns (UserAccount) { option (google.api.http) = {patch: "/api/v1/admin/users/{user_id}/enabled" body: "*"}; }
@@ -741,4 +743,20 @@ message RetryChannelDeliveryRequest {
  string delivery_id = 3;
  int64 version = 4;
  bool confirm_possible_duplicate = 5;
+}
+
+// Secret fields are write-only. Empty values preserve credentials only when
+// App ID is unchanged. Public registration handlers have no product authority.
+message GetRegistrationSettingsRequest {}
+message RegistrationSettingsResponse { bool available = 1; repeated RegistrationMethod items = 2; }
+message RegistrationMethod {
+ string provider = 1; bool enabled = 2; bool ready = 3; string app_id = 4;
+ bool app_secret_configured = 5; string tenant_key = 6; string official_account_id = 7;
+ bool verification_token_configured = 8; bool encoding_aes_key_configured = 9;
+ int64 version = 10; string callback_url = 11;
+}
+message UpdateRegistrationSettingsRequest {
+ string provider = 1; bool enabled = 2; string app_id = 3; string app_secret = 4;
+ string official_account_id = 5; string verification_token = 6; string encoding_aes_key = 7;
+ int64 expected_version = 8; string reason = 9;
 }

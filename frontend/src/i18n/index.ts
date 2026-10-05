@@ -337,6 +337,19 @@ Object.assign((en as unknown as { approvals: Record<string, unknown> }).approval
   failedNotice: "Submission failed. Check your connection and retry; this action has not been approved.",
 });
 
+Object.assign(zh, { registration: {
+ failureTitle: "扫码登录未完成", failureHint: "授权已过期、被取消，或账号不属于开放的企业。请返回登录页重新扫码；持续失败时联系管理员检查应用权限。", title: "登录与注册方式", hint: "开放后，用户扫码即可登录；首次使用自动注册普通账号。关闭入口不影响已登录的会话，管理员仍可使用账号密码登录。",
+ feishu: "飞书", wechat_official: "微信公众号", feishuHint: "仅允许应用所在企业的用户。企业身份自动验证；请开放获取公司信息权限并发布网页应用。", wechatHint: "用户扫码并关注公众号后注册；已关注的用户扫码登录。公众号须支持带参数二维码，回调使用安全模式。",
+ enabled: "开放扫码登录 / 注册", appID: "App ID", appSecret: "App Secret", originalID: "公众号原始 ID", token: "回调 Token", aesKey: "EncodingAESKey", callback: "供应商回调地址", callbackHint: "复制到供应商后台。飞书配置为重定向 URL；微信公众号配置为服务器 URL，并启用安全模式。", tenant: "已验证企业", configured: "已保存，留空保留", reason: "变更原因", save: "保存配置", saved: "注册方式已更新", failed: "配置未完成。检查应用凭证、获取公司信息权限、应用发布和身份服务权限，再重新保存。", unavailable: "扫码注册尚未配置。请由部署管理员配置注册 Broker 和 Keycloak 权限。", pending: "登录入口尚未配置完成，请重新保存。", loadFailed: "无法读取注册配置，请重试。", retry: "重新读取",
+ scanTitle: "微信公众号登录 / 注册", scanHint: "用微信扫描二维码并关注公众号，完成后自动进入工作区。已关注的用户扫码即可。", waiting: "等待扫码关注，二维码 5 分钟后失效", completing: "身份已确认，正在进入工作区…", expired: "二维码已过期或入口已关闭，请返回登录页重新扫码。", completionFailed: "登录未完成，请返回登录页重新扫码；持续失败时联系管理员。", back: "返回登录", qrAlt: "微信公众号登录注册二维码", language: "English"
+} });
+Object.assign(en, { registration: {
+ failureTitle: "Scan sign-in could not be completed", failureHint: "Authorization expired, was cancelled, or the account is outside the allowed enterprise. Return to sign in and scan again; contact your administrator to check application permissions if it continues.", title: "Sign-in and registration methods", hint: "Users can scan to sign in. First use creates an ordinary account. Closing a method keeps existing sessions; administrators can still sign in with a password.",
+ feishu: "Feishu", wechat_official: "WeChat Official Account", feishuHint: "Only users in the application's enterprise are allowed. Enterprise identity is verified automatically. Enable company-information permission and publish the web application.", wechatHint: "Scan and follow the Official Account to register. Existing followers can scan to sign in. The account must support parameterized QR codes; callbacks use safe mode.",
+ enabled: "Open scan sign-in / registration", appID: "App ID", appSecret: "App Secret", originalID: "Official Account original ID", token: "Callback Token", aesKey: "EncodingAESKey", callback: "Provider callback URL", callbackHint: "Copy to the provider console: redirect URL for Feishu, server URL with safe mode for WeChat.", tenant: "Verified enterprise", configured: "Saved; leave blank to retain", reason: "Reason for change", save: "Save configuration", saved: "Registration method updated", failed: "Configuration is incomplete. Check application credentials, company-information permission, publication and identity-service permissions, then save again.", unavailable: "Scan registration has not been configured. Ask the deployment administrator to configure the registration broker and Keycloak permissions.", pending: "Sign-in entry is not ready. Save again to retry.", loadFailed: "Could not load registration settings. Retry.", retry: "Reload",
+ scanTitle: "WeChat Official Account sign in / register", scanHint: "Scan with WeChat and follow the Official Account to enter the workspace. Existing followers can scan to sign in.", waiting: "Waiting for scan and follow. The QR code expires in 5 minutes.", completing: "Identity confirmed. Signing in…", expired: "QR expired or this method was closed. Return to sign in and scan again.", completionFailed: "Could not complete sign-in. Return to sign in and scan again; contact your administrator if it continues.", back: "Back to sign in", qrAlt: "WeChat Official Account sign-in and registration QR code", language: "简体中文"
+} });
+
 export function resolveInitialLocale(stored: string | null, browserLanguage: string): SupportedLocale {
   if (stored === "zh-CN" || stored === "en-US") return stored;
   return browserLanguage.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
@@ -515,7 +528,7 @@ Object.assign(en.common, { confirm: "Confirm", refresh: "Refresh", disabled: "Di
 Object.assign((zh as unknown as { credits: Record<string, string> }).credits, { groupBudget: "部门预算：{name}", groupBudgetRemaining: "今日部门剩余 ✧ {remaining} / 上限 ✧ {limit}；可用积分取个人与部门剩余中的较小值。" });
 Object.assign((en as unknown as { credits: Record<string, string> }).credits, { groupBudget: "Department budget: {name}", groupBudgetRemaining: "Department remaining today: ✧ {remaining} of ✧ {limit}. Available Credits use the lower of the personal and Department balance." });
 Object.assign(zh.users, {
-  tabs: { users: "用户", groups: "部门与群组", audit: "治理审计", rates: "模型倍率", codes: "兑换码" },
+  tabs: { users: "用户", registration: "注册方式", groups: "部门与群组", audit: "治理审计", rates: "模型倍率", codes: "兑换码" },
   result: "操作结果", roles: "角色", bootstrapAdministrator: "初始管理员", bootstrapLocked: "初始管理员不可降级", resourcePublisher: "资源发布者", departments: "所属部门",
   reason: "变更原因", disableUser: "停用账号", enableUser: "启用账号", syncGroups: "从身份源同步", groupSyncFailed: "身份群组同步失败；本地权限未变更。",
   identityReadOnly: "群组与成员关系来自身份源，只能同步；平台不会反向修改企业目录。", group: "群组", groupPath: "身份源路径", groupType: "用途", department: "部门", identityGroup: "普通群组", memberCount: "成员数",
@@ -524,7 +537,7 @@ Object.assign(zh.users, {
   auditPrivacy: "审计记录只保留治理动作、目标标识、原因和计数，不记录私有内容。", occurredAt: "发生时间", action: "动作", target: "目标", metrics: "计数"
 });
 Object.assign(en.users, {
-  tabs: { users: "Users", groups: "Departments & groups", audit: "Governance audit", rates: "Model rates", codes: "Redemption codes" },
+  tabs: { users: "Users", registration: "Registration", groups: "Departments & groups", audit: "Governance audit", rates: "Model rates", codes: "Redemption codes" },
   result: "Result", roles: "Roles", bootstrapAdministrator: "Bootstrap administrator", bootstrapLocked: "The Bootstrap Administrator cannot be demoted", resourcePublisher: "Resource Publisher", departments: "Departments",
   reason: "Reason", disableUser: "Disable account", enableUser: "Enable account", syncGroups: "Sync identity source", groupSyncFailed: "Identity group sync failed. Local permissions were not changed.",
   identityReadOnly: "Groups and memberships are read-only from the identity source. The platform never writes back to the enterprise directory.", group: "Group", groupPath: "Identity path", groupType: "Purpose", department: "Department", identityGroup: "Identity group", memberCount: "Members",

@@ -25,6 +25,8 @@ const (
 	AgentWorkspaceService_ListConversationFiles_FullMethodName                     = "/workspace.v1.AgentWorkspaceService/ListConversationFiles"
 	AgentWorkspaceService_GetSkillDocument_FullMethodName                          = "/workspace.v1.AgentWorkspaceService/GetSkillDocument"
 	AgentWorkspaceService_GetCurrentUser_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/GetCurrentUser"
+	AgentWorkspaceService_GetRegistrationSettings_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/GetRegistrationSettings"
+	AgentWorkspaceService_UpdateRegistrationSettings_FullMethodName                = "/workspace.v1.AgentWorkspaceService/UpdateRegistrationSettings"
 	AgentWorkspaceService_ListUsers_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/ListUsers"
 	AgentWorkspaceService_CreateUser_FullMethodName                                = "/workspace.v1.AgentWorkspaceService/CreateUser"
 	AgentWorkspaceService_SetUserEnabled_FullMethodName                            = "/workspace.v1.AgentWorkspaceService/SetUserEnabled"
@@ -203,6 +205,8 @@ type AgentWorkspaceServiceClient interface {
 	ListConversationFiles(ctx context.Context, in *ListConversationFilesRequest, opts ...grpc.CallOption) (*ListConversationFilesResponse, error)
 	GetSkillDocument(ctx context.Context, in *GetSkillDocumentRequest, opts ...grpc.CallOption) (*SkillDocument, error)
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*CurrentUser, error)
+	GetRegistrationSettings(ctx context.Context, in *GetRegistrationSettingsRequest, opts ...grpc.CallOption) (*RegistrationSettingsResponse, error)
+	UpdateRegistrationSettings(ctx context.Context, in *UpdateRegistrationSettingsRequest, opts ...grpc.CallOption) (*RegistrationMethod, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	SetUserEnabled(ctx context.Context, in *SetUserEnabledRequest, opts ...grpc.CallOption) (*UserAccount, error)
@@ -433,6 +437,26 @@ func (c *agentWorkspaceServiceClient) GetCurrentUser(ctx context.Context, in *Ge
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CurrentUser)
 	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetCurrentUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) GetRegistrationSettings(ctx context.Context, in *GetRegistrationSettingsRequest, opts ...grpc.CallOption) (*RegistrationSettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegistrationSettingsResponse)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_GetRegistrationSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) UpdateRegistrationSettings(ctx context.Context, in *UpdateRegistrationSettingsRequest, opts ...grpc.CallOption) (*RegistrationMethod, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegistrationMethod)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_UpdateRegistrationSettings_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2109,6 +2133,8 @@ type AgentWorkspaceServiceServer interface {
 	ListConversationFiles(context.Context, *ListConversationFilesRequest) (*ListConversationFilesResponse, error)
 	GetSkillDocument(context.Context, *GetSkillDocumentRequest) (*SkillDocument, error)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error)
+	GetRegistrationSettings(context.Context, *GetRegistrationSettingsRequest) (*RegistrationSettingsResponse, error)
+	UpdateRegistrationSettings(context.Context, *UpdateRegistrationSettingsRequest) (*RegistrationMethod, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	SetUserEnabled(context.Context, *SetUserEnabledRequest) (*UserAccount, error)
@@ -2302,6 +2328,12 @@ func (UnimplementedAgentWorkspaceServiceServer) GetSkillDocument(context.Context
 }
 func (UnimplementedAgentWorkspaceServiceServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*CurrentUser, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCurrentUser not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) GetRegistrationSettings(context.Context, *GetRegistrationSettingsRequest) (*RegistrationSettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRegistrationSettings not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) UpdateRegistrationSettings(context.Context, *UpdateRegistrationSettingsRequest) (*RegistrationMethod, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateRegistrationSettings not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
@@ -2926,6 +2958,42 @@ func _AgentWorkspaceService_GetCurrentUser_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentWorkspaceServiceServer).GetCurrentUser(ctx, req.(*GetCurrentUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_GetRegistrationSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRegistrationSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).GetRegistrationSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_GetRegistrationSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).GetRegistrationSettings(ctx, req.(*GetRegistrationSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_UpdateRegistrationSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRegistrationSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).UpdateRegistrationSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_UpdateRegistrationSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).UpdateRegistrationSettings(ctx, req.(*UpdateRegistrationSettingsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5948,6 +6016,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCurrentUser",
 			Handler:    _AgentWorkspaceService_GetCurrentUser_Handler,
+		},
+		{
+			MethodName: "GetRegistrationSettings",
+			Handler:    _AgentWorkspaceService_GetRegistrationSettings_Handler,
+		},
+		{
+			MethodName: "UpdateRegistrationSettings",
+			Handler:    _AgentWorkspaceService_UpdateRegistrationSettings_Handler,
 		},
 		{
 			MethodName: "ListUsers",

@@ -195,3 +195,7 @@ Do not run `down -v`: the named volumes contain persistent product and identity 
 ## Readiness Boundary
 
 The UI and `/readyz` prove only API, database, identity, and frontend availability. A Runtime is selectable only when the deployed RepoDigest has passed its real model, MCP, cancellation, Secret-redaction, Workspace, and gVisor checks. Never insert synthetic Run success or event records to make verification pass.
+
+## Optional Scan Registration
+
+WeChat Official Account and Feishu scan sign-in/register are configured by a product Administrator under User Management → Registration. They default to closed and keep Keycloak as the product credential authority. Deploy the optional broker secrets and run the one-time admin-only identity-profile setup before enabling methods; [scan registration](../../docs/technical/scan-registration.md) documents exact provider permissions, safe-mode callbacks, configuration, and outstanding real-account acceptance. Never reuse Workflow Message Channel or Connector credentials for product registration.

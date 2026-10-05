@@ -420,6 +420,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/registration-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_GetRegistrationSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/registration-methods/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["AgentWorkspaceService_UpdateRegistrationSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -2410,6 +2442,17 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
         };
+        AgentWorkspaceServiceUpdateRegistrationSettingsBody: {
+            enabled?: boolean;
+            app_id?: string;
+            app_secret?: string;
+            official_account_id?: string;
+            verification_token?: string;
+            encoding_aes_key?: string;
+            /** Format: int64 */
+            expected_version?: number;
+            reason?: string;
+        };
         AgentWorkspaceServiceUpdateSessionBody: {
             title?: string;
             /** Format: int64 */
@@ -3780,6 +3823,24 @@ export interface components {
             voided_at?: string;
             /** Format: date-time */
             created_at?: string;
+        };
+        v1RegistrationMethod: {
+            provider?: string;
+            enabled?: boolean;
+            ready?: boolean;
+            app_id?: string;
+            app_secret_configured?: boolean;
+            tenant_key?: string;
+            official_account_id?: string;
+            verification_token_configured?: boolean;
+            encoding_aes_key_configured?: boolean;
+            /** Format: int64 */
+            version?: number;
+            callback_url?: string;
+        };
+        v1RegistrationSettingsResponse: {
+            available?: boolean;
+            items?: components["schemas"]["v1RegistrationMethod"][];
         };
         v1ReplacePromptOptimizationCandidatesRequest: {
             items?: components["schemas"]["v1PromptOptimizationCandidateInput"][];
@@ -5214,6 +5275,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1RedemptionCodeStatus"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_GetRegistrationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1RegistrationSettingsResponse"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_UpdateRegistrationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWorkspaceServiceUpdateRegistrationSettingsBody"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1RegistrationMethod"];
                 };
             };
             /** @description An unexpected error response. */
