@@ -77,3 +77,21 @@ Broker client secret 和 RSA 2048 PKCS8 签名 Key 在主机上生成，只写�
 | `index-EUb5SjPG.js` | `10c69e2f28d6dc965c9cd0b7a754ac4568c7178242fa4ce016dd13ea0a99bfb9` |
 
 发布日志与公网校验记录为 `/tmp/aw-registration-save-web-release.log`、`/tmp/aw-registration-save-public-evidence.json`。未使用生产管理员凭证提交真实注册配置，供应商校验、真实扫码和微信服务器握手仍待验收；本次没有执行完整 Runtime/数据库集成门禁。Web 可单独回退到 `scan-registration-20261005-1`，不涉及数据库回退。
+
+## 真实公众号配置与二维码权限诊断
+
+随后产品 Administrator 在公众平台加入 API IP 白名单并重新保存。2026-10-05 17:16:34（Asia/Shanghai）的微信配置 PUT 返回 200，17:17:24 的服务器 URL 验证 GET 回调返回 200；数据库仅检查非秘密元数据，`wechat_official` 为 enabled=true、ready=true、version=1。API 容器实际公网出口确认是 `47.237.108.63`。这些结果证明本次真实凭证验证、身份入口同步和回调握手通过，不证明二维码或注册完成。
+
+之后 authorize 请求约 530–547 ms 返回 `registration_start_failed`。以保护环境中的已保存配置，在主机上通过实际 Registration Gateway 重放供应商调用；解密仅发生于临时进程内存，不输出配置、请求体、Token、回调秘密或供应商原始错误文本。最小诊断结果：
+
+```text
+endpoint=/cgi-bin/stable_token http_status=200 provider_code=0
+credentials_verified=true
+endpoint=/cgi-bin/stable_token http_status=200 provider_code=0
+endpoint=/cgi-bin/qrcode/create http_status=200 provider_code=48001
+temporary_qr_created=false
+```
+
+当前阻塞为真实公众号拒绝带参数二维码接口（48001，接口未授权）。公众平台截图此前显示个人、未认证主体；需要在该公众号的接口权限中确认并取得生成带参数二维码权限，或换用具备该权限的公众号。现有配置虽然 Ready，保存阶段目前只验证 stable token；实际二维码能力必须另行验收，不能将 Ready 记为二维码权限已通过。
+
+本次没有修改生产凭证、入口开关或服务代码，没有触发关注事件、建号或完整产品登录。临时诊断源码和主机可执行文件已清理；真实微信新关注和已关注扫码、飞书真实授权仍未通过端到端验收。

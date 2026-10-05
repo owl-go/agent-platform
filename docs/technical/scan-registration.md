@@ -1,6 +1,6 @@
 # 扫码登录与注册
 
-实现日期：2026-10-05。本地 PostgreSQL 17 和 Keycloak 26.7.1 的验证记录见 [验收证据](../evidence/agent-workspace/2026-10-05-scan-registration.md)。已从 `main_temp` 发布，见 [发布验证](../evidence/agent-workspace/2026-10-05-scan-registration-deployment.md)。真实飞书企业应用和微信公众号关注/扫码尚未验收，两种方法保持关闭。
+实现日期：2026-10-05。本地 PostgreSQL 17 和 Keycloak 26.7.1 的验证记录见 [验收证据](../evidence/agent-workspace/2026-10-05-scan-registration.md)。已从 `main_temp` 发布，见 [发布验证](../evidence/agent-workspace/2026-10-05-scan-registration-deployment.md)。真实微信公众号配置保存和服务器握手已通过；当前公众号创建带参数二维码返回 48001，关注/扫码尚未验收。真实飞书企业应用尚未验收。
 
 ## 产品流程
 
@@ -49,6 +49,8 @@ python3 scripts/configure-registration-identity.py check
 | 微信公众号 | App ID、App Secret、公众号原始 ID（`gh_...`）、回调 Token、43 字符 EncodingAESKey | 账号具有带参数二维码及 stable token API 权限；按公众平台要求配置服务器 IP 白名单；callback URL 作为服务器 URL，启用安全模式；关注和扫码事件交给该接口 |
 
 微信原始 ID 与 App ID 是两个不同字段，不能互换；加密事件的尾部 App ID 和解密消息的 ToUserName 都必须匹配。已有公众号业务若使用同一回调入口，需要先评估消息路由，不能用其他渠道凭证替代这里的配置。开放方法的保存前验证应用凭证；凭证或权限验证失败不改动已存配置。
+
+当前微信保存验证调用 stable token，不调用二维码接口；配置 Ready 和服务器 URL 验证成功均不能证明带参数二维码权限。开放后的首次二维码申请若返回 48001，需在公众平台确认并取得生成带参数二维码权限，或更换具备该权限的公众号；不能通过增加回调参数绕过供应商授权。
 
 ## 接口与状态
 
