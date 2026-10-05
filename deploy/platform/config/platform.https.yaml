@@ -16,6 +16,10 @@ authentication:
   jwks_timeout: 3s
 
 accounts:
+  registration_broker:
+    public_url: "${REGISTRATION_PUBLIC_URL}"
+    client_secret: "${REGISTRATION_CLIENT_SECRET}"
+    signing_key: "${REGISTRATION_SIGNING_KEY}"
   keycloak_base_url: "${KEYCLOAK_BASE_URL}"
   realm: "${KEYCLOAK_REALM}"
   admin_client_id: "${KEYCLOAK_SERVICE_CLIENT_ID}"

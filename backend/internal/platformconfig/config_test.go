@@ -318,3 +318,38 @@ func validOIDCYAML(dsn string) string {
   discovery_timeout: 5s
   jwks_timeout: 3s`, 1)
 }
+
+func TestRegistrationBrokerIsOptionalAndRequiresCompleteHTTPSConfiguration(t *testing.T) {
+	config, err := Load(writeConfig(t, validOIDCYAML("postgres://database/platform")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = config.ValidateAPI(); err != nil {
+		t.Fatal("optional broker changed existing deployments", err)
+	}
+	good := RegistrationBrokerConfig{PublicURL: "https://workspace.test", ClientSecret: strings.Repeat("s", 32), SigningKey: "fixture-key"}
+	config.Accounts.RegistrationBroker = good
+	if err = config.ValidateAPI(); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*Config)
+	}{
+		{"HTTP", func(c *Config) { c.Accounts.RegistrationBroker.PublicURL = "http://workspace.test" }},
+		{"credentials in origin", func(c *Config) { c.Accounts.RegistrationBroker.PublicURL = "https://user@workspace.test" }},
+		{"origin path", func(c *Config) { c.Accounts.RegistrationBroker.PublicURL = "https://workspace.test/path" }},
+		{"origin query", func(c *Config) { c.Accounts.RegistrationBroker.PublicURL = "https://workspace.test?token=secret" }},
+		{"missing key", func(c *Config) { c.Accounts.RegistrationBroker.SigningKey = "" }},
+		{"short client secret", func(c *Config) { c.Accounts.RegistrationBroker.ClientSecret = "short" }},
+		{"non OIDC", func(c *Config) { c.Authentication.Mode = "deny_all" }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := config
+			test.mutate(&candidate)
+			if candidate.ValidateAPI() == nil {
+				t.Fatal("invalid broker configuration accepted")
+			}
+		})
+	}
+}

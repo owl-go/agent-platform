@@ -20,6 +20,14 @@ _Avoid_: Platform operator, Organization administrator, support user
 An authorized User who may create and maintain Department Resources only inside a Department where they currently hold Identity Group membership. The role does not grant Administrator access, access to another Department, or access to any User's private content.
 _Avoid_: Administrator, resource owner bypass, global editor
 
+**Registration Method**:
+An Administrator-managed external identity route for scan sign-in and first-use creation of an ordinary User. It has its own availability and provider application configuration; it never grants governance roles or authorizes a Connector or Workflow Message Channel.
+_Avoid_: Connector Authorization, Message Channel Account, password registration
+
+**Registration Attempt**:
+A short-lived, browser-bound exchange that ties one external identity proof to one sign-in request. Confirmation can complete only that exchange and cannot be reused for another browser or User.
+_Avoid_: User session, Connector Authorization, Message Channel Sender Pairing
+
 **Identity Group**:
 A read-only local projection of one group and its memberships from the configured enterprise identity source. A Group marked as a Department may scope shared resources and a daily Credit budget; the product never maintains a second writable organization tree.
 _Avoid_: product-managed Team, role grant, local mailing list

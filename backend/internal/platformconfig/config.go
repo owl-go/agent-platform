@@ -51,15 +51,22 @@ type MessageChannelsConfig struct {
 	MaxConnections             int                      `yaml:"max_connections"`
 }
 
+type RegistrationBrokerConfig struct {
+	PublicURL    string `yaml:"public_url"`
+	ClientSecret string `yaml:"client_secret"`
+	SigningKey   string `yaml:"signing_key"`
+}
+
 type AccountsConfig struct {
-	KeycloakBaseURL      string `yaml:"keycloak_base_url"`
-	Realm                string `yaml:"realm"`
-	AdminClientID        string `yaml:"admin_client_id"`
-	AdminClientSecret    string `yaml:"admin_client_secret"`
-	BootstrapSubject     string `yaml:"bootstrap_subject"`
-	BootstrapUsername    string `yaml:"bootstrap_username"`
-	BootstrapEmail       string `yaml:"bootstrap_email"`
-	BootstrapDisplayName string `yaml:"bootstrap_display_name"`
+	RegistrationBroker   RegistrationBrokerConfig `yaml:"registration_broker"`
+	KeycloakBaseURL      string                   `yaml:"keycloak_base_url"`
+	Realm                string                   `yaml:"realm"`
+	AdminClientID        string                   `yaml:"admin_client_id"`
+	AdminClientSecret    string                   `yaml:"admin_client_secret"`
+	BootstrapSubject     string                   `yaml:"bootstrap_subject"`
+	BootstrapUsername    string                   `yaml:"bootstrap_username"`
+	BootstrapEmail       string                   `yaml:"bootstrap_email"`
+	BootstrapDisplayName string                   `yaml:"bootstrap_display_name"`
 }
 
 type WorkspaceConfig struct {
@@ -265,6 +272,9 @@ func (config Config) ValidateAPI() error {
 	if err := config.Authentication.Validate(); err != nil {
 		return err
 	}
+	if config.Accounts.RegistrationBroker.PublicURL != "" && config.Authentication.Mode != "oidc" {
+		return fmt.Errorf("registration broker requires OIDC authentication")
+	}
 	if err := config.Accounts.Validate(); err != nil {
 		return err
 	}
@@ -278,6 +288,13 @@ func (config Config) ValidateAPI() error {
 }
 
 func (config AccountsConfig) Validate() error {
+	broker := config.RegistrationBroker
+	if broker.PublicURL != "" || broker.ClientSecret != "" || broker.SigningKey != "" {
+		u, err := url.Parse(broker.PublicURL)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || len(broker.ClientSecret) < 32 || broker.SigningKey == "" {
+			return fmt.Errorf("registration broker requires an HTTPS origin, a client secret of at least 32 characters, and a signing key")
+		}
+	}
 	if err := validateHTTPSURL("accounts.keycloak_base_url", config.KeycloakBaseURL, true); err != nil {
 		return err
 	}

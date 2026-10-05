@@ -10,7 +10,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 
 当前实现包含以下限界上下文：
 
-- Account：OIDC 身份、本地 User 投影、Bootstrap Administrator 与可委派 Administrator、Resource Publisher、只读 Identity Group/成员关系同步、账号治理和隐私受限的 Governance Audit Event。
+- Account：OIDC 身份、Administrator 管理的 Registration Method、短期 Registration Attempt、本地 User 投影、Bootstrap Administrator 与可委派 Administrator、Resource Publisher、只读 Identity Group/成员关系同步、账号治理和隐私受限的 Governance Audit Event。
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、Administrator-owned Connector Publication、User-private Connector Installation/Authorization、兼容期 CLI Definition/Enablement/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 - Product Analytics：从已确认的登录、默认执行配置、Session 首次任务与终态、Workflow 创建、第二次成功运行和执行流重连生成追加式 Product Event。执行流重连只记录流类型与恢复方式，并按匿名对象的五分钟窗口去重；所有事件都只保存匿名 User/对象 Key 和白名单粗粒度属性，采集失败不改变业务操作结果。
@@ -21,6 +21,8 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 Account 拥有 User、治理角色、Identity Group 投影和 Governance Audit Event，不拥有积分状态。Credits 只读取当前 Group membership 与 Department Credit Budget 完成聚合准入；Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
 
 Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
+
+账号扫码接入通过 Account Application 的供应商验证、Keycloak 联邦身份和短期 Repository 端口实现；Go Broker 只向固定 Keycloak client/回调签发一分钟身份断言，产品 Token 仍仅由 Keycloak 签发。配置和 Attempt 密文、Version CAS、一次性兑换及配置与治理审计的原子提交由 Account GORM Adapter 负责；供应商 HTTP 不进入数据库事务。Keycloak 普通账号无邮箱时允许扫码建号；密码账号仍由 Application 验证必填邮箱。部署预声明两个 admin-only 身份标记，不向产品服务授予 manage-realm。详细设计和真实验证边界见 [扫码登录与注册](scan-registration.md)。
 
 ## 所有权
 

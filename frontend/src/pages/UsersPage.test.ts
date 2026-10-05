@@ -23,7 +23,7 @@ describe("UsersPage enterprise Credits", () => {
     expect(wrapper.text()).toContain("90%");
     expect(wrapper.text()).toContain("50.00");
     expect(wrapper.text()).not.toContain("60.00");
-    expect(wrapper.findAll(".admin-tabs button").map((item) => item.text())).toEqual(["用户", "部门与群组", "治理审计", "模型倍率"]);
+    expect(wrapper.findAll(".admin-tabs button").map((item) => item.text())).toEqual(["用户", "注册方式", "部门与群组", "治理审计", "模型倍率"]);
     expect(wrapper.text()).toContain("受 财务部 部门预算约束");
     expect(wrapper.text()).not.toContain("兑换码仅本次显示");
     wrapper.unmount();

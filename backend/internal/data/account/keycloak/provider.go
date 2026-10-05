@@ -32,7 +32,9 @@ func New(config platformconfig.AccountsConfig, client *http.Client) (*Provider, 
 	if client == nil {
 		client = &http.Client{Timeout: 15 * time.Second}
 	}
-	return &Provider{client: client, baseURL: strings.TrimRight(config.KeycloakBaseURL, "/"), realm: config.Realm, clientID: config.AdminClientID, clientSecret: config.AdminClientSecret}, nil
+	copyClient := *client
+	copyClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &Provider{client: &copyClient, baseURL: strings.TrimRight(config.KeycloakBaseURL, "/"), realm: config.Realm, clientID: config.AdminClientID, clientSecret: config.AdminClientSecret}, nil
 }
 
 func (provider *Provider) CreateUser(ctx context.Context, input accountdomain.NewUser) (string, string, error) {
