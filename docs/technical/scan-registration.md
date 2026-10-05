@@ -1,6 +1,6 @@
 # 扫码登录与注册
 
-实现日期：2026-10-05。本地 PostgreSQL 17 和 Keycloak 26.7.1 的验证记录见 [验收证据](../evidence/agent-workspace/2026-10-05-scan-registration.md)。真实飞书企业应用、微信公众号关注/扫码和线上发布尚未验收。
+实现日期：2026-10-05。本地 PostgreSQL 17 和 Keycloak 26.7.1 的验证记录见 [验收证据](../evidence/agent-workspace/2026-10-05-scan-registration.md)。已从 `main_temp` 发布，见 [发布验证](../evidence/agent-workspace/2026-10-05-scan-registration-deployment.md)。真实飞书企业应用和微信公众号关注/扫码尚未验收，两种方法保持关闭。
 
 ## 产品流程
 
