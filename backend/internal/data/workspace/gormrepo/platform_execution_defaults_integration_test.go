@@ -35,6 +35,7 @@ func testPlatformExecutionDefaultSavesWithoutRunAndPropagates(t *testing.T, veri
 	exec("INSERT INTO users(id,oidc_subject,username,email,display_name,administrator) VALUES(?,?,?,?,?,true)", administrator, administrator, administrator, administrator+"@example.test", administrator)
 	exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", userID, userID, userID, userID+"@example.test", userID)
 	exec(`INSERT INTO model_provider_connections(id,credential_owner_user_id,name,provider_type,endpoint,protocols,api_key_ciphertext,verification_status) VALUES(?,?,'Provider','openai','https://example.test','["openai_responses"]','ciphertext',?)`, connectionID, administrator, verificationStatus)
+	exec(`INSERT INTO model_provider_credential_versions(connection_id,connection_version,api_key_ciphertext) VALUES(?,1,'ciphertext')`, connectionID)
 	compatibility, _ := json.Marshal([]domain.RuntimeModelCompatibility{{RuntimeEngine: domain.RuntimeCodex, Status: "unverified"}})
 	exec(`INSERT INTO provider_models(id,connection_id,model_id,display_name,compatibility) VALUES(?,?,'model-1','Model',?::jsonb)`, modelID, connectionID, string(compatibility))
 	defaults, _ := json.Marshal(map[string]string{"codex": modelID})
@@ -116,6 +117,21 @@ func testPlatformExecutionDefaultSavesWithoutRunAndPropagates(t *testing.T, veri
 	newSettings, err := repository.GetSettings(ctx, newUser)
 	if err != nil || newSettings.RuntimeModelDefaults[domain.RuntimeCodex] != modelID {
 		t.Fatalf("new User inheritance = %#v, %v", newSettings, err)
+	}
+	session, err := repository.CreateSession(ctx, newUser, nil, nil)
+	if err != nil {
+		t.Fatal("new User could not create a Session", err)
+	}
+	_, firstReply, err := repository.CreatePlannedMessagePair(ctx, newUser, session.ID, "Use the inherited enterprise default", nil, "", "")
+	if err != nil {
+		t.Fatal("new User could not submit the first inherited message", err)
+	}
+	if firstReply.State != "queued" || firstReply.ResponseSnapshot == nil || len(firstReply.ResponseSnapshot.Stages) != 1 {
+		t.Fatal("first inherited message was not queued with an execution snapshot")
+	}
+	firstStage := firstReply.ResponseSnapshot.Stages[0]
+	if firstStage.RuntimeEngine != domain.RuntimeCodex || firstStage.ProviderModel.ID != modelID || firstStage.ProviderModel.Compatibility != "unverified" {
+		t.Fatal("first message changed or ignored the inherited unverified pair")
 	}
 	var runCount int64
 	if err := db.Table("runs").Count(&runCount).Error; err != nil || runCount != 0 {

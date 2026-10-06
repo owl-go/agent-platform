@@ -71,7 +71,6 @@ const setupRequired = computed(() => {
   const model = selectableModels.value.find((item) => item.id === selected.provider_model_id);
   if (!model || !model.connection.api_key_configured) return true;
   const compatibility = model.compatibility.find((item) => item.runtime_engine === current.default_runtime_engine)?.status;
-  if (current.execution_inherited) return model.connection.verification_status !== "verified" || compatibility !== "verified";
   return compatibility === "incompatible" || !compatibility;
 });
 const filteredSessions = computed(() => {
