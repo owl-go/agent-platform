@@ -180,4 +180,3 @@ curl --fail https://workspace.example.com/api/readyz
 Administrator 添加 Model Provider Connection：填写供应商类型、官方/受控 HTTPS Endpoint、写保护 API Key，加载模型目录并验证连接。选择经过验收、协议兼容的 Runtime Engine / Provider Model，直接保存为 Platform Execution Default；供应商可连通不等于引擎能执行。为 User 配置 Daily Credit Allocation 和必要的 Model Credit Rate 后，普通用户登录即可继承平台默认，或在 Personal Settings 选择允许的个人配置，再创建 Session / Workflow。Credits 是产品使用单位，不是供应商金额或财务对账。
 
 知识检索是可选项：在共享 YAML 增加[知识库配置中的 `retrieval` block](../../docs/technical/knowledge-base-rag.md)，填写 `RAGFLOW_ENDPOINT/API_KEY/DEPLOYMENT_ID/EMBEDDING_MODEL`，同时供 API 与 Worker 使用。Endpoint 必须是无 path/query/用户信息的 HTTPS origin（本地测试可用 loopback HTTP），部署身份在同一持久数据安装中保持稳定；默认未配置时不提供检索。先验证指定 RAGFlow / Embedding 镜像与完整上传、解析、Ready、权限及召回契约，再允许依赖该知识的 Workflow 或 Smart Assistant。随附 [RAGFlow 本地开发示例](../../deploy/ragflow-local/README.md)不是生产高可用部署，独立存储、备份、网络和资源需另行规划。图片模型及 Prompt Optimization 在管理界面独立配置，不随文字模型连接自动启用。
-
