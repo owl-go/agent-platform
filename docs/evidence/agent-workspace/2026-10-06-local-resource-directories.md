@@ -15,6 +15,7 @@
 - 一次性 `postgres:17-alpine` + tmpfs，设置测试进程 `WORKSPACE_TEST_POSTGRES_DSN` 后运行 `go -C backend test -count=1 ./internal/data/workspace/gormrepo -run '^(TestDefaultResource|TestDefaultCatalog|TestDefaultConnector|TestDefaultSkill|TestLocalResourceDirectory)' -v`：8 项通过，79.172s。覆盖新安装全目录、并发启动、重复/升级、无授权或伪造 Conformance、私有资源保护、同名保留、对象写失败回滚，以及在不修改中心清单的情况下新增 Skill/Expert 并解析稳定 Key 绑定。旧脚本 Publication 的 Revision、disabled 状态与 Version 全部保留，Connector Revision/Publication 数量各为 1。测试数据库和容器已清理。
 - `make deploy-test`：23 个部署测试、13 个安装测试通过，Shell 语法通过；新增/删除目录的发布范围检测覆盖三种资源。
 - `make test`、`make build`：通过，自动目录校验报告 20 Connector、9 Skill、8 Expert +3 内置 Skill。全量 Go 门禁未配置数据库 DSN，其中 Skip 不作为数据库集成通过；上面的隔离数据库测试是真实执行结果。
+- 第一次不可变发布门禁发现 Git archive 默认 tar.umask 增加写权限位，导致 Skill 摘要与工作区不同；在远端切换前停止。修复为按 Git 的可执行位规范化 0644/0755，新增 0644↔0664、0755↔0775 摘要稳定及可执行位保留回归。重新执行全量测试和构建通过；实际 `git archive HEAD` 解包后，以该目录设置 `AGENT_WORKSPACE_RESOURCE_ROOT` 运行迁移身份测试，37 个原资源摘要全部通过。
 - `git diff --check`、暂存后的 `git diff --cached --check` 和 `cmp -s AGENTS.md CLAUDE.md`：通过。没有 Web 实现改动。
 
 目录初始化安装的是平台定义。新环境 CLI 保持 disabled，仍需 exact bundle SHA-256 × 当前 Runtime RepoDigest 的真实 Conformance 才能开放；MCP 使用者仍需各自配置或授权。本变更不新增供应商业务调用、完整 Runtime Production Conformance 或全新 Ubuntu 安装验收证据。

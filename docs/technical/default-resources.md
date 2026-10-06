@@ -51,6 +51,8 @@ API/Worker 先完成账号 Bootstrap，再调用 `EnsureDefaultResources`；资�
 
 目录组包拒绝符号链接、特殊文件、越界路径和超限内容；JSON 严格拒绝未知字段。Skill 继续使用既有 ZIP 安全规范化/资源验证，名称从 SKILL.md 的 display_name 读取；Connector 使用公共 Package Parser，包括不可变 CLI Bundle 校验；Expert 使用既有 Domain Input 校验。对象写入先校验 Size 和 SHA-256，数据库只保存逻辑 Object Key。对象键基于内容摘要；数据库提交失败可能留下没有引用的不可变对象，重试复用同一内容，不把失败记录标为已完成。
 
+组包文件权限规范化为 0644 或 0755，仅保留 Git 管理的可执行位；Git archive 的 tar.umask、工作区 umask 和镜像 COPY 的读写位差异不改变 Skill 摘要。
+
 默认 Expert/Skill 原版使用稳定 `system_key` 与现有 `system_managed` 权限，无法编辑或删除；新需求以另名自定义资源表达。发布者改变内容须增加对应资源版本；同一版本出现不同内容会失败并阻止启动。更新保留 ID、递增资源修订，历史执行快照不回写。初始化不能把 Catalog 版本号视作已经验证的运行能力。
 
 首次遇到同名 Bootstrap Administrator 自建资源时记录为非受管理资源：不修改、不复制、不在以后升级时接管。User-private 资源不参与同名查找，也不被修改。默认 Expert 引用被保留的管理员 Skill 时，后续该 Skill 若消失会明确报错，不静默绑定悬空 ID。
