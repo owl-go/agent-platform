@@ -274,7 +274,7 @@ def container_value(container, expression):
 
 def inspect_server(root):
     if not (root / "src").is_symlink() or not (root / "web/current").is_symlink():
-        raise DeploymentError("目标还未完成首次安装，请使用首次安装说明；日常部署只接管已有安装")
+        raise DeploymentError("目标还未完成首次安装，请先运行 make install")
     source = (root / "src").resolve(strict=True)
     if not source.is_relative_to(root) or not (root / "web/current").resolve(strict=True).is_relative_to(root):
         raise DeploymentError("现有发布指针不在安装目录内")

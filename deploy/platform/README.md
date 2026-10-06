@@ -33,6 +33,6 @@ make deploy
 
 ## 首次安装与特殊升级
 
-- 空服务器：[首次安装说明](installation.md)。当前入口不自动安装 Docker、gVisor 或供应身份系统。
+- 空服务器：运行 `make install`，见[首次安装](installation.md)。填写服务器、域名和邮箱，依赖、配置与服务启动由脚本完成。
 - Compose、Runtime、身份主题、Sandbox 变更：[运维参考](operations.md#基础设施与-runtime-升级)。日常入口会明确提示，并保留现有配置与镜像。
 - 扫码注册、对象存储与身份配置：[运维参考](operations.md)。这些配置不需要每次部署重复操作。
