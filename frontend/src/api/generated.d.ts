@@ -4040,6 +4040,7 @@ export interface components {
         v1SetPlatformExecutionDefaultRequest: {
             runtime_engine?: string;
             provider_model_id?: string;
+            /** @description Deprecated: ignored. Saving the default does not require a validation Run. */
             validation_run_id?: string;
             /** Format: int64 */
             expected_version?: number;

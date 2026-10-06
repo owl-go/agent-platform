@@ -489,7 +489,7 @@ type platformExecutionDefaultRecord struct {
 	Singleton       bool      `gorm:"column:singleton"`
 	RuntimeEngine   string    `gorm:"column:runtime_engine"`
 	ProviderModelID string    `gorm:"column:provider_model_id"`
-	ValidationRunID string    `gorm:"column:validation_run_id"`
+	ValidationRunID *string   `gorm:"column:validation_run_id"`
 	UpdatedByUserID string    `gorm:"column:updated_by_user_id"`
 	CreatedAt       time.Time `gorm:"column:created_at"`
 	UpdatedAt       time.Time `gorm:"column:updated_at"`
