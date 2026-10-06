@@ -86,6 +86,7 @@ const OperationAgentWorkspaceServiceGetImageGeneration = "/workspace.v1.AgentWor
 const OperationAgentWorkspaceServiceGetKnowledgeBase = "/workspace.v1.AgentWorkspaceService/GetKnowledgeBase"
 const OperationAgentWorkspaceServiceGetMCPConnectorDeletionImpact = "/workspace.v1.AgentWorkspaceService/GetMCPConnectorDeletionImpact"
 const OperationAgentWorkspaceServiceGetPlatformExecutionDefault = "/workspace.v1.AgentWorkspaceService/GetPlatformExecutionDefault"
+const OperationAgentWorkspaceServiceGetRegistrationSettings = "/workspace.v1.AgentWorkspaceService/GetRegistrationSettings"
 const OperationAgentWorkspaceServiceGetRun = "/workspace.v1.AgentWorkspaceService/GetRun"
 const OperationAgentWorkspaceServiceGetSession = "/workspace.v1.AgentWorkspaceService/GetSession"
 const OperationAgentWorkspaceServiceGetSettings = "/workspace.v1.AgentWorkspaceService/GetSettings"
@@ -181,6 +182,7 @@ const OperationAgentWorkspaceServiceUpdateIdentityGroupBudget = "/workspace.v1.A
 const OperationAgentWorkspaceServiceUpdateKnowledgeBase = "/workspace.v1.AgentWorkspaceService/UpdateKnowledgeBase"
 const OperationAgentWorkspaceServiceUpdateMCPConnector = "/workspace.v1.AgentWorkspaceService/UpdateMCPConnector"
 const OperationAgentWorkspaceServiceUpdateModelProviderConnection = "/workspace.v1.AgentWorkspaceService/UpdateModelProviderConnection"
+const OperationAgentWorkspaceServiceUpdateRegistrationSettings = "/workspace.v1.AgentWorkspaceService/UpdateRegistrationSettings"
 const OperationAgentWorkspaceServiceUpdateSession = "/workspace.v1.AgentWorkspaceService/UpdateSession"
 const OperationAgentWorkspaceServiceUpdateSettings = "/workspace.v1.AgentWorkspaceService/UpdateSettings"
 const OperationAgentWorkspaceServiceUpdateSkill = "/workspace.v1.AgentWorkspaceService/UpdateSkill"
@@ -260,6 +262,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetKnowledgeBase(context.Context, *GetKnowledgeBaseRequest) (*KnowledgeBase, error)
 	GetMCPConnectorDeletionImpact(context.Context, *GetMCPConnectorDeletionImpactRequest) (*ResourceDeletionImpact, error)
 	GetPlatformExecutionDefault(context.Context, *GetPlatformExecutionDefaultRequest) (*PlatformExecutionDefault, error)
+	GetRegistrationSettings(context.Context, *GetRegistrationSettingsRequest) (*RegistrationSettingsResponse, error)
 	GetRun(context.Context, *GetRunRequest) (*Run, error)
 	GetSession(context.Context, *GetSessionRequest) (*Session, error)
 	GetSettings(context.Context, *GetSettingsRequest) (*PersonalSettings, error)
@@ -355,6 +358,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	UpdateKnowledgeBase(context.Context, *UpdateKnowledgeBaseRequest) (*KnowledgeBase, error)
 	UpdateMCPConnector(context.Context, *UpdateMCPConnectorRequest) (*MCPConnector, error)
 	UpdateModelProviderConnection(context.Context, *UpdateModelProviderConnectionRequest) (*ModelProviderConnection, error)
+	UpdateRegistrationSettings(context.Context, *UpdateRegistrationSettingsRequest) (*RegistrationMethod, error)
 	UpdateSession(context.Context, *UpdateSessionRequest) (*Session, error)
 	UpdateSettings(context.Context, *UpdateSettingsRequest) (*PersonalSettings, error)
 	UpdateSkill(context.Context, *UpdateSkillRequest) (*Skill, error)
@@ -373,6 +377,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("GET", "/api/v1/conversation-files", _AgentWorkspaceService_ListConversationFiles0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/skills/{skill_id}/document", _AgentWorkspaceService_GetSkillDocument0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/me", _AgentWorkspaceService_GetCurrentUser0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/admin/registration-methods", _AgentWorkspaceService_GetRegistrationSettings0_HTTP_Handler(srv))
+	r.Handle("PUT", "/api/v1/admin/registration-methods/{provider}", _AgentWorkspaceService_UpdateRegistrationSettings0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/admin/users", _AgentWorkspaceService_ListUsers0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/admin/users", _AgentWorkspaceService_CreateUser0_HTTP_Handler(srv))
 	r.Handle("PATCH", "/api/v1/admin/users/{user_id}/enabled", _AgentWorkspaceService_SetUserEnabled0_HTTP_Handler(srv))
@@ -654,6 +660,47 @@ func _AgentWorkspaceService_GetCurrentUser0_HTTP_Handler(srv AgentWorkspaceServi
 			return err
 		}
 		reply := out.(*CurrentUser)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_GetRegistrationSettings0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in GetRegistrationSettingsRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceGetRegistrationSettings)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.GetRegistrationSettings(ctx, req.(*GetRegistrationSettingsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*RegistrationSettingsResponse)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_UpdateRegistrationSettings0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in UpdateRegistrationSettingsRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceUpdateRegistrationSettings)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.UpdateRegistrationSettings(ctx, req.(*UpdateRegistrationSettingsRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*RegistrationMethod)
 		return ctx.Result(200, reply)
 	}
 }
@@ -4209,6 +4256,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetKnowledgeBase(ctx context.Context, req *GetKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	GetMCPConnectorDeletionImpact(ctx context.Context, req *GetMCPConnectorDeletionImpactRequest, opts ...http.CallOption) (rsp *ResourceDeletionImpact, err error)
 	GetPlatformExecutionDefault(ctx context.Context, req *GetPlatformExecutionDefaultRequest, opts ...http.CallOption) (rsp *PlatformExecutionDefault, err error)
+	GetRegistrationSettings(ctx context.Context, req *GetRegistrationSettingsRequest, opts ...http.CallOption) (rsp *RegistrationSettingsResponse, err error)
 	GetRun(ctx context.Context, req *GetRunRequest, opts ...http.CallOption) (rsp *Run, err error)
 	GetSession(ctx context.Context, req *GetSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	GetSettings(ctx context.Context, req *GetSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
@@ -4304,6 +4352,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	UpdateKnowledgeBase(ctx context.Context, req *UpdateKnowledgeBaseRequest, opts ...http.CallOption) (rsp *KnowledgeBase, err error)
 	UpdateMCPConnector(ctx context.Context, req *UpdateMCPConnectorRequest, opts ...http.CallOption) (rsp *MCPConnector, err error)
 	UpdateModelProviderConnection(ctx context.Context, req *UpdateModelProviderConnectionRequest, opts ...http.CallOption) (rsp *ModelProviderConnection, err error)
+	UpdateRegistrationSettings(ctx context.Context, req *UpdateRegistrationSettingsRequest, opts ...http.CallOption) (rsp *RegistrationMethod, err error)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest, opts ...http.CallOption) (rsp *Session, err error)
 	UpdateSettings(ctx context.Context, req *UpdateSettingsRequest, opts ...http.CallOption) (rsp *PersonalSettings, err error)
 	UpdateSkill(ctx context.Context, req *UpdateSkillRequest, opts ...http.CallOption) (rsp *Skill, err error)
@@ -5462,6 +5511,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetPlatformExecutionDefault(ctx co
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
 		http.Operation(OperationAgentWorkspaceServiceGetPlatformExecutionDefault),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) GetRegistrationSettings(ctx context.Context, in *GetRegistrationSettingsRequest, opts ...http.CallOption) (*RegistrationSettingsResponse, error) {
+	var out RegistrationSettingsResponse
+	pattern := "/api/v1/admin/registration-methods"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceGetRegistrationSettings),
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
@@ -7028,6 +7093,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateModelProviderConnection(ctx 
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "PATCH", path, in, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) UpdateRegistrationSettings(ctx context.Context, in *UpdateRegistrationSettingsRequest, opts ...http.CallOption) (*RegistrationMethod, error) {
+	var out RegistrationMethod
+	pattern := "/api/v1/admin/registration-methods/{provider}"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceUpdateRegistrationSettings),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

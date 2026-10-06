@@ -38,6 +38,7 @@ import (
 )
 
 type Service struct {
+	registration *registrationBroker
 	workspacev1.UnimplementedAgentWorkspaceServiceServer
 	accounts                 *accountapplication.Service
 	credits                  *creditsapplication.Service
@@ -60,6 +61,7 @@ type Service struct {
 
 func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	workspacev1.RegisterAgentWorkspaceServiceHTTPServer(server, service)
+	server.Handle("/api/v1/registration/{provider}/{operation}", http.HandlerFunc(service.registrationHTTP))
 	server.Handle(pixsoOAuthCallbackPath, http.HandlerFunc(service.pixsoOAuthCallback))
 	server.Handle(tianyanchaOAuthCallbackPath, http.HandlerFunc(service.tianyanchaOAuthCallback))
 	server.Handle(linearOAuthCallbackPath, http.HandlerFunc(service.linearOAuthCallback))
@@ -206,7 +208,8 @@ func publicError(err error) error {
 	var channelFailure *workspaceapplication.ChannelAccountFailure
 	if errors.As(err, &channelFailure) {
 		switch channelFailure.Code {
-		case "feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable":
+		case "feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable",
+			"wecom_credentials_invalid", "wecom_connection_failed", "wecom_authentication_timeout", "wecom_authentication_rejected", "wecom_authentication_invalid":
 			return kratoserrors.New(http.StatusUnprocessableEntity, channelFailure.Code, channelFailure.Code).WithMetadata(map[string]string{
 				"provider_code":        strconv.Itoa(channelFailure.ProviderCode),
 				"provider_http_status": strconv.Itoa(channelFailure.HTTPStatus),

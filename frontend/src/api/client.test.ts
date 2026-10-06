@@ -2,6 +2,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
+  it.each(["wechat_official", "feishu"] as const)("sends %s registration settings with a JSON media type", async (provider) => {
+    const input = { enabled: true, app_id: "app", app_secret: "fixture-secret", official_account_id: "gh_fixture", verification_token: "fixture-token", encoding_aes_key: "fixture-key", reason: "enable registration", expected_version: 0 };
+    const signal = new AbortController().signal;
+    const fetchMock = vi.fn(async (_path: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ provider }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createPlatformApi(() => "token").updateRegistrationMethod(provider, input, signal);
+
+    const [path, init] = fetchMock.mock.calls[0]!;
+    // Construct the browser's request: a string body otherwise defaults to text/plain,
+    // which the generated Kratos handler rejects before saving the configuration.
+    const request = new Request(`https://workspace.example${path}`, init);
+    expect(request.headers.get("Content-Type")).toBe("application/json");
+    expect(request.method).toBe("PUT");
+    expect(path).toBe(`/api/v1/admin/registration-methods/${provider}`);
+    expect(await request.json()).toEqual(input);
+    expect(init?.signal).toBe(signal);
+  });
+
   it.each(["99991672", "private-provider-detail", null])("retains only numeric provider diagnostics (%s)", async(providerCode)=>{
     vi.stubGlobal("fetch", vi.fn(async()=>new Response(JSON.stringify({reason:"feishu_tenant_permission_required",message:"private-provider-detail",metadata:{provider_code:providerCode}}),{status:422})));
     const api=createPlatformApi(()=>"token");

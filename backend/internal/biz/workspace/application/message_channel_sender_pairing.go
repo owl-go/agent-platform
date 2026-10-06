@@ -16,10 +16,10 @@ type ChannelSenderPairingRepository interface {
 }
 
 type channelSenderPairing struct {
-	id, binding      string
-	started, expires time.Time
-	cancel           context.CancelFunc
-	done             chan struct{}
+	id, provider, binding string
+	started, expires      time.Time
+	cancel                context.CancelFunc
+	done                  chan struct{}
 }
 
 // SetPairingContext binds temporary receivers to the API process lifetime.
@@ -42,14 +42,14 @@ func (s *MessageChannels) StartSenderPairing(ctx context.Context, owner, workflo
 		if err != nil {
 			return result, err
 		}
-		if stored.Channel.Provider != "feishu" || stored.Channel.Enabled || stored.Channel.Version != version {
+		if !supportsSenderPairing(stored.Channel.Provider) || stored.Channel.Enabled || stored.Channel.Version != version {
 			return result, domain.ErrConflict
 		}
 		credentials, err := s.credentials(stored)
 		if err != nil {
 			return result, err
 		}
-		login, err := s.StartLogin(ctx, owner, workflow, "feishu", stored.Channel.Region, "credentials", channelID, version, credentials)
+		login, err := s.StartLogin(ctx, owner, workflow, stored.Channel.Provider, stored.Channel.Region, "credentials", channelID, version, credentials)
 		clear(credentials)
 		if err != nil {
 			return result, err
@@ -70,10 +70,10 @@ func (s *MessageChannels) StartSenderPairing(ctx context.Context, owner, workflo
 		}
 	}()
 	now := time.Now().UTC()
-	if l.public.Provider != "feishu" || l.public.Status != "connected" || !now.Before(l.public.ExpiresAt) || l.identity.BindingID == "" || l.identity.TenantID == "" {
+	if !supportsSenderPairing(l.public.Provider) || l.public.Status != "connected" || !now.Before(l.public.ExpiresAt) || l.identity.BindingID == "" || (l.public.Provider == "feishu" && l.identity.TenantID == "") {
 		return result, domain.ErrConflict
 	}
-	receiver, ok := s.transports["feishu"].StreamReceiver.(ChannelStreamHealthReceiver)
+	receiver, ok := s.transports[l.public.Provider].StreamReceiver.(ChannelStreamHealthReceiver)
 	if !ok {
 		return result, domain.ErrInvalid
 	}
@@ -88,6 +88,23 @@ func (s *MessageChannels) StartSenderPairing(ctx context.Context, owner, workflo
 	if err != nil {
 		return result, err
 	}
+	tenant := l.identity.TenantID
+	if l.public.Provider == "dingtalk" && l.channel != "" {
+		saved, err := s.repository.GetMessageChannel(ctx, owner, workflow, l.channel)
+		if err != nil {
+			clear(state.Credentials)
+			return result, err
+		}
+		if saved.Channel.Version != l.version || saved.Channel.Enabled {
+			clear(state.Credentials)
+			return result, domain.ErrConflict
+		}
+		if saved.Channel.AccountID == l.identity.ID && saved.Channel.BindingID == l.identity.BindingID {
+			// Retained accounts keep their enterprise boundary during pairing.
+			// A newly authenticated app remains unpinned until receive/reply validation.
+			tenant = saved.Channel.TenantID
+		}
+	}
 	nonce := make([]byte, 16)
 	if _, err := rand.Read(nonce); err != nil {
 		clear(state.Credentials)
@@ -98,7 +115,7 @@ func (s *MessageChannels) StartSenderPairing(ctx context.Context, owner, workflo
 		expires = l.public.ExpiresAt
 	}
 	pairCtx, cancel := context.WithDeadline(s.pairingContext, expires)
-	p := &channelSenderPairing{id: uuid.NewString(), binding: l.identity.BindingID, started: now, expires: expires, cancel: cancel, done: make(chan struct{})}
+	p := &channelSenderPairing{id: uuid.NewString(), provider: l.public.Provider, binding: l.identity.BindingID, started: now, expires: expires, cancel: cancel, done: make(chan struct{})}
 	if err := s.reserveSenderPairing(ctx, p); err != nil {
 		cancel()
 		clear(state.Credentials)
@@ -109,23 +126,33 @@ func (s *MessageChannels) StartSenderPairing(ctx context.Context, owner, workflo
 	l.public.PairingExpiresAt = &p.expires
 	l.public.SuggestedSenderID = ""
 	code := "pair " + hex.EncodeToString(nonce)
-	stored := ChannelStored{Channel: domain.MessageChannel{OwnerID: owner, WorkflowID: workflow, Provider: "feishu", Region: l.region, AccountID: l.identity.ID, TenantID: l.identity.TenantID, BindingID: l.identity.BindingID}}
+	stored := ChannelStored{Channel: domain.MessageChannel{OwnerID: owner, WorkflowID: workflow, Provider: l.public.Provider, Region: l.region, AccountID: l.identity.ID, TenantID: tenant, BindingID: l.identity.BindingID}}
 	go s.receiveSenderPairing(pairCtx, l, p, receiver, stored, state.Credentials, code)
 	return l.public, nil
 }
 
+func supportsSenderPairing(provider string) bool {
+	return provider == "feishu" || provider == "dingtalk" || provider == "wecom"
+}
+func senderPairingBinding(provider, binding string) string {
+	return provider + ":" + binding
+}
+
 func (s *MessageChannels) reserveSenderPairing(ctx context.Context, p *channelSenderPairing) error {
+	if !supportsSenderPairing(p.provider) || p.binding == "" || p.id == "" {
+		return domain.ErrInvalid
+	}
 	s.pairingMu.Lock()
 	defer s.pairingMu.Unlock()
 	// Existing login quotas additionally bound this to four per User.
-	if len(s.pairings) >= 16 || s.pairings[p.binding] != "" {
+	if len(s.pairings) >= 16 || s.pairings[senderPairingBinding(p.provider, p.binding)] != "" {
 		return domain.ErrConflict
 	}
 	repository, ok := s.repository.(ChannelSenderPairingRepository)
 	if !ok {
 		return domain.ErrInvalid
 	}
-	receiving, err := repository.ChannelAccountReceiving(ctx, "feishu", p.binding)
+	receiving, err := repository.ChannelAccountReceiving(ctx, p.provider, p.binding)
 	if err != nil {
 		return err
 	}
@@ -135,7 +162,7 @@ func (s *MessageChannels) reserveSenderPairing(ctx context.Context, p *channelSe
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	s.pairings[p.binding] = p.id
+	s.pairings[senderPairingBinding(p.provider, p.binding)] = p.id
 	return nil
 }
 
@@ -144,8 +171,8 @@ func (s *MessageChannels) receiveSenderPairing(ctx context.Context, l *channelLo
 	defer p.cancel()
 	defer func() {
 		s.pairingMu.Lock()
-		if s.pairings[p.binding] == p.id {
-			delete(s.pairings, p.binding)
+		if s.pairings[senderPairingBinding(p.provider, p.binding)] == p.id {
+			delete(s.pairings, senderPairingBinding(p.provider, p.binding))
 		}
 		s.pairingMu.Unlock()
 		l.mu.Lock()
@@ -166,6 +193,9 @@ func (s *MessageChannels) receiveSenderPairing(ctx context.Context, l *channelLo
 		l.mu.Lock()
 		defer l.mu.Unlock()
 		now := time.Now().UTC()
+		if stored.Channel.Provider == "dingtalk" && (message.TenantID == "" || (stored.Channel.TenantID != "" && message.TenantID != stored.Channel.TenantID)) {
+			return nil
+		}
 		if l.pairing != p || ctx.Err() != nil || l.public.Status != "connected" || l.public.PairingStatus != "waiting" || !now.Before(p.expires) || message.Validate(now) != nil || message.Bot || message.Group || message.SenderID == stored.Channel.AccountID || message.SenderID == "" || message.Text != code || message.EventID == "" || message.MessageID == "" || message.OccurredAt.Before(p.started.Add(-5*time.Second)) || message.OccurredAt.After(now.Add(30*time.Second)) {
 			return nil
 		}

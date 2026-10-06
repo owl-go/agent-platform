@@ -24,6 +24,7 @@ const confirmation = ref<{ channel: MessageChannel; action: string }>();
 const form = reactive({ name: "", provider: "telegram", region: "feishu", senders: "", groups: "", direct: true, credentials: {} as Record<string,string> });
 const providers = Object.keys(channelSetups);
 const setup = computed(() => channelSetups[form.provider]!);
+const senderPairingAvailable = computed(() => ["feishu", "dingtalk", "wecom"].includes(form.provider));
 const fields = computed(() => setup.value.fields);
 const login = ref<ChannelLogin>();
 const qrImage = ref("");
@@ -92,7 +93,7 @@ async function applyLogin(result: ChannelLogin, generation: number) {
   }, Math.max(0, Date.parse(result.expires_at) - Date.now()));
   if (result.status === "connected") {
     qrImage.value = ""; verificationCode.value = ""; clearSecrets();
-    if (result.provider !== "feishu" && !form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
+    if (!senderPairingAvailable.value && !form.senders.trim() && result.suggested_sender_id) form.senders = result.suggested_sender_id;
     if (["connecting", "waiting"].includes(result.pairing_status ?? "")) loginTimer = setTimeout(() => pollLogin(generation), 2000);
     return;
   }
@@ -105,7 +106,7 @@ async function applyLogin(result: ChannelLogin, generation: number) {
   if (result.status !== "verification_required") loginTimer = setTimeout(() => pollLogin(generation), 2000);
 }
 async function startSenderPairing() {
-  if (busy.value || polling.value || !authenticated.value || form.provider !== "feishu") return;
+  if (busy.value || polling.value || !authenticated.value || !senderPairingAvailable.value) return;
   const current = login.value?.status === "connected" && Date.now() < Date.parse(login.value.expires_at) ? login.value : undefined;
   if (!current && !editing.value) return;
   if (!current) clearLogin();
@@ -138,10 +139,10 @@ async function connectAccount() {
     await applyLogin(result, generation);
   } catch (failure) {
     if (!disposed && generation === loginGeneration) {
-      const codes = ["feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable"];
-      const knownFailure = form.provider === "feishu" && failure instanceof ApiError && codes.includes(failure.code);
+      const codes = ["feishu_credentials_rejected", "feishu_authentication_unavailable", "feishu_bot_unavailable", "feishu_bot_inactive", "feishu_tenant_permission_required", "feishu_tenant_unavailable", "wecom_credentials_invalid", "wecom_connection_failed", "wecom_authentication_timeout", "wecom_authentication_rejected", "wecom_authentication_invalid"];
+      const knownFailure = failure instanceof ApiError && codes.includes(failure.code) && failure.code.startsWith(`${form.provider}_`);
       error.value = t(knownFailure ? `channels.loginErrors.${failure.code}` : "channels.loginFailed");
-      if (knownFailure && failure.providerCode) error.value += ` ${t("channels.providerErrorCode", { code: failure.providerCode })}`;
+      if (knownFailure && failure.providerCode) error.value += ` ${t(form.provider === "wecom" ? "channels.wecomErrorCode" : "channels.providerErrorCode", { code: failure.providerCode })}`;
     }
   }
   finally { if (generation === loginGeneration) busy.value = false; }
@@ -187,7 +188,6 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 
 <template>
   <section class="message-channels" :aria-label="t('channels.title')">
-    <p class="muted">{{ t('channels.description') }}</p>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-alert v-if="!loading && !available && !error" :title="t('channels.platformDisabled')" type="info" :closable="false" />
     <div class="channel-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">{{ t('common.refresh') }}</el-button></div>
@@ -221,7 +221,10 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
       <section class="channel-account-setup">
         <h3>{{ t('channels.accountSetup') }}</h3>
         <p class="muted">{{ t(`channels.setup.${form.provider}`) }}</p>
-        <a :href="setup.docs" target="_blank" rel="noopener noreferrer">{{ t('channels.setupGuide') }}</a>
+        <div class="channel-actions">
+          <a v-if="form.provider === 'telegram'" class="channel-botfather-link" href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">{{ t('channels.botFather') }}</a>
+          <a :href="setup.docs" target="_blank" rel="noopener noreferrer">{{ t('channels.setupGuide') }}</a>
+        </div>
         <el-form-item v-if="form.provider === 'feishu'" :label="t('channels.region')"><el-select v-model="form.region" :disabled="busy || Boolean(login)" @change="reconnect"><el-option value="feishu" :label="t('channels.providers.feishu')" /><el-option value="lark" label="Lark" /></el-select></el-form-item>
         <template v-if="authenticated">
           <p role="status">{{ t(editing && !reconnecting ? 'channels.savedAccount' : 'channels.accountConnected') }} · {{ login?.account_name || editing?.account_name || login?.account_id || editing?.account_id }}</p>
@@ -253,9 +256,9 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
         <p class="muted">{{ t(`channels.receive.${setup.receive}`) }}</p>
         <el-form-item :label="t('workflows.name')"><el-input v-model="form.name" :disabled="busy" maxlength="100" /></el-form-item>
         <el-form-item :label="t('channels.senderLabel', {kind:setup.sender})"><el-input v-model="form.senders" type="textarea" :disabled="busy" :placeholder="setup.sender" /></el-form-item>
-        <div v-if="form.provider === 'feishu'" class="channel-sender-pairing">
+        <div v-if="senderPairingAvailable" class="channel-sender-pairing">
           <el-button v-if="!['connecting','waiting'].includes(login?.pairing_status ?? '')" :loading="busy" :disabled="busy || polling" @click="startSenderPairing">{{ t('channels.pairing.generate') }}</el-button>
-          <p v-if="login?.pairing_status" role="status">{{ t(`channels.pairing.${login.pairing_status}`) }}</p>
+          <p v-if="login?.pairing_status" role="status">{{ t(`channels.pairing.${login.pairing_status}`, {provider:t(`channels.providers.${form.provider}`)}) }}</p>
           <template v-if="login?.pairing_status === 'waiting' && login.pairing_code">
             <p>{{ t('channels.pairing.instruction') }}</p>
             <code class="channel-pairing-code">{{ login.pairing_code }}</code>
@@ -293,6 +296,7 @@ onBeforeUnmount(() => { disposed = true; abort.abort(); clearTimeout(timer); cle
 .channel-provider-card:focus-visible { outline:2px solid var(--aw-primary); outline-offset:2px; }
 .channel-provider-card:disabled { cursor:not-allowed; opacity:.55; }
 .channel-config-form { max-height:min(65vh,640px); overflow-y:auto; padding-inline-end:var(--aw-space-2); }
+.channel-botfather-link { font-weight:600; }
 .channel-account-setup,.channel-message-setup { display:grid; gap:var(--aw-space-3); }
 .channel-message-setup { margin-top:var(--aw-space-4); padding-top:var(--aw-space-4); border-top:1px solid var(--aw-n4); }
 .channel-qr { width:240px; max-width:100%; }

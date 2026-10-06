@@ -27,13 +27,15 @@ type ChannelStored struct {
 	Ciphertext []byte
 }
 type ChannelSendJob struct {
-	Delivery        domain.ChannelDelivery
-	Stored          ChannelStored
-	Message         domain.ChannelMessage
-	ReplyCiphertext []byte
-	InboxID         string
-	Text            string
-	Lease           string
+	Response         []byte
+	ResponseRevision int64
+	Delivery         domain.ChannelDelivery
+	Stored           ChannelStored
+	Message          domain.ChannelMessage
+	ReplyCiphertext  []byte
+	InboxID          string
+	Text             string
+	Lease            string
 }
 type ChannelIdentity struct{ ID, Name, TenantID, BindingID string }
 type ChannelSendResult struct {
@@ -262,7 +264,7 @@ func (s *MessageChannels) Control(ctx context.Context, owner, workflow, id strin
 	if action == "validate" || action == "enable" {
 		s.pairingMu.Lock()
 		defer s.pairingMu.Unlock()
-		if s.pairings[old.Channel.BindingID] != "" {
+		if s.pairings[senderPairingBinding(old.Channel.Provider, old.Channel.BindingID)] != "" {
 			return old.Channel, domain.ErrConflict
 		}
 	}
@@ -304,7 +306,11 @@ func (s *MessageChannels) Receive(ctx context.Context, stored ChannelStored, mes
 		return err
 	}
 	message.Reply = nil
-	_, err = s.repository.ReceiveChannelMessage(ctx, stored, message, reply)
+	var received bool
+	received, err = s.repository.ReceiveChannelMessage(ctx, stored, message, reply)
+	if err == nil && received && stored.Channel.Enabled {
+		s.receiveFeedback(ctx, stored, message)
+	}
 	return err
 }
 func (s *MessageChannels) Callback(ctx context.Context, provider, id string, headers http.Header, body []byte) (any, error) {
@@ -411,7 +417,7 @@ func (s *MessageChannels) ProcessDelivery(ctx context.Context) (bool, error) {
 	job.Message.Reply["delivery_kind"] = job.Delivery.Kind
 	sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	result := sender.Send(sendCtx, job.Stored, c, job.Message, text, job.Delivery.ID)
+	result := s.sendResponse(sendCtx, job, c, text, sender)
 	return true, s.repository.FinishChannelDelivery(ctx, job, result)
 }
 func (s *MessageChannels) Deliveries(ctx context.Context, owner, workflow, id string) ([]domain.ChannelDelivery, error) {

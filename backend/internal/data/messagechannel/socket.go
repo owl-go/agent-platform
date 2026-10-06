@@ -44,10 +44,12 @@ type socketSession struct {
 	writeMu   sync.Mutex
 	pendingMu sync.Mutex
 	pending   map[string]chan []byte
+	// WeCom uses the originating req_id for successive stream updates.
+	replyGate chan struct{}
 }
 
 func newSocketSession(ctx context.Context, socket channelSocket) *socketSession {
-	return &socketSession{socket: socket, ctx: ctx, pending: map[string]chan []byte{}}
+	return &socketSession{socket: socket, ctx: ctx, pending: map[string]chan []byte{}, replyGate: make(chan struct{}, 1)}
 }
 func (s *socketSession) write(kind int, data []byte) error {
 	s.writeMu.Lock()

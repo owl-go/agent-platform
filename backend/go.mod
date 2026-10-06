@@ -14,6 +14,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/open-dingtalk/dingtalk-stream-sdk-go v0.9.1
 	github.com/pelletier/go-toml/v2 v2.2.4
+	github.com/yuin/goldmark v1.8.6
 	golang.org/x/crypto v0.54.0
 	golang.org/x/image v0.31.0
 	golang.org/x/text v0.40.0

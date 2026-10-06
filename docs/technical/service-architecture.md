@@ -10,7 +10,7 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 
 当前实现包含以下限界上下文：
 
-- Account：OIDC 身份、本地 User 投影、Bootstrap Administrator 与可委派 Administrator、Resource Publisher、只读 Identity Group/成员关系同步、账号治理和隐私受限的 Governance Audit Event。
+- Account：OIDC 身份、Administrator 管理的 Registration Method、短期 Registration Attempt、本地 User 投影、Bootstrap Administrator 与可委派 Administrator、Resource Publisher、只读 Identity Group/成员关系同步、账号治理和隐私受限的 Governance Audit Event。
 - Workspace：Session、Workflow、Run Conversation、Run、Expert、Expert Team、Skill、Administrator-owned Connector Publication、User-private Connector Installation/Authorization、兼容期 CLI Definition/Enablement/Approval、平台级 Model Provider Connection 与 Provider Model，以及 Personal Settings。
 - Credits：Credit Ledger、余额投影、Daily Credit Allocation、Redemption Code、Model Credit Rate、Credit Adjustment，以及模型执行的积分准入和结算。
 - Product Analytics：从已确认的登录、默认执行配置、Session 首次任务与终态、Workflow 创建、第二次成功运行和执行流重连生成追加式 Product Event。执行流重连只记录流类型与恢复方式，并按匿名对象的五分钟窗口去重；所有事件都只保存匿名 User/对象 Key 和白名单粗粒度属性，采集失败不改变业务操作结果。
@@ -21,6 +21,8 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 Account 拥有 User、治理角色、Identity Group 投影和 Governance Audit Event，不拥有积分状态。Credits 只读取当前 Group membership 与 Department Credit Budget 完成聚合准入；Workspace 通过 Credits 的 Application 端口检查准入、冻结每个 Execution Stage 的费率并结算实际消耗，不直接更新 Credit Ledger 或余额投影。AI Creation 同样不能直接更新余额或读取供应商凭证明文；它通过窄端口解析冻结的连接版本、创建预留并提交终态结算。四个上下文可以使用同一个 PostgreSQL 实例，但 Domain 和 Application 端口不泄漏 GORM Model。
 
 Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
+
+账号扫码接入通过 Account Application 的供应商验证、Keycloak 联邦身份和短期 Repository 端口实现；Go Broker 只向固定 Keycloak client/回调签发一分钟身份断言，产品 Token 仍仅由 Keycloak 签发。配置和 Attempt 密文、Version CAS、一次性兑换及配置与治理审计的原子提交由 Account GORM Adapter 负责；供应商 HTTP 不进入数据库事务。Keycloak 普通账号无邮箱时允许扫码建号；密码账号仍由 Application 验证必填邮箱。部署预声明两个 admin-only 身份标记，不向产品服务授予 manage-realm。详细设计和真实验证边界见 [扫码登录与注册](scan-registration.md)。
 
 ## 默认资源初始化
 
@@ -49,7 +51,13 @@ Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enableme
 
 ## API
 
-Workflow Message Channel 已实现全部 13 个目标渠道的文本收发；owner 管理使用 Proto API，Telegram/Slack/WhatsApp 回调是独立供应商认证的自定义 HTTP Handler。Workspace Application 分别定义 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver` 和 `ChannelSender` port，`ChannelTransport` 静态注册每个渠道的唯一接收方式与独立发送器，QQ WebSocket 通过可选 `ChannelStreamHealthReceiver` 报告真实握手健康，不创建用户消息；可选 `ChannelTypingSender`/`ChannelTypingSession` 只处理执行期的瞬态输入状态，失败不影响 Run 或 Delivery；Data Adapter 各自实现供应商协议，Migration 000066 保存配置/Inbox/Conversation/Delivery，000067 扩展 provider 并追加加密接收游标。Matrix、Signal、BlueBubbles 使用 Administrator 批准的精确 HTTPS Endpoint；显式私网访问不扩展 Sandbox Egress。Inbox 准入复用 Workflow Queue 与 Credits，终态 Event/Credits/Outbox 同事务提交；Worker 持有进程级 Advisory Lock，连接与发送使用独立有界循环。渠道凭证只供 host 运输与执行脱敏，不进入 Runtime env/Snapshot。配置默认关闭，2026-10-03 已部署并开启平台级配置，迁移和渠道循环通过部署检查；真实账号闭环与完整 Production Conformance 尚未取得。部署证据见 [验证记录](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)，配置和限制见 [接入设计](workflow-message-channels.md)。
+Workflow Message Channel 的账号、受众配对、收发验证、原聊天回复与恢复设计见 [接入设计](workflow-message-channels.md)，产品边界见 [产品规格](../product/agent-workspace-requirements.md)。当前全部 13 个目标渠道有文本 Adapter；真实账号验收与部署健康检查分别记录，后者不能证明外部 IM 闭环可用。
+
+Workspace Application 定义 `ChannelAccount`、`ChannelWebhookReceiver`/`ChannelStreamReceiver`、`ChannelSender`，通过 `ChannelTransport` 静态注册唯一接收方式与独立发送器。`ChannelStreamHealthReceiver` 仅报告可信连接健康；飞书、钉钉与企业微信临时发送者配对复用已认证接收连接，只生成由 owner 确认的受众候选，不创建 Inbox 或 Run。供应商错误映射为固定公共分类，可保留数值错误码，不传播凭据或原始错误内容。Matrix、Signal、BlueBubbles 的精确 HTTPS Endpoint 继续由 Administrator 批准，host 运输权限不扩展 Sandbox Egress。
+
+可选 `ChannelTypingSender`/`ChannelTypingSession` 管理瞬态输入状态；`ChannelResponseSender` 管理共享回复的创建与更新，`ChannelReactionSender` 是独立可选的表情能力。Worker 的 `TrackResponse` 经 Application 端口接收公开预览，Runtime Executor 在已提交事件之后提取固定进度及已脱敏最终成员摘要/答案，供应商调用留在 Data Adapter，失败不改变 Run 结果。更新端口同时接收原 `ChannelMessage` 与 opaque handle；Application 在当前 owner、Audience、配置与 generation 检查后解密 Inbox 的 Reply，临时使用原回调信息，不把回调能力放入普通回复状态。飞书、钉钉和企业微信的动态回复、截止时间、Markdown 与备用发送边界以接入设计为准。
+
+Migration `000066` 保存配置/Inbox/Conversation/Delivery，`000067` 扩展 provider 与加密接收游标，`000068` 冻结 Run 的渠道来源，`000069` 添加回复状态与 revision fence。回复句柄、创建意图和有界公开摘要可持久化，暂定答案只在内存；不确定创建遵守显式恢复规则。Inbox 准入复用 Workflow Queue 与 Credits，终态 Event/Credits/Outbox 同事务提交。Worker 持有进程级 Advisory Lock，连接、回执读取、进度和发送分别沿有界循环运行；渠道凭据与回复能力只用于 host 运输及执行脱敏，不进入 Runtime env/Snapshot。接入设计包含日期化发布证据；初次平台启用记录见 [部署记录](../evidence/agent-workspace/2026-10-03-workflow-message-channels-deployment.md)，完整 Production Conformance 与真实账号能力仍按各项证据单独判定。
 
 `backend/api/workspace/v1/workspace.proto` 是普通 JSON API 的权威契约。用户认证使用 Bearer OIDC Token。Workflow API Key/API Secret 只允许通过 HTTP Basic 调用该 Workflow 的 Token Exchange；凭证通过拥有者专用的 Workflow API Credential 读取接口返回，API Secret 在存储中加密。Token Exchange 返回的 72 小时 JWT 通过 Bearer Header 启动和查看该 Workflow 的 Run，不代表 User 身份，也不能访问其他产品 API。
 

@@ -90,7 +90,7 @@ func initializeAPI(contextContext context.Context, config platformconfig.Config,
 	if err != nil {
 		return nil, err
 	}
-	httpHandlers, err := agentworkspace.NewHTTPHandlers(workspaceService, filterFunc)
+	httpHandlers, err := agentworkspace.NewHTTPHandlers(workspaceService, filterFunc, applicationService, database, box, provider, config)
 	if err != nil {
 		return nil, err
 	}

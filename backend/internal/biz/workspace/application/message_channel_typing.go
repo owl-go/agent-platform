@@ -12,10 +12,13 @@ import (
 // The repository returns only a currently running, authorized channel execution.
 // No provider credentials or reply context enter the ExecutionJob or Runtime.
 type ChannelTypingJob struct {
-	Stored          ChannelStored
-	Message         domain.ChannelMessage
-	ReplyCiphertext []byte
-	Running         bool
+	InboxID          string
+	Response         ChannelResponseState
+	ResponseRevision int64
+	Stored           ChannelStored
+	Message          domain.ChannelMessage
+	ReplyCiphertext  []byte
+	Running          bool
 }
 type ChannelTypingRepository interface {
 	GetChannelTypingJob(context.Context, ExecutionJob) (*ChannelTypingJob, error)
