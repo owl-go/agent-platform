@@ -147,7 +147,12 @@ def validate_public(values):
 
 
 def snapshot(repo, destination):
-    run(["git", "fetch", "origin", "main_temp"], cwd=repo)
+    # Bound stalled transfers and avoid intermittent HTTP/2 failures on release networks.
+    try:
+        run(["git", "-c", "http.version=HTTP/1.1", "-c", "http.lowSpeedLimit=1", "-c", "http.lowSpeedTime=30",
+             "fetch", "origin", "main_temp"], cwd=repo)
+    except DeploymentError:
+        raise DeploymentError("无法读取 origin/main_temp，请检查 Git 访问权限与网络后重试 make deploy")
     revision = run(["git", "rev-parse", "origin/main_temp"], cwd=repo).strip()
     archive = destination.parent / "source.tar"
     run(["git", "archive", "--format=tar", "-o", str(archive), revision], cwd=repo)
