@@ -19,3 +19,16 @@
 - `git diff --check`、暂存后的 `git diff --cached --check` 和 `cmp -s AGENTS.md CLAUDE.md`：通过。没有 Web 实现改动。
 
 目录初始化安装的是平台定义。新环境 CLI 保持 disabled，仍需 exact bundle SHA-256 × 当前 Runtime RepoDigest 的真实 Conformance 才能开放；MCP 使用者仍需各自配置或授权。本变更不新增供应商业务调用、完整 Runtime Production Conformance 或全新 Ubuntu 安装验收证据。
+
+## 线上发布与去重核对
+
+最终实现 `6046292` 推送并合入 `main_temp` 的 `5565c04454f49aa2681c4de7fa1fd7305f326911`；从不可变快照执行 `make deploy` 成功，发布 `app-20261006T144155Z-35b600ac`。备份、构建、切换、健康、Readiness 和 HTTPS/OIDC 检查通过。API/Worker 均在只读 Rootfs 下使用 `AGENT_WORKSPACE_RESOURCE_ROOT=/app/resources`，各包含 20 个 Connector、9 个业务 Skill 和 8 个 Expert 子目录，实际启动初始化完成。
+
+- API Image：`sha256:241c157a536e806d1bcf3d1d902f24820f7fee8260ca3f43972c582d6fbedbae`，healthy。
+- Worker Image：`sha256:873c5a0729c3746b214469dac73203d1a879713c935c07386a1dbfc052f78b8d`，healthy。
+- 部署前后 Publication 均为 20，包含 source、活动 Revision、状态和 Version 的聚合指纹均为 `01586af8c4d6c63f873cc78595d7c76f`；Revision 总数均为 35，没有新增重复修订。
+- 平台 Skill 均为 12，ID/名称/Version/内容摘要指纹均为 `c3257cfdfbc70a397fd8b1c7f454d0b4`。
+- 平台 Expert 均为 8，ID/名称/Version/Skill 绑定指纹均为 `2a2c7d56eabbd18a65953366b32ab81f`。
+- `platform.env` / `platform.https.yaml` 部署前后 SHA-256 一致；Web 仍为前次发布 `app-20261006T105155Z-bf4f48ff`。未改变 Runtime 镜像、账号授权或用户内容。
+
+线上检查验证已有安装的目录迁移和两个服务的启动去重；全新 Ubuntu 首次安装闭环仍须独立机器验收，不能由本次已有服务器发布替代。
