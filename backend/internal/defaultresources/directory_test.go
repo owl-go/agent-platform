@@ -164,3 +164,39 @@ func TestExpertMayReferenceBuiltInCreationSkill(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDirectoryDigestIgnoresGitArchiveWriteBitsButRetainsExecutability(t *testing.T) {
+	root := directoryFixture(t)
+	file := filepath.Join(root, "skills/example/script.sh")
+	writeResourceFixture(t, root, "skills/example/script.sh", "#!/bin/sh\nexit 0\n")
+	if err := os.Chmod(file, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	before, err := LoadDirectory(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(file, 0o775); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(root, "skills/example/SKILL.md"), 0o664); err != nil {
+		t.Fatal(err)
+	}
+	after, err := LoadDirectory(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.Skills[0].SHA256 != after.Skills[0].SHA256 {
+		t.Fatal("Git archive write bits changed the immutable Skill identity")
+	}
+	if err := os.Chmod(file, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	nonExecutable, err := LoadDirectory(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nonExecutable.Skills[0].SHA256 == before.Skills[0].SHA256 {
+		t.Fatal("script executability was discarded")
+	}
+}

@@ -283,7 +283,14 @@ func archiveDirectory(ctx context.Context, files fs.FS, directory, excluded stri
 			return err
 		}
 		header := &zip.FileHeader{Name: relative, Method: zip.Deflate}
-		header.SetMode(info.Mode().Perm())
+		// Git archive adds group-write bits according to tar.umask. Only the
+		// executable bit is part of the repository's file identity; freeze
+		// canonical permissions so checkout and release archives agree.
+		mode := fs.FileMode(0o644)
+		if info.Mode().Perm()&0o111 != 0 {
+			mode = 0o755
+		}
+		header.SetMode(mode)
 		file, err := writer.CreateHeader(header)
 		if err != nil {
 			return err
