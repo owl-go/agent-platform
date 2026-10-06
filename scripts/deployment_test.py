@@ -55,6 +55,17 @@ class DeploymentTests(unittest.TestCase):
             deployment.make_plan({}, {deployment.MIGRATIONS + "/000001.sql": "old"})
         self.assertTrue(deployment.make_plan({deployment.MIGRATIONS + "/000002.sql": "new"}, {})["migration"])
 
+    def test_migration_verification_preserves_history_and_checks_exact_source_hashes(self):
+        files = {deployment.MIGRATIONS + "/000002.sql": "source-digest"}
+        previous = {"000001_retired.sql": "historical-digest"}
+        valid = {**previous, "000002.sql": "source-digest"}
+        deployment.verify_migrations(files, valid, previous)
+        for actual in (previous, {**valid, "000002.sql": "wrong-digest"},
+                       {"000002.sql": "source-digest"}, {**valid, "unknown.sql": "unexpected"},
+                       {**valid, "000001_retired.sql": "changed-history"}):
+            with self.subTest(actual=actual), self.assertRaises(deployment.DeploymentError):
+                deployment.verify_migrations(files, actual, previous)
+
     def test_snapshot_uses_fetched_integration_not_dirty_worktree(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -207,7 +218,7 @@ class DeploymentTests(unittest.TestCase):
             with patch.object(deployment, "inspect_server", return_value=state), \
                     patch.object(deployment, "load_remote_env", return_value={}), \
                     patch.object(deployment, "container_value", return_value="sha256:" + "b" * 64), \
-                    patch.object(deployment, "database", return_value="000001.sql"), \
+                    patch.object(deployment, "migration_ledger", return_value={"000001.sql": payload["files"][deployment.MIGRATIONS + "/000001.sql"]}), \
                     patch.object(deployment, "active_work", return_value=False), \
                     patch.object(deployment, "wait_healthy"), \
                     patch.object(deployment, "verify_server"), \

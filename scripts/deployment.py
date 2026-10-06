@@ -338,6 +338,20 @@ def active_work():
                     "+(SELECT count(*) FROM message_channel_deliveries WHERE state = 'sending');\n") != "0"
 
 
+def migration_ledger():
+    return json.loads(database("SELECT COALESCE(json_object_agg(name,checksum),'{}'::json) FROM schema_migrations;\n"))
+
+
+def verify_migrations(files, actual, previous):
+    expected = {Path(path).name: digest for path, digest in files.items()
+                if path.startswith(MIGRATIONS + "/") and path.endswith(".sql")}
+    if any(actual.get(name) != digest for name, digest in expected.items()):
+        raise DeploymentError("本次 Migration 未应用或内容摘要不一致")
+    historical = {name: digest for name, digest in previous.items() if name not in expected}
+    if {name: digest for name, digest in actual.items() if name not in expected} != historical:
+        raise DeploymentError("历史 Migration 账本发生了非预期变化")
+
+
 def wait_healthy(service):
     for _ in range(60):
         state = container_value(service, "{{.State.Health.Status}}")
@@ -404,7 +418,7 @@ def perform_release(root, payload):
         env["PLATFORM_CONFIG_FILE"] = str(root / "config/platform.https.yaml")
         previous_web = (root / "web/current").resolve()
         previous_images = {service: container_value(service, "{{.Image}}") for service in ("api", "worker")}
-        previous_migrations = database("SELECT name FROM schema_migrations ORDER BY name;\n")
+        previous_migrations = migration_ledger()
         backup = root / "backups" / ("pre-" + payload["release"])
         backup.mkdir(mode=0o700, parents=True, exist_ok=False)
         with (backup / "deployment.log").open("w") as log:
@@ -459,9 +473,7 @@ def perform_release(root, payload):
             def verify():
                 verify_server(root, env)
                 if plan["backend"]:
-                    expected = sorted(Path(p).name for p in files if p.startswith(MIGRATIONS + "/") and p.endswith(".sql"))
-                    if database("SELECT name FROM schema_migrations ORDER BY name;\n").splitlines() != expected:
-                        raise DeploymentError("Migration 账本未匹配本次版本")
+                    verify_migrations(files, migration_ledger(), previous_migrations)
 
             def rollback():
                 compose(["up", "-d", "--no-deps", "api", "worker"], rollback_file)
@@ -480,7 +492,7 @@ def perform_release(root, payload):
             print("自动切换应用并检查健康…", flush=True)
             try:
                 cutover(compose, rollback, plan, verify,
-                        lambda: database("SELECT name FROM schema_migrations ORDER BY name;\n") != previous_migrations,
+                        lambda: migration_ledger() != previous_migrations,
                         promote)
             except BaseException:
                 # A Web-only failure must also restore its pointer.
