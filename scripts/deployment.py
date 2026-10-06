@@ -323,7 +323,8 @@ def verify_server(root, env):
 
 def atomic_link(target, link):
     temporary = link.with_name("." + link.name + "-" + uuid.uuid4().hex)
-    temporary.symlink_to(target)
+    # Caddy mounts the Web root at /srv/web; host-absolute links cannot resolve there.
+    temporary.symlink_to(os.path.relpath(target, link.parent))
     os.replace(temporary, link)
 
 

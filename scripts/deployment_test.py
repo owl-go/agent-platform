@@ -36,6 +36,21 @@ class DeploymentTests(unittest.TestCase):
                     deployment.save_profile({"host": "other", "root": "/opt/other"}, path)
             self.assertEqual(json.loads(path.read_text()), first)
 
+    def test_web_links_resolve_relative_to_the_container_bind_mount(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            web = root / "host/web"
+            release = web / "releases/old"
+            release.mkdir(parents=True)
+            (release / "index.html").write_text("working page")
+            deployment.atomic_link(release, web / "current")
+            self.assertEqual(os.readlink(web / "current"), "releases/old")
+            container_mount = root / "container/srv/web"
+            container_mount.parent.mkdir(parents=True)
+            import shutil
+            shutil.copytree(web, container_mount, symlinks=True)
+            self.assertEqual((container_mount / "current/index.html").read_text(), "working page")
+
     def test_deploy_plan_skips_docs_and_updates_only_affected_components(self):
         base = {"backend/main.go": "a", "frontend/app.vue": "b", "README.md": "c"}
         self.assertEqual(deployment.make_plan({**base, "README.md": "d"}, base),
