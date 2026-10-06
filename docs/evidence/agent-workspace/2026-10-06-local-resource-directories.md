@@ -11,7 +11,7 @@
 已执行：
 
 - 迁移前旧 ZIP × 新目录等价测试：通过，20 Connector、9 Skill、8 Expert 全部比较；执行两次后才移除归档。
-- `go -C backend test -count=1 ./internal/defaultresources ./internal/data/workspace/gormrepo`：通过。目录单测覆盖独立发现、脚本副本隔离、冻结字节、未知/保留 Key、重复 Key/名称、版本、JSON 未知字段、完整 Expert、未知 Skill 绑定、source 别名、双模式包、metadata/package 根和资源符号链接、取消及显式根路径错误。
+- `go -C backend test -count=1 ./internal/defaultresources ./internal/data/workspace/gormrepo`：通过。目录单测覆盖独立发现、脚本副本隔离、冻结字节、未知/保留 Key、重复 Key/名称、版本、JSON 未知字段、完整 Expert、未知 Skill 绑定、source 别名、双模式包、metadata/package 根和资源符号链接、取消及显式根路径错误。随后增加三个内置 Skill 名称的保留检查，并重新执行 `make test` / `make build` 通过，避免使用不同 Key 建立内置名称副本。
 - 一次性 `postgres:17-alpine` + tmpfs，设置测试进程 `WORKSPACE_TEST_POSTGRES_DSN` 后运行 `go -C backend test -count=1 ./internal/data/workspace/gormrepo -run '^(TestDefaultResource|TestDefaultCatalog|TestDefaultConnector|TestDefaultSkill|TestLocalResourceDirectory)' -v`：8 项通过，79.172s。覆盖新安装全目录、并发启动、重复/升级、无授权或伪造 Conformance、私有资源保护、同名保留、对象写失败回滚，以及在不修改中心清单的情况下新增 Skill/Expert 并解析稳定 Key 绑定。旧脚本 Publication 的 Revision、disabled 状态与 Version 全部保留，Connector Revision/Publication 数量各为 1。测试数据库和容器已清理。
 - `make deploy-test`：23 个部署测试、13 个安装测试通过，Shell 语法通过；新增/删除目录的发布范围检测覆盖三种资源。
 - `make test`、`make build`：通过，自动目录校验报告 20 Connector、9 Skill、8 Expert +3 内置 Skill。全量 Go 门禁未配置数据库 DSN，其中 Skip 不作为数据库集成通过；上面的隔离数据库测试是真实执行结果。

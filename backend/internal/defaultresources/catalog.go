@@ -64,8 +64,10 @@ func decodeDefinition(data []byte, target any) error {
 
 func (catalog Catalog) validate() error {
 	seen := map[string]bool{}
+	names := map[string]bool{}
 	for _, definition := range systemskills.Definitions() {
 		seen["skill:"+definition.Key] = true
+		names["skill:"+strings.ToLower(strings.TrimSpace(definition.Name))] = true
 	}
 	check := func(kind, key, version string) error {
 		if !resourceKey.MatchString(key) || !resourceVersion.MatchString(version) || seen[kind+":"+key] {
@@ -74,7 +76,6 @@ func (catalog Catalog) validate() error {
 		seen[kind+":"+key] = true
 		return nil
 	}
-	names := map[string]bool{}
 	checkName := func(kind, name string) error {
 		key := kind + ":" + strings.ToLower(strings.TrimSpace(name))
 		if names[key] {

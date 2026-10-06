@@ -70,7 +70,7 @@ func TestDirectoryDiscoveryDoesNotLoadBuildScriptsAndFreezesBytes(t *testing.T) 
 }
 
 func TestDirectoryRejectsInvalidDefinitionsBeforeInstallation(t *testing.T) {
-	for _, problem := range []string{"duplicate key", "duplicate name", "unknown Skill reference", "missing Skill document", "unknown JSON field", "incomplete Expert", "reserved Skill key", "invalid version", "source alias", "both Connector modes"} {
+	for _, problem := range []string{"duplicate key", "duplicate name", "unknown Skill reference", "missing Skill document", "unknown JSON field", "incomplete Expert", "reserved Skill key", "reserved Skill name", "invalid version", "source alias", "both Connector modes"} {
 		t.Run(problem, func(t *testing.T) {
 			root := directoryFixture(t)
 			switch problem {
@@ -99,6 +99,13 @@ func TestDirectoryRejectsInvalidDefinitionsBeforeInstallation(t *testing.T) {
 				os.Remove(filepath.Join(root, "skills/example/SKILL.md"))
 			case "reserved Skill key":
 				writeResourceFixture(t, root, "skills/example/resource.json", `{"key":"system.create_skill","version":"1.0.0"}`)
+			case "reserved Skill name":
+				file := filepath.Join(root, "skills/example/SKILL.md")
+				body, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				writeResourceFixture(t, root, "skills/example/SKILL.md", strings.ReplaceAll(string(body), "Example Skill", "Create Skill"))
 			case "invalid version":
 				writeResourceFixture(t, root, "skills/example/resource.json", `{"key":"local.skill.example","version":"latest"}`)
 			case "source alias":

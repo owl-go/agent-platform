@@ -57,7 +57,7 @@ API/Worker 先完成账号 Bootstrap，再调用 `EnsureDefaultResources`；资�
 
 Connector Publication 已存在但不属于当前默认初始化时，保留其活动修订与状态；同 source/version 的私人包摘要冲突也不提升为平台发布。受管理 Connector 升级只替换活动修订，保留管理员显式 disabled 状态，并用 publication version 防止并发覆盖。
 
-由旧脚本创建的同 source Publication 不产生第二条记录；相同 source/version/摘要的 Revision 复用。受管理资源内容更新须增加自身 version，同版本不同内容拒绝提交；重复 Key、同类同名、未知 Skill Key 和保留 system.* Skill Key 在加载时拒绝。移除目录不删除数据库资源、用户安装/授权或历史快照。
+由旧脚本创建的同 source Publication 不产生第二条记录；相同 source/version/摘要的 Revision 复用。受管理资源内容更新须增加自身 version，同版本不同内容拒绝提交；重复 Key、同类同名、未知 Skill Key，以及三个内置 Skill 的 Key/名称在加载时拒绝。移除目录不删除数据库资源、用户安装/授权或历史快照。
 
 ## 可用性与授权
 
