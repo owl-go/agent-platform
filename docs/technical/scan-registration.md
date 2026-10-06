@@ -69,7 +69,7 @@ Broker 只接受固定 client ID、client secret、该 provider 的精确 Keyclo
 
 ## 验证边界
 
-登录码改造已从 `main_temp` 发布 API 和 Web，公众号原配置保持开启；真实 Keycloak 到等待页面、普通二维码、绑定浏览器的登录码接口和拒绝条件已检查。本地与发布证据见 [2026-10-06 验证记录](../evidence/agent-workspace/2026-10-06-wechat-message-code.md)，真实手机发码和完整产品登录仍待验收。
+登录码改造已从 `main_temp` 发布 API 和 Web，公众号原配置保持开启；真实 Keycloak 到等待页面、普通二维码、绑定浏览器的登录码接口和拒绝条件已检查。本地与发布证据见 [2026-10-06 验证记录](../evidence/agent-workspace/2026-10-06-wechat-message-code.md)，四位数字版本及跨副本尝试额度已发布，见 [短码发布验证](../evidence/agent-workspace/2026-10-06-wechat-four-digit-code.md)。真实手机发码和完整产品登录仍待验收。
 
 本地 fake Gateway 覆盖真实供应商协议形状和拒绝条件；Keycloak 集成以 fake 上游身份跑实际联邦身份、PKCE、RS256/JWKS、无邮箱建号和最终产品 OIDC 签发，不能记作真实飞书扫码。
 
