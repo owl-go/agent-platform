@@ -216,3 +216,11 @@ platform_compose exec -T worker wget -qO- http://127.0.0.1:9090/readyz
 - [服务架构](docs/technical/service-architecture.md)、[Sandbox](docs/technical/sandbox-runner.md)、[Runtime 契约](docs/technical/runtime-adapter.md)、[生产验收](docs/technical/production-conformance.md)：部署边界和检查依据。
 
 本地 Assistant embed 预览：执行 `pnpm --dir frontend dev --host 127.0.0.1 --port 4177 --strictPort`，打开 `http://localhost:4177/assistant-embed-preview.html`，粘贴产品 Share and Embed 代码并运行；allowed origins 包含 `http://localhost:4177`。预览不保存 Share Token，也不包含在生产构建中。
+
+## 交流与反馈
+
+欢迎扫码加入「Ai Agent 实验室」微信群，交流 Agent Workspace、Skills 和实际应用场景。
+
+<img src="docs/assets/ai-agent-lab-wechat-group.jpg" alt="Ai Agent 实验室微信群二维码" width="360">
+
+图片注明二维码在 **2026 年 10 月 13 日前**有效，过期后需更新。
