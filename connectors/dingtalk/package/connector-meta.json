@@ -1,0 +1,1 @@
+{"auth_mode": "cli", "description": "DingTalk Workspace CLI 业务操作；安装后通过钉钉设备授权连接账号。", "examples_en": ["List DingTalk tasks", "Search DingTalk documents"], "examples_zh": ["查询钉钉待办", "搜索钉钉文档"], "minPlatformVersion": "1.0.0", "name": "钉钉", "source": "dingtalk", "type": "cli", "version": "1.0.64"}

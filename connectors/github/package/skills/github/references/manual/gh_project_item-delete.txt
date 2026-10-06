@@ -1,0 +1,40 @@
+Source: https://cli.github.com/manual/gh_project_item-delete
+
+gh project item-delete
+
+Delete an item from a project by ID
+
+gh project item-delete [<number>] [flags]
+
+Options
+
+		--format <string>
+
+	Output format: {json}
+
+		--id <string>
+
+	ID of the item to delete
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--owner <string>
+
+	Login of the owner. Use "@me" for the current user.
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+Examples
+
+# Delete an item in the current user's project "1"
+$ gh project item-delete 1 --owner "@me" --id <item-id>
+
+See also
+
+  gh project

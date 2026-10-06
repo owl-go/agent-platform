@@ -1,0 +1,11 @@
+{
+  "transport": "streamable_http",
+  "url": "https://apim-gateway.pkulaw.com/mcp-law-search-service",
+  "egress_hosts": [
+    "apim-gateway.pkulaw.com"
+  ],
+  "timeout_seconds": 60,
+  "headers": {
+    "Authorization": "${MCP_BEARER_TOKEN}"
+  }
+}

@@ -1,0 +1,70 @@
+Source: https://cli.github.com/manual/gh_release_download
+
+gh release download
+
+gh release download [<tag>] [flags]
+
+Download assets from a GitHub release.
+
+Without an explicit tag name argument, assets are downloaded from the
+latest release in the project. In this case, --pattern or --archive
+is required.
+
+Options
+
+		--allow-escape-sequences
+
+	Allow printing terminal escape sequences when writing an asset to standard output
+
+	-A, 
+		--archive <format>
+
+	Download the source code archive in the specified format (zip or tar.gz)
+
+		--clobber
+
+	Overwrite existing files of the same name
+
+	-D, 
+		--dir <directory> (default ".")
+
+	The directory to download files into
+
+	-O, 
+		--output <file>
+
+	The file to write a single asset to (use "-" to write to standard output)
+
+	-p, 
+		--pattern <stringArray>
+
+	Download only assets that match a glob pattern
+
+		--skip-existing
+
+	Skip downloading when files of the same name exist
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Download all assets from a specific release
+$ gh release download v1.2.3
+
+# Download only Debian packages for the latest release
+$ gh release download --pattern '*.deb'
+
+# Specify multiple file patterns
+$ gh release download -p '*.deb' -p '*.rpm'
+
+# Download the archive of the source code for a release
+$ gh release download v1.2.3 --archive=zip
+
+See also
+
+  gh release

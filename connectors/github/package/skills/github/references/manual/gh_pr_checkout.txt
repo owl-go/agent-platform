@@ -1,0 +1,88 @@
+Source: https://cli.github.com/manual/gh_pr_checkout
+
+gh pr checkout
+
+Check out a pull request in git
+
+gh pr checkout [<number> | <url> | <branch>] [flags]
+
+Options
+
+	-b, 
+		--branch <string>
+
+	Local branch name to use (default [the name of the head branch])
+
+		--detach
+
+	Checkout PR with a detached HEAD
+
+	-f, 
+		--force
+
+	Reset the existing local branch to the latest state of the pull request
+
+		--recurse-submodules
+
+	Update all submodules after checkout
+
+		--worktree <path>
+
+	Check out the pull request into a worktree at the given path
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+ALIASES
+
+gh pr co
+
+Examples
+
+# Interactively select a PR from the 10 most recent to check out
+$ gh pr checkout
+
+# Checkout a specific PR
+$ gh pr checkout 32
+$ gh pr checkout https://github.com/OWNER/REPO/pull/32
+$ gh pr checkout feature
+$ gh pr checkout 32 --branch feature --worktree /path/to/wt-feature
+
+See also
+
+  gh pr
+
+    In use
+
+  Using pull request number
+
+  You can check out any pull request, including from forks, in a repository using its pull request number
+
+    // Checking out a pull request locally
+~/Projects/my-project$ gh pr checkout 12
+remote: Enumerating objects: 66, done.
+remote: Counting objects: 100% (66/66), done.
+remote: Total 83 (delta 66), reused 66 (delta 66), pack-reused 17
+Unpacking objects: 100% (83/83), done.
+From https://github.com/owner/repo
+ * [new ref]             refs/pull/8896/head -> patch-2
+M       README.md
+Switched to branch 'patch-2'
+
+~/Projects/my-project$
+
+  Using other selectors
+
+  You can also use URLs and branch names to checkout pull requests.
+
+    // Checking out a pull request locally
+~/Projects/my-project$ gh pr checkout branch-name
+Switched to branch 'branch-name'
+Your branch is up to date with 'origin/branch-name'.
+Already up to date.
+
+~/Projects/my-project$

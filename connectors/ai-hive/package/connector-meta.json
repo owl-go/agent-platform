@@ -1,0 +1,1 @@
+{"auth_mode": "cli", "description": "使用蜂巢 AI 查询模型、进行文本对话，预检并生成图片和视频，查询生成任务。", "examples_en": ["List image models and preview generation cost", "Check an AI-Hive video generation task"], "examples_zh": ["查询可用图片模型并预检生成费用", "查询 AI-Hive 视频生成任务进度"], "minPlatformVersion": "1.0.0", "name": "AI-Hive", "source": "ai-hive", "type": "mcp", "version": "0.3.0"}

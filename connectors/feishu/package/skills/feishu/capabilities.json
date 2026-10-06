@@ -1,0 +1,9608 @@
+[
+  {
+    "id": "apps_create",
+    "argv_prefix": [
+      "apps",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_get",
+    "argv_prefix": [
+      "apps",
+      "+get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_update",
+    "argv_prefix": [
+      "apps",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_list",
+    "argv_prefix": [
+      "apps",
+      "+list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_access_scope_set",
+    "argv_prefix": [
+      "apps",
+      "+access-scope-set"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_access_scope_get",
+    "argv_prefix": [
+      "apps",
+      "+access-scope-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_list",
+    "argv_prefix": [
+      "apps",
+      "+role-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_get",
+    "argv_prefix": [
+      "apps",
+      "+role-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_create",
+    "argv_prefix": [
+      "apps",
+      "+role-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_update",
+    "argv_prefix": [
+      "apps",
+      "+role-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_delete",
+    "argv_prefix": [
+      "apps",
+      "+role-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_member_list",
+    "argv_prefix": [
+      "apps",
+      "+role-member-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_member_add",
+    "argv_prefix": [
+      "apps",
+      "+role-member-add"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_member_remove",
+    "argv_prefix": [
+      "apps",
+      "+role-member-remove"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_role_match_list",
+    "argv_prefix": [
+      "apps",
+      "+role-match-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_member_list",
+    "argv_prefix": [
+      "apps",
+      "+member-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_member_add",
+    "argv_prefix": [
+      "apps",
+      "+member-add"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_member_update",
+    "argv_prefix": [
+      "apps",
+      "+member-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_member_remove",
+    "argv_prefix": [
+      "apps",
+      "+member-remove"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_member_settings_get",
+    "argv_prefix": [
+      "apps",
+      "+member-settings-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_member_settings_set",
+    "argv_prefix": [
+      "apps",
+      "+member-settings-set"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_html_publish",
+    "argv_prefix": [
+      "apps",
+      "+html-publish"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write",
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_init",
+    "argv_prefix": [
+      "apps",
+      "+init"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_release_create",
+    "argv_prefix": [
+      "apps",
+      "+release-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_release_list",
+    "argv_prefix": [
+      "apps",
+      "+release-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_release_get",
+    "argv_prefix": [
+      "apps",
+      "+release-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_env_pull",
+    "argv_prefix": [
+      "apps",
+      "+env-pull"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_log_list",
+    "argv_prefix": [
+      "apps",
+      "+log-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_log_get",
+    "argv_prefix": [
+      "apps",
+      "+log-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_trace_list",
+    "argv_prefix": [
+      "apps",
+      "+trace-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_trace_get",
+    "argv_prefix": [
+      "apps",
+      "+trace-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_metric_list",
+    "argv_prefix": [
+      "apps",
+      "+metric-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_analytics_list",
+    "argv_prefix": [
+      "apps",
+      "+analytics-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_env_list",
+    "argv_prefix": [
+      "apps",
+      "+env-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_env_set",
+    "argv_prefix": [
+      "apps",
+      "+env-set"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_env_delete",
+    "argv_prefix": [
+      "apps",
+      "+env-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_table_list",
+    "argv_prefix": [
+      "apps",
+      "+db-table-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_table_get",
+    "argv_prefix": [
+      "apps",
+      "+db-table-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_execute",
+    "argv_prefix": [
+      "apps",
+      "+db-execute"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_env_create",
+    "argv_prefix": [
+      "apps",
+      "+db-env-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_data_import",
+    "argv_prefix": [
+      "apps",
+      "+db-data-import"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "apps_db_data_export",
+    "argv_prefix": [
+      "apps",
+      "+db-data-export"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "apps_db_sync_create",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_sync_list",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_sync_get",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_sync_enable",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-enable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_sync_disable",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-disable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_sync_update",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_sync_delete",
+    "argv_prefix": [
+      "apps",
+      "+db-sync-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_changelog_list",
+    "argv_prefix": [
+      "apps",
+      "+db-changelog-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_audit_status",
+    "argv_prefix": [
+      "apps",
+      "+db-audit-status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_audit_enable",
+    "argv_prefix": [
+      "apps",
+      "+db-audit-enable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_audit_disable",
+    "argv_prefix": [
+      "apps",
+      "+db-audit-disable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_audit_list",
+    "argv_prefix": [
+      "apps",
+      "+db-audit-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_env_diff",
+    "argv_prefix": [
+      "apps",
+      "+db-env-diff"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_env_migrate",
+    "argv_prefix": [
+      "apps",
+      "+db-env-migrate"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_recovery_diff",
+    "argv_prefix": [
+      "apps",
+      "+db-recovery-diff"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_recovery_apply",
+    "argv_prefix": [
+      "apps",
+      "+db-recovery-apply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_db_quota_get",
+    "argv_prefix": [
+      "apps",
+      "+db-quota-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_file_list",
+    "argv_prefix": [
+      "apps",
+      "+file-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_file_get",
+    "argv_prefix": [
+      "apps",
+      "+file-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_file_sign",
+    "argv_prefix": [
+      "apps",
+      "+file-sign"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_file_download",
+    "argv_prefix": [
+      "apps",
+      "+file-download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "apps_file_upload",
+    "argv_prefix": [
+      "apps",
+      "+file-upload"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "apps_file_delete",
+    "argv_prefix": [
+      "apps",
+      "+file-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_file_quota_get",
+    "argv_prefix": [
+      "apps",
+      "+file-quota-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_cache_get",
+    "argv_prefix": [
+      "apps",
+      "+cache-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_cache_delete",
+    "argv_prefix": [
+      "apps",
+      "+cache-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_cache_clear",
+    "argv_prefix": [
+      "apps",
+      "+cache-clear"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_git_credential_init",
+    "argv_prefix": [
+      "apps",
+      "+git-credential-init"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_git_credential_list",
+    "argv_prefix": [
+      "apps",
+      "+git-credential-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_git_credential_remove",
+    "argv_prefix": [
+      "apps",
+      "+git-credential-remove"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_session_create",
+    "argv_prefix": [
+      "apps",
+      "+session-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_session_list",
+    "argv_prefix": [
+      "apps",
+      "+session-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_session_get",
+    "argv_prefix": [
+      "apps",
+      "+session-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_session_stop",
+    "argv_prefix": [
+      "apps",
+      "+session-stop"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_session_messages_list",
+    "argv_prefix": [
+      "apps",
+      "+session-messages-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_chat",
+    "argv_prefix": [
+      "apps",
+      "+chat"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_user_id_convert",
+    "argv_prefix": [
+      "apps",
+      "+user-id-convert"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:directory.user.id_convert:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_plugin_install",
+    "argv_prefix": [
+      "apps",
+      "+plugin-install"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_plugin_uninstall",
+    "argv_prefix": [
+      "apps",
+      "+plugin-uninstall"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_plugin_list",
+    "argv_prefix": [
+      "apps",
+      "+plugin-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_list",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_get",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_create",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_update",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_enable",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-enable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_disable",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-disable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_delete",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_openapi_key_reset",
+    "argv_prefix": [
+      "apps",
+      "+openapi-key-reset"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_automation_list",
+    "argv_prefix": [
+      "apps",
+      "+automation-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_automation_get",
+    "argv_prefix": [
+      "apps",
+      "+automation-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_automation_create",
+    "argv_prefix": [
+      "apps",
+      "+automation-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_automation_update",
+    "argv_prefix": [
+      "apps",
+      "+automation-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_automation_enable",
+    "argv_prefix": [
+      "apps",
+      "+automation-enable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "apps_automation_disable",
+    "argv_prefix": [
+      "apps",
+      "+automation-disable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "spark:app:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "application_slash_command_list",
+    "argv_prefix": [
+      "application",
+      "+slash-command-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "application:app_slash_command:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "application_slash_command_create",
+    "argv_prefix": [
+      "application",
+      "+slash-command-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "application:app_slash_command:write",
+      "application:app_slash_command:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "application_slash_command_update",
+    "argv_prefix": [
+      "application",
+      "+slash-command-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "application:app_slash_command:write",
+      "application:app_slash_command:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "application_slash_command_delete",
+    "argv_prefix": [
+      "application",
+      "+slash-command-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "application:app_slash_command:write",
+      "application:app_slash_command:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_agenda",
+    "argv_prefix": [
+      "calendar",
+      "+agenda"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_create",
+    "argv_prefix": [
+      "calendar",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:create",
+      "calendar:calendar.event:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_delete",
+    "argv_prefix": [
+      "calendar",
+      "+delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:read",
+      "calendar:calendar.event:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_update",
+    "argv_prefix": [
+      "calendar",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_freebusy",
+    "argv_prefix": [
+      "calendar",
+      "+freebusy"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.free_busy:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_room_find",
+    "argv_prefix": [
+      "calendar",
+      "+room-find"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.free_busy:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_rsvp",
+    "argv_prefix": [
+      "calendar",
+      "+rsvp"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:reply"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_suggestion",
+    "argv_prefix": [
+      "calendar",
+      "+suggestion"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.free_busy:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_meeting",
+    "argv_prefix": [
+      "calendar",
+      "+meeting"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_search_event",
+    "argv_prefix": [
+      "calendar",
+      "+search-event"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_get",
+    "argv_prefix": [
+      "calendar",
+      "+get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_transfer",
+    "argv_prefix": [
+      "calendar",
+      "+transfer"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:transfer",
+      "calendar:calendar.event:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_join_event",
+    "argv_prefix": [
+      "calendar",
+      "+join-event"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:join"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "calendar_list_attendees",
+    "argv_prefix": [
+      "calendar",
+      "+list-attendees"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "calendar:calendar.event:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_search",
+    "argv_prefix": [
+      "docs",
+      "+search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "search:docs:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_create",
+    "argv_prefix": [
+      "docs",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:create",
+      "docs:document.media:upload",
+      "docx:document:write_only",
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_fetch",
+    "argv_prefix": [
+      "docs",
+      "+fetch"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_update",
+    "argv_prefix": [
+      "docs",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:write_only",
+      "docx:document:readonly",
+      "docs:document.media:upload",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_script",
+    "argv_prefix": [
+      "docs",
+      "+script"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_history_list",
+    "argv_prefix": [
+      "docs",
+      "+history-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_history_revert",
+    "argv_prefix": [
+      "docs",
+      "+history-revert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:write_only",
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_history_revert_status",
+    "argv_prefix": [
+      "docs",
+      "+history-revert-status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_media_insert",
+    "argv_prefix": [
+      "docs",
+      "+media-insert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:upload",
+      "docx:document:write_only",
+      "docx:document:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_media_upload",
+    "argv_prefix": [
+      "docs",
+      "+media-upload"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "docs_media_preview",
+    "argv_prefix": [
+      "docs",
+      "+media-preview"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_media_download",
+    "argv_prefix": [
+      "docs",
+      "+media-download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:download",
+      "docs:permission.member:auth"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "docs_resource_download",
+    "argv_prefix": [
+      "docs",
+      "+resource-download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly",
+      "docs:document.media:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "docs_resource_update",
+    "argv_prefix": [
+      "docs",
+      "+resource-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly",
+      "docx:document:write_only",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_resource_delete",
+    "argv_prefix": [
+      "docs",
+      "+resource-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docx:document:readonly",
+      "docx:document:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_upload",
+    "argv_prefix": [
+      "drive",
+      "+upload"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:upload",
+      "drive:drive.metadata:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "drive_create_folder",
+    "argv_prefix": [
+      "drive",
+      "+create-folder"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "space:folder:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_create_shortcut",
+    "argv_prefix": [
+      "drive",
+      "+create-shortcut"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "space:document:shortcut"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_copy",
+    "argv_prefix": [
+      "drive",
+      "+copy"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document:copy",
+      "drive:drive.metadata:readonly",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_download",
+    "argv_prefix": [
+      "drive",
+      "+download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download",
+      "docs:permission.member:auth",
+      "drive:drive.metadata:readonly",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "drive_preview",
+    "argv_prefix": [
+      "drive",
+      "+preview"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_cover",
+    "argv_prefix": [
+      "drive",
+      "+cover"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_add_comment",
+    "argv_prefix": [
+      "drive",
+      "+add-comment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:drive.metadata:readonly",
+      "docx:document:readonly",
+      "docs:document.comment:create",
+      "docs:document.comment:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_list_comments",
+    "argv_prefix": [
+      "drive",
+      "+list-comments"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:read",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_batch_query_comments",
+    "argv_prefix": [
+      "drive",
+      "+batch-query-comments"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:read",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_resolve_comment",
+    "argv_prefix": [
+      "drive",
+      "+resolve-comment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_restore_comment",
+    "argv_prefix": [
+      "drive",
+      "+restore-comment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_add_reply",
+    "argv_prefix": [
+      "drive",
+      "+add-reply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:create",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_list_replies",
+    "argv_prefix": [
+      "drive",
+      "+list-replies"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:read",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_update_reply",
+    "argv_prefix": [
+      "drive",
+      "+update-reply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_delete_reply",
+    "argv_prefix": [
+      "drive",
+      "+delete-reply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_react_reply",
+    "argv_prefix": [
+      "drive",
+      "+react-reply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.comment:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_export",
+    "argv_prefix": [
+      "drive",
+      "+export"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.content:read",
+      "docs:document:export",
+      "docx:document:readonly",
+      "drive:drive.metadata:readonly",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "drive_export_download",
+    "argv_prefix": [
+      "drive",
+      "+export-download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document:export"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "drive_import",
+    "argv_prefix": [
+      "drive",
+      "+import"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:upload",
+      "docs:document:import",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "drive_version_history",
+    "argv_prefix": [
+      "drive",
+      "+version-history"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_version_get",
+    "argv_prefix": [
+      "drive",
+      "+version-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_version_revert",
+    "argv_prefix": [
+      "drive",
+      "+version-revert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_version_delete",
+    "argv_prefix": [
+      "drive",
+      "+version-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_move",
+    "argv_prefix": [
+      "drive",
+      "+move"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "space:document:move"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_update_title",
+    "argv_prefix": [
+      "drive",
+      "+update-title"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_delete",
+    "argv_prefix": [
+      "drive",
+      "+delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "space:document:delete",
+      "drive:drive.metadata:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_status",
+    "argv_prefix": [
+      "drive",
+      "+status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:drive.metadata:readonly",
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_push",
+    "argv_prefix": [
+      "drive",
+      "+push"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:drive.metadata:readonly",
+      "drive:file:upload",
+      "space:folder:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_pull",
+    "argv_prefix": [
+      "drive",
+      "+pull"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:drive.metadata:readonly",
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_sync",
+    "argv_prefix": [
+      "drive",
+      "+sync"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:drive.metadata:readonly",
+      "drive:file:download",
+      "drive:file:upload",
+      "space:folder:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_task_result",
+    "argv_prefix": [
+      "drive",
+      "+task_result"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_apply_permission",
+    "argv_prefix": [
+      "drive",
+      "+apply-permission"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:permission.member:apply"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_member_add",
+    "argv_prefix": [
+      "drive",
+      "+member-add"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:permission.member:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_member_list",
+    "argv_prefix": [
+      "drive",
+      "+member-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:permission.member:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_member_remove",
+    "argv_prefix": [
+      "drive",
+      "+member-remove"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:permission.member:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_permission_get_setting",
+    "argv_prefix": [
+      "drive",
+      "+permission-get-setting"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:permission.setting:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_secure_label_list",
+    "argv_prefix": [
+      "drive",
+      "+secure-label-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:secure_label:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_secure_label_update",
+    "argv_prefix": [
+      "drive",
+      "+secure-label-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:secure_label:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_search",
+    "argv_prefix": [
+      "drive",
+      "+search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "search:docs:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "drive_inspect",
+    "argv_prefix": [
+      "drive",
+      "+inspect"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:drive.metadata:readonly",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_chat_create",
+    "argv_prefix": [
+      "im",
+      "+chat-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:chat:create_by_user"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_chat_list",
+    "argv_prefix": [
+      "im",
+      "+chat-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_chat_members_list",
+    "argv_prefix": [
+      "im",
+      "+chat-members-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:chat.members:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_chat_messages_list",
+    "argv_prefix": [
+      "im",
+      "+chat-messages-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message.group_msg:get_as_user",
+      "im:message.p2p_msg:get_as_user",
+      "im:message.reactions:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_chat_search",
+    "argv_prefix": [
+      "im",
+      "+chat-search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_chat_update",
+    "argv_prefix": [
+      "im",
+      "+chat-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:chat:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_message_read_users",
+    "argv_prefix": [
+      "im",
+      "+message-read-users"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_messages_mget",
+    "argv_prefix": [
+      "im",
+      "+messages-mget"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message.group_msg:get_as_user",
+      "im:message.p2p_msg:get_as_user",
+      "im:message.reactions:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_messages_read_status",
+    "argv_prefix": [
+      "im",
+      "+messages-read-status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_messages_reply",
+    "argv_prefix": [
+      "im",
+      "+messages-reply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message.send_as_user",
+      "im:message"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_messages_resources_download",
+    "argv_prefix": [
+      "im",
+      "+messages-resources-download"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "im_messages_search",
+    "argv_prefix": [
+      "im",
+      "+messages-search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "search:message",
+      "im:message.reactions:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_messages_send",
+    "argv_prefix": [
+      "im",
+      "+messages-send"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message.send_as_user",
+      "im:message"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_threads_messages_list",
+    "argv_prefix": [
+      "im",
+      "+threads-messages-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:message.group_msg:get_as_user",
+      "im:message.p2p_msg:get_as_user",
+      "im:message.reactions:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_flag_create",
+    "argv_prefix": [
+      "im",
+      "+flag-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed.flag:write",
+      "im:message.group_msg:get_as_user",
+      "im:message.p2p_msg:get_as_user",
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_flag_cancel",
+    "argv_prefix": [
+      "im",
+      "+flag-cancel"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed.flag:write",
+      "im:message.group_msg:get_as_user",
+      "im:message.p2p_msg:get_as_user",
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_flag_list",
+    "argv_prefix": [
+      "im",
+      "+flag-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed.flag:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_feed_shortcut_create",
+    "argv_prefix": [
+      "im",
+      "+feed-shortcut-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed.shortcut:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_feed_shortcut_remove",
+    "argv_prefix": [
+      "im",
+      "+feed-shortcut-remove"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed.shortcut:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_feed_shortcut_list",
+    "argv_prefix": [
+      "im",
+      "+feed-shortcut-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed.shortcut:read",
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_feed_group_list",
+    "argv_prefix": [
+      "im",
+      "+feed-group-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed_group_v1:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_feed_group_list_item",
+    "argv_prefix": [
+      "im",
+      "+feed-group-list-item"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed_group_v1:read",
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "im_feed_group_query_item",
+    "argv_prefix": [
+      "im",
+      "+feed-group-query-item"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "im:feed_group_v1:read",
+      "im:chat:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "contact_search_user",
+    "argv_prefix": [
+      "contact",
+      "+search-user"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "contact:user:search"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "contact_search_bot",
+    "argv_prefix": [
+      "contact",
+      "+search-bot"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "search:bot"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "contact_get_user",
+    "argv_prefix": [
+      "contact",
+      "+get-user"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "contact:user.basic_profile:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_workbook_info",
+    "argv_prefix": [
+      "sheets",
+      "+workbook-info"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_revision_get",
+    "argv_prefix": [
+      "sheets",
+      "+revision-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_list",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_create",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_delete",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_rename",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-rename"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_move",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-move"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read",
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_copy",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-copy"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_hide",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-hide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_unhide",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-unhide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_set_tab_color",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-set-tab-color"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_show_gridline",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-show-gridline"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sheet_hide_gridline",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-hide-gridline"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_workbook_create",
+    "argv_prefix": [
+      "sheets",
+      "+workbook-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:create",
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_workbook_export",
+    "argv_prefix": [
+      "sheets",
+      "+workbook-export"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read",
+      "docs:document:export",
+      "drive:drive.metadata:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "sheets_workbook_import",
+    "argv_prefix": [
+      "sheets",
+      "+workbook-import"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:upload",
+      "docs:document:import"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "sheets_sheet_info",
+    "argv_prefix": [
+      "sheets",
+      "+sheet-info"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_insert",
+    "argv_prefix": [
+      "sheets",
+      "+dim-insert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_delete",
+    "argv_prefix": [
+      "sheets",
+      "+dim-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_hide",
+    "argv_prefix": [
+      "sheets",
+      "+dim-hide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_unhide",
+    "argv_prefix": [
+      "sheets",
+      "+dim-unhide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_freeze",
+    "argv_prefix": [
+      "sheets",
+      "+dim-freeze"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_group",
+    "argv_prefix": [
+      "sheets",
+      "+dim-group"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_ungroup",
+    "argv_prefix": [
+      "sheets",
+      "+dim-ungroup"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dim_move",
+    "argv_prefix": [
+      "sheets",
+      "+dim-move"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only",
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_changeset_get",
+    "argv_prefix": [
+      "sheets",
+      "+changeset-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_get",
+    "argv_prefix": [
+      "sheets",
+      "+cells-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_csv_get",
+    "argv_prefix": [
+      "sheets",
+      "+csv-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dropdown_get",
+    "argv_prefix": [
+      "sheets",
+      "+dropdown-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_table_get",
+    "argv_prefix": [
+      "sheets",
+      "+table-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_search",
+    "argv_prefix": [
+      "sheets",
+      "+cells-search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_replace",
+    "argv_prefix": [
+      "sheets",
+      "+cells-replace"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_formula_verify",
+    "argv_prefix": [
+      "sheets",
+      "+formula-verify"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_set",
+    "argv_prefix": [
+      "sheets",
+      "+cells-set"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_set_style",
+    "argv_prefix": [
+      "sheets",
+      "+cells-set-style"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_set_image",
+    "argv_prefix": [
+      "sheets",
+      "+cells-set-image"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only",
+      "drive:file:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_csv_put",
+    "argv_prefix": [
+      "sheets",
+      "+csv-put"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dropdown_set",
+    "argv_prefix": [
+      "sheets",
+      "+dropdown-set"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_table_put",
+    "argv_prefix": [
+      "sheets",
+      "+table-put"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read",
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_clear",
+    "argv_prefix": [
+      "sheets",
+      "+cells-clear"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_merge",
+    "argv_prefix": [
+      "sheets",
+      "+cells-merge"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_unmerge",
+    "argv_prefix": [
+      "sheets",
+      "+cells-unmerge"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_rows_resize",
+    "argv_prefix": [
+      "sheets",
+      "+rows-resize"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cols_resize",
+    "argv_prefix": [
+      "sheets",
+      "+cols-resize"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_range_move",
+    "argv_prefix": [
+      "sheets",
+      "+range-move"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_range_copy",
+    "argv_prefix": [
+      "sheets",
+      "+range-copy"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_range_fill",
+    "argv_prefix": [
+      "sheets",
+      "+range-fill"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_range_sort",
+    "argv_prefix": [
+      "sheets",
+      "+range-sort"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_list",
+    "argv_prefix": [
+      "sheets",
+      "+chart-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_pivot_list",
+    "argv_prefix": [
+      "sheets",
+      "+pivot-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cond_format_list",
+    "argv_prefix": [
+      "sheets",
+      "+cond-format-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cond_format_result_get",
+    "argv_prefix": [
+      "sheets",
+      "+cond-format-result-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_list",
+    "argv_prefix": [
+      "sheets",
+      "+filter-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_view_list",
+    "argv_prefix": [
+      "sheets",
+      "+filter-view-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sparkline_list",
+    "argv_prefix": [
+      "sheets",
+      "+sparkline-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_float_image_list",
+    "argv_prefix": [
+      "sheets",
+      "+float-image-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_create",
+    "argv_prefix": [
+      "sheets",
+      "+chart-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_update",
+    "argv_prefix": [
+      "sheets",
+      "+chart-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_delete",
+    "argv_prefix": [
+      "sheets",
+      "+chart-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_create_basic",
+    "argv_prefix": [
+      "sheets",
+      "+chart-create-basic"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_config_update",
+    "argv_prefix": [
+      "sheets",
+      "+chart-config-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read",
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_chart_data_update",
+    "argv_prefix": [
+      "sheets",
+      "+chart-data-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read",
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_pivot_create",
+    "argv_prefix": [
+      "sheets",
+      "+pivot-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_pivot_update",
+    "argv_prefix": [
+      "sheets",
+      "+pivot-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_pivot_delete",
+    "argv_prefix": [
+      "sheets",
+      "+pivot-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cond_format_create",
+    "argv_prefix": [
+      "sheets",
+      "+cond-format-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cond_format_update",
+    "argv_prefix": [
+      "sheets",
+      "+cond-format-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cond_format_delete",
+    "argv_prefix": [
+      "sheets",
+      "+cond-format-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_create",
+    "argv_prefix": [
+      "sheets",
+      "+filter-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_update",
+    "argv_prefix": [
+      "sheets",
+      "+filter-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_delete",
+    "argv_prefix": [
+      "sheets",
+      "+filter-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_view_create",
+    "argv_prefix": [
+      "sheets",
+      "+filter-view-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_view_update",
+    "argv_prefix": [
+      "sheets",
+      "+filter-view-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_filter_view_delete",
+    "argv_prefix": [
+      "sheets",
+      "+filter-view-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sparkline_create",
+    "argv_prefix": [
+      "sheets",
+      "+sparkline-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sparkline_update",
+    "argv_prefix": [
+      "sheets",
+      "+sparkline-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_sparkline_delete",
+    "argv_prefix": [
+      "sheets",
+      "+sparkline-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_float_image_create",
+    "argv_prefix": [
+      "sheets",
+      "+float-image-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_float_image_update",
+    "argv_prefix": [
+      "sheets",
+      "+float-image-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_float_image_delete",
+    "argv_prefix": [
+      "sheets",
+      "+float-image-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_styles_put",
+    "argv_prefix": [
+      "sheets",
+      "+styles-put"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_batch_update",
+    "argv_prefix": [
+      "sheets",
+      "+batch-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only",
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_batch_chart_create",
+    "argv_prefix": [
+      "sheets",
+      "+batch-chart-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_batch_chart_update",
+    "argv_prefix": [
+      "sheets",
+      "+batch-chart-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read",
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_batch_set_style",
+    "argv_prefix": [
+      "sheets",
+      "+cells-batch-set-style"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_cells_batch_clear",
+    "argv_prefix": [
+      "sheets",
+      "+cells-batch-clear"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dropdown_update",
+    "argv_prefix": [
+      "sheets",
+      "+dropdown-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_dropdown_delete",
+    "argv_prefix": [
+      "sheets",
+      "+dropdown-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_history_list",
+    "argv_prefix": [
+      "sheets",
+      "+history-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_history_revert",
+    "argv_prefix": [
+      "sheets",
+      "+history-revert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "sheets_history_revert_status",
+    "argv_prefix": [
+      "sheets",
+      "+history-revert-status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "sheets:spreadsheet:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_url_resolve",
+    "argv_prefix": [
+      "base",
+      "+url-resolve"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:block:read",
+      "base:field:read",
+      "base:record:read",
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_title_resolve",
+    "argv_prefix": [
+      "base",
+      "+title-resolve"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "search:docs:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_block_list",
+    "argv_prefix": [
+      "base",
+      "+base-block-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:block:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_block_create",
+    "argv_prefix": [
+      "base",
+      "+base-block-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:block:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_block_move",
+    "argv_prefix": [
+      "base",
+      "+base-block-move"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:block:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_block_rename",
+    "argv_prefix": [
+      "base",
+      "+base-block-rename"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:block:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_block_delete",
+    "argv_prefix": [
+      "base",
+      "+base-block-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:block:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_list",
+    "argv_prefix": [
+      "base",
+      "+table-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_get",
+    "argv_prefix": [
+      "base",
+      "+table-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:read",
+      "base:field:read",
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_create",
+    "argv_prefix": [
+      "base",
+      "+table-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:create",
+      "base:field:read",
+      "base:field:create",
+      "base:field:update",
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_update",
+    "argv_prefix": [
+      "base",
+      "+table-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_delete",
+    "argv_prefix": [
+      "base",
+      "+table-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_copy",
+    "argv_prefix": [
+      "base",
+      "+table-copy"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_table_copy_status",
+    "argv_prefix": [
+      "base",
+      "+table-copy-status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_list",
+    "argv_prefix": [
+      "base",
+      "+field-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_get",
+    "argv_prefix": [
+      "base",
+      "+field-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_create",
+    "argv_prefix": [
+      "base",
+      "+field-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_update",
+    "argv_prefix": [
+      "base",
+      "+field-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_delete",
+    "argv_prefix": [
+      "base",
+      "+field-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_search_options",
+    "argv_prefix": [
+      "base",
+      "+field-search-options"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_extension_get",
+    "argv_prefix": [
+      "base",
+      "+field-extension-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_extension_update",
+    "argv_prefix": [
+      "base",
+      "+field-extension-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_field_extension_update_cells",
+    "argv_prefix": [
+      "base",
+      "+field-extension-update-cells"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_list",
+    "argv_prefix": [
+      "base",
+      "+view-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get",
+    "argv_prefix": [
+      "base",
+      "+view-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_create",
+    "argv_prefix": [
+      "base",
+      "+view-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_delete",
+    "argv_prefix": [
+      "base",
+      "+view-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get_filter",
+    "argv_prefix": [
+      "base",
+      "+view-get-filter"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_set_filter",
+    "argv_prefix": [
+      "base",
+      "+view-set-filter"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get_visible_fields",
+    "argv_prefix": [
+      "base",
+      "+view-get-visible-fields"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_set_visible_fields",
+    "argv_prefix": [
+      "base",
+      "+view-set-visible-fields"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get_group",
+    "argv_prefix": [
+      "base",
+      "+view-get-group"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_set_group",
+    "argv_prefix": [
+      "base",
+      "+view-set-group"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get_sort",
+    "argv_prefix": [
+      "base",
+      "+view-get-sort"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_set_sort",
+    "argv_prefix": [
+      "base",
+      "+view-set-sort"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get_timebar",
+    "argv_prefix": [
+      "base",
+      "+view-get-timebar"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_set_timebar",
+    "argv_prefix": [
+      "base",
+      "+view-set-timebar"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_get_card",
+    "argv_prefix": [
+      "base",
+      "+view-get-card"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_set_card",
+    "argv_prefix": [
+      "base",
+      "+view-set-card"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_view_rename",
+    "argv_prefix": [
+      "base",
+      "+view-rename"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:view:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_list",
+    "argv_prefix": [
+      "base",
+      "+record-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_search",
+    "argv_prefix": [
+      "base",
+      "+record-search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_get",
+    "argv_prefix": [
+      "base",
+      "+record-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_upsert",
+    "argv_prefix": [
+      "base",
+      "+record-upsert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:create",
+      "base:record:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_batch_create",
+    "argv_prefix": [
+      "base",
+      "+record-batch-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_batch_update",
+    "argv_prefix": [
+      "base",
+      "+record-batch-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_share_link_create",
+    "argv_prefix": [
+      "base",
+      "+record-share-link-create"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_upload_attachment",
+    "argv_prefix": [
+      "base",
+      "+record-upload-attachment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:update",
+      "base:field:read",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "base_record_download_attachment",
+    "argv_prefix": [
+      "base",
+      "+record-download-attachment"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:read",
+      "docs:document.media:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "base_record_remove_attachment",
+    "argv_prefix": [
+      "base",
+      "+record-remove-attachment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:update",
+      "base:field:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_delete",
+    "argv_prefix": [
+      "base",
+      "+record-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:record:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_record_history_list",
+    "argv_prefix": [
+      "base",
+      "+record-history-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:history:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_get",
+    "argv_prefix": [
+      "base",
+      "+base-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:app:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_copy",
+    "argv_prefix": [
+      "base",
+      "+base-copy"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:app:copy"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_base_create",
+    "argv_prefix": [
+      "base",
+      "+base-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:app:create",
+      "base:table:read",
+      "base:table:create",
+      "base:table:update",
+      "base:table:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_template_categories",
+    "argv_prefix": [
+      "base",
+      "+template-categories"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:template:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_template_list",
+    "argv_prefix": [
+      "base",
+      "+template-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:template:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_template_search",
+    "argv_prefix": [
+      "base",
+      "+template-search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:template:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_role_create",
+    "argv_prefix": [
+      "base",
+      "+role-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:role:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_role_delete",
+    "argv_prefix": [
+      "base",
+      "+role-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:role:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_role_update",
+    "argv_prefix": [
+      "base",
+      "+role-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:role:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_role_list",
+    "argv_prefix": [
+      "base",
+      "+role-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:role:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_role_get",
+    "argv_prefix": [
+      "base",
+      "+role-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:role:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_advperm_enable",
+    "argv_prefix": [
+      "base",
+      "+advperm-enable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:app:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_advperm_disable",
+    "argv_prefix": [
+      "base",
+      "+advperm-disable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:app:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workflow_list",
+    "argv_prefix": [
+      "base",
+      "+workflow-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workflow:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workflow_get",
+    "argv_prefix": [
+      "base",
+      "+workflow-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workflow:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workflow_create",
+    "argv_prefix": [
+      "base",
+      "+workflow-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workflow:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workflow_update",
+    "argv_prefix": [
+      "base",
+      "+workflow-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workflow:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workflow_enable",
+    "argv_prefix": [
+      "base",
+      "+workflow-enable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workflow:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workflow_disable",
+    "argv_prefix": [
+      "base",
+      "+workflow-disable"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workflow:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_button_rule_bind",
+    "argv_prefix": [
+      "base",
+      "+button-rule-bind"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read",
+      "base:field:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_button_rule_get",
+    "argv_prefix": [
+      "base",
+      "+button-rule-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_button_rule_unbind",
+    "argv_prefix": [
+      "base",
+      "+button-rule-unbind"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:field:read",
+      "base:field:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_data_query",
+    "argv_prefix": [
+      "base",
+      "+data-query"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:table:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_create",
+    "argv_prefix": [
+      "base",
+      "+form-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_delete",
+    "argv_prefix": [
+      "base",
+      "+form-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_list",
+    "argv_prefix": [
+      "base",
+      "+form-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_update",
+    "argv_prefix": [
+      "base",
+      "+form-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_get",
+    "argv_prefix": [
+      "base",
+      "+form-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_detail",
+    "argv_prefix": [
+      "base",
+      "+form-detail"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_questions_create",
+    "argv_prefix": [
+      "base",
+      "+form-questions-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_questions_delete",
+    "argv_prefix": [
+      "base",
+      "+form-questions-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_questions_update",
+    "argv_prefix": [
+      "base",
+      "+form-questions-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_questions_list",
+    "argv_prefix": [
+      "base",
+      "+form-questions-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_submit",
+    "argv_prefix": [
+      "base",
+      "+form-submit"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_share_get",
+    "argv_prefix": [
+      "base",
+      "+form-share-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_form_share_update",
+    "argv_prefix": [
+      "base",
+      "+form-share-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:form:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_list",
+    "argv_prefix": [
+      "base",
+      "+dashboard-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_get",
+    "argv_prefix": [
+      "base",
+      "+dashboard-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_share_get",
+    "argv_prefix": [
+      "base",
+      "+dashboard-share-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_share_update",
+    "argv_prefix": [
+      "base",
+      "+dashboard-share-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_create",
+    "argv_prefix": [
+      "base",
+      "+dashboard-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_update",
+    "argv_prefix": [
+      "base",
+      "+dashboard-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_delete",
+    "argv_prefix": [
+      "base",
+      "+dashboard-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_arrange",
+    "argv_prefix": [
+      "base",
+      "+dashboard-arrange"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_block_list",
+    "argv_prefix": [
+      "base",
+      "+dashboard-block-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_block_get",
+    "argv_prefix": [
+      "base",
+      "+dashboard-block-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_block_get_data",
+    "argv_prefix": [
+      "base",
+      "+dashboard-block-get-data"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_block_create",
+    "argv_prefix": [
+      "base",
+      "+dashboard-block-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_block_update",
+    "argv_prefix": [
+      "base",
+      "+dashboard-block-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_dashboard_block_delete",
+    "argv_prefix": [
+      "base",
+      "+dashboard-block-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:dashboard:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workspace_create",
+    "argv_prefix": [
+      "base",
+      "+workspace-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workspace:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workspace_entity_list",
+    "argv_prefix": [
+      "base",
+      "+workspace-entity-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workspace:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_workspace_move_in",
+    "argv_prefix": [
+      "base",
+      "+workspace-move-in"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:workspace:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_create",
+    "argv_prefix": [
+      "base",
+      "+app-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode:create",
+      "base:workspace:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_get",
+    "argv_prefix": [
+      "base",
+      "+app-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_page_list",
+    "argv_prefix": [
+      "base",
+      "+app-page-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_page:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_page_get",
+    "argv_prefix": [
+      "base",
+      "+app-page-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_page:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_page_create",
+    "argv_prefix": [
+      "base",
+      "+app-page-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_page:create",
+      "base:appmode_page:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_page_update",
+    "argv_prefix": [
+      "base",
+      "+app-page-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_page:update",
+      "base:appmode_page:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_page_delete",
+    "argv_prefix": [
+      "base",
+      "+app-page-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_page:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_block_list",
+    "argv_prefix": [
+      "base",
+      "+app-block-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_block:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_block_get",
+    "argv_prefix": [
+      "base",
+      "+app-block-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_block:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_block_get_data",
+    "argv_prefix": [
+      "base",
+      "+app-block-get-data"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_block:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_block_create",
+    "argv_prefix": [
+      "base",
+      "+app-block-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_block:create",
+      "base:appmode_block:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "base_app_block_update",
+    "argv_prefix": [
+      "base",
+      "+app-block-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "base:appmode_block:update",
+      "base:appmode_block:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_message",
+    "argv_prefix": [
+      "mail",
+      "+message"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_messages",
+    "argv_prefix": [
+      "mail",
+      "+messages"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_message_modify",
+    "argv_prefix": [
+      "mail",
+      "+message-modify"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.folder:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_message_trash",
+    "argv_prefix": [
+      "mail",
+      "+message-trash"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_thread",
+    "argv_prefix": [
+      "mail",
+      "+thread"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_triage",
+    "argv_prefix": [
+      "mail",
+      "+triage"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_watch",
+    "argv_prefix": [
+      "mail",
+      "+watch"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:event",
+      "mail:user_mailbox.event.mail_address:read",
+      "mail:user_mailbox:readonly",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_reply",
+    "argv_prefix": [
+      "mail",
+      "+reply"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_reply_all",
+    "argv_prefix": [
+      "mail",
+      "+reply-all"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_send",
+    "argv_prefix": [
+      "mail",
+      "+send"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:send",
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_draft_create",
+    "argv_prefix": [
+      "mail",
+      "+draft-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_draft_send",
+    "argv_prefix": [
+      "mail",
+      "+draft-send"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:send"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_draft_edit",
+    "argv_prefix": [
+      "mail",
+      "+draft-edit"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_forward",
+    "argv_prefix": [
+      "mail",
+      "+forward"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_send_receipt",
+    "argv_prefix": [
+      "mail",
+      "+send-receipt"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:send",
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox:readonly",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.subject:read",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_decline_receipt",
+    "argv_prefix": [
+      "mail",
+      "+decline-receipt"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
+      "mail:user_mailbox:readonly",
+      "mail:user_mailbox.message.body:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_signature",
+    "argv_prefix": [
+      "mail",
+      "+signature"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_share_to_chat",
+    "argv_prefix": [
+      "mail",
+      "+share-to-chat"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:readonly",
+      "im:message",
+      "im:message.send_as_user"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_template_create",
+    "argv_prefix": [
+      "mail",
+      "+template-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_template_update",
+    "argv_prefix": [
+      "mail",
+      "+template-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "mail:user_mailbox.message:modify",
+      "mail:user_mailbox:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "mail_lint_html",
+    "argv_prefix": [
+      "mail",
+      "+lint-html"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "markdown_create",
+    "argv_prefix": [
+      "markdown",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:upload",
+      "drive:drive.metadata:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "markdown_diff",
+    "argv_prefix": [
+      "markdown",
+      "+diff"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "markdown_fetch",
+    "argv_prefix": [
+      "markdown",
+      "+fetch"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "markdown_patch",
+    "argv_prefix": [
+      "markdown",
+      "+patch"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:download",
+      "drive:file:upload",
+      "drive:drive.metadata:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "markdown_overwrite",
+    "argv_prefix": [
+      "markdown",
+      "+overwrite"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "drive:file:upload",
+      "drive:drive.metadata:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_create",
+    "argv_prefix": [
+      "slides",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:create",
+      "slides:presentation:write_only",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_add_slide",
+    "argv_prefix": [
+      "slides",
+      "+add-slide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_delete_slide",
+    "argv_prefix": [
+      "slides",
+      "+delete-slide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_media_upload",
+    "argv_prefix": [
+      "slides",
+      "+media-upload"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:upload",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "slides_media_download",
+    "argv_prefix": [
+      "slides",
+      "+media-download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "docs:document.media:download",
+      "drive:file:download"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "slides_replace_slide",
+    "argv_prefix": [
+      "slides",
+      "+replace-slide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_replace_pages",
+    "argv_prefix": [
+      "slides",
+      "+replace-pages"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_update_slide",
+    "argv_prefix": [
+      "slides",
+      "+update-slide"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_update",
+    "argv_prefix": [
+      "slides",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read",
+      "docs:document.media:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_screenshot",
+    "argv_prefix": [
+      "slides",
+      "+screenshot"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:screenshot",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_xml_get",
+    "argv_prefix": [
+      "slides",
+      "+xml-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:read",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_history_list",
+    "argv_prefix": [
+      "slides",
+      "+history-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:read",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_history_revert",
+    "argv_prefix": [
+      "slides",
+      "+history-revert"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "slides_history_revert_status",
+    "argv_prefix": [
+      "slides",
+      "+history-revert-status"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "slides:presentation:read",
+      "wiki:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_search",
+    "argv_prefix": [
+      "minutes",
+      "+search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes.search:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_download",
+    "argv_prefix": [
+      "minutes",
+      "+download"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes.media:export"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "minutes_upload",
+    "argv_prefix": [
+      "minutes",
+      "+upload"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes.upload:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "minutes_update",
+    "argv_prefix": [
+      "minutes",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_apply_permission",
+    "argv_prefix": [
+      "minutes",
+      "+apply-permission"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:permission:apply"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_summary",
+    "argv_prefix": [
+      "minutes",
+      "+summary"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_todo",
+    "argv_prefix": [
+      "minutes",
+      "+todo"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_speaker_replace",
+    "argv_prefix": [
+      "minutes",
+      "+speaker-replace"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes:readonly",
+      "minutes:minutes:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_word_replace",
+    "argv_prefix": [
+      "minutes",
+      "+word-replace"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "minutes_detail",
+    "argv_prefix": [
+      "minutes",
+      "+detail"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "minutes:minutes.basic:read",
+      "minutes:minutes.artifacts:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_create",
+    "argv_prefix": [
+      "task",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_update",
+    "argv_prefix": [
+      "task",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_set_ancestor",
+    "argv_prefix": [
+      "task",
+      "+set-ancestor"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_comment",
+    "argv_prefix": [
+      "task",
+      "+comment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:comment:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_complete",
+    "argv_prefix": [
+      "task",
+      "+complete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_reopen",
+    "argv_prefix": [
+      "task",
+      "+reopen"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_assign",
+    "argv_prefix": [
+      "task",
+      "+assign"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_followers",
+    "argv_prefix": [
+      "task",
+      "+followers"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_reminder",
+    "argv_prefix": [
+      "task",
+      "+reminder"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_get_my_tasks",
+    "argv_prefix": [
+      "task",
+      "+get-my-tasks"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_get_related_tasks",
+    "argv_prefix": [
+      "task",
+      "+get-related-tasks"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_search",
+    "argv_prefix": [
+      "task",
+      "+search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_upload_attachment",
+    "argv_prefix": [
+      "task",
+      "+upload-attachment"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:attachment:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "task_tasklist_create",
+    "argv_prefix": [
+      "task",
+      "+tasklist-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:tasklist:write",
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_tasklist_search",
+    "argv_prefix": [
+      "task",
+      "+tasklist-search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:tasklist:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_tasklist_task_add",
+    "argv_prefix": [
+      "task",
+      "+tasklist-task-add"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:task:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "task_tasklist_members",
+    "argv_prefix": [
+      "task",
+      "+tasklist-members"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "task:tasklist:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_search",
+    "argv_prefix": [
+      "vc",
+      "+search"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.search:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_notes",
+    "argv_prefix": [
+      "vc",
+      "+notes"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:note:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_recording",
+    "argv_prefix": [
+      "vc",
+      "+recording"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:record:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_detail",
+    "argv_prefix": [
+      "vc",
+      "+detail"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.meetingevent:read",
+      "vc:record:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_join",
+    "argv_prefix": [
+      "vc",
+      "+meeting-join"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.bot.join:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_leave",
+    "argv_prefix": [
+      "vc",
+      "+meeting-leave"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.bot.join:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_list_active",
+    "argv_prefix": [
+      "vc",
+      "+meeting-list-active"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.meetingevent:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_events",
+    "argv_prefix": [
+      "vc",
+      "+meeting-events"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.meetingevent:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_message_send",
+    "argv_prefix": [
+      "vc",
+      "+meeting-message-send"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.message:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_screenshot",
+    "argv_prefix": [
+      "vc",
+      "+meeting-screenshot"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.realtime:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "vc_meeting_countdown",
+    "argv_prefix": [
+      "vc",
+      "+meeting-countdown"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:meeting.interaction:write"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "note_detail",
+    "argv_prefix": [
+      "note",
+      "+detail"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:note:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "note_transcript",
+    "argv_prefix": [
+      "note",
+      "+transcript"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "vc:note:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "whiteboard_update",
+    "argv_prefix": [
+      "whiteboard",
+      "+update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "board:whiteboard:node:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "docs_whiteboard_update",
+    "argv_prefix": [
+      "docs",
+      "+whiteboard-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "board:whiteboard:node:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "whiteboard_export",
+    "argv_prefix": [
+      "whiteboard",
+      "+export"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "board:whiteboard:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "whiteboard_query",
+    "argv_prefix": [
+      "whiteboard",
+      "+query"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "board:whiteboard:node:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_move",
+    "argv_prefix": [
+      "wiki",
+      "+move"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:node:move",
+      "wiki:node:read",
+      "wiki:space:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_move_to_drive",
+    "argv_prefix": [
+      "wiki",
+      "+move-to-drive"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "space:document:move",
+      "wiki:space:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_node_create",
+    "argv_prefix": [
+      "wiki",
+      "+node-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:node:create",
+      "wiki:node:read",
+      "wiki:space:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_delete_space",
+    "argv_prefix": [
+      "wiki",
+      "+delete-space"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:space:write_only",
+      "wiki:space:read"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_space_list",
+    "argv_prefix": [
+      "wiki",
+      "+space-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:space:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_space_create",
+    "argv_prefix": [
+      "wiki",
+      "+space-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:space:write_only"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_node_list",
+    "argv_prefix": [
+      "wiki",
+      "+node-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_node_copy",
+    "argv_prefix": [
+      "wiki",
+      "+node-copy"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:node:copy"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_node_get",
+    "argv_prefix": [
+      "wiki",
+      "+node-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:node:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_node_delete",
+    "argv_prefix": [
+      "wiki",
+      "+node-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:node:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_member_add",
+    "argv_prefix": [
+      "wiki",
+      "+member-add"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:member:create"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_member_remove",
+    "argv_prefix": [
+      "wiki",
+      "+member-remove"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:member:update"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "wiki_member_list",
+    "argv_prefix": [
+      "wiki",
+      "+member-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "wiki:member:retrieve"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_cycle_list",
+    "argv_prefix": [
+      "okr",
+      "+cycle-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.period:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_cycle_detail",
+    "argv_prefix": [
+      "okr",
+      "+cycle-detail"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_progress_list",
+    "argv_prefix": [
+      "okr",
+      "+progress-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.progress:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_progress_get",
+    "argv_prefix": [
+      "okr",
+      "+progress-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.progress:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_progress_create",
+    "argv_prefix": [
+      "okr",
+      "+progress-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.progress:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_progress_update",
+    "argv_prefix": [
+      "okr",
+      "+progress-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.progress:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_progress_delete",
+    "argv_prefix": [
+      "okr",
+      "+progress-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.progress:delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_upload_image",
+    "argv_prefix": [
+      "okr",
+      "+upload-image"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.progress.file:upload"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 300
+  },
+  {
+    "id": "okr_create",
+    "argv_prefix": [
+      "okr",
+      "+create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_batch_create",
+    "argv_prefix": [
+      "okr",
+      "+batch-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_reorder",
+    "argv_prefix": [
+      "okr",
+      "+reorder"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_weight",
+    "argv_prefix": [
+      "okr",
+      "+weight"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_indicator_update",
+    "argv_prefix": [
+      "okr",
+      "+indicator-update"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_patch",
+    "argv_prefix": [
+      "okr",
+      "+patch"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.content:writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_detail",
+    "argv_prefix": [
+      "okr",
+      "+comment-detail"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.readonly",
+      "okr:okr.content:readonly",
+      "okr:okr.progress:readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_list",
+    "argv_prefix": [
+      "okr",
+      "+comment-list"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_get",
+    "argv_prefix": [
+      "okr",
+      "+comment-get"
+    ],
+    "risk": "low",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.readonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_create",
+    "argv_prefix": [
+      "okr",
+      "+comment-create"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_patch",
+    "argv_prefix": [
+      "okr",
+      "+comment-patch"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_delete",
+    "argv_prefix": [
+      "okr",
+      "+comment-delete"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.delete"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_solve",
+    "argv_prefix": [
+      "okr",
+      "+comment-solve"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  },
+  {
+    "id": "okr_comment_reopen",
+    "argv_prefix": [
+      "okr",
+      "+comment-reopen"
+    ],
+    "risk": "high",
+    "identities": [
+      "user"
+    ],
+    "scopes": [
+      "okr:okr.comment.writeonly"
+    ],
+    "egress_hosts": [
+      "open.feishu.cn"
+    ],
+    "timeout_seconds": 120
+  }
+]

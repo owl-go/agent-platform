@@ -1,0 +1,20 @@
+Source: https://cli.github.com/manual/gh_repo_archive
+
+gh repo archive
+
+gh repo archive [<repository>] [flags]
+
+Archive a GitHub repository.
+
+With no argument, archives the current repository.
+
+Options
+
+	-y, 
+		--yes
+
+	Skip the confirmation prompt
+
+See also
+
+  gh repo

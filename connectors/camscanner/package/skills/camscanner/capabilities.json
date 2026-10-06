@@ -1,0 +1,510 @@
+[
+  {
+    "argv_prefix": [
+      "image",
+      "convert"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_24a065c96b5fc1fc",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "edit"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_62fea286f934c5c1",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "enhance"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_e40704609cab1c8b",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "extract-formula"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_977ea0bab34addfd",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "hd"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_30eaebd4db43ead7",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-excel"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_21525d476f416c87",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-pdf"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_41083649d81e7644",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-text"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_45eabf2da1d8a8b4",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "merge-word"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_6b2cb02633817ad5",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "ocr"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_721931e55ded7624",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "receipt"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_3c1a9951f8011047",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "restore"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_a22a936ccc0e4716",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "scan"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_65fd2cf3bbe2cbf7",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "to-pdf"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_edad7c38edae5d3b",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "translate"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_784ab83af1e0cf38",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "validate"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_49e026af333b75b2",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "image",
+      "watermark"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_a80dc9eeb318a07a",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "convert"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_b84196f418e53349",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "remove-watermark"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_fc46e123b2147dc2",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "to-images"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_ec27aaab7bc57848",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "to-images-zip"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_f57468e7466c250d",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "pdf",
+      "watermark"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_5e65487c78f5fbed",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "office",
+      "convert"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_2ee6d6a90333ac1f",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "txt",
+      "to-word"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_f52685660fffc061",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "dirs"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_e6cc5429e8871148",
+    "identities": [
+      "user"
+    ],
+    "risk": "low",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "download"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_6e3fa24984cff6d2",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "move"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_9d3da47edd6ec739",
+    "identities": [
+      "user"
+    ],
+    "risk": "high",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "doc",
+      "search"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_f4643b6ea661af82",
+    "identities": [
+      "user"
+    ],
+    "risk": "low",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "--version"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_46dcd820f40e03f1",
+    "identities": [
+      "user"
+    ],
+    "risk": "low",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "--help"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_0bdbc8fb00a40fb6",
+    "identities": [
+      "user"
+    ],
+    "risk": "low",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "info"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_06271baf49532c87",
+    "identities": [
+      "user"
+    ],
+    "risk": "low",
+    "scopes": [],
+    "timeout_seconds": 120
+  },
+  {
+    "argv_prefix": [
+      "help"
+    ],
+    "egress_hosts": [
+      "ai-tools.camscanner.com"
+    ],
+    "id": "cs_106a5842fc5fce6f",
+    "identities": [
+      "user"
+    ],
+    "risk": "low",
+    "scopes": [],
+    "timeout_seconds": 120
+  }
+]

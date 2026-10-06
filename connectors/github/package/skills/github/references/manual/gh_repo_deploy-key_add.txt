@@ -1,0 +1,40 @@
+Source: https://cli.github.com/manual/gh_repo_deploy-key_add
+
+gh repo deploy-key add
+
+gh repo deploy-key add <key-file> [flags]
+
+Add a deploy key to a GitHub repository.
+
+Note that any key added by gh will be associated with the current authentication token.
+If you de-authorize the GitHub CLI app or authentication token from your account, any
+deploy keys added by GitHub CLI will be removed as well.
+
+Options
+
+	-w, 
+		--allow-write
+
+	Allow write access for the key
+
+	-t, 
+		--title <string>
+
+	Title of the new key
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Generate a passwordless SSH key and add it as a deploy key to a repository
+$ ssh-keygen -t ed25519 -C "my description" -N "" -f ~/.ssh/gh-test
+$ gh repo deploy-key add ~/.ssh/gh-test.pub
+
+See also
+
+  gh repo deploy-key

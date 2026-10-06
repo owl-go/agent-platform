@@ -1,0 +1,101 @@
+Source: https://cli.github.com/manual/gh_run_view
+
+gh run view
+
+gh run view [<run-id>] [flags]
+
+View a summary of a workflow run.
+
+Due to platform limitations, gh may not always be able to associate jobs with their
+corresponding logs when using the primary method of fetching logs in zip format.
+
+In such cases, gh will attempt to fetch logs for each job individually via the API.
+This fallback is slower and more resource-intensive. If more than 25 job logs are missing,
+the operation will fail with an error.
+
+Additionally, due to similar platform constraints, some log lines may not be
+associated with a specific step within a job. In these cases, the step name will
+appear as UNKNOWN STEP in the log output.
+
+Options
+
+	-a, 
+		--attempt <uint> (default 0)
+
+	The attempt number of the workflow run
+
+		--exit-status
+
+	Exit with non-zero status if run failed
+
+	-j, 
+		--job <string>
+
+	View a specific job ID from a run
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+		--log
+
+	View full log for either a run or specific job
+
+		--log-failed
+
+	View the log for any failed steps in a run or specific job
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-v, 
+		--verbose
+
+	Show job steps
+
+	-w, 
+		--web
+
+	Open run in the browser
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+JSON Fields
+
+attempt, conclusion, createdAt, databaseId, displayTitle, event, headBranch, headSha, jobs, name, number, startedAt, status, updatedAt, url, workflowDatabaseId, workflowName
+
+Examples
+
+# Interactively select a run to view, optionally selecting a single job
+$ gh run view
+
+# View a specific run
+$ gh run view 12345
+
+# View a specific run with specific attempt number
+$ gh run view 12345 --attempt 3
+
+# View a specific job within a run
+$ gh run view --job 456789
+
+# View the full log for a specific job
+$ gh run view --log --job 456789
+
+# Exit non-zero if a run failed
+$ gh run view 0451 --exit-status && echo "run pending or passed"
+
+See also
+
+  gh run

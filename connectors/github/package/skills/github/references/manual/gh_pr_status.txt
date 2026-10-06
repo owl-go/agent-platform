@@ -1,0 +1,67 @@
+Source: https://cli.github.com/manual/gh_pr_status
+
+gh pr status
+
+gh pr status [flags]
+
+Show status of relevant pull requests.
+
+The status shows a summary of pull requests that includes information such as
+pull request number, title, CI checks, reviews, etc.
+
+To see more details of CI checks, run gh pr checks.
+
+Options
+
+	-c, 
+		--conflict-status
+
+	Display the merge conflict status of each pull request
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+JSON Fields
+
+additions, assignees, author, autoMergeRequest, baseRefName, baseRefOid, body, changedFiles, closed, closedAt, closingIssuesReferences, comments, commits, createdAt, deletions, files, fullDatabaseId, headRefName, headRefOid, headRepository, headRepositoryOwner, id, isCrossRepository, isDraft, labels, latestReviews, maintainerCanModify, mergeCommit, mergeStateStatus, mergeable, mergedAt, mergedBy, milestone, number, potentialMergeCommit, projectCards, projectItems, reactionGroups, reviewDecision, reviewRequests, reviews, state, statusCheckRollup, title, updatedAt, url
+
+See also
+
+  gh pr
+
+    In use
+
+      # Viewing the status of your relevant pull requests
+~/Projects/my-project$ gh pr status
+Current branch
+  #12 Remove the test feature [user:patch-2]
+   - All checks failing - Review required
+
+Created by you
+  You have no open pull requests
+
+Requesting a code review from you
+  #13 Fix tests [branch]
+  - 3/4 checks failing - Review required
+  #15 New feature [branch]
+   - Checks passing - Approved
+
+~/Projects/my-project$

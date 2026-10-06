@@ -14,6 +14,8 @@ make install
 
 安装中断时，修正提示的问题并重跑相同命令，会继续原安装版本并保留已经生成的密钥。已有安装会提示使用 `make deploy`，不会覆盖数据。
 
+仓库 `connectors/`、`skills/`、`experts/` 自动导入平台，重复启动不会生成副本；添加资源见[资源目录](../../README.md#资源目录)。
+
 登录后在管理后台配置模型和需要开放的注册方式。执行引擎与 CLI Builder 保持关闭，需按[Runtime 验收](../../docs/technical/production-conformance.md)启用经过验证的镜像；安装成功表示登录与服务检查通过。
 
 需要指定参数或只检查服务器：

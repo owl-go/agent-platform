@@ -1,0 +1,27 @@
+Source: https://cli.github.com/manual/gh_cache
+
+gh cache
+
+Work with GitHub Actions caches.
+
+Available commands
+
+  gh cache delete
+
+  gh cache list
+
+Options
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+$ gh cache list
+$ gh cache delete --all
+
+See also
+
+  gh

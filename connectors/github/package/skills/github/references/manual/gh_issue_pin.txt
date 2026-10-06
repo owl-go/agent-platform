@@ -1,0 +1,31 @@
+Source: https://cli.github.com/manual/gh_issue_pin
+
+gh issue pin
+
+gh issue pin {<number> | <url>}
+
+Pin an issue to a repository.
+
+The issue can be specified by issue number or URL.
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Pin an issue to the current repository
+$ gh issue pin 23
+
+# Pin an issue by URL
+$ gh issue pin https://github.com/owner/repo/issues/23
+
+# Pin an issue to specific repository
+$ gh issue pin 23 --repo owner/repo
+
+See also
+
+  gh issue

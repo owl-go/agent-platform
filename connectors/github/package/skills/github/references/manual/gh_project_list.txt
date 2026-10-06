@@ -1,0 +1,57 @@
+Source: https://cli.github.com/manual/gh_project_list
+
+gh project list
+
+List the projects for an owner
+
+gh project list [flags]
+
+Options
+
+		--closed
+
+	Include closed projects
+
+		--format <string>
+
+	Output format: {json}
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+	-L, 
+		--limit <int> (default 30)
+
+	Maximum number of projects to fetch
+
+		--owner <string>
+
+	Login of the owner
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-w, 
+		--web
+
+	Open projects list in the browser
+
+ALIASES
+
+gh project ls
+
+Examples
+
+# List the current user's projects
+$ gh project list
+
+# List the projects for org github including closed projects
+$ gh project list --owner github --closed
+
+See also
+
+  gh project

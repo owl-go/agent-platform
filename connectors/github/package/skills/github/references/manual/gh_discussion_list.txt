@@ -1,0 +1,112 @@
+Source: https://cli.github.com/manual/gh_discussion_list
+
+gh discussion list
+
+gh discussion list [flags]
+
+List discussions in a GitHub repository. By default, only open discussions
+are shown.
+
+Options
+
+		--after <string>
+
+	Cursor for the next page of results
+
+		--answered
+
+	Filter by answered state
+
+	-A, 
+		--author <string>
+
+	Filter by author
+
+	-c, 
+		--category <string>
+
+	Filter by category name or slug
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-l, 
+		--label <strings>
+
+	Filter by label
+
+	-L, 
+		--limit <int> (default 30)
+
+	Maximum number of discussions to fetch
+
+		--order <string> (default "desc")
+
+	Order of results: {asc|desc}
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+	-S, 
+		--search <query>
+
+	Search discussions with query
+
+		--sort <string> (default "updated")
+
+	Sort by field: {created|updated}
+
+	-s, 
+		--state <string> (default "open")
+
+	Filter by state: {open|closed|all}
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-w, 
+		--web
+
+	List discussions in the web browser
+
+ALIASES
+
+gh discussion ls
+
+JSON Fields
+
+answerChosenAt, answerChosenBy, answered, author, body, category, closed, closedAt, createdAt, id, labels, locked, number, stateReason, title, updatedAt, url
+
+Examples
+
+# List open discussions
+$ gh discussion list
+
+# List discussions with a specific category
+$ gh discussion list --category General
+
+# List closed discussions by author
+$ gh discussion list --state closed --author monalisa
+
+# List all discussions (closed or open) by label
+$ gh discussion list --state all --label bug,enhancement
+
+# List answered Q&A discussions as JSON
+$ gh discussion list --answered --json number,title,url
+
+# List unanswered Q&A discussions as JSON
+$ gh discussion list --answered=false --json number,title,url
+
+See also
+
+  gh discussion

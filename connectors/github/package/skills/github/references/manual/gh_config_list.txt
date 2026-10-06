@@ -1,0 +1,22 @@
+Source: https://cli.github.com/manual/gh_config_list
+
+gh config list
+
+Print a list of configuration keys and values
+
+gh config list [flags]
+
+Options
+
+	-h, 
+		--host <string>
+
+	Get per-host configuration
+
+ALIASES
+
+gh config ls
+
+See also
+
+  gh config

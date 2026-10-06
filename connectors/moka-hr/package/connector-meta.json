@@ -1,0 +1,1 @@
+{"auth_mode": "cli", "description": "Moka ATS 只读查询：职位、候选人、申请、流程、部门、Offer 字段、人才库与面试；使用企业级 API Key。", "examples_en": ["List experienced-hire jobs", "List interviews for this week"], "examples_zh": ["查询社招职位", "查询本周面试安排"], "minPlatformVersion": "1.0.0", "name": "Moka HR 招聘", "source": "moka-hr", "type": "cli", "version": "0.1.0"}

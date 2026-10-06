@@ -1,0 +1,62 @@
+Source: https://cli.github.com/manual/gh_codespace_list
+
+gh codespace list
+
+gh codespace list [flags]
+
+List codespaces of the authenticated user.
+
+Alternatively, organization administrators may list all codespaces billed to the organization.
+
+Options
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-L, 
+		--limit <int> (default 30)
+
+	Maximum number of codespaces to list
+
+	-o, 
+		--org <login>
+
+	The login handle of the organization to list codespaces for (admin-only)
+
+	-R, 
+		--repo <string>
+
+	Repository name with owner: user/repo
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-u, 
+		--user <username>
+
+	The username to list codespaces for (used with --org)
+
+	-w, 
+		--web
+
+	List codespaces in the web browser, cannot be used with --user or --org
+
+ALIASES
+
+gh cs ls, gh codespace ls
+
+JSON Fields
+
+createdAt, displayName, gitStatus, lastUsedAt, machineName, name, owner, repository, state, vscsTarget
+
+See also
+
+  gh codespace

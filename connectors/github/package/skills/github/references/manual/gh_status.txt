@@ -1,0 +1,38 @@
+Source: https://cli.github.com/manual/gh_status
+
+gh status
+
+gh status [flags]
+
+The status command prints information about your work on GitHub across all the repositories you're subscribed to, including:
+
+  Assigned Issues
+
+  Assigned Pull Requests
+
+  Review Requests
+
+  Mentions
+
+  Repository Activity (new issues/pull requests, comments)
+
+Options
+
+	-e, 
+		--exclude <strings>
+
+	Comma separated list of repos to exclude in owner/name format
+
+	-o, 
+		--org <string>
+
+	Report status within an organization
+
+Examples
+
+$ gh status -e cli/cli -e cli/go-gh # Exclude multiple repositories
+$ gh status -o cli # Limit results to a single organization
+
+See also
+
+  gh

@@ -1,0 +1,29 @@
+Source: https://cli.github.com/manual/gh_pr_ready
+
+gh pr ready
+
+gh pr ready [<number> | <url> | <branch>] [flags]
+
+Mark a pull request as ready for review.
+
+Without an argument, the pull request that belongs to the current branch
+is marked as ready.
+
+If supported by your plan, convert to draft with --undo
+
+Options
+
+		--undo
+
+	Convert a pull request to "draft"
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh pr

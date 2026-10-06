@@ -1,0 +1,21 @@
+Source: https://cli.github.com/manual/gh_extension_exec
+
+gh extension exec
+
+gh extension exec <name> [args]
+
+Execute an extension using the short name. For example, if the extension repository is
+owner/gh-extension, you should pass extension. You can use this command when
+the short name conflicts with a core gh command.
+
+All arguments after the extension name will be forwarded to the executable
+of the extension.
+
+Examples
+
+# Execute a label extension instead of the core gh label command
+$ gh extension exec label
+
+See also
+
+  gh extension

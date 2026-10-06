@@ -1,0 +1,54 @@
+Source: https://cli.github.com/manual/gh_ruleset_check
+
+gh ruleset check
+
+gh ruleset check [<branch>] [flags]
+
+View information about GitHub rules that apply to a given branch.
+
+The provided branch name does not need to exist; rules will be displayed that would apply
+to a branch with that name. All rules are returned regardless of where they are configured.
+
+If no branch name is provided, then the current branch will be used.
+
+The --default flag can be used to view rules that apply to the default branch of the
+repository.
+
+Options
+
+		--default
+
+	Check rules on default branch
+
+	-w, 
+		--web
+
+	Open the branch rules page in a web browser
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# View all rules that apply to the current branch
+$ gh ruleset check
+
+# View all rules that apply to a branch named "my-branch" in a different repository
+$ gh ruleset check my-branch --repo owner/repo
+
+# View all rules that apply to the default branch in a different repository
+$ gh ruleset check --default --repo owner/repo
+
+# View a ruleset configured in a different repository or any of its parents
+$ gh ruleset view 23 --repo owner/repo
+
+# View an organization-level ruleset
+$ gh ruleset view 23 --org my-org
+
+See also
+
+  gh ruleset

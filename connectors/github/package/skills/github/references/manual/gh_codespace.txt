@@ -1,0 +1,41 @@
+Source: https://cli.github.com/manual/gh_codespace
+
+gh codespace
+
+Connect to and manage codespaces
+
+Available commands
+
+  gh codespace code
+
+  gh codespace cp
+
+  gh codespace create
+
+  gh codespace delete
+
+  gh codespace edit
+
+  gh codespace jupyter
+
+  gh codespace list
+
+  gh codespace logs
+
+  gh codespace ports
+
+  gh codespace rebuild
+
+  gh codespace ssh
+
+  gh codespace stop
+
+  gh codespace view
+
+ALIASES
+
+gh cs
+
+See also
+
+  gh

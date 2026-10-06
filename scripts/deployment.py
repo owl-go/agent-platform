@@ -25,7 +25,8 @@ PUBLIC_KEYS = ("VITE_OIDC_AUTHORITY", "VITE_OIDC_CLIENT_ID", "VITE_OIDC_REDIRECT
                "VITE_OIDC_POST_LOGOUT_REDIRECT_URI")
 MIGRATIONS = "backend/internal/infrastructure/gormdb/migrations"
 GROUPS = {
-    "backend": ("backend", "deploy/platform/Dockerfile.service", ".dockerignore"),
+    "backend": ("backend", "deploy/platform/Dockerfile.service", ".dockerignore",
+                "resources.json", "connectors", "skills", "experts"),
     "web": ("frontend",),
     "infrastructure": ("deploy/platform/compose.yaml", "deploy/platform/compose.execution.yaml",
                        "deploy/platform/compose.https.yaml", "deploy/platform/Caddyfile",

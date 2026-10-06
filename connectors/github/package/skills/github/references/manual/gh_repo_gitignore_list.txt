@@ -1,0 +1,15 @@
+Source: https://cli.github.com/manual/gh_repo_gitignore_list
+
+gh repo gitignore list
+
+List available repository gitignore templates
+
+gh repo gitignore list
+
+ALIASES
+
+gh repo gitignore ls
+
+See also
+
+  gh repo gitignore

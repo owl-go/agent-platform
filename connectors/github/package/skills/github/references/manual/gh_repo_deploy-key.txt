@@ -1,0 +1,24 @@
+Source: https://cli.github.com/manual/gh_repo_deploy-key
+
+gh repo deploy-key
+
+Manage deploy keys in a repository
+
+Available commands
+
+  gh repo deploy-key add
+
+  gh repo deploy-key delete
+
+  gh repo deploy-key list
+
+Options
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh repo

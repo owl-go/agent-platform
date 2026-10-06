@@ -1,0 +1,86 @@
+Source: https://cli.github.com/manual/gh_repo_view
+
+gh repo view
+
+gh repo view [<repository>] [flags]
+
+Display the description and the README of a GitHub repository.
+
+With no argument, the repository for the current directory is displayed.
+
+With --web, open the repository in a web browser instead.
+
+With --branch, view a specific branch of the repository.
+
+Options
+
+	-b, 
+		--branch <string>
+
+	View a specific branch of the repository
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-w, 
+		--web
+
+	Open a repository in the browser
+
+JSON Fields
+
+archivedAt, assignableUsers, codeOfConduct, contactLinks, createdAt, defaultBranchRef, deleteBranchOnMerge, description, diskUsage, forkCount, fundingLinks, hasDiscussionsEnabled, hasIssuesEnabled, hasProjectsEnabled, hasWikiEnabled, homepageUrl, id, isArchived, isBlankIssuesEnabled, isEmpty, isFork, isInOrganization, isMirror, isPrivate, isSecurityPolicyEnabled, isTemplate, isUserConfigurationRepository, issueTemplates, issues, labels, languages, latestRelease, licenseInfo, mentionableUsers, mergeCommitAllowed, milestones, mirrorUrl, name, nameWithOwner, openGraphImageUrl, owner, parent, primaryLanguage, projects, projectsV2, pullRequestTemplates, pullRequests, pushedAt, rebaseMergeAllowed, repositoryTopics, securityPolicyUrl, squashMergeAllowed, sshUrl, stargazerCount, templateRepository, updatedAt, url, usesCustomOpenGraphImage, viewerCanAdminister, viewerDefaultCommitEmail, viewerDefaultMergeMethod, viewerHasStarred, viewerPermission, viewerPossibleCommitEmails, viewerSubscription, visibility, watchers
+
+See also
+
+  gh repo
+
+    In use
+
+  In terminal
+
+  By default, we will display items in the terminal.
+
+      # Viewing a repository in terminal
+~/Projects/my-project$ gh repo view owner/repo
+owner/repo
+Repository description
+
+  Repository README
+
+View this repository on GitHub: https://github.com/owner/repo/
+~/Projects/my-project$
+
+  In the browser
+
+  Quickly open an item in the browser using --web or -w
+
+      # Viewing a repository in the browser
+~/Projects$ gh repo view owner/repo --web
+Opening https://github.com/owner/repo/ in your browser.
+~/Projects$
+
+    With no arguments
+
+    We will display the repository you're currently in.
+
+      # Viewing the repository you're in
+~/Projects/my-project$ gh repo view
+owner/my-project
+Repository description
+
+  Repository README
+
+View this repository on GitHub: https://github.com/owner/repo/
+~/Projects/my-project$

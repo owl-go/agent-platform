@@ -1,0 +1,18 @@
+Source: https://cli.github.com/manual/gh_repo_deploy-key_delete
+
+gh repo deploy-key delete
+
+Delete a deploy key from a GitHub repository
+
+gh repo deploy-key delete <key-id>
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh repo deploy-key

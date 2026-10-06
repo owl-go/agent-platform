@@ -1,0 +1,30 @@
+Source: https://cli.github.com/manual/gh_repo_autolink
+
+gh repo autolink
+
+Autolinks link issues, pull requests, commit messages, and release descriptions to external third-party services.
+
+Autolinks require admin role to view or manage.
+
+For more information, see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-autolinks-to-reference-external-resources
+
+Available commands
+
+  gh repo autolink create
+
+  gh repo autolink delete
+
+  gh repo autolink list
+
+  gh repo autolink view
+
+Options
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh repo

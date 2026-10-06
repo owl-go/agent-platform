@@ -1,0 +1,47 @@
+Source: https://cli.github.com/manual/gh_label_edit
+
+gh label edit
+
+gh label edit <name> [flags]
+
+Update a label on GitHub.
+
+A label can be renamed using the --name flag.
+
+The label color needs to be 6 character hex value.
+
+Options
+
+	-c, 
+		--color <string>
+
+	Color of the label
+
+	-d, 
+		--description <string>
+
+	Description of the label
+
+	-n, 
+		--name <string>
+
+	New name of the label
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Update the color of the bug label
+$ gh label edit bug --color FF0000
+
+# Rename and edit the description of the bug label
+$ gh label edit bug --name big-bug --description "Bigger than normal bug"
+
+See also
+
+  gh label

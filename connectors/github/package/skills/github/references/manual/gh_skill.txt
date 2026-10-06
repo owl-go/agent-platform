@@ -1,0 +1,50 @@
+Source: https://cli.github.com/manual/gh_skill
+
+gh skill
+
+Install and manage agent skills from GitHub repositories.
+
+Working with agent skills in the GitHub CLI is in preview and
+subject to change without notice.
+
+Available commands
+
+  gh skill install
+
+  gh skill list
+
+  gh skill preview
+
+  gh skill publish
+
+  gh skill search
+
+  gh skill update
+
+ALIASES
+
+gh skills
+
+Examples
+
+# Search for skills
+$ gh skill search terraform
+
+# Install a skill
+$ gh skill install github/awesome-copilot documentation-writer
+
+# List installed skills
+$ gh skill list
+
+# Preview a skill before installing
+$ gh skill preview github/awesome-copilot documentation-writer
+
+# Update all installed skills
+$ gh skill update --all
+
+# Validate skills for publishing
+$ gh skill publish --dry-run
+
+See also
+
+  gh

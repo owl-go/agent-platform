@@ -1,0 +1,15 @@
+Source: https://cli.github.com/manual/gh_extension_list
+
+gh extension list
+
+List installed extension commands
+
+gh extension list
+
+ALIASES
+
+gh extension ls,  gh extensions ls, gh ext ls
+
+See also
+
+  gh extension

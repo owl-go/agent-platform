@@ -13,11 +13,16 @@ WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY backend .
+COPY resources.json /resources/resources.json
+COPY connectors /resources/connectors
+COPY skills /resources/skills
+COPY experts /resources/experts
 
 ARG SERVICE
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     case "${SERVICE}" in api|worker) ;; *) exit 1 ;; esac \
+    && go run ./cmd/resourcecheck --root /resources \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/service "./cmd/${SERVICE}"
 
 FROM public.ecr.aws/docker/library/alpine:3.23
@@ -27,6 +32,8 @@ RUN apk add --no-cache ca-certificates docker-cli git openssh-client tzdata \
     && adduser -u 65532 -S -D -H -G agent agent
 COPY --from=build --chown=65532:65532 /out/service /usr/local/bin/service
 COPY --from=notion-auth --chown=65532:65532 /ntn-auth /usr/local/bin/ntn-auth
+COPY --from=build --chown=65532:65532 /resources /app/resources
+ENV AGENT_WORKSPACE_RESOURCE_ROOT=/app/resources
 
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/service"]

@@ -1,0 +1,31 @@
+Source: https://cli.github.com/manual/gh_codespace_ports_visibility
+
+gh codespace ports visibility
+
+Change the visibility of the forwarded port
+
+gh codespace ports visibility <port>:{public|private|org}...
+
+Options inherited from parent commands
+
+	-c, 
+		--codespace <string>
+
+	Name of the codespace
+
+	-R, 
+		--repo <string>
+
+	Filter codespace selection by repository name (user/repo)
+
+		--repo-owner <string>
+
+	Filter codespace selection by repository owner (username or org)
+
+Examples
+
+$ gh codespace ports visibility 80:org 3000:private 8000:public
+
+See also
+
+  gh codespace ports

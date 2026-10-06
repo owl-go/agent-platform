@@ -1,0 +1,18 @@
+Source: https://cli.github.com/manual/gh_workflow_enable
+
+gh workflow enable
+
+gh workflow enable [<workflow-id> | <workflow-name>]
+
+Enable a workflow, allowing it to be run and show up when listing workflows.
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh workflow

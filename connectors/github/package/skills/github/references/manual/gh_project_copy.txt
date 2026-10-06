@@ -1,0 +1,48 @@
+Source: https://cli.github.com/manual/gh_project_copy
+
+gh project copy
+
+Copy a project
+
+gh project copy [<number>] [flags]
+
+Options
+
+		--drafts
+
+	Include draft issues when copying
+
+		--format <string>
+
+	Output format: {json}
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--source-owner <string>
+
+	Login of the source owner. Use "@me" for the current user.
+
+		--target-owner <string>
+
+	Login of the target owner. Use "@me" for the current user.
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+		--title <string>
+
+	Title for the new project
+
+Examples
+
+# Copy project "1" owned by monalisa to github
+$ gh project copy 1 --source-owner monalisa --target-owner github --title "a new project"
+
+See also
+
+  gh project

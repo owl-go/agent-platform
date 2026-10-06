@@ -1,0 +1,9 @@
+{
+  "transport": "streamable_http",
+  "url": "https://mcp-server.mindbye.com/mcp-servers/contract-review-prod",
+  "egress_hosts": [
+    "mcp-server.mindbye.com",
+    "contract-review-mcp.oss-cn-hangzhou.aliyuncs.com"
+  ],
+  "timeout_seconds": 60
+}

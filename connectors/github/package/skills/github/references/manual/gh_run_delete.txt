@@ -1,0 +1,26 @@
+Source: https://cli.github.com/manual/gh_run_delete
+
+gh run delete
+
+Delete a workflow run
+
+gh run delete [<run-id>]
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Interactively select a run to delete
+$ gh run delete
+
+# Delete a specific run
+$ gh run delete 12345
+
+See also
+
+  gh run

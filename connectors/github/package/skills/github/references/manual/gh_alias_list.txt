@@ -1,0 +1,15 @@
+Source: https://cli.github.com/manual/gh_alias_list
+
+gh alias list
+
+gh alias list
+
+This command prints out all of the aliases gh is configured to use.
+
+ALIASES
+
+gh alias ls
+
+See also
+
+  gh alias
