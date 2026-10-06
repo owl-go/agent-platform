@@ -1,17 +1,27 @@
 package conformancepreflight_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCanaryDoesNotCountAsModelCredential(t *testing.T) {
 	repoRoot := repositoryRoot(t)
 	temp := t.TempDir()
+	bin := filepath.Join(temp, "bin")
+	if err := os.MkdirAll(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// This rejection test must not contact a real Docker daemon or CLI plugin.
+	if err := os.WriteFile(filepath.Join(bin, "docker"), []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	credentialDirectories := make([]string, 0, 5)
 	for _, runtimeName := range []string{"claude", "codex", "hermes", "openclaw", "pi"} {
 		directory := filepath.Join(temp, runtimeName)
@@ -27,8 +37,11 @@ func TestCanaryDoesNotCountAsModelCredential(t *testing.T) {
 		credentialDirectories = append(credentialDirectories, directory)
 	}
 
-	command := exec.Command("bash", filepath.Join(repoRoot, "scripts", "conformance", "production-preflight.sh"))
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "bash", filepath.Join(repoRoot, "scripts", "conformance", "production-preflight.sh"))
 	command.Env = append(os.Environ(),
+		"PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"CONFORMANCE_REPOSITORY_URL=git@example.com:owner/repository.git",
 		"CONFORMANCE_BASE_BRANCH=phase0-fixture",
 		"CONFORMANCE_WORK_ROOT="+filepath.Join(temp, "work"),
