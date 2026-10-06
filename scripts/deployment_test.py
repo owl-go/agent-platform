@@ -156,13 +156,21 @@ class DeploymentTests(unittest.TestCase):
             self.assertFalse((root / "backups").exists())
 
     def test_remote_release_preserves_secrets_and_runtime_and_records_verified_images(self):
+        self.exercise_remote_release("backend")
+
+    def test_web_only_release_promotes_verified_assets_without_restarting_backend(self):
+        self.exercise_remote_release("web")
+
+    def exercise_remote_release(self, change):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             previous, candidate = root / "src.release-old", root / "src.release-app-test"
             for source, text in ((previous, "old"), (candidate, "new")):
                 (source / deployment.MIGRATIONS).mkdir(parents=True)
                 (source / deployment.MIGRATIONS / "000001.sql").write_text("immutable")
-                (source / "backend/app.go").write_text(text)
+                (source / "backend/app.go").write_text(text if change == "backend" else "unchanged")
+                (source / "frontend").mkdir()
+                (source / "frontend/app.vue").write_text(text if change == "web" else "unchanged")
             (root / "src").symlink_to(previous)
             old_web = root / "web/releases/old"
             old_web.mkdir(parents=True)
@@ -184,6 +192,11 @@ class DeploymentTests(unittest.TestCase):
             state = {"source": str(previous), "files": deployment.file_manifest(previous), "backend_verified": True}
             payload = {"release": "app-test", "previous": str(previous), "revision": "a" * 40,
                        "files": deployment.file_manifest(candidate), "web_files": {}}
+            if change == "web":
+                (candidate / ".web/assets").mkdir(parents=True)
+                (candidate / ".web/index.html").write_text("release entry")
+                (candidate / ".web/assets/app.js").write_text("release asset")
+                payload["web_files"] = deployment.file_manifest(candidate / ".web")
             with patch.object(deployment, "inspect_server", return_value=state), \
                     patch.object(deployment, "load_remote_env", return_value={}), \
                     patch.object(deployment, "container_value", return_value="sha256:" + "b" * 64), \
@@ -195,7 +208,11 @@ class DeploymentTests(unittest.TestCase):
                     patch.object(deployment.subprocess, "run", side_effect=dump):
                 deployment.perform_release(root, payload)
             self.assertEqual((root / "src").resolve(), candidate.resolve())
-            self.assertEqual((root / "web/current").resolve(), old_web.resolve())
+            expected_web = root / "web/releases/app-test" if change == "web" else old_web
+            self.assertEqual((root / "web/current").resolve(), expected_web.resolve())
+            if change == "web":
+                self.assertEqual((expected_web / "assets/app.js").read_text(), "release asset")
+                self.assertEqual((expected_web / "assets/app.js").stat().st_mode & 0o777, 0o644)
             record = json.loads((candidate / ".deployment.json").read_text())
             self.assertEqual(record["backend_hash"], deployment.group_hashes(payload["files"])["backend"])
             self.assertEqual(set(record["images"]), {"api", "worker"})
@@ -204,7 +221,9 @@ class DeploymentTests(unittest.TestCase):
                 self.assertEqual((root / "backups/pre-app-test" / name).stat().st_mode & 0o777, 0o600)
             self.assertTrue((root / "backups/pre-app-test/business.pgdump").exists())
             self.assertTrue((root / "backups/pre-app-test/identity.pgdump").exists())
-            self.assertTrue(any(c[-3:] == ["build", "api", "worker"] for c in commands))
+            self.assertEqual(any(c[-3:] == ["build", "api", "worker"] for c in commands), change == "backend")
+            if change == "web":
+                self.assertFalse(any("up" in c or "stop" in c for c in commands))
             self.assertFalse(any("push" in c or "volume" in c or "identity" in c or "egress-controller" in c for c in commands))
 
 
