@@ -28,7 +28,7 @@ async function poll() {
     const result = await response.json() as { status: string; qr_url: string; login_code: string; expires_at: string };
     const qr = new URL(result.qr_url);
     if (qr.origin !== "https://open.weixin.qq.com" || qr.pathname !== "/qr/code" || !qr.searchParams.get("username")) throw new Error("Invalid QR");
-    if (!/^AW-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(result.login_code)) throw new Error("Invalid login code");
+    if (!/^[0-9]{4}$/.test(result.login_code)) throw new Error("Invalid login code");
     const expires = Date.parse(result.expires_at);
     if (!Number.isFinite(expires)) throw new Error("Invalid expiry");
     qrURL.value = qr.href; loginCode.value = result.login_code; deadline = expires; loading.value = false;

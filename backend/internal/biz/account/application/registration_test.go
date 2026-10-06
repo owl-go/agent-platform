@@ -14,12 +14,16 @@ import (
 )
 
 type registrationMemory struct {
-	mu       sync.Mutex
-	settings map[string]domain.RegistrationSettings
-	attempts map[string]domain.RegistrationAttempt
-	audits   int
+	mu         sync.Mutex
+	settings   map[string]domain.RegistrationSettings
+	attempts   map[string]domain.RegistrationAttempt
+	audits     int
+	reserveErr error
 }
 
+func (m *registrationMemory) ReserveWeChatVerification(context.Context, string) error {
+	return m.reserveErr
+}
 func (m *registrationMemory) Settings(_ context.Context, p string) (domain.RegistrationSettings, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -54,6 +58,11 @@ func (m *registrationMemory) MarkReady(_ context.Context, p string, v int64) err
 func (m *registrationMemory) CreateAttempt(_ context.Context, a domain.RegistrationAttempt) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	for _, existing := range m.attempts {
+		if a.LoginCodeHash != "" && existing.LoginCodeHash == a.LoginCodeHash && time.Now().Before(existing.ExpiresAt) {
+			return domain.ErrLoginCodeConflict
+		}
+	}
 	m.attempts[a.ID] = a
 	return nil
 }
@@ -465,9 +474,92 @@ func TestWeChatConcurrentProviderRetriesAreIdempotent(t *testing.T) {
 }
 
 func TestRegistrationLoginCodeRejectsNonLoginMessages(t *testing.T) {
-	for _, value := range []string{"", "hello", "123456", "AW-AAAA-AAAA-AAA0", "AW-AAAA-AAAA-AAAA<script>", "登录 AW-AAAA-AAAA-AAAA"} {
+	for _, value := range []string{"", "hello", "123", "12345", "12a4", "１２３４", "123456", "AW-AAAA-AAAA-AAA0", "AW-AAAA-AAAA-AAAA<script>", "登录 AW-AAAA-AAAA-AAAA"} {
 		if NormalizeRegistrationLoginCode(value) != "" {
 			t.Fatalf("ordinary message parsed as code: %q", value)
 		}
+	}
+}
+
+func TestRegistrationLoginCodeIsFourDecimalDigits(t *testing.T) {
+	for range 1000 {
+		code, err := RegistrationLoginCode()
+		if err != nil || len(code) != 4 || NormalizeRegistrationLoginCode(code) != code {
+			t.Fatal("invalid generated code", err)
+		}
+	}
+	for _, code := range []string{"0000", "0007", "0382", "9999"} {
+		if NormalizeRegistrationLoginCode("  "+code+"\n") != code {
+			t.Fatal("leading zero lost")
+		}
+	}
+}
+
+type collisionRegistrationRepository struct {
+	*registrationMemory
+	failures int
+	calls    int
+	err      error
+}
+
+func (r *collisionRegistrationRepository) CreateAttempt(ctx context.Context, a domain.RegistrationAttempt) error {
+	r.calls++
+	if r.failures > 0 {
+		r.failures--
+		return r.err
+	}
+	return r.registrationMemory.CreateAttempt(ctx, a)
+}
+func TestRegistrationRetriesOnlyLoginCodeCollisions(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		failures int
+		err      error
+		calls    int
+		success  bool
+	}{
+		{"collision", 2, domain.ErrLoginCodeConflict, 3, true},
+		{"bounded", 100, domain.ErrLoginCodeConflict, 32, false},
+		{"repository failure", 2, errors.New("database unavailable"), 1, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			app, memory, _, _, _ := registrationFixture()
+			repo := &collisionRegistrationRepository{registrationMemory: memory, failures: test.failures, err: test.err}
+			app.repo = repo
+			digest := sha256.Sum256([]byte(strings.Repeat("v", 43)))
+			a, browser, _, err := app.Begin(t.Context(), domain.RegistrationWeChat, app.RedirectURI(domain.RegistrationWeChat), "state", "nonce", base64.RawURLEncoding.EncodeToString(digest[:]))
+			if (err == nil) != test.success || repo.calls != test.calls {
+				t.Fatal("unexpected allocation result", err, repo.calls)
+			}
+			if test.success && (len(a.LoginCode) != 4 || browser == "" || a.LoginCodeHash != RegistrationHash(a.LoginCode)) {
+				t.Fatal("invalid allocated code")
+			}
+		})
+	}
+}
+func TestWeChatVerificationLimitFailsClosedAndKeepsConfirmedRetries(t *testing.T) {
+	app, memory, _, _, _ := registrationFixture()
+	a, _ := beginRegistration(t, app, domain.RegistrationWeChat)
+	memory.reserveErr = domain.ErrRegistrationRateLimited
+	if err := app.VerifyWeChat(t.Context(), a.LoginCode, "openid"); !errors.Is(err, domain.ErrRegistrationRateLimited) || memory.attempts[a.ID].Status != "waiting" {
+		t.Fatal("limited sender confirmed an attempt", err)
+	}
+	memory.reserveErr = errors.New("database unavailable")
+	if err := app.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err == nil || memory.attempts[a.ID].Status != "waiting" {
+		t.Fatal("failed limiter allowed identity binding")
+	}
+	memory.reserveErr = nil
+	if err := app.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err != nil {
+		t.Fatal(err)
+	}
+	memory.reserveErr = domain.ErrRegistrationRateLimited
+	if err := app.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err != nil {
+		t.Fatal("confirmed provider retry failed", err)
+	}
+	if err := app.VerifyWeChat(t.Context(), a.LoginCode, "other-openid"); err == nil {
+		t.Fatal("other identity replaced confirmation")
+	}
+	if memory.attempts[a.ID].Version != 2 {
+		t.Fatal("provider retry changed identity")
 	}
 }

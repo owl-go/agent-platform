@@ -82,6 +82,10 @@ func TestWeChatEncryptedTextConfirmsOnlyItsLoginAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	unknown := "9999"
+	if attempt.LoginCode == unknown {
+		unknown = "0000"
+	}
 	broker := &registrationBroker{app: app}
 	service := &Service{registration: broker}
 
@@ -93,7 +97,7 @@ func TestWeChatEncryptedTextConfirmsOnlyItsLoginAttempt(t *testing.T) {
 		{"follow-only", "event", "<Event>subscribe</Event>", false, "一次性登录码"},
 		{"old-scene", "event", "<Event>SCAN</Event><EventKey>old-attempt</EventKey><Ticket>old-ticket</Ticket>", false, ""},
 		{"ordinary-text", "text", "<Content>hello</Content>", false, "完整一次性登录码"},
-		{"unknown-code", "text", "<Content>AW-AAAA-AAAA-AAAA</Content>", false, "无效或已过期"},
+		{"unknown-code", "text", "<Content>" + unknown + "</Content>", false, "无效或已过期"},
 		{"valid-code", "text", "<Content>" + attempt.LoginCode + "</Content><MsgId>10001</MsgId>", true, "登录已确认"},
 		{"provider-retry", "text", "<Content>" + attempt.LoginCode + "</Content><MsgId>10001</MsgId>", true, "登录已确认"},
 	} {
@@ -155,5 +159,27 @@ func TestWeChatEncryptedTextConfirmsOnlyItsLoginAttempt(t *testing.T) {
 	broker.wechatCallback(response, request)
 	if response.Code != 403 || store.attempts[fresh.ID].Identity.Subject != "" {
 		t.Fatal("forged callback confirmed login")
+	}
+	store.reserveErr = accountdomain.ErrRegistrationRateLimited
+	request, _ = encryptedLoginMessage(t, settings, body)
+	response = httptest.NewRecorder()
+	broker.wechatCallback(response, request)
+	if response.Code != 200 || !strings.Contains(decryptLoginReply(t, settings, response), "稍后再试") || store.attempts[fresh.ID].Status != "waiting" {
+		t.Fatal("limited message confirmed identity or omitted encrypted reply")
+	}
+	// A pre-release long challenge is invalidated instead of exposed to the new UI.
+	fresh2, browser2, _, err := app.Begin(t.Context(), settings.Provider, app.RedirectURI(settings.Provider), "state", "nonce", challenge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := store.attempts[fresh2.ID]
+	legacy.LoginCode = "AW-ABCD-EFGH-JKLM"
+	store.attempts[fresh2.ID] = legacy
+	request = httptest.NewRequest(http.MethodGet, "/api/v1/registration/wechat_official/status?id="+fresh2.ID, nil)
+	request.AddCookie(registrationCookie(fresh2.ID, browser2, 300))
+	response = httptest.NewRecorder()
+	service.registrationHTTP(response, request)
+	if response.Code != 410 || strings.Contains(response.Body.String(), legacy.LoginCode) {
+		t.Fatal("legacy challenge was exposed")
 	}
 }

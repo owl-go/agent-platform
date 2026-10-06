@@ -10,10 +10,12 @@ import (
 )
 
 var (
-	ErrUnauthenticated = errors.New("request is not authenticated")
-	ErrForbidden       = errors.New("request is not authorized")
-	ErrNotFound        = errors.New("User not found")
-	ErrConflict        = errors.New("User conflicts with current state")
+	ErrUnauthenticated         = errors.New("request is not authenticated")
+	ErrForbidden               = errors.New("request is not authorized")
+	ErrNotFound                = errors.New("User not found")
+	ErrConflict                = errors.New("User conflicts with current state")
+	ErrLoginCodeConflict       = errors.New("registration login code is already reserved")
+	ErrRegistrationRateLimited = errors.New("registration verification rate limit reached")
 )
 
 var usernamePattern = regexp.MustCompile(`^[a-z][a-z0-9._-]{2,63}$`)

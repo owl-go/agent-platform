@@ -34,14 +34,23 @@ import (
 
 type brokerTestStore struct {
 	accountapplication.RegistrationRepository
-	settings accountdomain.RegistrationSettings
-	attempts map[string]accountdomain.RegistrationAttempt
+	settings   accountdomain.RegistrationSettings
+	attempts   map[string]accountdomain.RegistrationAttempt
+	reserveErr error
 }
 
+func (s *brokerTestStore) ReserveWeChatVerification(context.Context, string) error {
+	return s.reserveErr
+}
 func (s *brokerTestStore) Settings(context.Context, string) (accountdomain.RegistrationSettings, error) {
 	return s.settings, nil
 }
 func (s *brokerTestStore) CreateAttempt(_ context.Context, a accountdomain.RegistrationAttempt) error {
+	for _, old := range s.attempts {
+		if a.LoginCodeHash != "" && old.LoginCodeHash == a.LoginCodeHash {
+			return accountdomain.ErrLoginCodeConflict
+		}
+	}
 	s.attempts[a.ID] = a
 	return nil
 }
