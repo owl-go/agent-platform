@@ -11308,7 +11308,8 @@
           "type": "string"
         },
         "validation_run_id": {
-          "type": "string"
+          "type": "string",
+          "description": "Deprecated: ignored. Saving the default does not require a validation Run."
         },
         "expected_version": {
           "type": "string",

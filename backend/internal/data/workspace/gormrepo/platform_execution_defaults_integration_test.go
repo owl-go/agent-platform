@@ -11,15 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *testing.T) {
+func TestPlatformExecutionDefaultSavesWithoutRunAndPropagates(t *testing.T) {
 	for _, verificationStatus := range []string{"verified", "unverified"} {
 		t.Run(verificationStatus, func(t *testing.T) {
-			testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t, verificationStatus)
+			testPlatformExecutionDefaultSavesWithoutRunAndPropagates(t, verificationStatus)
 		})
 	}
 }
 
-func testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *testing.T, verificationStatus string) {
+func testPlatformExecutionDefaultSavesWithoutRunAndPropagates(t *testing.T, verificationStatus string) {
 	t.Helper()
 	db := conversationTestDatabase(t)
 	repository := New(db, nil)
@@ -40,45 +40,6 @@ func testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *t
 	defaults, _ := json.Marshal(map[string]string{"codex": modelID})
 	exec(`INSERT INTO personal_settings(user_id,default_runtime_engine,runtime_model_defaults,execution_inherited) VALUES(?,'codex',?::jsonb,false)`, administrator, string(defaults))
 	exec(`INSERT INTO personal_settings(user_id) VALUES(?)`, userID)
-	workflow, err := repository.CreateWorkflow(ctx, administrator, domain.WorkflowInput{Name: "Validate default", Goal: "Return a short health check"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	run, err := repository.CreateRun(ctx, administrator, workflow.ID, "manual", nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, "", 0); !errors.Is(err, domain.ErrInvalid) {
-		t.Fatalf("missing validation Run error = %v", err)
-	}
-	if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, run.ID, 0); !errors.Is(err, domain.ErrInvalid) {
-		t.Fatalf("unfinished validation Run error = %v", err)
-	}
-	exec(`UPDATE runs SET state='succeeded',started_at=now(),ended_at=now() WHERE id=?`, run.ID)
-	var persistedRun runRecord
-	if err := db.Where("id = ?", run.ID).Take(&persistedRun).Error; err != nil {
-		t.Fatal(err)
-	}
-	encodedOriginal := persistedRun.WorkflowSnapshot
-	var mismatchedSnapshot domain.ExecutionSnapshot
-	if err := json.Unmarshal(encodedOriginal, &mismatchedSnapshot); err != nil {
-		t.Fatal(err)
-	}
-	if len(mismatchedSnapshot.Stages) == 0 {
-		t.Fatal("validation Run has no execution stages")
-	}
-	for index := range mismatchedSnapshot.Stages {
-		mismatchedSnapshot.Stages[index].ProviderModel.ID = uuid.NewString()
-	}
-	encodedMismatch, err := json.Marshal(mismatchedSnapshot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	exec(`UPDATE runs SET workflow_snapshot=?::jsonb WHERE id=?`, string(encodedMismatch), run.ID)
-	if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, run.ID, 0); !errors.Is(err, domain.ErrInvalid) {
-		t.Fatalf("mismatched validation Run error = %v", err)
-	}
-	exec(`UPDATE runs SET workflow_snapshot=?::jsonb WHERE id=?`, string(encodedOriginal), run.ID)
 	for _, test := range []struct {
 		name    string
 		prepare func()
@@ -109,7 +70,7 @@ func testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *t
 		t.Run(test.name, func(t *testing.T) {
 			test.prepare()
 			defer test.restore()
-			if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, run.ID, 0); !errors.Is(err, domain.ErrInvalid) {
+			if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, 0); !errors.Is(err, domain.ErrInvalid) {
 				t.Fatalf("%s error = %v", test.name, err)
 			}
 			if _, err := repository.GetPlatformExecutionDefault(ctx); !errors.Is(err, domain.ErrNotFound) {
@@ -118,11 +79,11 @@ func testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *t
 		})
 	}
 
-	created, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, run.ID, 0)
+	created, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.Version != 1 || created.ValidationRunID != run.ID {
+	if created.Version != 1 || created.ValidationRunID != "" {
 		t.Fatalf("created default = %#v", created)
 	}
 	var persistedConnection modelProviderConnectionRecord
@@ -139,8 +100,8 @@ func testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *t
 		t.Fatal(err)
 	}
 	var promotedCompatibility []domain.RuntimeModelCompatibility
-	if err := json.Unmarshal(promoted.Compatibility, &promotedCompatibility); err != nil || len(promotedCompatibility) != 1 || promotedCompatibility[0].Status != "verified" {
-		t.Fatalf("promoted compatibility = %#v, %v", promotedCompatibility, err)
+	if err := json.Unmarshal(promoted.Compatibility, &promotedCompatibility); err != nil || len(promotedCompatibility) != 1 || promotedCompatibility[0].Status != "unverified" {
+		t.Fatalf("unexpected compatibility mutation = %#v, %v", promotedCompatibility, err)
 	}
 	inherited, err := repository.GetSettings(ctx, userID)
 	if err != nil {
@@ -156,7 +117,48 @@ func testPlatformExecutionDefaultRequiresSuccessfulMatchingRunAndPropagates(t *t
 	if err != nil || newSettings.RuntimeModelDefaults[domain.RuntimeCodex] != modelID {
 		t.Fatalf("new User inheritance = %#v, %v", newSettings, err)
 	}
-	if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, run.ID, 0); !errors.Is(err, domain.ErrConflict) {
+	var runCount int64
+	if err := db.Table("runs").Count(&runCount).Error; err != nil || runCount != 0 {
+		t.Fatal("saving created a Run", runCount, err)
+	}
+	if _, err := repository.SetPlatformExecutionDefault(ctx, userID, domain.RuntimeCodex, modelID, 1); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatal("ordinary User changed enterprise settings", err)
+	}
+	workflow, err := repository.CreateWorkflow(ctx, userID, domain.WorkflowInput{Name: "Use enterprise default", Goal: "Check execution selection"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := repository.CreateRun(ctx, userID, workflow.ID, "manual", nil, nil)
+	if err != nil {
+		t.Fatal("inherited unverified pair could not start a Run", err)
+	}
+	var frozen runRecord
+	if err := db.Where("id=?", run.ID).Take(&frozen).Error; err != nil {
+		t.Fatal(err)
+	}
+	var snapshot domain.ExecutionSnapshot
+	if err := json.Unmarshal(frozen.WorkflowSnapshot, &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	stages, err := snapshot.OrderedStages()
+	if err != nil || len(stages) == 0 || stages[0].RuntimeEngine != domain.RuntimeCodex || stages[0].ProviderModel.ID != modelID {
+		t.Fatal("execution ignored inherited selection", err)
+	}
+	// Preserve historical evidence until the next save, then clear it without a Run lookup.
+	exec("UPDATE platform_execution_defaults SET validation_run_id=? WHERE singleton", run.ID)
+	historical, err := repository.GetPlatformExecutionDefault(ctx)
+	if err != nil || historical.ValidationRunID != run.ID {
+		t.Fatal("historical reference was lost", err)
+	}
+	updated, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, 1)
+	if err != nil || updated.Version != 2 || updated.ValidationRunID != "" {
+		t.Fatal("resave still required or retained validation proof", err)
+	}
+	var stored platformExecutionDefaultRecord
+	if err := db.Where("singleton").Take(&stored).Error; err != nil || stored.ValidationRunID != nil {
+		t.Fatal("missing proof was not persisted as NULL", err)
+	}
+	if _, err := repository.SetPlatformExecutionDefault(ctx, administrator, domain.RuntimeCodex, modelID, 0); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("stale update error = %v", err)
 	}
 }

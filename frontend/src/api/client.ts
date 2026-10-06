@@ -81,7 +81,7 @@ export interface ExpertTeamInput { name: string; icon: string; icon_background: 
 export interface ExpertTeam extends ExpertTeamInput { id: string; experts: Expert[]; expertise_tags: string[]; capability_introduction?: string; available: boolean; created_at: string; updated_at: string; version: number; members: ExpertTeamMember[] }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
 export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number; execution_inherited?: boolean; platform_execution_available?: boolean }
-export interface PlatformExecutionDefault { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; updated_by_user_id: string; version: number; updated_at: string }
+export interface PlatformExecutionDefault { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id?: string; updated_by_user_id: string; version: number; updated_at: string }
 export interface HomeOverview { recent_tasks: HomeTask[]; common_workflows: HomeWorkflow[]; action_items: HomeAction[] }
 export interface HomeTask { kind: "session" | "run"; id: string; parent_id: string; title: string; state: string; updated_at: string }
 export interface HomeWorkflow { id: string; name: string; run_count: number; updated_at: string }
@@ -272,7 +272,7 @@ export interface PlatformApi {
   getSettings(signal?: AbortSignal): Promise<PersonalSettings>;
   updateSettings(settings: PersonalSettings, signal?: AbortSignal): Promise<PersonalSettings>;
   getPlatformExecutionDefault(signal?: AbortSignal): Promise<PlatformExecutionDefault>;
-  setPlatformExecutionDefault(input: { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id: string; expected_version: number }, signal?: AbortSignal): Promise<PlatformExecutionDefault>;
+  setPlatformExecutionDefault(input: { runtime_engine: RuntimeEngine; provider_model_id: string; expected_version: number }, signal?: AbortSignal): Promise<PlatformExecutionDefault>;
   listRuntimeEngines(signal?: AbortSignal): Promise<RuntimeEngineStatus[]>;
   listModelProviderPresets(signal?: AbortSignal): Promise<ModelProviderPreset[]>;
   listModelProviderConnections(signal?: AbortSignal): Promise<ModelProviderConnection[]>;

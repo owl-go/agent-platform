@@ -69,7 +69,7 @@ describe("SettingsPage model provider feedback", () => {
       { id: "model-incompatible", connection_id: connection.id, model_id: "incompatible", display_name: "Incompatible", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "incompatible" }] },
       { id: "model-unavailable", connection_id: connection.id, model_id: "unavailable", display_name: "Unavailable", available: false, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] },
     ] };
-    const saved = { runtime_engine: "codex" as const, provider_model_id: "model-verified", validation_run_id: "run-success", updated_by_user_id: "user-1", version: 1, updated_at: "2026-09-28T00:00:00Z" };
+    const saved = { runtime_engine: "codex" as const, provider_model_id: "model-verified", validation_run_id: "", updated_by_user_id: "user-1", version: 1, updated_at: "2026-09-28T00:00:00Z" };
     const api = apiStub();
     api.listModelProviderConnections = vi.fn(async () => [providerConnection]);
     api.getPlatformExecutionDefault = vi.fn(async () => saved);
@@ -84,10 +84,12 @@ describe("SettingsPage model provider feedback", () => {
     expect(card.find('option[value="model-unavailable"]').exists()).toBe(false);
     expect(card.get('option[value="model-unverified"]').text()).toContain("未验证");
     await card.findAll("select")[1]!.setValue("model-unverified");
-    await card.find('input[placeholder="Run ID"]').setValue("run-success");
+    expect(card.find('input[placeholder="Run ID"]').exists()).toBe(false);
+    expect(card.get('button[type="submit"]').attributes("disabled")).toBeUndefined();
     await card.trigger("submit");
     await flushPromises();
-    expect(api.setPlatformExecutionDefault).toHaveBeenCalledWith({ runtime_engine: "codex", provider_model_id: "model-unverified", validation_run_id: "run-success", expected_version: 1 });
+    expect(api.setPlatformExecutionDefault).toHaveBeenCalledWith({ runtime_engine: "codex", provider_model_id: "model-unverified", expected_version: 1 });
+    expect(wrapper.get(".app-toast.success").text()).toContain("企业默认已更新");
     wrapper.unmount();
   });
 

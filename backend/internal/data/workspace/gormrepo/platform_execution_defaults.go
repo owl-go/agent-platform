@@ -20,8 +20,8 @@ func (repository *Repository) GetPlatformExecutionDefault(ctx context.Context) (
 	return platformExecutionDefaultDomain(row)
 }
 
-func (repository *Repository) SetPlatformExecutionDefault(ctx context.Context, administratorID string, runtime domain.RuntimeEngine, modelID, validationRunID string, expectedVersion int64) (domain.PlatformExecutionDefault, error) {
-	if administratorID == "" || modelID == "" || validationRunID == "" || expectedVersion < 0 {
+func (repository *Repository) SetPlatformExecutionDefault(ctx context.Context, administratorID string, runtime domain.RuntimeEngine, modelID string, expectedVersion int64) (domain.PlatformExecutionDefault, error) {
+	if administratorID == "" || modelID == "" || expectedVersion < 0 {
 		return domain.PlatformExecutionDefault{}, fmt.Errorf("%w: platform execution default fields are required", domain.ErrInvalid)
 	}
 	if _, err := domain.ParseRuntime(string(runtime)); err != nil {
@@ -63,32 +63,6 @@ func (repository *Repository) SetPlatformExecutionDefault(ctx context.Context, a
 		if compatibilityIndex < 0 {
 			return fmt.Errorf("%w: Runtime and Provider Model compatibility is unavailable", domain.ErrInvalid)
 		}
-		var run runRecord
-		if err := tx.Where("id = ? AND owner_user_id = ? AND state = 'succeeded'", validationRunID, administratorID).Take(&run).Error; err != nil {
-			return fmt.Errorf("%w: successful validation Run is required", domain.ErrInvalid)
-		}
-		var snapshot domain.ExecutionSnapshot
-		if err := json.Unmarshal(run.WorkflowSnapshot, &snapshot); err != nil {
-			return fmt.Errorf("decode validation Run snapshot: %w", err)
-		}
-		stages, err := snapshot.OrderedStages()
-		if err != nil || len(stages) == 0 {
-			return fmt.Errorf("%w: validation Run has no valid execution stages", domain.ErrInvalid)
-		}
-		for _, stage := range stages {
-			if stage.RuntimeEngine != runtime || stage.ProviderModel.ID != modelID {
-				return fmt.Errorf("%w: validation Run does not match the requested Runtime and Provider Model", domain.ErrInvalid)
-			}
-		}
-		compatibility[compatibilityIndex].Status = "verified"
-		compatibility[compatibilityIndex].Reason = "Verified by a successful Administrator validation Run"
-		encodedCompatibility, err := marshal(compatibility)
-		if err != nil {
-			return err
-		}
-		if err := tx.Model(&providerModelRecord{}).Where("id = ?", modelID).Update("compatibility", encodedCompatibility).Error; err != nil {
-			return err
-		}
 
 		var current platformExecutionDefaultRecord
 		lookupErr := tx.Where("singleton", true).Take(&current).Error
@@ -98,7 +72,7 @@ func (repository *Repository) SetPlatformExecutionDefault(ctx context.Context, a
 			if expectedVersion != 0 {
 				return domain.ErrConflict
 			}
-			if err := tx.Create(&platformExecutionDefaultRecord{Singleton: true, RuntimeEngine: string(runtime), ProviderModelID: modelID, ValidationRunID: validationRunID, UpdatedByUserID: administratorID, CreatedAt: now, UpdatedAt: now, Version: 1}).Error; err != nil {
+			if err := tx.Create(&platformExecutionDefaultRecord{Singleton: true, RuntimeEngine: string(runtime), ProviderModelID: modelID, UpdatedByUserID: administratorID, CreatedAt: now, UpdatedAt: now, Version: 1}).Error; err != nil {
 				return err
 			}
 		case lookupErr != nil:
@@ -107,7 +81,7 @@ func (repository *Repository) SetPlatformExecutionDefault(ctx context.Context, a
 			if current.Version != expectedVersion {
 				return domain.ErrConflict
 			}
-			result := tx.Model(&platformExecutionDefaultRecord{}).Where("singleton AND version = ?", expectedVersion).Updates(map[string]any{"runtime_engine": string(runtime), "provider_model_id": modelID, "validation_run_id": validationRunID, "updated_by_user_id": administratorID, "updated_at": now, "version": gorm.Expr("version + 1")})
+			result := tx.Model(&platformExecutionDefaultRecord{}).Where("singleton AND version = ?", expectedVersion).Updates(map[string]any{"runtime_engine": string(runtime), "provider_model_id": modelID, "validation_run_id": nil, "updated_by_user_id": administratorID, "updated_at": now, "version": gorm.Expr("version + 1")})
 			if result.Error != nil {
 				return result.Error
 			}
@@ -132,5 +106,9 @@ func platformExecutionDefaultDomain(row platformExecutionDefaultRecord) (domain.
 	if err != nil {
 		return domain.PlatformExecutionDefault{}, err
 	}
-	return domain.PlatformExecutionDefault{RuntimeEngine: runtime, ProviderModelID: row.ProviderModelID, ValidationRunID: row.ValidationRunID, UpdatedBy: row.UpdatedByUserID, Version: row.Version, UpdatedAt: row.UpdatedAt}, nil
+	validationRunID := ""
+	if row.ValidationRunID != nil {
+		validationRunID = *row.ValidationRunID
+	}
+	return domain.PlatformExecutionDefault{RuntimeEngine: runtime, ProviderModelID: row.ProviderModelID, ValidationRunID: validationRunID, UpdatedBy: row.UpdatedByUserID, Version: row.Version, UpdatedAt: row.UpdatedAt}, nil
 }

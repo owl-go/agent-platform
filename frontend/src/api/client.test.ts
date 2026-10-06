@@ -2,6 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
+  it("saves an enterprise execution default without a validation Run", async () => {
+    const fetcher = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, {status:200,headers:{"Content-Type":"application/json"}}));
+    vi.stubGlobal("fetch",fetcher);
+    const input={runtime_engine:"codex" as const,provider_model_id:"model-1",expected_version:0};
+    await createPlatformApi(()=>"token").setPlatformExecutionDefault(input);
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/v1/admin/platform-execution-default");
+    expect(fetcher.mock.calls[0]?.[1]?.method).toBe("PUT");
+    expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toEqual(input);
+  });
+
   it.each(["wechat_official", "feishu"] as const)("sends %s registration settings with a JSON media type", async (provider) => {
     const input = { enabled: true, app_id: "app", app_secret: "fixture-secret", official_account_id: "gh_fixture", verification_token: "fixture-token", encoding_aes_key: "fixture-key", reason: "enable registration", expected_version: 0 };
     const signal = new AbortController().signal;
