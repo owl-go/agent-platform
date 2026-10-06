@@ -297,6 +297,16 @@ def verify_server(root, env):
     for url in (origin + "/api/healthz", origin + "/api/readyz", origin + "/",
                 env["VITE_OIDC_AUTHORITY"].rstrip("/") + "/.well-known/openid-configuration"):
         run(["curl", "--fail", "--silent", "--show-error", "--max-time", "20", "-o", "/dev/null", url])
+    web = (root / "web/current").resolve(strict=True)
+    entry = web / "index.html"
+    paths = ["index.html", *sorted(set(re.findall(r'(?:src|href)="/(assets/[A-Za-z0-9._-]+)"', entry.read_text())))]
+    with tempfile.TemporaryDirectory(prefix="aw-public-verify-") as directory:
+        for path in paths:
+            response = Path(directory) / "response"
+            url = origin + ("/" if path == "index.html" else "/" + path)
+            run(["curl", "--fail", "--silent", "--show-error", "--max-time", "20", "-o", str(response), url])
+            if response.read_bytes() != (web / path).read_bytes():
+                raise DeploymentError("公网 Web 内容与当前发布不一致")
 
 
 def atomic_link(target, link):

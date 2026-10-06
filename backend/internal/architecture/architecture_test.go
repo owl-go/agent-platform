@@ -151,8 +151,8 @@ func TestCaddyAllowsLongRunningAPIResponses(t *testing.T) {
 	}
 }
 
-func TestPlatformDeploymentRecreatesAndVerifiesCaddy(t *testing.T) {
-	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+func TestInfrastructureDeploymentRecreatesAndVerifiesCaddy(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform-infrastructure.sh")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -164,13 +164,13 @@ func TestPlatformDeploymentRecreatesAndVerifiesCaddy(t *testing.T) {
 		`"$caddy_container")" = "$release_dir/deploy/platform"`,
 	} {
 		if !strings.Contains(script, required) {
-			t.Errorf("deploy-platform.sh does not enforce %q", required)
+			t.Errorf("deploy-platform-infrastructure.sh does not enforce %q", required)
 		}
 	}
 }
 
-func TestPlatformDeploymentBuildsPinsAndSmokesUnifiedRuntime(t *testing.T) {
-	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+func TestInfrastructureDeploymentBuildsPinsAndSmokesUnifiedRuntime(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform-infrastructure.sh")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -184,13 +184,13 @@ func TestPlatformDeploymentBuildsPinsAndSmokesUnifiedRuntime(t *testing.T) {
 		`expected zero or five legacy Runtime image references`,
 	} {
 		if !strings.Contains(script, required) {
-			t.Errorf("deploy-platform.sh does not enforce %q", required)
+			t.Errorf("deploy-platform-infrastructure.sh does not enforce %q", required)
 		}
 	}
 }
 
-func TestPlatformDeploymentReverifiesCLIConnectorsBeforeCutover(t *testing.T) {
-	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform.sh")
+func TestInfrastructureDeploymentReverifiesCLIConnectorsBeforeCutover(t *testing.T) {
+	path := filepath.Join(repositoryRoot(t), "..", "scripts", "deploy-platform-infrastructure.sh")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
