@@ -1,12 +1,14 @@
 # Picset AI 连接器发布证据 — 2026-10-01
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 修订与部署
 
 - 官方依据：https://picsetai.cn/developer-api。页面提供 REST API 与个人 Agent Secret Key；未提供可直接安装的官方 CLI/MCP 配置。本包为仓库自有 REST CLI 桥接器。
 - Source：`picset-ai`，包版本 `0.1.0`，15 个 API 操作和 3 个只读诊断能力，User 身份；不填写未经官方公布的 scopes。
 - 功能 Commit：`17313a4`，开发分支 `codex/picset-ai-connector` 已推送。
 - 集成分支 `main_temp`，部署源 Commit：`ab469d9`。正式 `make deploy` 未跳过门禁；Release ID：`picset-ai-20261001T083300Z`。
-- 源目录：`/opt/agent-platform/src.release-picset-ai-20261001T083300Z`，Web：`/opt/agent-platform/web/releases/picset-ai-20261001T083300Z`，备份：`/opt/agent-platform/backups/pre-picset-ai-20261001T083300Z`。
+- 源目录：`/srv/agent-workspace/src.release-picset-ai-20261001T083300Z`，Web：`/srv/agent-workspace/web/releases/picset-ai-20261001T083300Z`，备份：`/srv/agent-workspace/backups/pre-picset-ai-20261001T083300Z`。
 - Publication：`available`，version `1`，活动 Revision：`f27d3edc-233a-4009-b8a5-b47f97f7cf04`。
 - 原始交付 ZIP SHA-256：`e97a863ac135f175c42a07ad538c5f36d4d1eb448474eda30962722ffaa9a7f4`。
 - 平台规范化 Package SHA-256：`0a9798d2ada16d636dbde4ab7f57ac728cd68fb3514ce4bdb7c58468ac9a8463`。
@@ -27,7 +29,7 @@
 - 临时 Installation 的状态为 active、version 1、无 Authorization，图标与 Revision 投影一致；验收后经 owner-scoped DELETE API 卸载，正式 Publication 保持可安装。远端本轮临时 ZIP/source/evidence 目录已清理。
 - 部署脚本完成数据库/配置备份校验、镜像 smoke、服务健康、Migration、OIDC 和公网 Web 产物检查。部署时的既有 bundle 复验打印 `verified 0 active CLI Connector bundles`；Picset 的 exact Conformance 在部署后单独完成，不能将该 0 条记录当作 Picset 验证。
 
-本机交付物和截图位于 `/Users/frank/.codex/artifacts/picset-ai-20261001/`：`picset-ai-0.1.0.zip`、`.source.zip`、`catalog-card.png`、`connection-form.png` 与无凭证发布响应记录。截图仅包含本连接器卡片/表单。
+本机交付物和截图位于 `<LOCAL_DATA_ROOT>`：`picset-ai-0.1.0.zip`、`.source.zip`、`catalog-card.png`、`connection-form.png` 与无凭证发布响应记录。截图仅包含本连接器卡片/表单。
 
 ## 验证边界
 

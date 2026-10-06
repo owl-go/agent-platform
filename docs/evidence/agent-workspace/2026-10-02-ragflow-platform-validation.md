@@ -1,16 +1,18 @@
 # RAGFlow platform validation — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Deployed installation
 
 The final guarded release is `ragflow-knowledge-20261002-4`, deployed from `main_temp` commit `669a54e86f05d65ba5fd1bab58a9289618be3bdc`. The development branch remains `codex/ragflow-knowledge-loop`; no direct deployment from the feature branch or merge into protected `main` was performed.
 
-- Platform: `https://47-237-108-63.sslip.io`.
-- Server source: `/opt/agent-platform/src.release-ragflow-knowledge-20261002-4`; Web: `/opt/agent-platform/web/releases/ragflow-knowledge-20261002-4`.
-- Verified business/identity database and configuration backup: `/opt/agent-platform/backups/pre-ragflow-knowledge-20261002-4`. The original pre-provider configuration is separately retained under `/opt/agent-platform/backups/pre-ragflow-config-20261002`.
+- Platform: `https://workspace.example.com`.
+- Server source: `/srv/agent-workspace/src.release-ragflow-knowledge-20261002-4`; Web: `/srv/agent-workspace/web/releases/ragflow-knowledge-20261002-4`.
+- Verified business/identity database and configuration backup: `/srv/agent-workspace/backups/pre-ragflow-knowledge-20261002-4`. The original pre-provider configuration is separately retained under `/srv/agent-workspace/backups/pre-ragflow-config-20261002`.
 - API image: `sha256:efa2b07415162b730805898871b7ce743c7d9da3a1c319faad6e8332dbac65a9`; Worker: `sha256:ce02dc2bc133608833d8ae729c6f6d1e0c43053cd9da51c8765f27f6101d49a3`.
 - Migration `000067_ragflow_knowledge_generations.sql` is installed. API and Worker share the protected RAGFlow configuration.
 
-RAGFlow v0.24.0 and native Ollama `bge-m3` use the exact image/model digests in [local validation](2026-10-02-ragflow-local-validation.md). The durable Compose files are under `/Users/frank/.local/share/agent-platform-ragflow/deployment`, with credentials outside Git and named data volumes retained. Actual container bind mounts were inspected after recreation and point to this directory. The local UI remains on loopback port 19380; Knowledge SDK uses 19381; the shared entry uses 19382.
+RAGFlow v0.24.0 and native Ollama `bge-m3` use the exact image/model digests in [local validation](2026-10-02-ragflow-local-validation.md). The durable Compose files are under `<LOCAL_DATA_ROOT>/deployment`, with credentials outside Git and named data volumes retained. Actual container bind mounts were inspected after recreation and point to this directory. The local UI remains on loopback port 19380; Knowledge SDK uses 19381; the shared entry uses 19382.
 
 After the user confirmed switching the existing tunnel, `https://chili-darn-trolling.ngrok-free.dev` was retargeted to `http://127.0.0.1:19382`. Exact Knowledge SDK routes reach RAGFlow; existing model routes still reach the relay on port 3000. The relay container was not restarted. The existing ngrok LaunchAgent was retained; merged configuration passed `ngrok config check`. Traffic inspection was disabled and its request inventory remained empty after acceptance. The failed duplicate tunnel LaunchAgent was removed.
 
@@ -47,7 +49,7 @@ Executed successfully:
 
 ## Acceptance cleanup
 
-Twenty recorded checks passed, including removal of the temporary Assistant, both Workflows, Expert and Knowledge Base, public share revocation (HTTP 404), zeroing the temporary daily allocation, disabling the ordinary test User and deleting the temporary identity client. Protected acceptance tokens were removed; only nonsensitive check records remain under `/opt/agent-platform/evidence/ragflow-20261002/checks.json`. Historical Run and governance evidence remain subject to the existing lifecycle. Original source/provider records of deleted fixtures retain the documented thirty-day restore window rather than being forcibly purged.
+Twenty recorded checks passed, including removal of the temporary Assistant, both Workflows, Expert and Knowledge Base, public share revocation (HTTP 404), zeroing the temporary daily allocation, disabling the ordinary test User and deleting the temporary identity client. Protected acceptance tokens were removed; only nonsensitive check records remain under `/srv/agent-workspace/evidence/ragflow-20261002/checks.json`. Historical Run and governance evidence remain subject to the existing lifecycle. Original source/provider records of deleted fixtures retain the documented thirty-day restore window rather than being forcibly purged.
 
 The disposable local PostgreSQL test container was removed. RAGFlow, Ollama, the restricted/shared gateways and the existing ngrok service remain running.
 
@@ -63,6 +65,6 @@ The user supplied a replacement API Key and explicitly requested online activati
 
 The target account now has the same local Ollama embedding configuration and default embedding alias. Only that embedding configuration changed; other model defaults were preserved. The one retained provider revision was copied to a private dataset in the new account, checked against the platform source size/SHA-256, parsed and verified searchable. Its internal provider mapping was replaced transactionally, preserving the immutable platform revision and generation membership. The original Object Store source was retained; the obsolete provider document copy was removed after verification. No active platform Knowledge Base existed at the account switch.
 
-Protected backup: `/opt/agent-platform/backups/ragflow-key-change-20261002T093357Z`. The canonical server env and local protected test configuration now contain the new Key. API and Worker were recreated from the already released `main_temp` images, both were verified to have the new credential and became healthy. Server-to-ngrok-to-local Chinese SDK retrieval passed.
+Protected backup: `/srv/agent-workspace/backups/ragflow-key-change-20261002T093357Z`. The canonical server env and local protected test configuration now contain the new Key. API and Worker were recreated from the already released `main_temp` images, both were verified to have the new credential and became healthy. Server-to-ngrok-to-local Chinese SDK retrieval passed.
 
-An ordinary User then exercised the actual platform upload/ingestion/search path with the new credential. Six recorded checks passed: authenticated upload, Object Store/Worker/RAGFlow Ready, Chinese preview with the correct revision citation, Administrator denial of the private base, indexed no-hit, and temporary resource/account/client cleanup. The uploaded revision was `645fc0c6-d003-47b8-99f8-f3819e1e91e2`. Nonsensitive evidence is stored at `/opt/agent-platform/evidence/ragflow-key-20261002/checks.json`; authentication tokens were removed. Workflow and Assistant model-answer tests were not repeated for this credential-only change; their earlier acceptance is recorded above.
+An ordinary User then exercised the actual platform upload/ingestion/search path with the new credential. Six recorded checks passed: authenticated upload, Object Store/Worker/RAGFlow Ready, Chinese preview with the correct revision citation, Administrator denial of the private base, indexed no-hit, and temporary resource/account/client cleanup. The uploaded revision was `645fc0c6-d003-47b8-99f8-f3819e1e91e2`. Nonsensitive evidence is stored at `/srv/agent-workspace/evidence/ragflow-key-20261002/checks.json`; authentication tokens were removed. Workflow and Assistant model-answer tests were not repeated for this credential-only change; their earlier acceptance is recorded above.

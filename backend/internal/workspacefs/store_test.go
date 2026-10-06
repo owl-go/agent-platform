@@ -126,13 +126,13 @@ func TestWriteSSHFilesMaterializesWorkflowConfigAndConfiguredIdentity(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	sshConfig := "Host agent-platform\n  HostName 47.237.108.63\n  User root\n  IdentityFile ~/.ssh/xinjiapo.pem\n  IdentitiesOnly yes\n"
+	sshConfig := "Host fixture-git\n  HostName 203.0.113.10\n  User root\n  IdentityFile ~/.ssh/fixture-key.pem\n  IdentitiesOnly yes\n"
 	home, configPath, keyPath, cleanup, err := store.writeSSHFiles([]byte("private-key"), sshConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	if configPath != filepath.Join(home, ".ssh", "config") || keyPath != filepath.Join(home, ".ssh", "xinjiapo.pem") {
+	if configPath != filepath.Join(home, ".ssh", "config") || keyPath != filepath.Join(home, ".ssh", "fixture-key.pem") {
 		t.Fatalf("SSH paths = %q, %q under %q", configPath, keyPath, home)
 	}
 	config, err := os.ReadFile(configPath)
@@ -146,7 +146,7 @@ func TestWriteSSHFilesMaterializesWorkflowConfigAndConfiguredIdentity(t *testing
 	if info, err := os.Stat(configPath); err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("SSH config mode = %v, %v", info, err)
 	}
-	if !strings.HasSuffix(keyPath, filepath.Join(".ssh", "xinjiapo.pem")) {
+	if !strings.HasSuffix(keyPath, filepath.Join(".ssh", "fixture-key.pem")) {
 		t.Fatalf("identity path = %q", keyPath)
 	}
 }

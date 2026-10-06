@@ -1,5 +1,7 @@
 # RAGFlow local validation — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 This report records the pre-deployment state. Deployment and authenticated acceptance later on the same day are recorded in [platform acceptance](2026-10-02-ragflow-platform-validation.md).
 
 ## Installation and scope
@@ -10,7 +12,7 @@ The development branch is `codex/ragflow-knowledge-loop`. No server release or p
 - Native Ollama 0.35.0, `bge-m3` digest `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab`, registered as `bge-m3:aw-790764642607@Ollama`; a Chinese embedding returned 1,024 dimensions.
 - RAGFlow uses Elasticsearch, MySQL, Valkey and its supported OpenDAL/MySQL internal storage. Original platform source bytes remain behind the existing Object Store interface.
 - Local UI: `http://127.0.0.1:19380`. Restricted Knowledge SDK: `http://127.0.0.1:19381`. Optional shared model/Knowledge entry: `http://127.0.0.1:19382`.
-- Credentials and the live test JSON are stored with restricted permissions outside the repository, under `/Users/frank/.local/share/agent-platform-ragflow`. The change set was scanned against those actual credential values with no matches.
+- Credentials and the live test JSON are stored with restricted permissions outside the repository, under `<LOCAL_DATA_ROOT>`. The change set was scanned against those actual credential values with no matches.
 
 ## Executed checks
 

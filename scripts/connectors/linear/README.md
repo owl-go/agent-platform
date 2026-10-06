@@ -45,7 +45,7 @@ make web-build
 
 ```bash
 python3 scripts/connectors/linear/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /absolute/path/linear-1.0.0.zip \
   --normalized-sha256 '<SHA-256 returned by connector-package-validate>' \
   --evidence-directory /absolute/path/linear-publication-evidence
@@ -53,7 +53,7 @@ python3 scripts/connectors/linear/publish.py \
 
 ## 2026-10-01 发布证据
 
-通过 `main_temp` 的 Commit `9c21bc3` 部署 Release `linear-20261001T091000Z`，API、Worker、Egress Controller 和 Web 健康检查通过。[线上连接器目录](https://47-237-108-63.sslip.io/resources?tab=connectors) 中 `linear` 的 Publication 状态为 `available`，版本为 1，包版本为 `1.0.0`。
+通过 `main_temp` 的 Commit `9c21bc3` 部署 Release `linear-20261001T091000Z`，API、Worker、Egress Controller 和 Web 健康检查通过。[线上连接器目录](https://workspace.example.com/resources?tab=connectors) 中 `linear` 的 Publication 状态为 `available`，版本为 1，包版本为 `1.0.0`。
 
 - Revision：`95e0a7bc-30ab-42f3-93f3-5fb81dc4e6f1`。
 - 当前 Go parser 验证的 normalized package SHA-256：`677938b0e9d4a479d13e481ae011b784e4c4d3a25f317e75469d3aca9e9bbd39`。它不是 ZIP 文件字节的 SHA-256。

@@ -1,5 +1,7 @@
 # Workflow Message Channel 应用图标 — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 全部 13 个渠道入口使用固定 32px 应用图标；已保存账号和配置弹窗标题使用对应的 24px 图标。图标为装饰性图片，保留现有按钮名称与文本。应用资源本地打包，来源及许可记录在 `frontend/src/assets/message-channels/SOURCES.md` 和相邻 LICENSE 文件；飞书、钉钉复用既有资源。
 
 ## 实际验证
@@ -13,9 +15,9 @@
 
 - 功能提交：`6de06fa`；发布集成源：`main_temp` 的 `2bd4f3d44db595180978ca3b19fd0aaf2b2ec98f`。
 - 使用当前公开 OIDC 配置执行 `WEB_DEPLOY_HOST=agent-platform WEB_RELEASE_ID=workflow-channel-icons-20261003-1 make web-deploy`，发布成功。
-- 当前 Web 为 `/opt/agent-platform/web/releases/workflow-channel-icons-20261003-1`；前版为 `releases/workflow-channel-config-20261003-1`，目录保留，指针记录在 evidence 目录。
-- 公网 `https://47-237-108-63.sslip.io` 下载的页面、主 JS、工作流页面 JS/CSS 和 BlueBubbles PNG 均与本地构建 SHA-256 相同。页面 SHA-256 为 `bc4fc8f0b166703af7cabac188935b0781ab9b2634afbebe0f93c00ea272c6fa`。其余小图标由 Vite 内联到工作流页面 JS。
+- 当前 Web 为 `/srv/agent-workspace/web/releases/workflow-channel-icons-20261003-1`；前版为 `releases/workflow-channel-config-20261003-1`，目录保留，指针记录在 evidence 目录。
+- 公网 `https://workspace.example.com` 下载的页面、主 JS、工作流页面 JS/CSS 和 BlueBubbles PNG 均与本地构建 SHA-256 相同。页面 SHA-256 为 `bc4fc8f0b166703af7cabac188935b0781ab9b2634afbebe0f93c00ea272c6fa`。其余小图标由 Vite 内联到工作流页面 JS。
 - 公网 `/api/healthz` 返回 `ok`，`/api/readyz` 返回 `ready`；API、Worker、Egress Controller 均 healthy。本次仅发布 Web，没有修改后端或重新构建 Runtime 镜像。
-- 构建、验证日志位于本机 `/tmp/agent-platform-wmc-icon-*.log`；资源 Hash、部署后检查、截图保存在服务器 `/opt/agent-platform/evidence/workflow-channel-icons-20261003-1`。
+- 构建、验证日志位于本机 `/tmp/agent-platform-wmc-icon-*.log`；资源 Hash、部署后检查、截图保存在服务器 `/srv/agent-workspace/evidence/workflow-channel-icons-20261003-1`。
 
 浏览器检查使用只读 API fake，没有新增真实渠道账号或发送消息；本次视觉变更没有新增真实 IM 或 Runtime Conformance 验收证据。

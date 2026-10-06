@@ -1,5 +1,7 @@
 # 微信消息轮询与渠道运行记录 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 复现和修复
 
 已保存微信账号在接收验证阶段显示连接异常，截止时间显示 `Invalid Date`。只读诊断使用当前账号密文和同一真实 WeChat Adapter，凭证只在进程内解密；仅记录响应字段名、HTTP 状态、数值错误码和消息数量，不记录账号、Token、Cursor、验证码或聊天内容。
@@ -27,7 +29,7 @@
 
 功能提交 `d791fbb`，经 `main_temp` 集成为 `acf057422853664c8bdb62ab43729e99683f9d58`。发布标识 `wechat-validation-history-20261004-1`，API/Worker 源码与 Web 均使用该发布标识。
 
-发布前备份 `/opt/agent-platform/backups/pre-wechat-validation-history-20261004-1`：业务 pgdump 经 `pg_restore -l` 和 SHA-256 校验，保存配置、旧源码/Web 指针、旧镜像及 Migration ledger。只发布 API、Worker、Web，不重建 Runtime、CLI Builder 或其他基础服务。回退使用备份中的旧源码、旧 Web 和 API/Worker 镜像；新增 Migration 是向后兼容的追加字段，不删除历史数据。
+发布前备份 `/srv/agent-workspace/backups/pre-wechat-validation-history-20261004-1`：业务 pgdump 经 `pg_restore -l` 和 SHA-256 校验，保存配置、旧源码/Web 指针、旧镜像及 Migration ledger。只发布 API、Worker、Web，不重建 Runtime、CLI Builder 或其他基础服务。回退使用备份中的旧源码、旧 Web 和 API/Worker 镜像；新增 Migration 是向后兼容的追加字段，不删除历史数据。
 
 候选 API 仅绑定回环地址，使用现有控制与公网网络，完成正常 OIDC Authorization Code + PKCE 登录。九个资源接口均 200，已有 Workflow 的渠道列表与运行记录接口均 200。正式切换前无非终态 Run，停止 Worker 后重建 API 和 Worker并分别等待 healthy。切换阶段回填候选迁移与旧 Worker 停止之间可能留下的空 provider。
 
@@ -51,4 +53,4 @@
 
 再次只读核查时已有六个 succeeded Run 和六条 sent answer，另一个 Run 正在运行，渠道仍启用且 connected，说明后续普通问题继续进入执行链路。数量是核查时的快照，不是等待中的 Run 的最终结果。没有证据将手机旧提示归因于 notifyStart/notifyStop；提示随连接恢复消失，本轮未添加该类协议调用。
 
-脱敏证据保存于 `/opt/agent-platform/evidence/wechat-validation-history-20261004-1/wechat-live-workflow.json`，仅包含状态、数量、公网历史核查和 owner 确认，不含账号、Token、Cursor 或聊天内容。临时 owner 登录探测脚本已从本地和服务器删除，探测自己的登录会话已注销。本轮只补充验收证据，沿用此前发布的 API、Worker 和 Web，未重新发布代码。
+脱敏证据保存于 `/srv/agent-workspace/evidence/wechat-validation-history-20261004-1/wechat-live-workflow.json`，仅包含状态、数量、公网历史核查和 owner 确认，不含账号、Token、Cursor 或聊天内容。临时 owner 登录探测脚本已从本地和服务器删除，探测自己的登录会话已注销。本轮只补充验收证据，沿用此前发布的 API、Worker 和 Web，未重新发布代码。

@@ -10,7 +10,7 @@
 
 - 未授权 initialize 返回 401，`WWW-Authenticate` 指向 `/.well-known/oauth-protected-resource/mcp`，scope 为 `mcp`。
 - [Resource metadata](https://agent.xiaoe-tech.com/.well-known/oauth-protected-resource/mcp)确认唯一 resource 与 Bearer Header；[Authorization metadata](https://agent.xiaoe-tech.com/.well-known/oauth-authorization-server)确认 `/oauth/authorize`、`/oauth/register`、`/oauth/token`、`/oauth/revoke`，支持 S256、authorization_code、refresh_token、mcp 和 offline_access。
-- OAuth 客户端注册对示例 HTTPS 域名和 localhost 回调返回 201。真实平台 `https://47-237-108-63.sslip.io/api/v1/connectors/xiaoe/oauth/callback` 在本机及部署主机均返回 HTTP 566 和上游安全拦截页面。未改用 localhost，也未把手动 Token 作为替代授权方案。
+- OAuth 客户端注册对示例 HTTPS 域名和 localhost 回调返回 201。真实平台 `https://workspace.example.com/api/v1/connectors/xiaoe/oauth/callback` 在本机及部署主机均返回 HTTP 566 和上游安全拦截页面。未改用 localhost，也未把手动 Token 作为替代授权方案。
 - 品牌 SVG 直接来自[小鹅通授权服务资产](https://agent.xiaoe-tech.com/oauth/assets/xiaoe-icon.svg)，最终包与前端使用相同字节。
 
 配套 Skill 的操作路由来自上游使用说明，实际授权工具目录、账号和店铺范围、读写调用仍未验证。以实时 MCP Schema 为准；OAuth 的 `mcp` scope 不是细粒度读写 scope。
@@ -33,7 +33,7 @@ make web-build
 
 ```bash
 python3 scripts/connectors/xiaoe/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /tmp/xiaoe-publication/xiaoe-0.1.0.zip \
   --evidence /tmp/xiaoe-publication/publication.json
 ```

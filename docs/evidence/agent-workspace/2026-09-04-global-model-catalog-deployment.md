@@ -1,12 +1,14 @@
 # Global Model Catalog deployment verification - 2026-09-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Scope
 
-- Host: `47.237.108.63`
-- Public origin: `https://47-237-108-63.sslip.io`
-- Source release: `/opt/agent-platform/src.release-global-model-catalog-20260904T125300Z`
-- Web release: `/opt/agent-platform/web/releases/global-model-catalog-20260904T125300Z`
-- Pre-deployment backup: `/opt/agent-platform/backups/pre-global-model-catalog-20260904T125159Z`
+- Host: `203.0.113.10`
+- Public origin: `https://workspace.example.com`
+- Source release: `/srv/agent-workspace/src.release-global-model-catalog-20260904T125300Z`
+- Web release: `/srv/agent-workspace/web/releases/global-model-catalog-20260904T125300Z`
+- Pre-deployment backup: `/srv/agent-workspace/backups/pre-global-model-catalog-20260904T125159Z`
 
 The source release was copied from the current local working tree rather than an immutable Git commit. Existing concurrent work in that tree was preserved and included in the deployed snapshot.
 

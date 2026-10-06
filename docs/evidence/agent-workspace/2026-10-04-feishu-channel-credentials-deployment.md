@@ -1,14 +1,16 @@
 # 飞书消息渠道凭证简化发布验证 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 功能分支：`codex/feishu-channel-credentials`；功能提交：`c2fa518`。
 - 集成分支：`main_temp`；发布构建源：`e8c441b4ffd5421f6c981fc74044ff31f27bcf05`。
 - 发布 ID：`feishu-channel-20261004-1`。
-- 公网入口：`https://47-237-108-63.sslip.io`。
-- 源目录：`/opt/agent-platform/src.release-feishu-channel-20261004-1`。
-- Web 目录：`/opt/agent-platform/web/releases/feishu-channel-20261004-1`。
-- 发布前备份：`/opt/agent-platform/backups/pre-feishu-channel-20261004-1`。
+- 公网入口：`https://workspace.example.com`。
+- 源目录：`/srv/agent-workspace/src.release-feishu-channel-20261004-1`。
+- Web 目录：`/srv/agent-workspace/web/releases/feishu-channel-20261004-1`。
+- 发布前备份：`/srv/agent-workspace/backups/pre-feishu-channel-20261004-1`。
 
 飞书/Lark 自建应用只要求 App ID、App Secret。API 通过应用 Token 查询企业信息，自动保存 Tenant Key；旧凭证中手填的 Tenant Key 不作为认证身份依据。查询失败、返回空值或接入验证时企业身份改变均拒绝。事件 Header 和 Sender 的企业归属校验保留。
 

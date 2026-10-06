@@ -1,5 +1,7 @@
 # Feishu authorization and command approval verification - 2026-09-08
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Reported behavior and causes
 
 The User completed Feishu OAuth, but subsequent Session turns still reported
@@ -48,9 +50,9 @@ passing.
 
 The active deployment is:
 
-- Source: `/opt/agent-platform/src.release-feishu-approval-c303dfe-20260908`
-- Web: `/opt/agent-platform/web/releases/feishu-approval-c303dfe-20260908`
-- Backup: `/opt/agent-platform/backups/pre-feishu-approval-c303dfe-20260908`
+- Source: `/srv/agent-workspace/src.release-feishu-approval-c303dfe-20260908`
+- Web: `/srv/agent-workspace/web/releases/feishu-approval-c303dfe-20260908`
+- Backup: `/srv/agent-workspace/backups/pre-feishu-approval-c303dfe-20260908`
 - API image: `sha256:9bba772b07e04706f5f3fd60156cf085383f9b4d3fc6e555e046e6ece23280cb`
 - Worker image: `sha256:66346963a454c3a1033ada2e822c3314e993cceb587bdca3ff71bd113b67e024`
 - Egress Controller image:
@@ -96,7 +98,7 @@ frontend tests, `make web-typecheck`, `make web-build`, and `git diff --check`
 passed.
 
 Web release `feishu-approval-composer-fa6ec50-20260908` is active at
-`/opt/agent-platform/web/releases/feishu-approval-composer-fa6ec50-20260908`.
+`/srv/agent-workspace/web/releases/feishu-approval-composer-fa6ec50-20260908`.
 Both the remote release and public origin serve `assets/index-x2RZBYxv.js`. An
 authenticated production browser loaded the new release. A safety-only request
 explicitly asked to inspect help without sending; the Runtime omitted the
@@ -126,7 +128,7 @@ Team results remain available.
 All 189 frontend tests, `make web-typecheck`, `make web-build`, and
 `git diff --check` passed. Web release
 `feishu-activity-summary-9a722b9-20260908` is active at
-`/opt/agent-platform/web/releases/feishu-activity-summary-9a722b9-20260908`.
+`/srv/agent-workspace/web/releases/feishu-activity-summary-9a722b9-20260908`.
 Both the remote release and public origin serve `assets/index-CypoTZhI.js`.
 
 An authenticated production browser reloaded the existing successful Feishu

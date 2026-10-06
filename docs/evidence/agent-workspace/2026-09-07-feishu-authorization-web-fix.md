@@ -1,5 +1,7 @@
 # Feishu account authorization Web fix - 2026-09-07
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Failure and correction
 
 The authenticated Connectors page reproduced an HTTP 400 response from
@@ -24,7 +26,7 @@ now use specific Chinese and English guidance instead of package-format advice.
 
 ## Deployment and browser verification
 
-- Public origin: `https://47-237-108-63.sslip.io`.
+- Public origin: `https://workspace.example.com`.
 - `scripts/deploy-web.sh` rebuilt with the existing public OIDC configuration and
   activated release `feishu-authorization-cbffe60-20260907`.
 - Previous Web release `platform-20260907-main-469da9b` remains available for rollback.

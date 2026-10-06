@@ -1,5 +1,7 @@
 # 十三种消息渠道按实际接入方式配置 — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 行为与实现
 
 全部十三个入口使用独立的接入声明，包含实际凭证字段、接收方式、外部身份标签、接入指南与私聊/群聊限制。配置分为账号接入和消息接收：确认账号身份后才设置受众；编辑已保存的账号可保留凭证，重新授权使用同一实际身份校验。
@@ -37,15 +39,15 @@
 
 后端功能 `eb7ffcc` 与期限修复 `9ba5799` 从 `main_temp` 集成版本 `44105ad3b1620bcac2f594c01cb63c46edbb7eca` 构建。前端接收提示修正 `6201194` 经 `main_temp` 集成为 `e42b74f362cf4678e8f5f11b9afcb3b50bd9d913`，保留此前 Workflow Knowledge Input 的发布内容。API/Worker 与 Web 发布均为 `channel-provider-auth-20261003-1`；没有从功能分支发布。
 
-发布前业务数据库备份经 `pg_restore -l` 与 SHA-256 清单校验，配置、原源码/Web 指针及 API/Worker 镜像记录保存在服务器 `/opt/agent-platform/backups/pre-channel-provider-auth-20261003-1`。候选 API 仅绑定回环地址，使用正常 OIDC Authorization Code + PKCE 登录验证；没有打开 Direct Access Grant、创建新用户、绕过认证或修改 User Workflow。
+发布前业务数据库备份经 `pg_restore -l` 与 SHA-256 清单校验，配置、原源码/Web 指针及 API/Worker 镜像记录保存在服务器 `/srv/agent-workspace/backups/pre-channel-provider-auth-20261003-1`。候选 API 仅绑定回环地址，使用正常 OIDC Authorization Code + PKCE 登录验证；没有打开 Direct Access Grant、创建新用户、绕过认证或修改 User Workflow。
 
-最终候选和正式公网 `https://47-237-108-63.sslip.io` 均实际通过：
+最终候选和正式公网 `https://workspace.example.com` 均实际通过：
 
 - CLI Enablement、Expert、Expert Team、Skill、MCP、CLI Definition、Connector Catalog、Connector Installation、Command Approval 九个资源接口为 200。
 - 微信与 QQ 各自调用官方服务取得真实二维码：start 为 200/waiting、非空 QR，响应无凭证字段；poll 为 200/waiting；cancel 为 200，取消后 poll 为 404。
 - 每次探测结束仅注销本次登录取得的 Refresh Token。没有保存响应正文、QR 内容、Session ID、Token 或账号凭证；没有发送真实聊天消息或创建渠道配置。
 
-切换前无非终态 Run，先停止 Worker，重建 API/Worker 并等待 healthy，再切换源码指针；Web 经现有发布脚本构建与原子激活。API 镜像 `sha256:c1e86f282fa835948a84cd7d7a419344819ce5058595fb4001cb927ced44a04c`，Worker 镜像 `sha256:b3e14ecc1ada40a176636451842c2c4387d7a9c87aedf25d721c457451f0f908`。公网 healthz/readyz 分别为 ok/ready；启动日志 ERROR/FATAL/PANIC 为 0，四个消息渠道循环均 started=1、fatal=0。Migration 名称/checksum 与配置 SHA-256 保持一致，记录数不变：Expert 8、Skill 13、Connector Installation 20、Message Channel 0。临时候选容器已删除，脱敏证据位于服务器 `/opt/agent-platform/evidence/channel-provider-auth-20261003-1`。
+切换前无非终态 Run，先停止 Worker，重建 API/Worker 并等待 healthy，再切换源码指针；Web 经现有发布脚本构建与原子激活。API 镜像 `sha256:c1e86f282fa835948a84cd7d7a419344819ce5058595fb4001cb927ced44a04c`，Worker 镜像 `sha256:b3e14ecc1ada40a176636451842c2c4387d7a9c87aedf25d721c457451f0f908`。公网 healthz/readyz 分别为 ok/ready；启动日志 ERROR/FATAL/PANIC 为 0，四个消息渠道循环均 started=1、fatal=0。Migration 名称/checksum 与配置 SHA-256 保持一致，记录数不变：Expert 8、Skill 13、Connector Installation 20、Message Channel 0。临时候选容器已删除，脱敏证据位于服务器 `/srv/agent-workspace/evidence/channel-provider-auth-20261003-1`。
 
 公网 Web 的 index.html 和入口引用的资源，以及 Workflow Detail JS 均与本地生产构建逐字节一致；index.html SHA-256 为 `bb161591958bdd64b55b8b8d4af806cfda240713df6398bf8552f4bc9372e3b9`，Workflow Detail 资源为 `WorkflowDetailPage-DRSa-pD_.js`。
 

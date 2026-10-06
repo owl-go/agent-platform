@@ -1,5 +1,7 @@
 # Share settings saved before embed code generation — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Diagnosis and behavior
 
 The User's current embed URL returned HTTP 200 with `Content-Security-Policy: ... frame-ancestors https://www.baidu.com` and `X-Frame-Options: DENY`. It did not permit the local preview origin `http://localhost:4177`. The response headers were inspected through a temporary local diagnostic form without recording the Share Token, URL path, response body or visitor content.
@@ -15,8 +17,8 @@ The local preview uses the same iframe sandbox for both policy cases. A temporar
 - Feature code: `ec03613` on `codex/assistant-prompt-variables`, pushed.
 - Integrated code: `ffc6b7b05bcdc3673aa96c7bfc18a2ca602f4d7f` on `main_temp`, pushed before deployment. The locale merge retained existing Connector strings and added local-preview translations.
 - Web release: `assistant-share-save-20261003-1`, activated through `scripts/deploy-web.sh` after a production OIDC build.
-- Web path: `/opt/agent-platform/web/releases/assistant-share-save-20261003-1`.
-- Protected verified backup: `/opt/agent-platform/backups/pre-assistant-share-save-20261003-1`. Both database dumps passed `pg_restore -l`; configuration, prior release pointers and the SHA-256 manifest were verified.
+- Web path: `/srv/agent-workspace/web/releases/assistant-share-save-20261003-1`.
+- Protected verified backup: `/srv/agent-workspace/backups/pre-assistant-share-save-20261003-1`. Both database dumps passed `pg_restore -l`; configuration, prior release pointers and the SHA-256 manifest were verified.
 
 Focused tests passed 24 tests in 3 files on both feature and integration checkouts. Full frontend suites passed 443 tests in 50 files on the feature and 524 tests in 50 files on `main_temp`. Both checkouts passed `make web-typecheck`, `make web-build` and `git diff --check`; integration dependencies were installed with the frozen lockfile. Tests cover saving edited origins before rotation, using the saved version, refusing generation after failed save, avoiding duplicate first-enable rotation, and retaining the saved revision without displaying stale code when rotation fails.
 
@@ -27,7 +29,7 @@ Public Health and Readiness returned HTTP 200 with statuses `ok` and `ready`; OI
 
 ## Scope, acceptance and rollback
 
-This was a Web-only release. The API source pointer remains `/opt/agent-platform/src.release-assistant-embed-types-20261003-1`; API image remains `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e` and Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. API, Worker and Egress Controller remained healthy; Caddy remained running. Canonical environment and YAML bytes were unchanged. No backend, migration, Runtime or storage implementation changed; their environment-specific gates were not rerun.
+This was a Web-only release. The API source pointer remains `/srv/agent-workspace/src.release-assistant-embed-types-20261003-1`; API image remains `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e` and Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. API, Worker and Egress Controller remained healthy; Caddy remained running. Canonical environment and YAML bytes were unchanged. No backend, migration, Runtime or storage implementation changed; their environment-specific gates were not rerun.
 
 The local paste-and-run preview is a development entrypoint and is excluded from the production build. Its implementation is recorded in feature commit `59fd011` and is included in the integration source.
 

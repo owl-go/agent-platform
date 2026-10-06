@@ -1,5 +1,7 @@
 # 渠道连续消息共用一个会话入口 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 复现与原因
 
 owner 反馈同一微信用户的消息在 Workflow Run History 显示多个入口。只读生产核查发现当时八个 Run 已有同一个 conversation_id、连续的 turn_number、一个入站 sender 和 chat；会话及上下文没有拆分。原因是列表汇总对 message_channel 触发绕过了 Run Conversation 汇总，将每个执行 Turn 直接显示为一行。
@@ -16,8 +18,8 @@ owner 反馈同一微信用户的消息在 Workflow Run History 显示多个入�
 
 功能提交 `34497d0`，通过 `main_temp` 集成为 `3bc9f02d01736cd86c8618d6e5c45147d3bcd559` 并推送，发布标识 `channel-conversation-20261004-1`。只更新 API 和 Web；Worker 未重建或停止，镜像保持 `sha256:b641a3713a66007b8a994b1c10bd4529982fcad193eea1226dca486ff0df0db9`。API 镜像为 `sha256:916fd12d691dc881669a08518cad636c8f58c6363ba84bca869f08ff00ae7d18`，两个服务均 healthy，API 启动 ERROR/FATAL/PANIC 行数为零。
 
-发布前在 `/opt/agent-platform/backups/pre-channel-conversation-20261004-1` 保存业务 pgdump、配置、旧源码/Web 指针、API/Worker 镜像与 Migration ledger；pgdump 通过 `pg_restore -l`，pgdump/config 通过 SHA-256 校验。配置 SHA-256 与全部 Migration name/checksum 在切换后保持一致，没有新 Migration 或历史数据合并/删除。回退可使用保存的旧 API 镜像和源码/Web 指针。
+发布前在 `/srv/agent-workspace/backups/pre-channel-conversation-20261004-1` 保存业务 pgdump、配置、旧源码/Web 指针、API/Worker 镜像与 Migration ledger；pgdump 通过 `pg_restore -l`，pgdump/config 通过 SHA-256 校验。配置 SHA-256 与全部 Migration name/checksum 在切换后保持一致，没有新 Migration 或历史数据合并/删除。回退可使用保存的旧 API 镜像和源码/Web 指针。
 
 候选 API 仅监听回环端口，使用现有 owner 的正常 OIDC 登录核对真实数据；随后同一核查通过公网正式接口完成：history_rows=1、conversation_roots=1、retained_turns=9、latest_turn=9、provider=wechat、enabled=true、health=connected。全部九轮仍可通过 turns 接口按同一 conversation_id 读取。生产 HTML SHA-256 为 `62799bb3e81f305fa77c180386678936177b9e4143aab935920150469dc654ce`，与生产构建相同；30 个入口资源逐个 SHA-256 一致，公网 healthz/readyz 均正常。
 
-脱敏日志位于 `/opt/agent-platform/evidence/channel-conversation-20261004-1` 的 `candidate-history.log`、`public-history.log`、`public-web.json`。候选容器、私有临时环境文件和本地/服务器临时登录探测已清理，探测自己的登录会话已注销。没有向微信注入测试消息或额外调用模型；这是既有真实问答历史的展示验收。Runtime、Sandbox 和渠道收发实现未改变，本轮没有新增 Runtime Digest、Linux/gVisor 或 Production Conformance 证据。此前逐轮显示的历史验收是旧版本行为，由本次会话汇总行为取代。
+脱敏日志位于 `/srv/agent-workspace/evidence/channel-conversation-20261004-1` 的 `candidate-history.log`、`public-history.log`、`public-web.json`。候选容器、私有临时环境文件和本地/服务器临时登录探测已清理，探测自己的登录会话已注销。没有向微信注入测试消息或额外调用模型；这是既有真实问答历史的展示验收。Runtime、Sandbox 和渠道收发实现未改变，本轮没有新增 Runtime Digest、Linux/gVisor 或 Production Conformance 证据。此前逐轮显示的历史验收是旧版本行为，由本次会话汇总行为取代。

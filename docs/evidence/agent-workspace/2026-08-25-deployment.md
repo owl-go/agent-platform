@@ -1,14 +1,16 @@
 # Agent Workspace deployment evidence - 2026-08-25
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 Status: deployed; API acceptance, real-browser identity acceptance, real Codex Session continuity, and real Workflow execution are complete.
 
 ## Target and rollback
 
-- Worker: `47.237.108.63` (Linux)
-- Public origin: `https://47-237-108-63.sslip.io`
-- Active source: `/opt/agent-platform/src.release-agent-workspace-20260825`
-- Rollback source: `/opt/agent-platform/src.release-1c261de`
-- Pre-reset backup: `/opt/agent-platform/backups/20260825-023445`
+- Worker: `203.0.113.10` (Linux)
+- Public origin: `https://workspace.example.com`
+- Active source: `/srv/agent-workspace/src.release-agent-workspace-20260825`
+- Rollback source: `/srv/agent-workspace/src.release-1c261de`
+- Pre-reset backup: `/srv/agent-workspace/backups/20260825-023445`
 
 The backup contains `business.pgdump`, `identity.pgdump`, and `config.tar.gz`. `sha256sum -c SHA256SUMS` passed for all three files before the reset. The legacy business database was rebuilt from the Agent Workspace schema; the additive `000002_run_queued_at.sql` migration repaired the initial zero-time Run rows and now rejects invalid queued timestamps.
 
@@ -29,7 +31,7 @@ The four Runtime engines use separate immutable images:
 - Hermes: `127.0.0.1:5000/agent-platform/hermes@sha256:376de53a1564c4332b12e101f19c527e38db6499d193ace2e9d0598b29f6cd5b`
 - OpenClaw: `127.0.0.1:5000/agent-platform/openclaw@sha256:7074894081ec42a9c3e083ea0ee671982b05779d6dc1eea0f0b51974a16612b8`
 
-The exact Codex image runs CLI `0.147.0`. Its configured Model Profile uses model `gpt-5.6-sol` and the TLS relay `https://47-237-108-63.sslip.io/model-relay/openai`; the original plaintext model endpoint is not reachable from the Runtime network. The Model Secret remains encrypted in product storage and enters the Runtime only through the single-execution credential environment.
+The exact Codex image runs CLI `0.147.0`. Its configured Model Profile uses model `gpt-5.6-sol` and the TLS relay `https://workspace.example.com/model-relay/openai`; the original plaintext model endpoint is not reachable from the Runtime network. The Model Secret remains encrypted in product storage and enters the Runtime only through the single-execution credential environment.
 
 ## Real browser evidence
 

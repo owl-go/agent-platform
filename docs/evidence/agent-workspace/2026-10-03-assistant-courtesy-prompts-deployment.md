@@ -1,5 +1,7 @@
 # Assistant courtesy prompt correction — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Behavior and implementation
 
 The User reported that `哦 谢谢您` received the scope refusal and explicitly requested a prompt adjustment. The preprocessing instruction's blanket rejection of off-topic chat had no exception for complete courtesies. A new prompt regression failed on the missing courtesy exception before the change.
@@ -23,9 +25,9 @@ The prompt regression covers default and legacy custom scope prompts, preservati
 - Feature code: `a515de65957967429e14170152fe11c2386b56e5` on `codex/assistant-prompt-variables`, pushed.
 - Integrated code: `a5229a75541321701106f847a4f37c4852cd4587` on `main_temp`, pushed before release.
 - API/source release: `assistant-courtesy-20261003-1`.
-- Source: `/opt/agent-platform/src.release-assistant-courtesy-20261003-1`.
+- Source: `/srv/agent-workspace/src.release-assistant-courtesy-20261003-1`.
 - API image: `sha256:bb9e7f7a36d72ddfa18080e1a9c43d72a5c8d206d2f0df288bb181364c274327`.
-- Protected backup: `/opt/agent-platform/backups/pre-assistant-courtesy-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, release pointers and backup manifest were verified.
+- Protected backup: `/srv/agent-workspace/backups/pre-assistant-courtesy-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, release pointers and backup manifest were verified.
 
 Tracked integration source was archived, uploaded and built with the existing API Dockerfile. The Compose stack recreated API only. Public `/api/healthz` and `/api/readyz` returned `ok` and `ready` before the source pointer was switched. An initial verification used an incorrect authenticated health URL and received 401; the documented public endpoints were then checked successfully. Canonical configuration hashes remained unchanged. API, Worker and Egress Controller remained healthy and Caddy running.
 
@@ -43,4 +45,4 @@ The browser showed three completed answer bodies and zero error surfaces; a scre
 
 Web remains `assistant-scroll-20261003-1`; Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. Configuration, storage, identity, retrieval, Runtime/CLI Builder images and persistent volumes were retained.
 
-Rollback uses the protected previous source `/opt/agent-platform/src.release-assistant-visitor-cookie-20261003-1` and API image `sha256:971c21956555118bba5e4cc53057fd6d8cbae2df79dd1a00e998ac16f8ddba1a` through the production Compose stack. Switch the source pointer only after health passes; retain current Web, configuration and volumes.
+Rollback uses the protected previous source `/srv/agent-workspace/src.release-assistant-visitor-cookie-20261003-1` and API image `sha256:971c21956555118bba5e4cc53057fd6d8cbae2df79dd1a00e998ac16f8ddba1a` through the production Compose stack. Switch the source pointer only after health passes; retain current Web, configuration and volumes.

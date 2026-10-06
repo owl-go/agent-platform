@@ -55,6 +55,6 @@ make build
 
 ## 工具部署（2026-10-02）
 
-集成提交 `4f785bac0b05b83f67f25b9781f5a5ab75fff2ed` 已推送到 `main_temp`。服务器 `agent-platform` 的工具入口为 `/opt/agent-platform/connectors/haokuaiji/current/scripts/connectors/haokuaiji/build.py`，激活版本为 `haokuaiji-tooling-4f785bac0b05`。版本目录同时携带该集成提交的 Go 包解析器源码与依赖声明；上传和激活前核对全部 33 个源文件 SHA-256。
+集成提交 `4f785bac0b05b83f67f25b9781f5a5ab75fff2ed` 已推送到 `main_temp`。服务器 `agent-platform` 的工具入口为 `/srv/agent-workspace/connectors/haokuaiji/current/scripts/connectors/haokuaiji/build.py`，激活版本为 `haokuaiji-tooling-4f785bac0b05`。版本目录同时携带该集成提交的 Go 包解析器源码与依赖声明；上传和激活前核对全部 33 个源文件 SHA-256。
 
 服务器实际执行了 9 项 Python 测试、Go 解析器包测试及完整命令行构建／Parse smoke，均通过。smoke 只使用立即清理的 synthetic fixture，未发起畅捷通请求，也未写入平台 Revision、Publication、Installation 或 Authorization。该部署没有启动或替换 API/Worker/Web 服务；部署后公网 Health 为 `ok`、Readiness 为 `ready`。详细证据见仓库 `docs/evidence/agent-workspace/2026-10-02-haokuaiji-tooling-deployment.md`。

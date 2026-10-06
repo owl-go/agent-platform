@@ -1,5 +1,7 @@
 # 好会计打包工具部署 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 状态：打包工具已部署并通过服务器验证；业务连接器尚未发布或安装。
 
 ## 发布标识
@@ -7,8 +9,8 @@
 - 部署源：`main_temp` 集成提交 `4f785bac0b05b83f67f25b9781f5a5ab75fff2ed`；功能提交 `73cd822`，合并无冲突。
 - SSH 主机：`agent-platform`，Linux amd64，Python 3.14.4、Go 1.26.0。
 - 激活版本：`haokuaiji-tooling-4f785bac0b05`。
-- 版本目录：`/opt/agent-platform/connectors/haokuaiji/releases/haokuaiji-tooling-4f785bac0b05`。
-- 原子入口：`/opt/agent-platform/connectors/haokuaiji/current/scripts/connectors/haokuaiji/build.py`。
+- 版本目录：`/srv/agent-workspace/connectors/haokuaiji/releases/haokuaiji-tooling-4f785bac0b05`。
+- 原子入口：`/srv/agent-workspace/connectors/haokuaiji/current/scripts/connectors/haokuaiji/build.py`。
 - 工具 tar.gz SHA-256：`3dde5f86ffd509bc2af1f9a43dfc727f37add59a10b7d1df6101cacfb20be484`。
 
 ## 已执行的检查
@@ -24,9 +26,9 @@
 - `python3 scripts/connectors/haokuaiji/build.py --help`：入口可运行。
 - 用临时 synthetic 配置实际执行 `build.py --config ... --output ...`，生成测试 ZIP，并调用同版本 `connectorpackage.Parse` 验证。逐项读取 ZIP，确认其中没有 fixture 凭证字节。测试 JSON/ZIP 随临时目录自动删除。
 
-验证后将工具 source 移入独立版本目录，原子替换好会计工具的 `current` 符号链接，删除 staging 上传 archive 和目录。该操作未修改平台 `/opt/agent-platform/src` 或 Web 指针，没有服务替换或数据库 Migration。
+验证后将工具 source 移入独立版本目录，原子替换好会计工具的 `current` 符号链接，删除 staging 上传 archive 和目录。该操作未修改平台 `/srv/agent-workspace/src` 或 Web 指针，没有服务替换或数据库 Migration。
 
-从服务器访问公网 `https://47-237-108-63.sslip.io/api/healthz` 返回 `{"status":"ok"}`，`/api/readyz` 返回 `{"status":"ready"}`。
+从服务器访问公网 `https://workspace.example.com/api/healthz` 返回 `{"status":"ok"}`，`/api/readyz` 返回 `{"status":"ready"}`。
 
 ## 验证边界
 

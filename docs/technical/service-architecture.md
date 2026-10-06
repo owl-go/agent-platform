@@ -22,6 +22,10 @@ Account 拥有 User、治理角色、Identity Group 投影和 Governance Audit E
 
 Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YAML。`internal/data` 实现 PostgreSQL、Runtime、Keycloak 等端口；`internal/service` 只做 Proto/HTTP 映射、身份提取与公开错误转换。
 
+## 默认资源初始化
+
+API 与 Worker 在账号 Bootstrap 完成后复用 `Repository.EnsureDefaultResources`，将随二进制分发的无凭据资源写入现有 Expert、Skill、Connector Revision/Publication seam。Migration `000072_default_resource_seeds.sql` 保存按资源稳定键与版本管理的初始化记录；它是 Adapter 层的升级账本，不引入新的 Domain 聚合。并发、失败、升级和权限边界见[默认资源分发](default-resources.md)。
+
 ## 所有权
 
 Session、Workflow、Expert、Expert Team、Skill、MCP Connector、CLI Enablement/Authorization/Approval、Personal Settings 和 Image Generation Record 等 User-owned 资源的每个查询和写入都以认证 User ID 过滤。Knowledge Base 另有不可变的 private、group、platform 三种 scope：group 读取要求当前 active Department membership，写入还要求 Resource Publisher；Platform Resource 继续按全企业只读投影。Administrator 权限不会绕过 private 或 group membership 查询。Model Provider Connection、Provider Model、Image Model 与 CLI Connector Definition 是平台级目录，所有认证 User 可读取可用投影，只有 Administrator 可写；User 只保存引用全局资源的个人默认、Enablement、Authorization 和最近图片模型选择。管理员可以查看账号级余额、今日用量、每日额度、Department budget、兑换、人工调整，以及按 CLI Connector Definition 汇总的启用、等待操作和授权健康计数，但不能借助管理权限读取其他 User 的会话、工作流、图片提示词、Reference Image、Generated Image、Connector 凭证/内容、外部身份、授权 Scope 或逐次执行消费明细。跨 User ID 与不存在资源使用相同的 Not Found 语义。

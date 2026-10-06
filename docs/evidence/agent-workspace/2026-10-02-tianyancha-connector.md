@@ -1,12 +1,14 @@
 # 天眼查连接器验证 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 包与上游
 
 - source `tianyancha`，version `1.0.0`，MCP Streamable HTTP，官方端点 `https://mcp.tianyancha.com/mcp`，目录分类“行业数据”。
 - 通过 `go -C backend run ./cmd/connector-package-validate ../outputs/tianyancha/tianyancha-1.0.0.zip` 实际调用当前 `connectorpackage.Parse`；规范化 SHA-256 `8e1b4b5d2eb1a7a9ab914a85820e51e9162742a069d3d148c770b3701eeaabec`，恰好一个 MCP manifest、一个 Skill，无 CLI bundle 或凭证。
 - 官方 Protected Resource / Authorization Server metadata 返回 200；issuer `https://capi.tianyancha.com/oauth`，S256 PKCE、动态 public client 注册、authorization code、refresh token。本修订只请求 `mcp:tools.call`。
 - `/mcp` 与 `/v1` 未授权 initialize 返回 401，包含 protected-resource metadata、所需 scope 与缺少 Authorization 的说明；这不是已授权工具发现通过。
-- 本机 DCR 返回 201，接受实际回调 `https://47-237-108-63.sslip.io/api/v1/connectors/tianyancha/oauth/callback`，返回的 URI 与 public client auth `none` 匹配；未记录 client ID 或凭证。
+- 本机 DCR 返回 201，接受实际回调 `https://workspace.example.com/api/v1/connectors/tianyancha/oauth/callback`，返回的 URI 与 public client auth `none` 匹配；未记录 client ID 或凭证。
 - 发布前 Administrator Publication 与当前 Administrator 的 User Installation 目录各无天眼查条目。
 - 官网 favicon 原始 32×32 像素转换为 PNG，包 SVG 与目录使用同一资产。
 
@@ -35,7 +37,7 @@
 
 - 功能提交 `cfeb153` 与地区限制提交 `7b058df` 已推送到 `codex/tianyancha-connector`。通过 `main_temp` 集成，最终发布源为 `3d4b228`，保留了同时到达的 Moka 更新。
 - 最终发布 `tianyancha-region-20261002T1335` 完成；复用此前执行门禁（`SKIP_DEPLOY_GATES=1`），合并后再次执行完整 `make test`、`make build`、Web typecheck 与完整前端测试：46 文件 / 462 用例通过，生产 Web 构建由发布流程完成。备份校验、Runtime/CLI Builder smoke、服务健康与部署源检查通过。
-- 备份 `/opt/agent-platform/backups/pre-tianyancha-region-20261002T1335`；部署源 `/opt/agent-platform/src.release-tianyancha-region-20261002T1335`。
+- 备份 `/srv/agent-workspace/backups/pre-tianyancha-region-20261002T1335`；部署源 `/srv/agent-workspace/src.release-tianyancha-region-20261002T1335`。
 - 最终 Publication available，Revision `a57eb19f-8734-4600-8002-7df05c527b5b`，规范化 SHA-256 为本文包验证栏中的最终摘要。发布器用明确披露选项记录 `callback_registration=blocked_region`、`account_verification=not_run`；并未记录 OAuth 注册成功。再次发布复用同一修订。
 - User 和 Administrator 目录各仅一个正式天眼查条目，品牌 PNG 正常投影。Playwright 浏览器实际显示“行业数据”、天眼查品牌图标、版本 1.0.0、安装包校验通过及地区阻塞说明。
 - 在管理员自己的 User 视图临时安装，未授权时“连接”入口可操作。点击后服务端真实地区限制映射为 `tianyancha_region_blocked`，页面显示联系天眼查确认受支持部署地区的中文提示；没有手动 Token 表单，也没有已授权工具执行。

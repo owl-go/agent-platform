@@ -323,7 +323,7 @@ _Avoid_: Runtime log, model claim, Response Snapshot, Artifact
 ## Experts, Skills, And Connectors
 
 **Platform Resource**:
-An Expert, Skill, or MCP Connector created by the Administrator and visible to every authenticated User. It appears only in the platform section of its catalog, remains editable only by the Administrator, and may be selected by Users alongside their private resources.
+An Expert, Skill, or MCP Connector owned by an Administrator and visible to every authenticated User in the platform section of its catalog. Administrator-created resources remain editable only by that Administrator; default Expert and Skill originals distributed with the platform are immutable and may be selected alongside private resources.
 _Avoid_: shared User resource, public credential, CLI Connector Definition
 
 **Expert**:

@@ -38,19 +38,30 @@ func (store *Store) InstallUpload(ctx context.Context, ownerID string, archive [
 }
 
 func (store *Store) InstallUploadWithMetadata(ctx context.Context, ownerID string, archive []byte) (objectKey, digest string, metadata Metadata, err error) {
-	if len(archive) == 0 || len(archive) > maxArchiveSize {
-		return "", "", Metadata{}, fmt.Errorf("Skill archive must contain 1-50 MiB")
-	}
-	normalized, err := normalizeArchive(ctx, archive)
-	if err != nil {
-		return "", "", Metadata{}, err
-	}
-	metadata, err = metadataFromArchive(normalized)
+	normalized, _, metadata, err := ValidateUpload(ctx, archive)
 	if err != nil {
 		return "", "", Metadata{}, err
 	}
 	objectKey, digest, err = store.put(ctx, ownerID, normalized)
 	return objectKey, digest, metadata, err
+}
+
+// ValidateUpload applies the same archive and metadata checks used by uploads
+// without assigning an owner or writing an Object Key.
+func ValidateUpload(ctx context.Context, archive []byte) ([]byte, string, Metadata, error) {
+	if len(archive) == 0 || len(archive) > maxArchiveSize {
+		return nil, "", Metadata{}, fmt.Errorf("Skill archive must contain 1-50 MiB")
+	}
+	normalized, err := normalizeArchive(ctx, archive)
+	if err != nil {
+		return nil, "", Metadata{}, err
+	}
+	metadata, err := metadataFromArchive(normalized)
+	if err != nil {
+		return nil, "", Metadata{}, err
+	}
+	sum := sha256.Sum256(normalized)
+	return normalized, hex.EncodeToString(sum[:]), metadata, nil
 }
 
 func (store *Store) InstallGit(ctx context.Context, ownerID, repositoryURL, ref string) (objectKey, digest, resolvedRef string, err error) {
