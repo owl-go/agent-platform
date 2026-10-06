@@ -193,6 +193,12 @@ def gates(source, plan, public, log):
         run(["make", "web-build"], cwd=source, env={**os.environ, **public}, log=log)
 
 
+def require_build_space(source, plan):
+    required = 4 * 1024**3 if plan["backend"] else 1024**3 if plan["web"] else 0
+    if shutil.disk_usage(source).free < required:
+        raise DeploymentError(f"发布工作站构建空间不足 {required // 1024**3} GiB，请释放过期构建缓存后重试；服务器尚未更新")
+
+
 def local_main(args):
     profile = load_profile(args)
     if args.configure:
@@ -222,6 +228,7 @@ def local_main(args):
         integrated = source / "scripts/deployment.py"
         if not integrated.exists() or integrated.read_bytes() != Path(__file__).read_bytes():
             raise DeploymentError("部署入口尚未集成到 main_temp；先完成集成，再运行 make deploy")
+        require_build_space(source, plan)
         with tempfile.NamedTemporaryFile(mode="w", prefix="aw-deploy-gates-", suffix=".log", delete=False) as log:
             print("自动执行适用检查…", flush=True)
             gates(source, plan, state["public"], log)
