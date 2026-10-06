@@ -34,14 +34,15 @@ type registrationSettingsModel struct {
 func (registrationSettingsModel) TableName() string { return "registration_settings" }
 
 type registrationAttemptModel struct {
-	ID                string `gorm:"primaryKey"`
-	Provider          string
-	Status            string
-	CodeHash          *string
-	LoginCodeHash     *string
-	PayloadCiphertext []byte
-	ExpiresAt         time.Time
-	Version           int64
+	ID                     string `gorm:"primaryKey"`
+	Provider               string
+	Status                 string
+	CodeHash               *string
+	LoginCodeHash          *string
+	LoginCodeReservedUntil *time.Time
+	PayloadCiphertext      []byte
+	ExpiresAt              time.Time
+	Version                int64
 }
 
 func (registrationAttemptModel) TableName() string { return "registration_attempts" }
@@ -140,6 +141,9 @@ func (r *RegistrationRepository) attemptModel(a domain.RegistrationAttempt) (reg
 }
 func (r *RegistrationRepository) CreateAttempt(ctx context.Context, a domain.RegistrationAttempt) error {
 	row, err := r.attemptModel(a)
+	if a.LoginCodeHash != "" {
+		row.LoginCodeReservedUntil = &a.ExpiresAt
+	}
 	if err != nil {
 		return err
 	}
@@ -148,7 +152,7 @@ func (r *RegistrationRepository) CreateAttempt(ctx context.Context, a domain.Reg
 		if err := tx.Exec("SELECT pg_advisory_xact_lock(731924611)").Error; err != nil {
 			return err
 		}
-		if err := tx.Where("expires_at < ?", time.Now().UTC()).Delete(&registrationAttemptModel{}).Error; err != nil {
+		if err := tx.Where("expires_at < ? AND (login_code_reserved_until IS NULL OR login_code_reserved_until <= ?)", time.Now().UTC(), time.Now().UTC()).Delete(&registrationAttemptModel{}).Error; err != nil {
 			return err
 		}
 		var count int64
@@ -158,7 +162,23 @@ func (r *RegistrationRepository) CreateAttempt(ctx context.Context, a domain.Reg
 		if count >= 10000 {
 			return fmt.Errorf("registration capacity reached")
 		}
-		return tx.Create(&row).Error
+		if a.Provider == domain.RegistrationWeChat {
+			var reserved int64
+			if err := tx.Model(&registrationAttemptModel{}).Where("provider=?", a.Provider).Count(&reserved).Error; err != nil {
+				return err
+			}
+			if reserved >= 100 {
+				return fmt.Errorf("registration capacity reached")
+			}
+		}
+		result := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "login_code_hash"}}, DoNothing: true}).Create(&row)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrLoginCodeConflict
+		}
+		return nil
 	})
 }
 func (r *RegistrationRepository) decodeAttempt(row registrationAttemptModel) (domain.RegistrationAttempt, error) {
@@ -217,4 +237,46 @@ func (r *RegistrationRepository) TransitionAttempt(ctx context.Context, a domain
 		return domain.ErrConflict
 	}
 	return nil
+}
+
+// ReserveWeChatVerification bounds numeric guesses across API replicas. Only
+// authenticated callback identities reach this method; identifiers stay hashed.
+func (r *RegistrationRepository) ReserveWeChatVerification(ctx context.Context, senderHash string) error {
+	if len(senderHash) != 64 {
+		return domain.ErrUnauthenticated
+	}
+	now := time.Now().UTC()
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("SELECT pg_advisory_xact_lock(731924612)").Error; err != nil {
+			return err
+		}
+		if err := tx.Exec("DELETE FROM registration_verification_limits WHERE expires_at <= ?", now).Error; err != nil {
+			return err
+		}
+		var count int64
+		if err := tx.Table("registration_verification_limits").Count(&count).Error; err != nil {
+			return err
+		}
+		if count >= 10000 {
+			return domain.ErrRegistrationRateLimited
+		}
+		for _, bucket := range []struct {
+			key    string
+			limit  int
+			window time.Duration
+		}{
+			{senderHash, 5, 5 * time.Minute}, {"global", 30, time.Minute},
+		} {
+			result := tx.Exec(`INSERT INTO registration_verification_limits (bucket_key, attempts, expires_at)
+    VALUES (?, 1, ?) ON CONFLICT (bucket_key) DO UPDATE SET attempts=registration_verification_limits.attempts+1
+    WHERE registration_verification_limits.attempts < ?`, bucket.key, now.Add(bucket.window), bucket.limit)
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected != 1 {
+				return domain.ErrRegistrationRateLimited
+			}
+		}
+		return nil
+	})
 }

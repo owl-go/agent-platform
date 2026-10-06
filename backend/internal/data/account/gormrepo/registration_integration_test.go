@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -101,7 +102,7 @@ func TestRegistrationRepositoryEncryptedSettingsAuditCASAndAttemptConsumption(t 
 			t.Fatal("no-email registration failed", err)
 		}
 	}
-	loginCode := "AW-ABCD-EFGH-JKLM"
+	loginCode := "0382"
 	loginHash := strings.Repeat("b", 64)
 	attempt := domain.RegistrationAttempt{ID: "attempt", Provider: domain.RegistrationWeChat, ConfigVersion: settings.Version, BrowserHash: "browser", LoginCode: loginCode, LoginCodeHash: loginHash, Status: "waiting", ExpiresAt: time.Now().Add(time.Minute), Version: 1}
 	if err = repo.CreateAttempt(t.Context(), attempt); err != nil {
@@ -116,7 +117,7 @@ func TestRegistrationRepositoryEncryptedSettingsAuditCASAndAttemptConsumption(t 
 	}
 	duplicate := attempt
 	duplicate.ID = "duplicate"
-	if err = repo.CreateAttempt(t.Context(), duplicate); err == nil {
+	if err = repo.CreateAttempt(t.Context(), duplicate); !errors.Is(err, domain.ErrLoginCodeConflict) {
 		t.Fatal("duplicate login hash accepted")
 	}
 	attempt.Status = "verified"
@@ -179,5 +180,91 @@ func TestRegistrationRepositoryEncryptedSettingsAuditCASAndAttemptConsumption(t 
 	}
 	if _, err = repo.Attempt(t.Context(), "expired"); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatal("expired attempt not cleaned")
+	}
+}
+
+func TestRegistrationVerificationLimitsAreSharedAtomicAndExpire(t *testing.T) {
+	db := registrationDB(t)
+	box, _ := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	repos := []*RegistrationRepository{NewRegistration(db, box), NewRegistration(db, box)}
+	sender := strings.Repeat("a", 64)
+	var wg sync.WaitGroup
+	results := make(chan error, 20)
+	for i := range 20 {
+		wg.Add(1)
+		go func() { defer wg.Done(); results <- repos[i%2].ReserveWeChatVerification(context.Background(), sender) }()
+	}
+	wg.Wait()
+	close(results)
+	accepted := 0
+	for err := range results {
+		if err == nil {
+			accepted++
+		} else if !errors.Is(err, domain.ErrRegistrationRateLimited) {
+			t.Fatal(err)
+		}
+	}
+	if accepted != 5 {
+		t.Fatalf("accepted %d concurrent sender guesses", accepted)
+	}
+	var global int
+	if err := db.Raw("SELECT attempts FROM registration_verification_limits WHERE bucket_key='global'").Scan(&global).Error; err != nil || global != 5 {
+		t.Fatal("blocked sender spent global budget", global, err)
+	}
+	for i := range 25 {
+		if err := repos[0].ReserveWeChatVerification(t.Context(), fmt.Sprintf("%064x", i+1)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := repos[1].ReserveWeChatVerification(t.Context(), strings.Repeat("b", 64)); !errors.Is(err, domain.ErrRegistrationRateLimited) {
+		t.Fatal("global verification limit bypassed", err)
+	}
+	if err := db.Exec("UPDATE registration_verification_limits SET expires_at=?", time.Now().Add(-time.Second)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repos[1].ReserveWeChatVerification(t.Context(), sender); err != nil {
+		t.Fatal("expired sender remained locked", err)
+	}
+}
+func TestRegistrationShortCodeReservationSurvivesHandoffAndCapacityIsBounded(t *testing.T) {
+	db := registrationDB(t)
+	box, _ := secretcrypto.New(base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	repo := NewRegistration(db, box)
+	a := domain.RegistrationAttempt{ID: "original", Provider: domain.RegistrationWeChat, LoginCode: "0007", LoginCodeHash: strings.Repeat("a", 64), Status: "waiting", Version: 1, ExpiresAt: time.Now().Add(5 * time.Minute)}
+	if err := repo.CreateAttempt(t.Context(), a); err != nil {
+		t.Fatal(err)
+	}
+	// The OIDC code expires sooner, but the old message must not confirm a new browser.
+	a.Status = "issued"
+	a.ExpiresAt = time.Now().Add(-time.Second)
+	if err := repo.TransitionAttempt(t.Context(), a, "waiting"); err != nil {
+		t.Fatal(err)
+	}
+	duplicate := a
+	duplicate.ID = "duplicate"
+	duplicate.Status = "waiting"
+	duplicate.ExpiresAt = time.Now().Add(time.Minute)
+	if err := repo.CreateAttempt(t.Context(), duplicate); !errors.Is(err, domain.ErrLoginCodeConflict) {
+		t.Fatal("handoff prematurely released the code", err)
+	}
+	for i := 1; i < 100; i++ {
+		next := duplicate
+		next.ID = fmt.Sprintf("attempt-%d", i)
+		next.LoginCodeHash = fmt.Sprintf("%064x", i)
+		if err := repo.CreateAttempt(t.Context(), next); err != nil {
+			t.Fatal(err)
+		}
+	}
+	next := duplicate
+	next.ID = "overflow"
+	next.LoginCodeHash = strings.Repeat("b", 64)
+	if err := repo.CreateAttempt(t.Context(), next); err == nil {
+		t.Fatal("short-code capacity was not bounded")
+	}
+	if err := db.Model(&registrationAttemptModel{}).Where("id=?", a.ID).Update("login_code_reserved_until", time.Now().Add(-time.Second)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.CreateAttempt(t.Context(), duplicate); err != nil {
+		t.Fatal("expired reservation not released", err)
 	}
 }

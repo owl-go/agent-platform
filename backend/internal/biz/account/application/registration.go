@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base32"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/big"
 	"net/url"
 	"strings"
 	"time"
@@ -23,6 +23,7 @@ type RegistrationRepository interface {
 	Attempt(context.Context, string) (domain.RegistrationAttempt, error)
 	AttemptByCode(context.Context, string) (domain.RegistrationAttempt, error)
 	AttemptByLoginCode(context.Context, string) (domain.RegistrationAttempt, error)
+	ReserveWeChatVerification(context.Context, string) error
 	TransitionAttempt(context.Context, domain.RegistrationAttempt, string) error
 }
 type RegistrationIdentityProvider interface {
@@ -191,8 +192,19 @@ func (s *Registration) Begin(ctx context.Context, provider, redirect, state, non
 		destination = "https://open.weixin.qq.com/qr/code?username=" + url.QueryEscape(settings.OfficialAccountID)
 	}
 	attempt.QRURL = destination
-	if err = s.repo.CreateAttempt(ctx, attempt); err != nil {
-		return attempt, "", "", err
+	for retry := 0; ; retry++ {
+		err = s.repo.CreateAttempt(ctx, attempt)
+		if err == nil {
+			break
+		}
+		if provider != domain.RegistrationWeChat || !errors.Is(err, domain.ErrLoginCodeConflict) || retry >= 31 {
+			return attempt, "", "", err
+		}
+		attempt.LoginCode, err = RegistrationLoginCode()
+		if err != nil {
+			return attempt, "", "", err
+		}
+		attempt.LoginCodeHash = RegistrationHash(attempt.LoginCode)
 	}
 	return attempt, browser, destination, nil
 }
@@ -234,25 +246,31 @@ func (s *Registration) VerifyWeChat(ctx context.Context, code, externalID string
 	if code == "" {
 		return domain.ErrUnauthenticated
 	}
-	a, err := s.repo.AttemptByLoginCode(ctx, RegistrationHash(code))
-	if err != nil {
-		return err
-	}
 	settings, err := s.PublicSettings(ctx, domain.RegistrationWeChat)
 	if err != nil {
 		return err
 	}
-	if a.Provider != domain.RegistrationWeChat || a.ConfigVersion != settings.Version || !time.Now().Before(a.ExpiresAt) || a.LoginCodeHash == "" || a.LoginCodeHash != RegistrationHash(code) {
-		return domain.ErrUnauthenticated
-	}
-	identity, err := domain.NewRegistrationIdentity(a.Provider, settings.AppID, externalID, "微信用户")
+	identity, err := domain.NewRegistrationIdentity(domain.RegistrationWeChat, settings.AppID, externalID, "微信用户")
 	if err != nil {
 		return err
 	}
+	a, lookupErr := s.repo.AttemptByLoginCode(ctx, RegistrationHash(code))
+	valid := lookupErr == nil && a.Provider == domain.RegistrationWeChat && a.ConfigVersion == settings.Version && time.Now().Before(a.ExpiresAt) && a.LoginCodeHash == RegistrationHash(code)
+	// Already confirmed messages from the same identity are provider retries, not
+	// new guesses. They cannot bind a waiting attempt or replace another identity.
+	if valid && a.Status != "waiting" && a.Identity.Subject == identity.Subject {
+		return nil
+	}
+	if err = s.repo.ReserveWeChatVerification(ctx, RegistrationHash(settings.AppID+":"+externalID)); err != nil {
+		return err
+	}
+	if lookupErr != nil {
+		return lookupErr
+	}
+	if !valid {
+		return domain.ErrUnauthenticated
+	}
 	if a.Status != "waiting" {
-		if a.Identity.Subject == identity.Subject {
-			return nil
-		}
 		return domain.ErrConflict
 	}
 	a.Identity = identity
@@ -269,32 +287,27 @@ func (s *Registration) VerifyWeChat(ctx context.Context, code, externalID string
 	return err
 }
 
-const registrationCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-// Twelve random base32 characters provide 60 bits of entropy. Codes have their
-// own lookup hash and never act as an OIDC token or browser authorization.
+// Login codes are short browser challenges, never OIDC or product tokens.
+// rand.Int samples uniformly and formatting preserves leading zeroes.
 func RegistrationLoginCode() (string, error) {
-	bytes := make([]byte, 8)
-	if _, err := rand.Read(bytes); err != nil {
+	value, err := rand.Int(rand.Reader, big.NewInt(10000))
+	if err != nil {
 		return "", err
 	}
-	code := base32.NewEncoding(registrationCodeAlphabet).WithPadding(base32.NoPadding).EncodeToString(bytes)[:12]
-	return "AW-" + code[:4] + "-" + code[4:8] + "-" + code[8:], nil
+	return fmt.Sprintf("%04d", value.Int64()), nil
 }
 
 func NormalizeRegistrationLoginCode(value string) string {
-	value = strings.ToUpper(strings.TrimSpace(value))
-	value = strings.ReplaceAll(value, "-", "")
-	if len(value) != 14 || !strings.HasPrefix(value, "AW") {
+	value = strings.TrimSpace(value)
+	if len(value) != 4 {
 		return ""
 	}
-	code := value[2:]
-	for _, c := range code {
-		if !strings.ContainsRune(registrationCodeAlphabet, c) {
+	for _, digit := range value {
+		if digit < '0' || digit > '9' {
 			return ""
 		}
 	}
-	return "AW-" + code[:4] + "-" + code[4:8] + "-" + code[8:]
+	return value
 }
 func (s *Registration) Complete(ctx context.Context, id, browser string) (domain.RegistrationAttempt, string, error) {
 	a, err := s.BrowserAttempt(ctx, id, browser)

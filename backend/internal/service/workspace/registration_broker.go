@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -139,7 +140,7 @@ func (service *Service) registrationHTTP(writer http.ResponseWriter, request *ht
 				return
 			}
 			writer.Header().Set("Content-Type", "application/json")
-			if provider == accountdomain.RegistrationWeChat && a.LoginCode == "" {
+			if provider == accountdomain.RegistrationWeChat && accountapplication.NormalizeRegistrationLoginCode(a.LoginCode) == "" {
 				writeAuthError(writer, 410, "registration_expired")
 				return
 			}
@@ -295,8 +296,10 @@ func (b *registrationBroker) wechatCallback(w http.ResponseWriter, r *http.Reque
 		code := accountapplication.NormalizeRegistrationLoginCode(message.Content)
 		reply = "请将当前登录网页上的完整一次性登录码发送给本公众号。"
 		if code != "" {
-			if b.app.VerifyWeChat(r.Context(), code, message.FromUserName) == nil {
+			if err := b.app.VerifyWeChat(r.Context(), code, message.FromUserName); err == nil {
 				reply = "登录已确认，请回到发起登录的网页。"
+			} else if errors.Is(err, accountdomain.ErrRegistrationRateLimited) {
+				reply = "尝试过于频繁，请稍后再试。"
 			} else {
 				reply = "登录码无效或已过期，请返回网页重新发起登录。"
 			}
