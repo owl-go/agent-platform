@@ -1,0 +1,18 @@
+Source: https://cli.github.com/manual/gh_gpg-key_add
+
+gh gpg-key add
+
+Add a GPG key to your GitHub account
+
+gh gpg-key add [<key-file>] [flags]
+
+Options
+
+	-t, 
+		--title <string>
+
+	Title for the new key
+
+See also
+
+  gh gpg-key

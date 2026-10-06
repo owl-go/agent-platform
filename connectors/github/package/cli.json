@@ -1,0 +1,2257 @@
+{
+  "activation_scopes": [
+    "repo",
+    "read:org",
+    "gist",
+    "project",
+    "workflow"
+  ],
+  "auth_url_domains": [
+    "github.com"
+  ],
+  "authentication_driver": "connector_package",
+  "bundle_path": "node_modules/@agent-platform/github-connector/launcher.cjs",
+  "capabilities": [
+    {
+      "argv_prefix": [
+        "cache",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_cache_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "cache",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_cache_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "discussion",
+        "comment"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_discussion_comment",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "discussion",
+        "create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_discussion_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "discussion",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_discussion_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "discussion",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_discussion_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "discussion",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_discussion_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "gist",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_gist_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "gist"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "gist",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_gist_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "gist"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "gist",
+        "rename"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_gist_rename",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "gist"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "gist",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_gist_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "gist"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "gpg-key",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_gpg_key_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "close"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_close",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "comment"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_comment",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "lock"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_lock",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "pin"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_pin",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "reopen"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_reopen",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "status"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_status",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "transfer"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_transfer",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "unlock"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_unlock",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "unpin"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_unpin",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "issue",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_issue_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "label",
+        "clone"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_label_clone",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "label",
+        "create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_label_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "label",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_label_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "label",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_label_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "label",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_label_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "org",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_org_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "read:org"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "checks"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_checks",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "close"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_close",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "comment"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_comment",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "diff"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_diff",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "lock"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_lock",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "merge"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_merge",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "ready"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_ready",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "reopen"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_reopen",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "review"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_review",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "status"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_status",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "unlock"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_unlock",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "update-branch"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_update_branch",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "pr",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_pr_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "close"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_close",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "copy"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_copy",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "field-create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_field_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "field-delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_field_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "field-list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_field_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "item-add"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_item_add",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "item-archive"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_item_archive",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "item-create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_item_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "item-delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_item_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "item-edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_item_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "item-list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_item_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "link"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_link",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "mark-template"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_mark_template",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "unlink"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_unlink",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_project_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "release",
+        "create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_release_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "release",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_release_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "release",
+        "delete-asset"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_release_delete_asset",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "release",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_release_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "release",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_release_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "release",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_release_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "archive"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_archive",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "autolink",
+        "create"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_autolink_create",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "autolink",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_autolink_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "autolink",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_autolink_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "autolink",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_autolink_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "deploy-key",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_deploy_key_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "edit"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_edit",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "gitignore",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_gitignore_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "gitignore",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_gitignore_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "license",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_license_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "license",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_license_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "read-dir"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_read_dir",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "read-file"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_read_file",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "rename"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_rename",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "unarchive"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_unarchive",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "repo",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_repo_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "ruleset",
+        "check"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_ruleset_check",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "ruleset",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_ruleset_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "ruleset",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_ruleset_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "run",
+        "cancel"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_run_cancel",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "run",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_run_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "run",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_run_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "run",
+        "rerun"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_run_rerun",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "run",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_run_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "search",
+        "code"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_search_code",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "search",
+        "commits"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_search_commits",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "search",
+        "issues"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_search_issues",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "search",
+        "prs"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_search_prs",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "search",
+        "repos"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_search_repos",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "secret",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_secret_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "ssh-key",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_ssh_key_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "variable",
+        "delete"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_variable_delete",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "variable",
+        "get"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_variable_get",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "variable",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_variable_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "variable",
+        "set"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_variable_set",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "workflow",
+        "disable"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_workflow_disable",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "workflow",
+        "enable"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_workflow_enable",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "workflow",
+        "list"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_workflow_list",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "workflow",
+        "run"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_workflow_run",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "repo",
+        "workflow"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "workflow",
+        "view"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_workflow_view",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "repo"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "--help"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_help",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 30
+    },
+    {
+      "argv_prefix": [
+        "--version"
+      ],
+      "egress_hosts": [
+        "api.github.com",
+        "github.com"
+      ],
+      "id": "gh_version",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 30
+    }
+  ],
+  "commands": {
+    "auth": {
+      "argv": [
+        "gh",
+        "platform",
+        "auth"
+      ],
+      "timeout_seconds": 30
+    },
+    "init": {
+      "argv": [
+        "gh",
+        "platform",
+        "init"
+      ],
+      "timeout_seconds": 30
+    },
+    "status": {
+      "argv": [
+        "gh",
+        "platform",
+        "status"
+      ],
+      "timeout_seconds": 30
+    },
+    "unAuth": {
+      "argv": [
+        "gh",
+        "platform",
+        "unauth"
+      ],
+      "timeout_seconds": 30
+    }
+  },
+  "egress_hosts": [
+    "api.github.com",
+    "github.com"
+  ],
+  "executable": "gh",
+  "resource_limits": {
+    "child_processes": 32,
+    "concurrency": 1,
+    "cpu_millis": 1000,
+    "memory_mib": 512,
+    "timeout_seconds": 120
+  },
+  "runtime": {
+    "digest": "sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b",
+    "kind": "node",
+    "version": "24.15.0"
+  },
+  "status_match": {
+    "equals": true,
+    "json_path": "$.configured"
+  },
+  "timeout_seconds": 120
+}

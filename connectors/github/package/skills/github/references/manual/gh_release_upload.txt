@@ -1,0 +1,30 @@
+Source: https://cli.github.com/manual/gh_release_upload
+
+gh release upload
+
+gh release upload <tag> <files>... [flags]
+
+Upload asset files to a GitHub Release.
+
+To define a display label for an asset, append text starting with # after the
+file name.
+
+When using --clobber, existing assets are deleted before new assets are uploaded.
+If the upload fails, the original assets will be lost.
+
+Options
+
+		--clobber
+
+	Delete and re-upload existing assets of the same name
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh release

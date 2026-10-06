@@ -1,0 +1,24 @@
+Source: https://cli.github.com/manual/gh_label_delete
+
+gh label delete
+
+Delete a label from a repository
+
+gh label delete <name> [flags]
+
+Options
+
+		--yes
+
+	Confirm deletion without prompting
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh label

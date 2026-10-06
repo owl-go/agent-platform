@@ -1,0 +1,6 @@
+# Imported package bytes define immutable revisions. Preserve upstream line
+# endings and whitespace instead of changing the package checksum during moves.
+connectors/*/package/** -text -whitespace
+skills/*/** -text -whitespace
+# Directory metadata is maintained here and follows normal text checks.
+skills/*/resource.json text whitespace

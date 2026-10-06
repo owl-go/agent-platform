@@ -1,0 +1,34 @@
+Source: https://cli.github.com/manual/gh_codespace_rebuild
+
+gh codespace rebuild
+
+gh codespace rebuild [flags]
+
+Rebuilding recreates your codespace.
+
+Your code and any current changes will be preserved. Your codespace will be rebuilt using
+your working directory's dev container. A full rebuild also removes cached Docker images.
+
+Options
+
+	-c, 
+		--codespace <string>
+
+	Name of the codespace
+
+		--full
+
+	Perform a full rebuild
+
+	-R, 
+		--repo <string>
+
+	Filter codespace selection by repository name (user/repo)
+
+		--repo-owner <string>
+
+	Filter codespace selection by repository owner (username or org)
+
+See also
+
+  gh codespace

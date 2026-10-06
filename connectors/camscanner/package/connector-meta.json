@@ -1,0 +1,17 @@
+{
+  "auth_mode": "oauth",
+  "description": "图片增强、OCR、PDF 与 Office 格式转换、多图合并和云文档管理；浏览器授权连接个人账号。",
+  "examples_en": [
+    "Recognize text in a scan",
+    "Convert a PDF to Word"
+  ],
+  "examples_zh": [
+    "识别扫描件中的文字",
+    "将 PDF 转换为 Word"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "name": "扫描全能王",
+  "source": "camscanner",
+  "type": "cli",
+  "version": "1.1.8"
+}

@@ -1,0 +1,25 @@
+Source: https://cli.github.com/manual/gh_release_delete-asset
+
+gh release delete-asset
+
+Delete an asset from a release
+
+gh release delete-asset <tag> <asset-name> [flags]
+
+Options
+
+	-y, 
+		--yes
+
+	Skip the confirmation prompt
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh release

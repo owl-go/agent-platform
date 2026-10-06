@@ -1,0 +1,1 @@
+{"auth_mode": "cli", "description": "墨刀 AI MCP 的 CLI 桥接器：生成原型、React 和 PRD，查询任务并导入 HTML；使用个人空间令牌连接。", "examples_en": ["Check Modao account benefits", "Generate and import an HTML prototype"], "examples_zh": ["查询墨刀账号权益", "生成 HTML 原型并导入墨刀"], "minPlatformVersion": "1.0.0", "name": "墨刀", "source": "modao", "type": "cli", "version": "0.1.1"}

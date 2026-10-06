@@ -1,0 +1,21 @@
+Source: https://cli.github.com/manual/gh_alias
+
+gh alias
+
+Aliases can be used to make shortcuts for gh commands or to compose multiple commands.
+
+Run gh help alias set to learn more.
+
+Available commands
+
+  gh alias delete
+
+  gh alias import
+
+  gh alias list
+
+  gh alias set
+
+See also
+
+  gh

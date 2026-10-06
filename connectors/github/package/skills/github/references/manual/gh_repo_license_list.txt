@@ -1,0 +1,17 @@
+Source: https://cli.github.com/manual/gh_repo_license_list
+
+gh repo license list
+
+gh repo license list
+
+List common repository licenses.
+
+For even more licenses, visit https://choosealicense.com/appendix
+
+ALIASES
+
+gh repo license ls
+
+See also
+
+  gh repo license

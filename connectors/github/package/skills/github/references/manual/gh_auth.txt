@@ -1,0 +1,25 @@
+Source: https://cli.github.com/manual/gh_auth
+
+gh auth
+
+Authenticate gh and git with GitHub
+
+Available commands
+
+  gh auth login
+
+  gh auth logout
+
+  gh auth refresh
+
+  gh auth setup-git
+
+  gh auth status
+
+  gh auth switch
+
+  gh auth token
+
+See also
+
+  gh

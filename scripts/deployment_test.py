@@ -70,6 +70,15 @@ class DeploymentTests(unittest.TestCase):
             deployment.make_plan({}, {deployment.MIGRATIONS + "/000001.sql": "old"})
         self.assertTrue(deployment.make_plan({deployment.MIGRATIONS + "/000002.sql": "new"}, {})["migration"])
 
+    def test_directory_resource_changes_rebuild_services(self):
+        for path in ("resources.json", "connectors/example/package/mcp.json",
+                     "skills/example/SKILL.md", "experts/example/expert.json"):
+            with self.subTest(path=path):
+                base = {path: "before"}
+                self.assertEqual(deployment.make_plan({path: "after"}, base),
+                                 {"backend": True, "web": False, "migration": False})
+                self.assertTrue(deployment.make_plan({}, base)["backend"])
+
     def test_migration_verification_preserves_history_and_checks_exact_source_hashes(self):
         files = {deployment.MIGRATIONS + "/000002.sql": "source-digest"}
         previous = {"000001_retired.sql": "historical-digest"}

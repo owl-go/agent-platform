@@ -1,0 +1,36 @@
+Source: https://cli.github.com/manual/gh_discussion
+
+gh discussion
+
+Working with discussions in the GitHub CLI is in preview and subject to change without notice.
+
+General commands
+
+  gh discussion create
+
+  gh discussion list
+
+Targeted commands
+
+  gh discussion comment
+
+  gh discussion edit
+
+  gh discussion view
+
+Options
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+$ gh discussion list
+$ gh discussion create --category "General" --title "Hello" --body "Hello World!"
+$ gh discussion view 123
+
+See also
+
+  gh

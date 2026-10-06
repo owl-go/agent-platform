@@ -1,0 +1,14 @@
+Source: https://cli.github.com/manual/gh_preview
+
+gh preview
+
+Preview commands are for testing, demonstrative, and development purposes only.
+They should be considered unstable and can change at any time.
+
+Available commands
+
+  gh preview prompter
+
+See also
+
+  gh

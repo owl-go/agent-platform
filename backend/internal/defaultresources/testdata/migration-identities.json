@@ -1,0 +1,150 @@
+{
+  "connector:ai-hive": {
+    "sha256": "9184a303e13e54c7013a290e73ca96989c64118b33748ae4d300b3bae1f68289",
+    "version": "0.3.0"
+  },
+  "connector:camscanner": {
+    "sha256": "12879d44e32adbd42011fcfe8b2d93e30f6f271f71310ef780c05acd32f36c23",
+    "version": "1.1.8"
+  },
+  "connector:caoliao": {
+    "sha256": "019e3d30ab19bca4fa3983de1214b965e9bd2ed11249123df539ad613ed1d0f1",
+    "version": "1.0.0"
+  },
+  "connector:dingtalk": {
+    "sha256": "702b014845c1ad261019b6fb25db2a42c904c378b9ca6a6d4b45f4723547fc6c",
+    "version": "1.0.64"
+  },
+  "connector:feishu": {
+    "sha256": "f677b0a80b6c511652f0fa5012fb314623fa7cb4c5a1f051b36d4cc8ac2312ed",
+    "version": "1.0.96"
+  },
+  "connector:github": {
+    "sha256": "ae22bb4fcf2b27b4bb18c4e3e545ec9bdd57247438cdd6187884609560da24b4",
+    "version": "0.1.0"
+  },
+  "connector:kling-ai": {
+    "sha256": "6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7",
+    "version": "0.1.0"
+  },
+  "connector:linear": {
+    "sha256": "677938b0e9d4a479d13e481ae011b784e4c4d3a25f317e75469d3aca9e9bbd39",
+    "version": "1.0.0"
+  },
+  "connector:mindbye": {
+    "sha256": "e1f7bbd076ad91403898dfb5b929eae6f29dadc971fd9197ee0d588a9a75cba0",
+    "version": "1.0.0"
+  },
+  "connector:modao": {
+    "sha256": "95aa27ff3182c64a0bc297a1efd4db2423a1bd469464b4f83c57814f9e493645",
+    "version": "0.1.1"
+  },
+  "connector:moka-hr": {
+    "sha256": "4928abaf8d99dc10bde2b5d6e0fcdc57d6fba616ce6854f920c71574ff8462c3",
+    "version": "0.1.0"
+  },
+  "connector:notion": {
+    "sha256": "660a91d5166392c7a20a6d25406fd4131bc9a5fe26ebbf9e2fe4bb289e1fe5f0",
+    "version": "0.23.15"
+  },
+  "connector:openboost": {
+    "sha256": "9d73b98a675df28e2b3050567e8f732dce81d3a94ec3205f560b6d89021d83af",
+    "version": "0.1.0"
+  },
+  "connector:picset-ai": {
+    "sha256": "0a9798d2ada16d636dbde4ab7f57ac728cd68fb3514ce4bdb7c58468ac9a8463",
+    "version": "0.1.0"
+  },
+  "connector:pixso": {
+    "sha256": "c6c388adad99a375af6dd327fbacaadb216c4e588312395fc9adffe22b3c52c4",
+    "version": "1.0.0"
+  },
+  "connector:pkulaw": {
+    "sha256": "66118421d6d83f98a13e6479113592222dd782fc7970ee177bd971c73db41669",
+    "version": "1.0.0"
+  },
+  "connector:teambition": {
+    "sha256": "90d6d31b7151061dc247494f3b1e520fbd0c411c89c49b856a7d8fdd5ff48f3d",
+    "version": "0.3.7"
+  },
+  "connector:tianyancha": {
+    "sha256": "8e1b4b5d2eb1a7a9ab914a85820e51e9162742a069d3d148c770b3701eeaabec",
+    "version": "1.0.0"
+  },
+  "connector:wecom": {
+    "sha256": "a166ce54b574b0e5a4ce090835431192c8dcb0601300e3449fde839049930cc0",
+    "version": "1.4.2"
+  },
+  "connector:xiaoe": {
+    "sha256": "cfc5ca7f6f6670b41416dc594b1d308fa3fdf2a5507e4386c65071f1ac07c543",
+    "version": "0.1.0"
+  },
+  "expert:default.expert.ai-workflow-architect": {
+    "sha256": "15dde7d17ded180d0442a92c5d474dbbe9b4b8722da50df526c16d52ca1f7b37",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.amazon-advertising": {
+    "sha256": "15a94e9c2da1cbffedb32f04fd064506a6bd49dab39c4f1f85e72d0870a64aea",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.amazon-listing": {
+    "sha256": "f0b92c2b409a9027a6ed4c74c88c732fac6a9e4e131cc30061335bcfed41b9a5",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.cross-border-ecommerce": {
+    "sha256": "5794db97862f78cc105e4ff7db5ff71d45d56b7a92e5b967d5845c89da9b24a5",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.cross-border-operations": {
+    "sha256": "0413e0d4cd1699ada54f108adefee15e3be2fea53fc9a90c8d8e1312aff71755",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.product-manager": {
+    "sha256": "15f9d44c2b58bd95f3c9b8858af52a691a105244ce6e7d548e1c7340ebc40b4f",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.travel-planning": {
+    "sha256": "58c326b8d4e5f4e6e8c85e162a199c460a866970d2c719ac4147df3f674fc898",
+    "version": "1.0.0"
+  },
+  "expert:default.expert.ui-designer": {
+    "sha256": "c34a3bd9837ca409917dcb2996114707c73593fa355cec2cdb3d3cd1aac0ed3b",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.frontend-design": {
+    "sha256": "2d172bd52df05ba47f0760b4b35a8df5a5d4b801d38741b2f186c421bac325bd",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.grill-me": {
+    "sha256": "ba07596380fee6faad8ca3c17a724fa2de1a0cd721fda6546c81faa57c38b851",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.pdf": {
+    "sha256": "db6bb928479bf3a75dc5a3743a126e52eaa6a48efe215c08a24e7883a5fecb12",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.pdf-image-text-extractor": {
+    "sha256": "366aeb5181f49ba7eee680d880a9a97fc477a7d7a2202176be1e9a19995f0c88",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.ppt-generator": {
+    "sha256": "8abe4e3ae5df9a2ce5f99e498a48cf025f55da5624e5ca7e45f9ff15205aee1f",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.tencent-meeting": {
+    "sha256": "9e1f02cd93fd7c93b342e933d268980c5ca828daba5e224ebea471183ad1d5c9",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.tencent-survey": {
+    "sha256": "5f706f687f07d57107478530bd7ef50c5c174d9110993f85a02e1e0c490ef1b1",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.travel-planning": {
+    "sha256": "f7191954795c98c46c252636746edb441265e98471db4643993c7f5ad3a94e36",
+    "version": "1.0.0"
+  },
+  "skill:default.skill.weekly-report": {
+    "sha256": "e8262ad0c04faef284a036e812baca26daf986e9ab8e16f96595476703dd4ab7",
+    "version": "1.0.0"
+  }
+}

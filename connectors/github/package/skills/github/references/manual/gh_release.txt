@@ -1,0 +1,40 @@
+Source: https://cli.github.com/manual/gh_release
+
+gh release
+
+Manage releases
+
+General commands
+
+  gh release create
+
+  gh release list
+
+Targeted commands
+
+  gh release delete
+
+  gh release delete-asset
+
+  gh release download
+
+  gh release edit
+
+  gh release upload
+
+  gh release verify
+
+  gh release verify-asset
+
+  gh release view
+
+Options
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh

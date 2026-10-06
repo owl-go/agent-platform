@@ -1,0 +1,29 @@
+Source: https://cli.github.com/manual/gh_release_delete
+
+gh release delete
+
+Delete a release
+
+gh release delete <tag> [flags]
+
+Options
+
+		--cleanup-tag
+
+	Delete the specified tag in addition to its release
+
+	-y, 
+		--yes
+
+	Skip the confirmation prompt
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh release

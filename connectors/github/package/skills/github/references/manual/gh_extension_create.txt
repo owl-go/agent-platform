@@ -1,0 +1,31 @@
+Source: https://cli.github.com/manual/gh_extension_create
+
+gh extension create
+
+Create a new extension
+
+gh extension create [<name>] [flags]
+
+Options
+
+		--precompiled <string>
+
+	Create a precompiled extension. Possible values: go, other
+
+Examples
+
+# Use interactively
+$ gh extension create
+
+# Create a script-based extension
+$ gh extension create foobar
+
+# Create a Go extension
+$ gh extension create --precompiled=go foobar
+
+# Create a non-Go precompiled extension
+$ gh extension create --precompiled=other foobar
+
+See also
+
+  gh extension

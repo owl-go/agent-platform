@@ -1,0 +1,48 @@
+Source: https://cli.github.com/manual/gh_issue_close
+
+gh issue close
+
+Close issue
+
+gh issue close {<number> | <url>} [flags]
+
+Options
+
+	-c, 
+		--comment <string>
+
+	Leave a closing comment
+
+		--duplicate-of <string>
+
+	Mark as duplicate of another issue by number or URL
+
+	-r, 
+		--reason <string>
+
+	Reason for closing: {completed|not planned|duplicate}
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Close issue
+$ gh issue close 123
+
+# Close issue and add a closing comment
+$ gh issue close 123 --comment "Closing this issue"
+
+# Close issue as a duplicate of issue #456
+$ gh issue close 123 --duplicate-of 456
+
+# Close issue as not planned
+$ gh issue close 123 --reason "not planned"
+
+See also
+
+  gh issue

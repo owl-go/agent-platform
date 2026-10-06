@@ -1,9 +1,14 @@
 package gormrepo
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -29,10 +34,26 @@ func defaultResourceFixture(t *testing.T) (*Repository, string, defaultresources
 	if len(catalog.Skills) == 0 || len(catalog.Experts) == 0 || len(catalog.Connectors) == 0 {
 		t.Fatal("starter catalog must include Skills, Experts and Connectors")
 	}
-	// Keep concurrency tests focused while the asset contract validates every package.
-	catalog.Skills = catalog.Skills[:1]
-	catalog.Experts = catalog.Experts[:1]
-	catalog.Connectors = catalog.Connectors[:1]
+	// Directory enumeration order is independent from resource identity. Keep
+	// concurrency tests focused on the same bound Expert and a small MCP package.
+	for _, item := range catalog.Skills {
+		if item.Key == "default.skill.travel-planning" {
+			catalog.Skills = []defaultresources.Skill{item}
+			break
+		}
+	}
+	for _, item := range catalog.Experts {
+		if item.Key == "default.expert.travel-planning" {
+			catalog.Experts = []defaultresources.Expert{item}
+			break
+		}
+	}
+	for _, item := range catalog.Connectors {
+		if item.Source == "ai-hive" {
+			catalog.Connectors = []defaultresources.Connector{item}
+			break
+		}
+	}
 	return New(db, nil), owner, catalog
 }
 
@@ -162,11 +183,15 @@ func TestDefaultResourceFailureRollsBackCatalog(t *testing.T) {
 
 func TestDefaultCatalogFreshInstallDoesNotAuthorizeOrVerifyCLI(t *testing.T) {
 	repo, _, _ := defaultResourceFixture(t)
+	catalog, err := defaultresources.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
 	objects := memory.New()
 	if err := repo.EnsureDefaultResources(context.Background(), objects); err != nil {
 		t.Fatal(err)
 	}
-	for table, want := range map[string]int64{"skills": 12, "experts": 8, "connector_package_publications": 20, "connector_installations": 0, "connector_authorizations": 0, "cli_connector_conformance": 0} {
+	for table, want := range map[string]int64{"skills": int64(len(catalog.Skills) + 3), "experts": int64(len(catalog.Experts)), "connector_package_publications": int64(len(catalog.Connectors)), "connector_installations": 0, "connector_authorizations": 0, "cli_connector_conformance": 0} {
 		var n int64
 		if err := repo.db.Table(table).Count(&n).Error; err != nil || n != want {
 			t.Fatalf("%s count=%d want=%d: %v", table, n, want, err)
@@ -251,7 +276,7 @@ func TestDefaultResourcesDoNotTakeOverExistingSkillOrPublication(t *testing.T) {
 	if err := repo.db.Omit("SystemKey").Create(&custom).Error; err != nil {
 		t.Fatal(err)
 	}
-	pkg, err := defaultresources.ParseConnector(catalog.Connectors[0])
+	pkg, err := catalog.ParseConnector(catalog.Connectors[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,5 +323,130 @@ func TestDefaultResourcesDoNotTakeOverExistingSkillOrPublication(t *testing.T) {
 	}
 	if err := repo.ensureResources(ctx, memory.New(), catalog); err == nil {
 		t.Fatal("missing retained Skill produced a dangling binding")
+	}
+}
+
+// Install a directory catalog, add entries without a central manifest edit,
+// and verify discovery, stable bindings, repeat startup and prior publication.
+func TestLocalResourceDirectoryDiscoveryAndPriorScriptPublication(t *testing.T) {
+	repo, owner, catalog := defaultResourceFixture(t)
+	root := t.TempDir()
+	write := func(name string, data []byte) {
+		t.Helper()
+		file := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, data, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	extract := func(directory string, archive []byte) {
+		t.Helper()
+		reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, entry := range reader.File {
+			content, err := entry.Open()
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := io.ReadAll(content)
+			content.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+			write(directory+"/"+entry.Name, data)
+		}
+	}
+	write("resources.json", []byte(`{"version":"1.0.0"}`))
+	archive, err := catalog.Archive(catalog.Skills[0].Archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	extract("skills/travel-planning", archive)
+	write("skills/travel-planning/resource.json", []byte(`{"key":"default.skill.travel-planning","version":"1.0.0","icon":"compass"}`))
+	expert, err := json.Marshal(catalog.Experts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	write("experts/travel-planning/expert.json", expert)
+	pkg, err := catalog.ParseConnector(catalog.Connectors[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	extract("connectors/ai-hive/package", pkg.NormalizedArchive)
+	// A previous publisher already created this exact Revision/Publication.
+	policy, err := pkg.RuntimePolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	revision, err := repo.CreateConnectorRevision(context.Background(), domain.ConnectorRevision{PackageSource: pkg.Metadata.Source, Version: pkg.Metadata.Version, Mode: domain.ConnectorModeMCP, PackageSHA256: pkg.SHA256, ObjectKey: pkg.ObjectKey(), RuntimePolicy: policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := connectorPublicationRecord{PackageSource: pkg.Metadata.Source, ActiveRevisionID: revision.ID, State: string(domain.ConnectorPublicationDisabled), AdministratorID: owner, Version: 7}
+	if err := repo.db.Create(&original).Error; err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(defaultresources.RootEnvironment, root)
+	objects := memory.New()
+	if err := repo.EnsureDefaultResources(context.Background(), objects); err != nil {
+		t.Fatal(err)
+	}
+	var before expertRecord
+	if err := repo.db.Where("system_key = ?", catalog.Experts[0].Key).Take(&before).Error; err != nil {
+		t.Fatal(err)
+	}
+	// Neither resources.json nor the old script directory needs an inventory edit.
+	write("skills/directory-only/resource.json", []byte(`{"key":"local.skill.directory-only","version":"1.0.0"}`))
+	write("skills/directory-only/SKILL.md", []byte("---\nname: directory-only\ndisplay_name: Directory Only\ndescription: Explain the supplied fixture.\n---\n\n# Fixture\nExplain the result.\n"))
+	added := catalog.Experts[0]
+	added.Key = "local.expert.directory-only"
+	added.Name = "Directory Only Expert"
+	added.SkillKeys = []string{"local.skill.directory-only"}
+	addedData, err := json.Marshal(added)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write("experts/directory-only/expert.json", addedData)
+	// Script source files are outside discovery, even with the same source.
+	write("scripts/connectors/ai-hive/connector-meta.json", []byte(`{"source":"ai-hive","version":"different"}`))
+	for i := 0; i < 2; i++ {
+		if err := repo.EnsureDefaultResources(context.Background(), objects); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for table, want := range map[string]int64{"skills": 5, "experts": 2, "connector_package_publications": 1, "connector_revisions": 1, "connector_installations": 0, "connector_authorizations": 0} {
+		var count int64
+		if err := repo.db.Table(table).Count(&count).Error; err != nil || count != want {
+			t.Fatalf("%s count=%d want=%d: %v", table, count, want, err)
+		}
+	}
+	var publication connectorPublicationRecord
+	if err := repo.db.Where("package_source = ?", original.PackageSource).Take(&publication).Error; err != nil {
+		t.Fatal(err)
+	}
+	if publication.ActiveRevisionID != original.ActiveRevisionID || publication.State != original.State || publication.Version != original.Version {
+		t.Fatal("directory import changed the prior script publication")
+	}
+	var after expertRecord
+	if err := repo.db.Where("id = ?", before.ID).Take(&after).Error; err != nil {
+		t.Fatal(err)
+	}
+	if after.ID != before.ID || after.Version != before.Version || !bytes.Equal(after.SkillIDs, before.SkillIDs) {
+		t.Fatal("repeat discovery changed existing Expert identity or binding")
+	}
+	var newSkill skillRecord
+	if err := repo.db.Where("system_key = ?", "local.skill.directory-only").Take(&newSkill).Error; err != nil {
+		t.Fatal(err)
+	}
+	var newExpert expertRecord
+	if err := repo.db.Where("system_key = ?", added.Key).Take(&newExpert).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(newExpert.SkillIDs), newSkill.ID) {
+		t.Fatal("new Expert binding was not resolved by stable Skill key")
 	}
 }

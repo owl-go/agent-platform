@@ -1,0 +1,21 @@
+Source: https://cli.github.com/manual/gh_attestation
+
+gh attestation
+
+Download and verify artifact attestations.
+
+Available commands
+
+  gh attestation download
+
+  gh attestation trusted-root
+
+  gh attestation verify
+
+ALIASES
+
+gh at
+
+See also
+
+  gh

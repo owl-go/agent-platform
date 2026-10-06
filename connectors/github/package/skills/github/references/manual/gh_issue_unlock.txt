@@ -1,0 +1,18 @@
+Source: https://cli.github.com/manual/gh_issue_unlock
+
+gh issue unlock
+
+Unlock issue conversation
+
+gh issue unlock {<number> | <url>}
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh issue

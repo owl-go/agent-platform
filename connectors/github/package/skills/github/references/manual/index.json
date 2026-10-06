@@ -1,0 +1,950 @@
+[
+  {
+    "sha256": "17259fc15648f7d4b680a73b4154eff56136e89dbe504edd60b47a43e3a6a036",
+    "url": "https://cli.github.com/manual/"
+  },
+  {
+    "sha256": "737bfb7b2ac1785163e5b2877cf02d59e7915e6b87cdbf1422175fd0b98f59c5",
+    "url": "https://cli.github.com/manual/gh"
+  },
+  {
+    "sha256": "e990f76ce2993f5fd25f3d87ec1ceca007128466d51d58d7256ac856ba7420c2",
+    "url": "https://cli.github.com/manual/gh_agent-task"
+  },
+  {
+    "sha256": "b4276e24e137bfcbde1e1fe1016ebb549e031a25e356c6130fc46eb36d422781",
+    "url": "https://cli.github.com/manual/gh_agent-task_create"
+  },
+  {
+    "sha256": "6a799d2462782da64d7b3eb426e6715446d0b5b958b4312769abf51d5d097c82",
+    "url": "https://cli.github.com/manual/gh_agent-task_list"
+  },
+  {
+    "sha256": "c575962e11eba5cabd8f3d2a853265348c875d0a0f3a95b1e871e01eeeb5dc2c",
+    "url": "https://cli.github.com/manual/gh_agent-task_view"
+  },
+  {
+    "sha256": "631c5aeb98fd337b62b98dd24ef2a10c6f110fe29c3c8dd427bafca0296d6a85",
+    "url": "https://cli.github.com/manual/gh_alias"
+  },
+  {
+    "sha256": "0badcfc43ee143e251c2de682dc38fe7c5609f2594b3222b50d03389e43a758a",
+    "url": "https://cli.github.com/manual/gh_alias_delete"
+  },
+  {
+    "sha256": "bb30ea9dc27a06a14c6f0e74f9c25955c7540833accda2247669e2492582b56e",
+    "url": "https://cli.github.com/manual/gh_alias_import"
+  },
+  {
+    "sha256": "24a03b81778a3254ca254c43f5a24f70f0df019a3c5fa676fca7a70edda5de58",
+    "url": "https://cli.github.com/manual/gh_alias_list"
+  },
+  {
+    "sha256": "6ed2ff42bdacac70f4ec168a03c7393c0af113f6db64d922695fdc7059acbc98",
+    "url": "https://cli.github.com/manual/gh_alias_set"
+  },
+  {
+    "sha256": "a8587627ddf09ac4ef25f6046efac1fb9978b51e57c82d27b8904fa53ede850b",
+    "url": "https://cli.github.com/manual/gh_api"
+  },
+  {
+    "sha256": "7741e8046332c5bc67a2f47cf20e634451e4b003761b5407bed88575899dac43",
+    "url": "https://cli.github.com/manual/gh_attestation"
+  },
+  {
+    "sha256": "356de625af6e952e01e787c03b69505f742e1d657323deac38eddbcac5c4cb5f",
+    "url": "https://cli.github.com/manual/gh_attestation_download"
+  },
+  {
+    "sha256": "b553a03ac800d81e4009bf2d3b5b98a3ea66727490bc1292b1f4934ccf19e4e2",
+    "url": "https://cli.github.com/manual/gh_attestation_trusted-root"
+  },
+  {
+    "sha256": "890e47c3de86e279efb60b99a94b89c4c1b5d2ca3391721e179c5eb251244f2a",
+    "url": "https://cli.github.com/manual/gh_attestation_verify"
+  },
+  {
+    "sha256": "378c5681c54bf880db05ffbde7952a70f4d64764d69c525d011c759d0d3798c8",
+    "url": "https://cli.github.com/manual/gh_auth"
+  },
+  {
+    "sha256": "29de0fc66bbca9e0dcdd56d852ac8c5f64fc21027852495ab5352372759b42c9",
+    "url": "https://cli.github.com/manual/gh_auth_login"
+  },
+  {
+    "sha256": "cee020da458f6c01d266d51b69cc85c4eecdaed90b253aafa850372091db11d5",
+    "url": "https://cli.github.com/manual/gh_auth_logout"
+  },
+  {
+    "sha256": "14eb9342d437bdf712fb4131e645a35ee9020f0af39659b9421aa89c6e5b8333",
+    "url": "https://cli.github.com/manual/gh_auth_refresh"
+  },
+  {
+    "sha256": "54250c7fb02ad334ec31101db38623c51452317f980aa2abfe3c4a82a13ae7e8",
+    "url": "https://cli.github.com/manual/gh_auth_setup-git"
+  },
+  {
+    "sha256": "185298fa07b666824aab8c5e7bca6ebf10bc893ca6347bef4bd1c1f7ad1ae866",
+    "url": "https://cli.github.com/manual/gh_auth_status"
+  },
+  {
+    "sha256": "0058e40f1a7986fd95f01f77aee087c86204dbb2f1e75b5348e82e43a56e0880",
+    "url": "https://cli.github.com/manual/gh_auth_switch"
+  },
+  {
+    "sha256": "a0d5c6aef696b73e38ab02c897d700eafd757600c1b52bddc20f1ea1b937fd7f",
+    "url": "https://cli.github.com/manual/gh_auth_token"
+  },
+  {
+    "sha256": "1dbc0850b409abd34492054e7c2c434f1b271410896d3fd5750356bd4947c681",
+    "url": "https://cli.github.com/manual/gh_browse"
+  },
+  {
+    "sha256": "928f842c093af533fe1e9409d2e5016dfb37ecca33e3612b2441b16556613504",
+    "url": "https://cli.github.com/manual/gh_cache"
+  },
+  {
+    "sha256": "ebbc70c8bb16033283964b0622635bcd22c80680234689e75ad74cc06e342e93",
+    "url": "https://cli.github.com/manual/gh_cache_delete"
+  },
+  {
+    "sha256": "9a5f79d014feba6f8b9a8716f6784669f5eef44291527fa7583190aada942352",
+    "url": "https://cli.github.com/manual/gh_cache_list"
+  },
+  {
+    "sha256": "0cf2a0c4e4021ac7257fb377add60818f07c533409f794ad82a82006bf927a6b",
+    "url": "https://cli.github.com/manual/gh_codespace"
+  },
+  {
+    "sha256": "105796da8c1d883852bdfd80403eb54481ad3c55717994d50c0b003e92687336",
+    "url": "https://cli.github.com/manual/gh_codespace_code"
+  },
+  {
+    "sha256": "58268e47bbc28f72cd0dd8fed4778f21339f3222e8a4f415432fea6cc788b016",
+    "url": "https://cli.github.com/manual/gh_codespace_cp"
+  },
+  {
+    "sha256": "70d61e0e3e1ed7f2cf13ee4a11ccd750aeee2de92ba9da5f8d40723dc36344af",
+    "url": "https://cli.github.com/manual/gh_codespace_create"
+  },
+  {
+    "sha256": "5d89d88109cb0600299c2a301beac700b795e4507217ade1ba6f161789b530c9",
+    "url": "https://cli.github.com/manual/gh_codespace_delete"
+  },
+  {
+    "sha256": "1b6e70f2a311f9e9bb47f628ae7a1408b113e5846434fb222a4308bd2c9e9a2b",
+    "url": "https://cli.github.com/manual/gh_codespace_edit"
+  },
+  {
+    "sha256": "4f5ce7e1329ef694b4d544f1df2db289cd679fc8af2715966e8906c153462f80",
+    "url": "https://cli.github.com/manual/gh_codespace_jupyter"
+  },
+  {
+    "sha256": "4e19f7a7c3a21cc237c66d6005a7446b5ea810e56297a03b44edfc1b9e58fd9a",
+    "url": "https://cli.github.com/manual/gh_codespace_list"
+  },
+  {
+    "sha256": "909d122083fbe9b91aa7f91413c191d3fa66e8abb87d4f975784e8168976008a",
+    "url": "https://cli.github.com/manual/gh_codespace_logs"
+  },
+  {
+    "sha256": "e6cde80b2acdbc1a6ed79879089f74c56bba6346544b84adbcd7b0b413c17824",
+    "url": "https://cli.github.com/manual/gh_codespace_ports"
+  },
+  {
+    "sha256": "c617ba8553924d0b83ba4d2843e35db60f1c207c8abb5840fdca245c075ffd0d",
+    "url": "https://cli.github.com/manual/gh_codespace_ports_forward"
+  },
+  {
+    "sha256": "717522c45d0bce11ecc8145b30fe8ce26171a484aa9561ffaaa0925537908206",
+    "url": "https://cli.github.com/manual/gh_codespace_ports_visibility"
+  },
+  {
+    "sha256": "faa8d864a38c7c2efadd4d14b5002972feaf97b822e52cbaa3b9a202042a8455",
+    "url": "https://cli.github.com/manual/gh_codespace_rebuild"
+  },
+  {
+    "sha256": "104310f943991be69ae6690dc89b863f1fd574a7b0820d24a946436f0bebd6ea",
+    "url": "https://cli.github.com/manual/gh_codespace_ssh"
+  },
+  {
+    "sha256": "ac1cc1df2d0f8a8ab9a296edd6fbee8cb160d638973db388b3e681e72c2ba2c4",
+    "url": "https://cli.github.com/manual/gh_codespace_stop"
+  },
+  {
+    "sha256": "b388a6919e48e39e4572d493dfafecb301af5a57cd9fc50e1c75e8ea6713c490",
+    "url": "https://cli.github.com/manual/gh_codespace_view"
+  },
+  {
+    "sha256": "f82112f2be224a35da7d2c0f1deef552e4035271fba33022412bb8840de74186",
+    "url": "https://cli.github.com/manual/gh_completion"
+  },
+  {
+    "sha256": "2a52f2117ad28228dbfefea9a2c2052be8bcff4427f0f2bba73f5026dd4604e1",
+    "url": "https://cli.github.com/manual/gh_config"
+  },
+  {
+    "sha256": "86fdddca63d25aea914e1420b34bb9aef13f2430adecc910b6b2a65064e0bfb2",
+    "url": "https://cli.github.com/manual/gh_config_clear-cache"
+  },
+  {
+    "sha256": "cf59c895ce024c167d7a0c01a9c85be4e9a5ade7af6ecab9549483f3ded4dec6",
+    "url": "https://cli.github.com/manual/gh_config_get"
+  },
+  {
+    "sha256": "3cfd33ee3a218f49e4fa7d290857ceb465d4928ef521ef0120f911784044d089",
+    "url": "https://cli.github.com/manual/gh_config_list"
+  },
+  {
+    "sha256": "e6c8588cfb1dbc446b00e3420e152068a3eafeb3c857eda0fb19f00b0005788c",
+    "url": "https://cli.github.com/manual/gh_config_set"
+  },
+  {
+    "sha256": "20cf6b571646f19a4f6c8349ec513d74015f3fd8633fa341c54c9c7d22076b2e",
+    "url": "https://cli.github.com/manual/gh_copilot"
+  },
+  {
+    "sha256": "c3ac6b1e9b8095242a43a10ff0c05615fbe7ef895baed266ea2db35b69804cf4",
+    "url": "https://cli.github.com/manual/gh_discussion"
+  },
+  {
+    "sha256": "88007c4b3665a5c90db6452700657f6c59d528784b4dd68aaadf4f78ee0fe752",
+    "url": "https://cli.github.com/manual/gh_discussion_comment"
+  },
+  {
+    "sha256": "5b4c1f84748eb410ba23026a27086e69720383b87822b1d29c0702bddc900aed",
+    "url": "https://cli.github.com/manual/gh_discussion_create"
+  },
+  {
+    "sha256": "860dc7d8dc827d8cf6e4ee3667436896eb2c6716f863e6566c4ffd2231efd341",
+    "url": "https://cli.github.com/manual/gh_discussion_edit"
+  },
+  {
+    "sha256": "a2812ec80c605d2c3307a84fcf22564a0c38564f6429aac0731a827dcee3c1c6",
+    "url": "https://cli.github.com/manual/gh_discussion_list"
+  },
+  {
+    "sha256": "32c7fd159d0c43c85789354f414df30d37a627370ff7b3727f6eef311dc52d50",
+    "url": "https://cli.github.com/manual/gh_discussion_view"
+  },
+  {
+    "sha256": "7942e2ac2e5457f8bd00463765151637689117779edbb9ebd4d1f3b3d46d7a90",
+    "url": "https://cli.github.com/manual/gh_extension"
+  },
+  {
+    "sha256": "596f8462b58175882ae7d7c9836a8c0737f4ae890bc453ba7a47708e3fda5f6c",
+    "url": "https://cli.github.com/manual/gh_extension_browse"
+  },
+  {
+    "sha256": "3eebdfc79957fe218756ae92d8910abc55ebabd1a6e3f885a545838170ff9ccc",
+    "url": "https://cli.github.com/manual/gh_extension_create"
+  },
+  {
+    "sha256": "58b1edff5e301e3d56eb87afd689d01e8feeb94815e30fb7e04041be9f9033eb",
+    "url": "https://cli.github.com/manual/gh_extension_exec"
+  },
+  {
+    "sha256": "ac76118000ea6c0bd18189e73808c22142fe109c0635dbcefc03b6c411fc53e0",
+    "url": "https://cli.github.com/manual/gh_extension_install"
+  },
+  {
+    "sha256": "48ae03b7a799e4ae0f354484f9f12d4eddec656c320e555faf1adac73562705c",
+    "url": "https://cli.github.com/manual/gh_extension_list"
+  },
+  {
+    "sha256": "62b6e292dcf769226f39e531818868264763b2e44cf0c02bb75f20ad9583d82e",
+    "url": "https://cli.github.com/manual/gh_extension_remove"
+  },
+  {
+    "sha256": "4f5a96b53ea62e4b570f3e7ca7b6ded8ff5d881f035cb4b561a8d46c262f2340",
+    "url": "https://cli.github.com/manual/gh_extension_search"
+  },
+  {
+    "sha256": "9e2b105343e3a26501c490814bf93d5b57f8a6211b1f3dd736f98a6f8dd70c1d",
+    "url": "https://cli.github.com/manual/gh_extension_upgrade"
+  },
+  {
+    "sha256": "bde0bef2e5a9c48f18d4bfb52c24e3dec8f1dd2bc2c7ae708661bf6ba0a3828a",
+    "url": "https://cli.github.com/manual/gh_gist"
+  },
+  {
+    "sha256": "a0b1a0e5a6c7a32961b37952cad33ee452d2536d2d44cb7c4d63038367b8c9f6",
+    "url": "https://cli.github.com/manual/gh_gist_clone"
+  },
+  {
+    "sha256": "72510b3bb1b50dafc83ef91f26cb0dcc580e23bc709a971745cec4004f2868a5",
+    "url": "https://cli.github.com/manual/gh_gist_create"
+  },
+  {
+    "sha256": "675168a46bcb421e988a77942ea7d7a1da9b82ed65f5800f24933b1316d109de",
+    "url": "https://cli.github.com/manual/gh_gist_delete"
+  },
+  {
+    "sha256": "e7921f4f12ce346e3db5d9036dda017e54f0074cc939794fc9c80b1abdcb12b1",
+    "url": "https://cli.github.com/manual/gh_gist_edit"
+  },
+  {
+    "sha256": "9a0d3d64f4923fed68cc6ff5a1e5d57e8a101220e8b4bfc810293ded64de43ab",
+    "url": "https://cli.github.com/manual/gh_gist_list"
+  },
+  {
+    "sha256": "3d63827ac02b9c2bc72a36a4367e1f0878b280cbfaf7e393ada3d64f94aafcdb",
+    "url": "https://cli.github.com/manual/gh_gist_rename"
+  },
+  {
+    "sha256": "e919b22860541a71767293009e9b9b9ad6c5ee7b0c9c511d35c20b1d503aa0d9",
+    "url": "https://cli.github.com/manual/gh_gist_view"
+  },
+  {
+    "sha256": "5adbe724b6dcb0541dd5a8b2488230db9d05ace05643c89076c575db3654cdcd",
+    "url": "https://cli.github.com/manual/gh_gpg-key"
+  },
+  {
+    "sha256": "318659cff1aecc801ad057db0ac94850e83a1711ca5a778abbfb678244a65c96",
+    "url": "https://cli.github.com/manual/gh_gpg-key_add"
+  },
+  {
+    "sha256": "2a7b3e292da84ede6a5afffc1251917033717ca4a33d2a8cdfa25f0fde44c30b",
+    "url": "https://cli.github.com/manual/gh_gpg-key_delete"
+  },
+  {
+    "sha256": "569b357d74b49a691502ae09f219a030598d065c0b2c1519e8c531982b29fbdd",
+    "url": "https://cli.github.com/manual/gh_gpg-key_list"
+  },
+  {
+    "sha256": "8db6f79d51ef36676fdbc6892fedd052f3f3e2f093f13f0cd1f8edbed7526dcc",
+    "url": "https://cli.github.com/manual/gh_help"
+  },
+  {
+    "sha256": "f3cf6aa4c75a9d0836c0694c14c6ea0f365b81c4607f5dcdfaa9d12011e09749",
+    "url": "https://cli.github.com/manual/gh_help_environment"
+  },
+  {
+    "sha256": "b11f14547f0e436bc947d4058fc9eaf21848a2ba671ebc2ff8e38833a52816d6",
+    "url": "https://cli.github.com/manual/gh_help_exit-codes"
+  },
+  {
+    "sha256": "b39ef8b1b63405854a93c84bccacfaa7a94cfa24a6e3f2ec4d59157ff3efa35b",
+    "url": "https://cli.github.com/manual/gh_help_formatting"
+  },
+  {
+    "sha256": "b07eb958584efc09ab1f0bbf764efbf0e96dc3e058d04e5dc6ca66f05c817b57",
+    "url": "https://cli.github.com/manual/gh_help_mintty"
+  },
+  {
+    "sha256": "8b5ef0cb296eb3427a1f024350763968440bb578b1a7c79ea424f9c2245846fe",
+    "url": "https://cli.github.com/manual/gh_help_reference"
+  },
+  {
+    "sha256": "923ee09939bf6f552db57993fdda8bd8c4e1ce171883948704c165cacbab75db",
+    "url": "https://cli.github.com/manual/gh_help_telemetry"
+  },
+  {
+    "sha256": "147d667b6d601855aba4406b6f70fac1ff16132c7d1af5c645f98346427ceaa3",
+    "url": "https://cli.github.com/manual/gh_issue"
+  },
+  {
+    "sha256": "7a0458cc6d80035909f035c9368679e0fa166107fcfc8afbedce534c08602b22",
+    "url": "https://cli.github.com/manual/gh_issue_close"
+  },
+  {
+    "sha256": "01bf0050112a044b1df98a2f66182d0c06cca3d00ba2a3c86c6aef071e04cbcd",
+    "url": "https://cli.github.com/manual/gh_issue_comment"
+  },
+  {
+    "sha256": "a35214cb96ceb108180375f1ef5994e2a3b6076b754c2e77414e9d65b6da274a",
+    "url": "https://cli.github.com/manual/gh_issue_create"
+  },
+  {
+    "sha256": "09e611f7150d7d92c499251c8442262576a48c7035e3c52db97ebf492c0c98a0",
+    "url": "https://cli.github.com/manual/gh_issue_delete"
+  },
+  {
+    "sha256": "33fcd88eeffb07cede347cad3a96c9dc9fd076e261cfb9b9ec50c02e673344fd",
+    "url": "https://cli.github.com/manual/gh_issue_develop"
+  },
+  {
+    "sha256": "823fdcc02bcf741b34d069cbe08403765c4e66b084fe7ab54d80765cb4dd42fd",
+    "url": "https://cli.github.com/manual/gh_issue_edit"
+  },
+  {
+    "sha256": "0fceea258c191701fcb69d61513be4e0e3337f0693304f448356597901270f7f",
+    "url": "https://cli.github.com/manual/gh_issue_list"
+  },
+  {
+    "sha256": "d9a26f6ed9bb9de304fd5b95989b697bff361f702dba1d95427afcdf2b4e4abc",
+    "url": "https://cli.github.com/manual/gh_issue_lock"
+  },
+  {
+    "sha256": "c7d0626ece0af857caafd5c6b52298ec323702f620c463937e37a4ebe97d01b4",
+    "url": "https://cli.github.com/manual/gh_issue_pin"
+  },
+  {
+    "sha256": "748f652dc1189ff7affeb264ae1b333a9b73ba4f02f2c18a8769c3bbe668047f",
+    "url": "https://cli.github.com/manual/gh_issue_reopen"
+  },
+  {
+    "sha256": "91f174740a61d24634a9dd4a1b11b69890b5b1f5523597749db28ff17e8c6dd9",
+    "url": "https://cli.github.com/manual/gh_issue_status"
+  },
+  {
+    "sha256": "29b187c902a42c13f6a9f0337fa31da700229fe256fa643e5c96207e33aca34e",
+    "url": "https://cli.github.com/manual/gh_issue_transfer"
+  },
+  {
+    "sha256": "8385372fc56d19c88d94fbe1990f4bb6f3fd322dcb804f4d6acfc97abb9a0ba1",
+    "url": "https://cli.github.com/manual/gh_issue_unlock"
+  },
+  {
+    "sha256": "5a670727ef73553a78df8599bdcc89910bd362184525cca296ea09350fda9958",
+    "url": "https://cli.github.com/manual/gh_issue_unpin"
+  },
+  {
+    "sha256": "f2638407ff689b829e2613f4545413896bd7d27ee4a3ec6e8a74809e6c05cb75",
+    "url": "https://cli.github.com/manual/gh_issue_view"
+  },
+  {
+    "sha256": "55e2eeb6008bf7b7880660b915e7092467cedcb45a98eb02872a8941fadc75b0",
+    "url": "https://cli.github.com/manual/gh_label"
+  },
+  {
+    "sha256": "dbf99f82dad29ea3c0ba6b5aead35b8a9d0947a5089ea99ee31b14f4b1e296b2",
+    "url": "https://cli.github.com/manual/gh_label_clone"
+  },
+  {
+    "sha256": "81ea2b19e679c679b1e4ee8c434742d763d11a7c075352e619027695583f71f7",
+    "url": "https://cli.github.com/manual/gh_label_create"
+  },
+  {
+    "sha256": "89fbdcea1ec65cc4587dbff5dd3c67792d6a296379a7985e712120df8a6a10e6",
+    "url": "https://cli.github.com/manual/gh_label_delete"
+  },
+  {
+    "sha256": "ba4704e212328a63da4ef68f22f72f554436dea204d5b5de61594d3dce172e58",
+    "url": "https://cli.github.com/manual/gh_label_edit"
+  },
+  {
+    "sha256": "a52b58cb815c277bbb81e8093c8cd71b11298098700a05242cc6aead051363ac",
+    "url": "https://cli.github.com/manual/gh_label_list"
+  },
+  {
+    "sha256": "eef0052b2304d298141da9cbf7565490705c148287378b6ea64ef9504b932fc6",
+    "url": "https://cli.github.com/manual/gh_licenses"
+  },
+  {
+    "sha256": "0dd81ae48d09dd7b5cf8f3f053a6428f46c2b55fc07b545d96a2529d4e4fab88",
+    "url": "https://cli.github.com/manual/gh_org"
+  },
+  {
+    "sha256": "e100681af3ebbe615bb3734e9aecbe54a66b2a97ff02b6eb99041f8a17219937",
+    "url": "https://cli.github.com/manual/gh_org_list"
+  },
+  {
+    "sha256": "4b6adee41cafe32a88310e7a5950403433fd8d687d7b0ef7c8bbf8ba7aefd6b6",
+    "url": "https://cli.github.com/manual/gh_pr"
+  },
+  {
+    "sha256": "744a6c6368e4af11bb7bfe2827b60308e934453c7736a83b6a43fd27ca69de04",
+    "url": "https://cli.github.com/manual/gh_pr_checkout"
+  },
+  {
+    "sha256": "8eb57aac3ed691babf7042035b7f9029b2ee6a81d03f3698f2af91624fb127c3",
+    "url": "https://cli.github.com/manual/gh_pr_checks"
+  },
+  {
+    "sha256": "10addda959f620fa2ed9ba165d9a15ab8bbdca90d1b2664467ccc9b8a1bbfc4a",
+    "url": "https://cli.github.com/manual/gh_pr_close"
+  },
+  {
+    "sha256": "50ef2c5a84423e05203c67a1eca539738bdd99d3d606ff9272a42aa03c072e72",
+    "url": "https://cli.github.com/manual/gh_pr_comment"
+  },
+  {
+    "sha256": "b2515eb1c1e0d9dc221d76eb924e22bb70142a0559ab0438bf000aa8e63bdc9a",
+    "url": "https://cli.github.com/manual/gh_pr_create"
+  },
+  {
+    "sha256": "a917875b3b28edfde79470479f034244d11873bd12088e551a8e3d016ce63d29",
+    "url": "https://cli.github.com/manual/gh_pr_diff"
+  },
+  {
+    "sha256": "4bec56627aaff8fd922e23ca0f36966c5730c4ababf06caa028f93376869e5e4",
+    "url": "https://cli.github.com/manual/gh_pr_edit"
+  },
+  {
+    "sha256": "ac2824d33f16fd317bed87343bcab18a941f8f13a1d34d8027dd5fa0d30ef6ed",
+    "url": "https://cli.github.com/manual/gh_pr_list"
+  },
+  {
+    "sha256": "6b60b9c7cd5b01b778bedfa5ea4f07c2a100fae5e72ad2f467c9923b933e033f",
+    "url": "https://cli.github.com/manual/gh_pr_lock"
+  },
+  {
+    "sha256": "b21ef4350f050611af8a268632579c019c2dcb33feea7c0abffd4ca2b2520f0b",
+    "url": "https://cli.github.com/manual/gh_pr_merge"
+  },
+  {
+    "sha256": "3cba4ed6eea31a2384de94ec29c7d37ad83e69864f3d4292b782a860aa0f1acd",
+    "url": "https://cli.github.com/manual/gh_pr_ready"
+  },
+  {
+    "sha256": "bce7a51be3cb49e5fa4ed701e6f4c8fd30b1e9178b50bb0ca8896aa207f29225",
+    "url": "https://cli.github.com/manual/gh_pr_reopen"
+  },
+  {
+    "sha256": "2104111ba005490e889d78abe5eb5d5429f90021f8ea7578565fb126162556d9",
+    "url": "https://cli.github.com/manual/gh_pr_revert"
+  },
+  {
+    "sha256": "d6a95f8c4f6ad2d77907ae8040abc9b7c9e1e0fa4c04542daf75777667ff8c0b",
+    "url": "https://cli.github.com/manual/gh_pr_review"
+  },
+  {
+    "sha256": "1c02f6f317c2a96d6558ea068d10b5005aad8f7339bb12fa8c904a2eb389d8ee",
+    "url": "https://cli.github.com/manual/gh_pr_status"
+  },
+  {
+    "sha256": "03a0884e8cae9fd0f14b5a96d61c22859656d466e12bb7a4f8151ef1cdaaebcd",
+    "url": "https://cli.github.com/manual/gh_pr_unlock"
+  },
+  {
+    "sha256": "e04937fd1373d349caff44acbb6649198ba50a064eb79b4dc01b7cbc3ed75c2c",
+    "url": "https://cli.github.com/manual/gh_pr_update-branch"
+  },
+  {
+    "sha256": "26b9fe7ce2c1f45c5eaefac68e051a40e18f1e1da57666bb3f8008ed1351524c",
+    "url": "https://cli.github.com/manual/gh_pr_view"
+  },
+  {
+    "sha256": "4edd0a5a1441a44c3cdf4e0a0e35fcd1fdd114909a524dc6ed13b8ffe4e3edd9",
+    "url": "https://cli.github.com/manual/gh_preview"
+  },
+  {
+    "sha256": "4b3662c58ee1ef8402ad71ab67c69811cb7df92b147de1bd9e325a2fa0532302",
+    "url": "https://cli.github.com/manual/gh_preview_prompter"
+  },
+  {
+    "sha256": "4c4e2b6c3a027b42ce5901ef6c296dc000fc1e64e56a3937c31d65e7bfec5746",
+    "url": "https://cli.github.com/manual/gh_project"
+  },
+  {
+    "sha256": "584f0546bfda915860e5c10571ef441db7d92f18efe79656850b682845e9ec0e",
+    "url": "https://cli.github.com/manual/gh_project_close"
+  },
+  {
+    "sha256": "1a8388fdb78bc6f522771de9e987e09cb3a5035d0b3fa64ef541d270bb0561cf",
+    "url": "https://cli.github.com/manual/gh_project_copy"
+  },
+  {
+    "sha256": "98d31221a40f72e20584a078d1d70ae29f285f5d5d088cf99bc7a03315799c6c",
+    "url": "https://cli.github.com/manual/gh_project_create"
+  },
+  {
+    "sha256": "9d1605119966ec5c0d7cacdd5de451e1abebeca3f2ba0600747137cf21882f2e",
+    "url": "https://cli.github.com/manual/gh_project_delete"
+  },
+  {
+    "sha256": "a0c21001bbd995c5db9407c6c6c634b6bb6e1b859e16ee4e82031c38c510050b",
+    "url": "https://cli.github.com/manual/gh_project_edit"
+  },
+  {
+    "sha256": "497218048e2cff325b4cd863aeb3d7041809ed03a38ff018989081b4074a85d8",
+    "url": "https://cli.github.com/manual/gh_project_field-create"
+  },
+  {
+    "sha256": "4b45253075129fcd0d97c7af23ac43eb7cf0ee36902746fd27c24c71c5c9c6a1",
+    "url": "https://cli.github.com/manual/gh_project_field-delete"
+  },
+  {
+    "sha256": "6cc11d887849f15b537cba2b8f58bd80d9fcda6d9f9be283e333265ef7f31444",
+    "url": "https://cli.github.com/manual/gh_project_field-list"
+  },
+  {
+    "sha256": "4c53a6ba09538d324c00ca0e7ffb80122c21ed81a1388ead6d45ff3ff924be76",
+    "url": "https://cli.github.com/manual/gh_project_item-add"
+  },
+  {
+    "sha256": "89f217167bbd05eb5f2933172e41f2d248feaee5d238f334988ffa178e3f6bc1",
+    "url": "https://cli.github.com/manual/gh_project_item-archive"
+  },
+  {
+    "sha256": "d3bfe28b4421fe4068ade909b490ff56bd0cca3acc1c7eb9f4b787e954d4f069",
+    "url": "https://cli.github.com/manual/gh_project_item-create"
+  },
+  {
+    "sha256": "9be6dc63862967a13bd17c3bd7fc4b2030ec6a87edb9c88f0874954ebac7a8cb",
+    "url": "https://cli.github.com/manual/gh_project_item-delete"
+  },
+  {
+    "sha256": "a2fce69a50a262650638f967b041f10b09c6d55118d7f9e16856a13351a8f5a5",
+    "url": "https://cli.github.com/manual/gh_project_item-edit"
+  },
+  {
+    "sha256": "a97c1ae926a7a02c38c398ac94d43a56c149450da7d9447aaf861efe31b0c0bd",
+    "url": "https://cli.github.com/manual/gh_project_item-list"
+  },
+  {
+    "sha256": "cae4b85d06c563bcfd8340df130659774aed6c92d0bfeb8817d0370b67277186",
+    "url": "https://cli.github.com/manual/gh_project_link"
+  },
+  {
+    "sha256": "301459b4de90000b8c2f6b58809731089bd4c8d3ed3266b89cf465a5340409eb",
+    "url": "https://cli.github.com/manual/gh_project_list"
+  },
+  {
+    "sha256": "1f3a7bef128af59ba825635c107d111ee305bc263f8fcc1574f8eb366403212b",
+    "url": "https://cli.github.com/manual/gh_project_mark-template"
+  },
+  {
+    "sha256": "c351cf165cc8bade303e88ebeb99c41d5814bd52366e24cff7d229b715431734",
+    "url": "https://cli.github.com/manual/gh_project_unlink"
+  },
+  {
+    "sha256": "6df8da8be559e80e33fa35f403d858c043c0750037354ea1efaa2c8d93ce4c1b",
+    "url": "https://cli.github.com/manual/gh_project_view"
+  },
+  {
+    "sha256": "7a6d4655929373864441547c73ccc0284c0ce2411956e2a95fed056da8b26476",
+    "url": "https://cli.github.com/manual/gh_release"
+  },
+  {
+    "sha256": "65708b017c321b202b84af99b1a8894603a8e813c7877e633848e8a92782e944",
+    "url": "https://cli.github.com/manual/gh_release_create"
+  },
+  {
+    "sha256": "b6a9bb1940c523ad9e5fc3736f96e8278d880baf2238d4afdac3f1bd2c18986e",
+    "url": "https://cli.github.com/manual/gh_release_delete"
+  },
+  {
+    "sha256": "404ecc53f3cfb38493fc398e40166feda80a6e8cdd9e3ca2815f14b5f8213a79",
+    "url": "https://cli.github.com/manual/gh_release_delete-asset"
+  },
+  {
+    "sha256": "023b815b48b60a16e79d9392e8a40959c71389984cc04c2c8df5c2c940b6b286",
+    "url": "https://cli.github.com/manual/gh_release_download"
+  },
+  {
+    "sha256": "db6e3ae209fabff22ef42aec5af5b95225d0ea6c842a8bbb2b6ae431557f4cb3",
+    "url": "https://cli.github.com/manual/gh_release_edit"
+  },
+  {
+    "sha256": "6496bfb9dcce038286ee5dbb00129ca645a7d78884c0f203c921081e8d32c59d",
+    "url": "https://cli.github.com/manual/gh_release_list"
+  },
+  {
+    "sha256": "cee442f4b22248284629fe189e8657f55c0cee8d8b9a2db3372f3bb80b65082e",
+    "url": "https://cli.github.com/manual/gh_release_upload"
+  },
+  {
+    "sha256": "81a67863f6561412a78f87584373e53ee2001b81bd445f18e44bc0c3a7f18a78",
+    "url": "https://cli.github.com/manual/gh_release_verify"
+  },
+  {
+    "sha256": "29a64c6328fd1343a1df4236ad34dfb7cf234435423c04a15f9098cdc7877649",
+    "url": "https://cli.github.com/manual/gh_release_verify-asset"
+  },
+  {
+    "sha256": "95e2eb1d8ff655ec524866616609db51f849b36235427e067c698bfec0c7d5a5",
+    "url": "https://cli.github.com/manual/gh_release_view"
+  },
+  {
+    "sha256": "04126741c73361f57d6fb5055f104ade2d78ac4515f881d392fbbc34dd7b8c3b",
+    "url": "https://cli.github.com/manual/gh_repo"
+  },
+  {
+    "sha256": "91b137a8840bf089eb4ed7e09202576e6872e7bd8f1b7c9e92ce3f9a652527d9",
+    "url": "https://cli.github.com/manual/gh_repo_archive"
+  },
+  {
+    "sha256": "6b31086474f99b99dc26f0a7dad8863f060d382e1928104081acc2041d762b86",
+    "url": "https://cli.github.com/manual/gh_repo_autolink"
+  },
+  {
+    "sha256": "9580b648d562068ca5b903c0153006f7c5b1a68df9b58e26b8b7f1650742ac5a",
+    "url": "https://cli.github.com/manual/gh_repo_autolink_create"
+  },
+  {
+    "sha256": "0b6e27a75410726f6268668e99bca4454ca92d4ec873cce481c1b3d39e63541c",
+    "url": "https://cli.github.com/manual/gh_repo_autolink_delete"
+  },
+  {
+    "sha256": "66cda34bfb52b5b88dd82c589370dc8f1ede4c074c9c8b218c71543df9214345",
+    "url": "https://cli.github.com/manual/gh_repo_autolink_list"
+  },
+  {
+    "sha256": "5880df608ae5c043c36aeb68bd984fb81f960206c07b1aaea885259e56d84616",
+    "url": "https://cli.github.com/manual/gh_repo_autolink_view"
+  },
+  {
+    "sha256": "3d6b538d26563116442381078aea60b095a78b04872a48bfb48d712156ffcbb0",
+    "url": "https://cli.github.com/manual/gh_repo_clone"
+  },
+  {
+    "sha256": "712ffec9d5a3541fbb3ef3f3a5d6595f8287c90d4715ade8d404dae2cb1243b4",
+    "url": "https://cli.github.com/manual/gh_repo_create"
+  },
+  {
+    "sha256": "a70b66c9c0545d953428156f1247429c101dd21110f076e721dc1375a0d5e0fa",
+    "url": "https://cli.github.com/manual/gh_repo_delete"
+  },
+  {
+    "sha256": "254e095f5af23c03041fa10df3aa9011f3a573f824ec20c1c1895faec9f53c9c",
+    "url": "https://cli.github.com/manual/gh_repo_deploy-key"
+  },
+  {
+    "sha256": "c33142116d7934857c04fdd55db5e3ce42646c3cb600fba1582f23ca6c9e88a3",
+    "url": "https://cli.github.com/manual/gh_repo_deploy-key_add"
+  },
+  {
+    "sha256": "e573bc17ec2e033e97342e4a32249d5a060ffb2da5fb9c8a1a34be621066951e",
+    "url": "https://cli.github.com/manual/gh_repo_deploy-key_delete"
+  },
+  {
+    "sha256": "986f2afed88c3743501f2d20192ed73b2336ad2becc2c010fa760d01b1532a3f",
+    "url": "https://cli.github.com/manual/gh_repo_deploy-key_list"
+  },
+  {
+    "sha256": "9ffc9bc698b32003da4580ffc5f23435117e4517f313cb7da64e0c3b68c09518",
+    "url": "https://cli.github.com/manual/gh_repo_edit"
+  },
+  {
+    "sha256": "598c3b2f0cc7a9ba8722e02edd0e619e1dac671b59b01f5751ccfb2dbde26e1a",
+    "url": "https://cli.github.com/manual/gh_repo_fork"
+  },
+  {
+    "sha256": "aabc7ffbd495a5783122e902c9d4613d3e68785461057aa31f4da1bf884249f0",
+    "url": "https://cli.github.com/manual/gh_repo_gitignore"
+  },
+  {
+    "sha256": "fbe8d73243ace48a4de7b9a26c38ffee085df0f3892cfa17e46c0c05eebb950e",
+    "url": "https://cli.github.com/manual/gh_repo_gitignore_list"
+  },
+  {
+    "sha256": "9affb9a26b6e39c05f0dcdcc9b1f12aa9767cf6baac5a191e88bdbffe8da1e5b",
+    "url": "https://cli.github.com/manual/gh_repo_gitignore_view"
+  },
+  {
+    "sha256": "45f30f0478b3faa7aa1df948a7ae8d3430a62c4d28920243270b5fcfc5fc3087",
+    "url": "https://cli.github.com/manual/gh_repo_license"
+  },
+  {
+    "sha256": "af27766d669db6fecb162bf9ff86f083dfce7d55b57525049616c1f3c92546a9",
+    "url": "https://cli.github.com/manual/gh_repo_license_list"
+  },
+  {
+    "sha256": "3de9a8fae78bb19aec6a6c55e1a8a6fa4a8c54b26cb59ceb0eb4c16a7b14007a",
+    "url": "https://cli.github.com/manual/gh_repo_license_view"
+  },
+  {
+    "sha256": "ee11c98440a0f7bdbac1bd5a45e8aa47d671eafa2035edc0a18b33b5f7d12c98",
+    "url": "https://cli.github.com/manual/gh_repo_list"
+  },
+  {
+    "sha256": "8a307c055a865fb48356bb5a08042d2e6c6ed80a515723228cab84a42687717e",
+    "url": "https://cli.github.com/manual/gh_repo_read-dir"
+  },
+  {
+    "sha256": "45a3d5b881b175fcda468ee6c73b214adcdbf1cb730ee7734130e9edcd0acc87",
+    "url": "https://cli.github.com/manual/gh_repo_read-file"
+  },
+  {
+    "sha256": "0d9461735fb774ecdefdbfe60c94597bb6e146a2b585c34a6f733cf3d2b883ea",
+    "url": "https://cli.github.com/manual/gh_repo_rename"
+  },
+  {
+    "sha256": "3ee079d40bf74da11198f569407a08bb46cf1783be911194d54772c251682f46",
+    "url": "https://cli.github.com/manual/gh_repo_set-default"
+  },
+  {
+    "sha256": "0261415e6c4e8e086c4283779a7efbb877bbdaf98625a77cb72e23fa05ba44cd",
+    "url": "https://cli.github.com/manual/gh_repo_sync"
+  },
+  {
+    "sha256": "9ff77ef55de876624d6d2dbe26199b2d5a0a377cb4142ae923215204031d8782",
+    "url": "https://cli.github.com/manual/gh_repo_unarchive"
+  },
+  {
+    "sha256": "6e6c9d79cbd7ec7a29524906354b72d61886e0a1e0d3d37c15736fda4dffc645",
+    "url": "https://cli.github.com/manual/gh_repo_view"
+  },
+  {
+    "sha256": "7e933f15f297bc27b4349dfe3e7b50eac16d7db2ab317c377f8a11264b6e0119",
+    "url": "https://cli.github.com/manual/gh_ruleset"
+  },
+  {
+    "sha256": "569372339d315d244b8a350c72aa921da42c71dee8316991bdbf2dcae2a2be17",
+    "url": "https://cli.github.com/manual/gh_ruleset_check"
+  },
+  {
+    "sha256": "e2645731151f6f5fed11191021d97394f05116a86459848831e31fb27e8f1a57",
+    "url": "https://cli.github.com/manual/gh_ruleset_list"
+  },
+  {
+    "sha256": "ec3e4f7e9ecd646de1ebc60882d725f1a52368118e528308798123f4bb86f8a2",
+    "url": "https://cli.github.com/manual/gh_ruleset_view"
+  },
+  {
+    "sha256": "9aef25459b6793daf56f98b9290d0ee1ae9ef9cc6d433e3a606e931f42efb041",
+    "url": "https://cli.github.com/manual/gh_run"
+  },
+  {
+    "sha256": "724aafeb0c138015baa22c56ffa124bb3dbf99507c1973b370a9e1e9439e3941",
+    "url": "https://cli.github.com/manual/gh_run_cancel"
+  },
+  {
+    "sha256": "53c8ac466cce03be46d327ceb48a2ab04fae9cd13a227b408e69ecc6d36d830c",
+    "url": "https://cli.github.com/manual/gh_run_delete"
+  },
+  {
+    "sha256": "aa7071819bc79b1bc7185d6aa6cb7824ef69a52e913f2c53141f4fb9bc6ad461",
+    "url": "https://cli.github.com/manual/gh_run_download"
+  },
+  {
+    "sha256": "faa1529e98b4c6c634ecc1c4e8f688ac22add7437eaa61181e4c56823c64a857",
+    "url": "https://cli.github.com/manual/gh_run_list"
+  },
+  {
+    "sha256": "2f40acc0f65f671e1c8fd7b7b735bc001fa2a76a8e7061d90a4f7966e339393f",
+    "url": "https://cli.github.com/manual/gh_run_rerun"
+  },
+  {
+    "sha256": "84780eb68fff655d67a7d05c0fcfde8fd6033110ed52765d9a2d73bd9e61849a",
+    "url": "https://cli.github.com/manual/gh_run_view"
+  },
+  {
+    "sha256": "beacfd2f34de7776e5ee9fbaa929413803a4ecf23e7d41e2ff952bf7023ed7d8",
+    "url": "https://cli.github.com/manual/gh_run_watch"
+  },
+  {
+    "sha256": "b22aec7e4b38c3656847049b2c4513e2a01aaf051f40b20cd68d68bc9d107bbc",
+    "url": "https://cli.github.com/manual/gh_search"
+  },
+  {
+    "sha256": "cce3a08c5f1695762aa37b2b328f84456df71554226987081b710aad747e7bf7",
+    "url": "https://cli.github.com/manual/gh_search_code"
+  },
+  {
+    "sha256": "ae36b8647115589dbf36b80fcf1b4602dfe70ad6b2c07363e54e8dc05bf2db06",
+    "url": "https://cli.github.com/manual/gh_search_commits"
+  },
+  {
+    "sha256": "2514e006fd3734ea6e7afdeac4f3565558b1834d9e63e306a1b6300ef585e429",
+    "url": "https://cli.github.com/manual/gh_search_issues"
+  },
+  {
+    "sha256": "d2e023c54c47e39c0908112d4ee4f82ac2727892edf9e2136977970d9c97b157",
+    "url": "https://cli.github.com/manual/gh_search_prs"
+  },
+  {
+    "sha256": "3baad33f622039d58552e0e24288481c285a6ee3de3336b249869ebf90dfef9b",
+    "url": "https://cli.github.com/manual/gh_search_repos"
+  },
+  {
+    "sha256": "7e83fab05df1abeacca8286fa52fdf6df4881b42dd7bacf5d1adfe156d2604c7",
+    "url": "https://cli.github.com/manual/gh_secret"
+  },
+  {
+    "sha256": "12cf48782da3811af3e208a5d1b9de283d7e62138a1ffca47474dd0e017f1201",
+    "url": "https://cli.github.com/manual/gh_secret_delete"
+  },
+  {
+    "sha256": "ba2a240ce40ceed1d8b58e942035692de0d17d7f9146d11e3fc7e091a963a25d",
+    "url": "https://cli.github.com/manual/gh_secret_list"
+  },
+  {
+    "sha256": "92345e76e4a3163446d1bd578205c68cbffaeabe1c57e0456d41cc17eccad752",
+    "url": "https://cli.github.com/manual/gh_secret_set"
+  },
+  {
+    "sha256": "619b2ab62be7e9a923e6e6eeb5abfea9580e4bfdf34fb82e0839ca6aa2d2ff76",
+    "url": "https://cli.github.com/manual/gh_skill"
+  },
+  {
+    "sha256": "65e3d434c72fdcbe5a70a63aed5ae0489c98f02ef69744a9ce71e86292c69f49",
+    "url": "https://cli.github.com/manual/gh_skill_install"
+  },
+  {
+    "sha256": "827a7d81241224e3a5e2e5e25dec18247f630aa1fc3b4b74cafdcfe73d863abd",
+    "url": "https://cli.github.com/manual/gh_skill_list"
+  },
+  {
+    "sha256": "92c354045112cdb781fde16194964d09aa054c6f85bf81ee5174e4cfd2438828",
+    "url": "https://cli.github.com/manual/gh_skill_preview"
+  },
+  {
+    "sha256": "1e888266d8e9bd76260ed6761d7727fd59d187f52ef7d74e17a2c52c6c917dee",
+    "url": "https://cli.github.com/manual/gh_skill_publish"
+  },
+  {
+    "sha256": "dc7b70ea871ad2678e6bf600ee1d59d9616f043443f3a286eb9c10e0268f4764",
+    "url": "https://cli.github.com/manual/gh_skill_search"
+  },
+  {
+    "sha256": "fe2d81f9d0d1ffd9998d3fca868658e6840221caf28728b919e024bbcd0d06c7",
+    "url": "https://cli.github.com/manual/gh_skill_update"
+  },
+  {
+    "sha256": "a16f98efc4af1374312098368bcd2074724dcc474ee5b5a8170c313179a5a30f",
+    "url": "https://cli.github.com/manual/gh_ssh-key"
+  },
+  {
+    "sha256": "4f3c9eabb8e78263f7f59646c23b2cf9021cc62727a788661f89f80632e57c38",
+    "url": "https://cli.github.com/manual/gh_ssh-key_add"
+  },
+  {
+    "sha256": "62f9d3b20c8c0b739c22499c7ce5b486256e0d6b7d7c149567e7f99cb6f9b00d",
+    "url": "https://cli.github.com/manual/gh_ssh-key_delete"
+  },
+  {
+    "sha256": "5caa153b45f334af756162234ef99d6723b1c4283ca07573b0c4ff2cb9193a18",
+    "url": "https://cli.github.com/manual/gh_ssh-key_list"
+  },
+  {
+    "sha256": "2ac0240ca4627d46d80da40d200482641660d26a6fa22285833491210770712f",
+    "url": "https://cli.github.com/manual/gh_status"
+  },
+  {
+    "sha256": "9e27030db19ea63b1364a043f31b3de3c1030fdd08829a1dca58090e13435058",
+    "url": "https://cli.github.com/manual/gh_variable"
+  },
+  {
+    "sha256": "9d82d4242eb2b394338bd54534f8aceb0a635dbcf07e5b070ee926521896b8c7",
+    "url": "https://cli.github.com/manual/gh_variable_delete"
+  },
+  {
+    "sha256": "a1229e29b2cd386dc0eab0598a2fa249a3c1e2a7eac58d43bec3dd067bb1b998",
+    "url": "https://cli.github.com/manual/gh_variable_get"
+  },
+  {
+    "sha256": "35763f12664af85acf4e83095ae8bca3ada2350173d7a03767eb0469c78f94be",
+    "url": "https://cli.github.com/manual/gh_variable_list"
+  },
+  {
+    "sha256": "54f8887fafa689a7d1882af7c6a0cfd8307830ff5c2d9fd5a28d37cf4e628ee6",
+    "url": "https://cli.github.com/manual/gh_variable_set"
+  },
+  {
+    "sha256": "65a560572f6135683080b4d0e228119f7521b9a98a287a65b340cfefa96ffc69",
+    "url": "https://cli.github.com/manual/gh_workflow"
+  },
+  {
+    "sha256": "77986b9e5081a512d7a34d9578ef902e0dd9051de47ae3cd7504e315d223a835",
+    "url": "https://cli.github.com/manual/gh_workflow_disable"
+  },
+  {
+    "sha256": "44d53d86a512cac2db191546dcff98c7d57b174f877e225a7f50395bfa9d13ab",
+    "url": "https://cli.github.com/manual/gh_workflow_enable"
+  },
+  {
+    "sha256": "14f5a42cd0c0ad9361fcc95a70efec0e99b74474ca3b862a867823b5d3b5a70c",
+    "url": "https://cli.github.com/manual/gh_workflow_list"
+  },
+  {
+    "sha256": "689b03950672f5743761537d1a2ca6e2c7edd1dc39a0198cf5873c1614e86ade",
+    "url": "https://cli.github.com/manual/gh_workflow_run"
+  },
+  {
+    "sha256": "68bc4d990d1f67089f72c130cc9e753697af1e0918945f2cfdf949f48402766c",
+    "url": "https://cli.github.com/manual/gh_workflow_view"
+  }
+]

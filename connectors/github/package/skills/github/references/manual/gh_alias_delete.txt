@@ -1,0 +1,17 @@
+Source: https://cli.github.com/manual/gh_alias_delete
+
+gh alias delete
+
+Delete set aliases
+
+gh alias delete {<alias> | --all} [flags]
+
+Options
+
+		--all
+
+	Delete all aliases
+
+See also
+
+  gh alias

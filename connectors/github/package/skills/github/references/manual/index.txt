@@ -1,0 +1,43 @@
+Source: https://cli.github.com/manual/
+
+GitHub CLI manual
+
+GitHub CLI, or gh, is a command-line interface to GitHub for use in your terminal or your scripts.
+
+    Available commands
+
+    Usage examples
+
+    Community extensions
+
+Installation
+
+You can find installation instructions on our README.
+
+Configuration
+
+    Run gh auth login to authenticate with your GitHub account. Alternatively, gh will respect the GITHUB_TOKEN environment variable.
+
+    To set your preferred editor, use gh config set editor <editor>. Read more about gh config and environment variables.
+
+    Declare your aliases for often-used commands with gh alias set.
+
+GitHub Enterprise
+
+GitHub CLI supports GitHub Enterprise Server 2.20 and above. To authenticate with a GitHub instance, run:
+
+gh auth login --hostname <hostname>
+
+To define this host as a default for all GitHub CLI commands, set the GH_HOST environment variable:
+
+export GH_HOST=<hostname>
+
+Finally, to authenticate commands in scripting mode or automation, set the GH_ENTERPRISE_TOKEN:
+
+export GH_ENTERPRISE_TOKEN=<access-token>
+
+Support
+
+    Ask usage questions and send us feedback in Discussions
+
+    Report bugs or search for existing feature requests in our issue tracker

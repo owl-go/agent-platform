@@ -1,0 +1,41 @@
+Source: https://cli.github.com/manual/gh_project_field-list
+
+gh project field-list
+
+List the fields in a project
+
+gh project field-list [<number>] [flags]
+
+Options
+
+		--format <string>
+
+	Output format: {json}
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+	-L, 
+		--limit <int> (default 30)
+
+	Maximum number of fields to fetch
+
+		--owner <string>
+
+	Login of the owner. Use "@me" for the current user.
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+Examples
+
+# List fields in the current user's project "1"
+$ gh project field-list 1 --owner "@me"
+
+See also
+
+  gh project

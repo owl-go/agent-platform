@@ -1,0 +1,1 @@
+{"auth_mode": "cli", "description": "Picset AI 图片 API：商品图、风格复刻、SKU 替换、精修、翻译、生成、分层与任务查询；使用个人 API Key 连接。", "examples_en": ["Generate an image from a prompt", "Query an image generation request"], "examples_zh": ["用文字生成商品图片", "查询 Picset AI 图片任务进度"], "minPlatformVersion": "1.0.0", "name": "Picset AI", "source": "picset-ai", "type": "cli", "version": "0.1.0"}

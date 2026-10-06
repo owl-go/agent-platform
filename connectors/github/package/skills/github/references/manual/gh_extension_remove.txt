@@ -1,0 +1,15 @@
+Source: https://cli.github.com/manual/gh_extension_remove
+
+gh extension remove
+
+Remove an installed extension
+
+gh extension remove <name>
+
+ALIASES
+
+gh extension uninstall,  gh extensions uninstall, gh ext uninstall
+
+See also
+
+  gh extension

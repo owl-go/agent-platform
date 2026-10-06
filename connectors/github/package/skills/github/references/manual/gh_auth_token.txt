@@ -1,0 +1,27 @@
+Source: https://cli.github.com/manual/gh_auth_token
+
+gh auth token
+
+gh auth token [flags]
+
+This command outputs the authentication token for an account on a given GitHub host.
+
+Without the --hostname flag, the default host is chosen.
+
+Without the --user flag, the active account for the host is chosen.
+
+Options
+
+	-h, 
+		--hostname <string>
+
+	The hostname of the GitHub instance authenticated with
+
+	-u, 
+		--user <string>
+
+	The account to output the token for
+
+See also
+
+  gh auth

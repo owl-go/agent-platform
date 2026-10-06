@@ -1,0 +1,56 @@
+Source: https://cli.github.com/manual/gh_gist_edit
+
+gh gist edit
+
+Edit one of your gists
+
+gh gist edit {<id> | <url>} [<filename>] [flags]
+
+Options
+
+	-a, 
+		--add <string>
+
+	Add a new file to the gist
+
+	-d, 
+		--desc <string>
+
+	New description for the gist
+
+	-f, 
+		--filename <string>
+
+	Select a file to edit
+
+	-r, 
+		--remove <string>
+
+	Remove a file from the gist
+
+Examples
+
+# Select a gist to edit interactively
+$ gh gist edit
+
+# Edit a gist file in the default editor
+$ gh gist edit 1234567890abcdef1234567890abcdef
+
+# Edit a specific file in the gist
+$ gh gist edit 1234567890abcdef1234567890abcdef --filename hello.py
+
+# Replace a gist file with content from a local file
+$ gh gist edit 1234567890abcdef1234567890abcdef --filename hello.py hello.py
+
+# Add a new file to the gist
+$ gh gist edit 1234567890abcdef1234567890abcdef --add newfile.py
+
+# Change the description of the gist
+$ gh gist edit 1234567890abcdef1234567890abcdef --desc "new description"
+
+# Remove a file from the gist
+$ gh gist edit 1234567890abcdef1234567890abcdef --remove hello.py
+
+See also
+
+  gh gist
