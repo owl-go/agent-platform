@@ -4,6 +4,14 @@
 
 ## 部署
 
+首次安装，在项目目录运行：
+
+```bash
+make install
+```
+
+填写服务器、域名和管理员邮箱，脚本自动安装依赖、生成配置并启动服务。见[首次安装](deploy/platform/installation.md)。
+
 已有服务器安装，首次只需保存服务器地址和安装目录：
 
 ```bash
@@ -20,7 +28,7 @@ make deploy
 
 发布使用已集成的 `origin/main_temp`，不会上传本地未提交文件。首次接管已有安装会重新构建 API / Worker，以确认运行版本一致。
 
-查看[部署说明](deploy/platform/README.md)。全新服务器请使用[首次安装说明](deploy/platform/installation.md)；当前一键入口用于已有安装。
+查看[部署说明](deploy/platform/README.md)。
 
 ## 开发
 

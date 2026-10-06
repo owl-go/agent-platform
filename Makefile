@@ -9,6 +9,9 @@ test:
 deploy:
 	scripts/deploy-platform.sh
 
+install:
+	scripts/install-platform.sh
+
 deploy-setup:
 	scripts/deploy-platform.sh --configure
 
@@ -17,9 +20,10 @@ deploy-check:
 
 deploy-test:
 	python3 -m unittest discover -s scripts -p 'deployment_test.py'
-	bash -n scripts/deploy-platform.sh scripts/deploy-platform-infrastructure.sh
+	python3 -m unittest discover -s scripts -p 'installation_test.py'
+	bash -n scripts/deploy-platform.sh scripts/deploy-platform-infrastructure.sh scripts/install-platform.sh
 
-.PHONY: deploy-setup deploy-check deploy-test
+.PHONY: install deploy-setup deploy-check deploy-test
 
 web-build:
 	pnpm --dir frontend build
