@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location("deployment", Path(__file__).with_name("deployment.py"))
 deployment = importlib.util.module_from_spec(spec)
@@ -115,6 +116,12 @@ class DeploymentTests(unittest.TestCase):
             deployment.gates(Path("/source"), {"backend": True, "web": False}, {}, io.StringIO())
         self.assertEqual([c.args[0] for c in run.call_args_list],
                          [["make", "deploy-test"], ["make", "test"], ["make", "build"]])
+
+    def test_build_space_blocks_before_gates_but_allows_noop_release(self):
+        with patch.object(deployment.shutil, "disk_usage", return_value=SimpleNamespace(free=2 * 1024**3)):
+            with self.assertRaisesRegex(deployment.DeploymentError, "构建空间不足 4 GiB"):
+                deployment.require_build_space(Path("/source"), {"backend": True, "web": False})
+            deployment.require_build_space(Path("/source"), {"backend": False, "web": False})
 
     def test_public_verification_rejects_stale_frontend_even_when_http_200(self):
         with tempfile.TemporaryDirectory() as directory:
