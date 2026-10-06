@@ -79,6 +79,7 @@ jobs:
       - run: docker compose --env-file deploy/platform/.env.example -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml -f deploy/platform/compose.execution.yaml config --quiet
       - run: docker compose --env-file deploy/platform/.env.example -f deploy/platform/compose.yaml build api worker
       - run: bash -n scripts/deploy-web.sh
+      - run: make deploy-test
 
   frontend:
     runs-on: ubuntu-latest
