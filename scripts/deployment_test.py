@@ -116,6 +116,25 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual([c.args[0] for c in run.call_args_list],
                          [["make", "deploy-test"], ["make", "test"], ["make", "build"]])
 
+    def test_public_verification_rejects_stale_frontend_even_when_http_200(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            web = root / "web/current"
+            web.mkdir(parents=True)
+            (web / "index.html").write_text('<script src="/assets/index-current.js"></script>')
+            (web / "assets").mkdir()
+            (web / "assets/index-current.js").write_text("new-release")
+
+            def curl(args):
+                destination = args[args.index("-o") + 1]
+                if destination != "/dev/null":
+                    Path(destination).write_text((web / "index.html").read_text() if args[-1].endswith("/") else "old-release")
+
+            env = {"VITE_OIDC_POST_LOGOUT_REDIRECT_URI": "https://host", "VITE_OIDC_AUTHORITY": "https://host/realms/test"}
+            with patch.object(deployment, "container_value", return_value="healthy"), patch.object(deployment, "run", side_effect=curl):
+                with self.assertRaisesRegex(deployment.DeploymentError, "公网 Web 内容"):
+                    deployment.verify_server(root, env)
+
     def test_web_build_is_once_and_uses_remote_public_configuration(self):
         public = {"VITE_OIDC_CLIENT_ID": "remote-client"}
         with patch.object(deployment, "run") as run:
