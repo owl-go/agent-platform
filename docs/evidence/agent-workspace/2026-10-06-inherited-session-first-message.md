@@ -17,3 +17,10 @@
 - `git diff --check`、`cmp -s AGENTS.md CLAUDE.md`：通过。
 
 本次验证证明界面允许提交且 Repository 能持久化首条消息及执行快照；没有向真实模型供应商发送验收消息，也不新增 Runtime 镜像或 Linux + runsc 的 Production Conformance 证据。
+
+线上发布：功能提交 `24d2c70` 已推送并合入 `main_temp` 的 `30ac7f7a6e3149925a9760422c99a83b97622ea1`，从该不可变快照执行 `make deploy`，退出状态为 0。发布 `app-20261006T105155Z-bf4f48ff` 完成适用门禁、数据库备份校验、API / Worker 构建和切换；健康、Readiness、HTTPS / OIDC 检查通过。
+
+- API：`sha256:8673d1ef2995a44445d0da15122d7ca0b3e234fbef15ae93f5179d88f1efb358`，healthy。
+- Worker：`sha256:72ff800fff59693e3e1673c3616fd84db625c86bd4d0e27e8922e7b819fca005`，healthy。
+- Session 页面在主入口静态导入；公网 `index.html` 与发布目录字节一致，实际主脚本 `/assets/index-GiXF4WHu.js` 的 SHA-256 为 `a2bdc67161ad37e8387ff80da023f08c7bbdca7fd7e1940931593bb002a5d2f8`，公网与服务器发布文件一致。发布源码中已不存在继承配置的 verified-only 判断。
+- 服务器 `platform.env` 和 `platform.https.yaml` 的部署前后哈希一致；未修改用户继承状态或供应商凭据。
