@@ -96,7 +96,8 @@ type RegistrationAttempt struct {
 	Nonce         string
 	Challenge     string
 	QRURL         string
-	TicketHash    string
+	LoginCode     string
+	LoginCodeHash string
 	Identity      RegistrationIdentity
 	Status        string
 	CodeHash      string

@@ -75,6 +75,16 @@ func (m *registrationMemory) AttemptByCode(_ context.Context, hash string) (doma
 	}
 	return domain.RegistrationAttempt{}, domain.ErrNotFound
 }
+func (m *registrationMemory) AttemptByLoginCode(_ context.Context, hash string) (domain.RegistrationAttempt, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, a := range m.attempts {
+		if a.LoginCodeHash == hash {
+			return a, nil
+		}
+	}
+	return domain.RegistrationAttempt{}, domain.ErrNotFound
+}
 func (m *registrationMemory) TransitionAttempt(_ context.Context, a domain.RegistrationAttempt, from string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -152,9 +162,6 @@ func (g *registrationGateway) FeishuIdentity(_ context.Context, s domain.Registr
 	}
 	return domain.NewRegistrationIdentity(s.Provider, s.AppID, "external-person", "张三")
 }
-func (g *registrationGateway) WeChatQR(context.Context, domain.RegistrationSettings, string) (string, error) {
-	return "trusted-ticket", nil
-}
 func registrationFixture() (*Registration, *registrationMemory, *registrationAccounts, *registrationIdentityProvider, *registrationGateway) {
 	repo := &registrationMemory{settings: map[string]domain.RegistrationSettings{}, attempts: map[string]domain.RegistrationAttempt{}}
 	users := &registrationAccounts{users: map[string]domain.User{}}
@@ -230,18 +237,18 @@ func TestRegistrationWeChatFollowProofBrowserBindingAndSingleUseExchange(t *test
 	if _, _, err := s.Complete(t.Context(), a.ID, b); err == nil {
 		t.Fatal("completed without follow")
 	}
-	for _, ticket := range []string{"", "forged-ticket"} {
-		if err := s.VerifyWeChat(t.Context(), a.ID, ticket, "openid"); err == nil {
-			t.Fatal("forged ticket accepted")
+	for _, code := range []string{"", "AW-AAAA-AAAA-AAAA"} {
+		if err := s.VerifyWeChat(t.Context(), code, "openid"); err == nil {
+			t.Fatal("invalid login code accepted")
 		}
 	}
-	if err := s.VerifyWeChat(t.Context(), a.ID, "trusted-ticket", "openid"); err != nil {
+	if err := s.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.VerifyWeChat(t.Context(), a.ID, "trusted-ticket", "openid"); err != nil {
+	if err := s.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err != nil {
 		t.Fatal("repeat callback not idempotent", err)
 	}
-	if err := s.VerifyWeChat(t.Context(), a.ID, "trusted-ticket", "someone-else"); err == nil {
+	if err := s.VerifyWeChat(t.Context(), a.LoginCode, "someone-else"); err == nil {
 		t.Fatal("second identity overwrote proof")
 	}
 	if _, _, err := s.Complete(t.Context(), a.ID, "another-browser"); err == nil {
@@ -270,7 +277,7 @@ func TestRegistrationWeChatFollowProofBrowserBindingAndSingleUseExchange(t *test
 		t.Fatal("code replay accepted")
 	}
 	second, browser := beginRegistration(t, s, a.Provider)
-	_ = s.VerifyWeChat(t.Context(), second.ID, "trusted-ticket", "openid")
+	_ = s.VerifyWeChat(t.Context(), second.LoginCode, "openid")
 	if _, _, err = s.Complete(t.Context(), second.ID, browser); err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +311,7 @@ func TestRegistrationExpiryDisableAndDisabledUserAreRejected(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			s, repo, users, _, _ := registrationFixture()
 			a, b := beginRegistration(t, s, domain.RegistrationWeChat)
-			_ = s.VerifyWeChat(t.Context(), a.ID, "trusted-ticket", "openid")
+			_ = s.VerifyWeChat(t.Context(), a.LoginCode, "openid")
 			switch mode {
 			case "expired":
 				a = repo.attempts[a.ID]
@@ -331,7 +338,7 @@ func TestRegistrationExpiryDisableAndDisabledUserAreRejected(t *testing.T) {
 func TestRegistrationConcurrentCompletionIssuesOneCode(t *testing.T) {
 	s, _, users, _, _ := registrationFixture()
 	a, b := beginRegistration(t, s, domain.RegistrationWeChat)
-	if err := s.VerifyWeChat(t.Context(), a.ID, "trusted-ticket", "openid"); err != nil {
+	if err := s.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err != nil {
 		t.Fatal(err)
 	}
 	var wg sync.WaitGroup
@@ -350,5 +357,117 @@ func TestRegistrationConcurrentCompletionIssuesOneCode(t *testing.T) {
 	}
 	if success != 1 || users.created != 1 {
 		t.Fatalf("successes=%d users=%d", success, users.created)
+	}
+}
+
+func TestWeChatLoginCodeIsBrowserBoundAndDoesNotCallQRProvider(t *testing.T) {
+	s, _, _, _, gateway := registrationFixture()
+	a, browser := beginRegistration(t, s, domain.RegistrationWeChat)
+	if NormalizeRegistrationLoginCode(a.LoginCode) != a.LoginCode || a.LoginCodeHash != RegistrationHash(a.LoginCode) || a.CodeHash != "" || gateway.calls != 0 {
+		t.Fatal("invalid or externally generated login challenge")
+	}
+	if a.QRURL != "https://open.weixin.qq.com/qr/code?username=gh_account" {
+		t.Fatal("not an ordinary follow QR")
+	}
+	second, secondBrowser := beginRegistration(t, s, domain.RegistrationWeChat)
+	if a.LoginCode == second.LoginCode {
+		t.Fatal("login code reused")
+	}
+	if err := s.VerifyWeChat(t.Context(), strings.ToLower(strings.ReplaceAll(a.LoginCode, "-", "")), "openid"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.Complete(t.Context(), a.ID, secondBrowser); err == nil {
+		t.Fatal("another browser completed the code")
+	}
+	if _, _, err := s.Complete(t.Context(), second.ID, browser); err == nil {
+		t.Fatal("identity transferred to another attempt")
+	}
+	if _, _, err := s.Complete(t.Context(), a.ID, browser); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWeChatLoginCodeRejectsExpiredClosedAndChangedAttempts(t *testing.T) {
+	for _, mode := range []string{"expired", "disabled", "changed", "foreign-provider"} {
+		t.Run(mode, func(t *testing.T) {
+			s, repo, _, _, _ := registrationFixture()
+			a, _ := beginRegistration(t, s, domain.RegistrationWeChat)
+			switch mode {
+			case "expired":
+				a.ExpiresAt = time.Now().Add(-time.Second)
+				repo.attempts[a.ID] = a
+			case "disabled":
+				settings := repo.settings[a.Provider]
+				settings.Enabled = false
+				repo.settings[a.Provider] = settings
+			case "changed":
+				settings := repo.settings[a.Provider]
+				settings.Version++
+				repo.settings[a.Provider] = settings
+			case "foreign-provider":
+				a.Provider = domain.RegistrationFeishu
+				repo.attempts[a.ID] = a
+			}
+			if err := s.VerifyWeChat(t.Context(), a.LoginCode, "openid"); err == nil {
+				t.Fatal("unavailable challenge accepted")
+			}
+			if repo.attempts[a.ID].Identity.Subject != "" {
+				t.Fatal("rejected message changed identity")
+			}
+		})
+	}
+}
+
+func TestWeChatConcurrentDifferentSendersCannotClaimOneCode(t *testing.T) {
+	s, repo, _, _, _ := registrationFixture()
+	a, _ := beginRegistration(t, s, domain.RegistrationWeChat)
+	var wg sync.WaitGroup
+	results := make(chan error, 8)
+	for i := range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results <- s.VerifyWeChat(context.Background(), a.LoginCode, "openid-"+string(rune('a'+i)))
+		}()
+	}
+	wg.Wait()
+	close(results)
+	success := 0
+	for err := range results {
+		if err == nil {
+			success++
+		}
+	}
+	if success != 1 || repo.attempts[a.ID].Status != "verified" {
+		t.Fatal("multiple senders claimed one challenge")
+	}
+}
+
+func TestWeChatConcurrentProviderRetriesAreIdempotent(t *testing.T) {
+	s, repo, _, _, _ := registrationFixture()
+	a, _ := beginRegistration(t, s, domain.RegistrationWeChat)
+	var wg sync.WaitGroup
+	results := make(chan error, 8)
+	for range 8 {
+		wg.Add(1)
+		go func() { defer wg.Done(); results <- s.VerifyWeChat(context.Background(), a.LoginCode, "same-openid") }()
+	}
+	wg.Wait()
+	close(results)
+	for err := range results {
+		if err != nil {
+			t.Fatal("provider retry failed", err)
+		}
+	}
+	if repo.attempts[a.ID].Version != 2 {
+		t.Fatal("provider retry changed confirmation more than once")
+	}
+}
+
+func TestRegistrationLoginCodeRejectsNonLoginMessages(t *testing.T) {
+	for _, value := range []string{"", "hello", "123456", "AW-AAAA-AAAA-AAA0", "AW-AAAA-AAAA-AAAA<script>", "登录 AW-AAAA-AAAA-AAAA"} {
+		if NormalizeRegistrationLoginCode(value) != "" {
+			t.Fatalf("ordinary message parsed as code: %q", value)
+		}
 	}
 }

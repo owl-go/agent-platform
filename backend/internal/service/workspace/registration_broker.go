@@ -139,7 +139,11 @@ func (service *Service) registrationHTTP(writer http.ResponseWriter, request *ht
 				return
 			}
 			writer.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(writer).Encode(map[string]string{"status": a.Status, "qr_url": a.QRURL, "expires_at": a.ExpiresAt.Format(time.RFC3339)})
+			if provider == accountdomain.RegistrationWeChat && a.LoginCode == "" {
+				writeAuthError(writer, 410, "registration_expired")
+				return
+			}
+			_ = json.NewEncoder(writer).Encode(map[string]string{"status": a.Status, "qr_url": a.QRURL, "login_code": a.LoginCode, "expires_at": a.ExpiresAt.Format(time.RFC3339)})
 			return
 		}
 		if request.Header.Get("X-Registration-Request") != "1" {
@@ -279,17 +283,34 @@ func (b *registrationBroker) wechatCallback(w http.ResponseWriter, r *http.Reque
 		writeAuthError(w, 403, "invalid_callback")
 		return
 	}
-	event, scene, err := registrationgateway.ParseWeChatEvent(settings, plain, time.Now())
+	message, err := registrationgateway.ParseWeChatMessage(settings, plain, time.Now())
 	if err != nil {
 		writeAuthError(w, 403, "invalid_callback")
 		return
 	}
-	if scene != "" {
-		err = b.app.VerifyWeChat(r.Context(), scene, event.Ticket, event.FromUserName)
+	reply := ""
+	if message.MsgType == "event" && message.Event == "subscribe" {
+		reply = "请将登录网页上的一次性登录码发送给本公众号，完成登录或注册。只发送你自己登录页面上的码。"
+	} else if message.MsgType == "text" {
+		code := accountapplication.NormalizeRegistrationLoginCode(message.Content)
+		reply = "请将当前登录网页上的完整一次性登录码发送给本公众号。"
+		if code != "" {
+			if b.app.VerifyWeChat(r.Context(), code, message.FromUserName) == nil {
+				reply = "登录已确认，请回到发起登录的网页。"
+			} else {
+				reply = "登录码无效或已过期，请返回网页重新发起登录。"
+			}
+		}
+	}
+	if reply != "" {
+		body, err := registrationgateway.WeChatTextReply(settings, message, reply, time.Now())
 		if err != nil {
-			writeAuthError(w, 403, "invalid_callback")
+			writeAuthError(w, 503, "registration_unavailable")
 			return
 		}
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		_, _ = w.Write(body)
+		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
 	_, _ = io.WriteString(w, "success")

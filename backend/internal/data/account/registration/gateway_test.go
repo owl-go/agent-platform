@@ -74,24 +74,21 @@ func TestProviderFailuresNeverExposeSecretsAndMissingCodesFailClosed(t *testing.
 		}
 	}
 }
-func TestWeChatUsesStableTokenAndTemporaryStringScene(t *testing.T) {
+func TestWeChatSettingsUseStableTokenWithoutQRPermission(t *testing.T) {
 	calls := 0
 	g := New(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
+		if r.URL.Path != "/cgi-bin/stable_token" {
+			t.Fatal("registration requires an unnecessary provider permission")
+		}
 		body, _ := io.ReadAll(r.Body)
-		if calls == 1 {
-			if r.URL.Path != "/cgi-bin/stable_token" || !bytes.Contains(body, []byte(`"force_refresh":false`)) {
-				t.Fatal("unsafe token refresh")
-			}
-			return response(`{"access_token":"wx-token"}`), nil
+		if !bytes.Contains(body, []byte(`"force_refresh":false`)) {
+			t.Fatal("unsafe token refresh")
 		}
-		if r.URL.Path != "/cgi-bin/qrcode/create" || r.URL.Query().Get("access_token") != "wx-token" || !bytes.Contains(body, []byte(`"scene_str":"scene"`)) || !bytes.Contains(body, []byte(`"expire_seconds":300`)) {
-			t.Fatal("invalid qr request")
-		}
-		return response(`{"ticket":"ticket"}`), nil
+		return response(`{"access_token":"wx-token"}`), nil
 	})})
-	ticket, err := g.WeChatQR(t.Context(), domain.RegistrationSettings{AppID: "app", AppSecret: "secret"}, "scene")
-	if err != nil || ticket != "ticket" || calls != 2 {
+	_, err := g.VerifySettings(t.Context(), domain.RegistrationSettings{Provider: domain.RegistrationWeChat, AppID: "app", AppSecret: "secret"})
+	if err != nil || calls != 1 {
 		t.Fatal(err)
 	}
 }
@@ -119,8 +116,8 @@ func TestWeChatSafeModeBindsAuthenticatedBodyApplicationAccountAndTime(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	event, scene, err := ParseWeChatEvent(settings, plain, now)
-	if err != nil || scene != "scene" || event.FromUserName != "openid" {
+	event, err := ParseWeChatMessage(settings, plain, now)
+	if err != nil || event.FromUserName != "openid" {
 		t.Fatal("follow proof lost", err)
 	}
 	for _, mode := range []string{"signature", "timestamp", "application", "account", "body", "plaintext"} {
@@ -147,7 +144,7 @@ func TestWeChatSafeModeBindsAuthenticatedBodyApplicationAccountAndTime(t *testin
 			}
 			p, err := DecryptWeChat(s, q, e, now)
 			if err == nil {
-				_, _, err = ParseWeChatEvent(s, p, now)
+				_, err = ParseWeChatMessage(s, p, now)
 			}
 			if err == nil {
 				t.Fatal("unsafe callback accepted")
@@ -156,7 +153,7 @@ func TestWeChatSafeModeBindsAuthenticatedBodyApplicationAccountAndTime(t *testin
 	}
 	scan := bytes.ReplaceAll(body, []byte("subscribe"), []byte("SCAN"))
 	scan = bytes.ReplaceAll(scan, []byte("qrscene_scene"), []byte("scene"))
-	if _, scene, err = ParseWeChatEvent(settings, scan, now); err != nil || scene != "scene" {
+	if event, err = ParseWeChatMessage(settings, scan, now); err != nil || event.Event != "SCAN" {
 		t.Fatal("existing follower scan rejected")
 	}
 }

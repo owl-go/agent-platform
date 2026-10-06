@@ -25,7 +25,7 @@ An Administrator-managed external identity route for scan sign-in and first-use 
 _Avoid_: Connector Authorization, Message Channel Account, password registration
 
 **Registration Attempt**:
-A short-lived, browser-bound exchange that ties one external identity proof to one sign-in request. Confirmation can complete only that exchange and cannot be reused for another browser or User.
+A short-lived, browser-bound exchange that ties one external identity proof to one sign-in request. Its WeChat one-time code identifies that exchange; confirmation can complete only that exchange and cannot be reused for another browser or User.
 _Avoid_: User session, Connector Authorization, Message Channel Sender Pairing
 
 **Identity Group**:

@@ -101,9 +101,23 @@ func TestRegistrationRepositoryEncryptedSettingsAuditCASAndAttemptConsumption(t 
 			t.Fatal("no-email registration failed", err)
 		}
 	}
-	attempt := domain.RegistrationAttempt{ID: "attempt", Provider: settings.Provider, ConfigVersion: settings.Version, BrowserHash: "browser", Status: "waiting", ExpiresAt: time.Now().Add(time.Minute), Version: 1}
+	loginCode := "AW-ABCD-EFGH-JKLM"
+	loginHash := strings.Repeat("b", 64)
+	attempt := domain.RegistrationAttempt{ID: "attempt", Provider: domain.RegistrationWeChat, ConfigVersion: settings.Version, BrowserHash: "browser", LoginCode: loginCode, LoginCodeHash: loginHash, Status: "waiting", ExpiresAt: time.Now().Add(time.Minute), Version: 1}
 	if err = repo.CreateAttempt(t.Context(), attempt); err != nil {
 		t.Fatal(err)
+	}
+	byLogin, err := repo.AttemptByLoginCode(t.Context(), loginHash)
+	if err != nil || byLogin.LoginCode != loginCode || byLogin.ID != attempt.ID {
+		t.Fatal("login hash did not resolve encrypted challenge", err)
+	}
+	if _, err = repo.AttemptByCode(t.Context(), loginHash); err == nil {
+		t.Fatal("login challenge accepted as OIDC exchange code")
+	}
+	duplicate := attempt
+	duplicate.ID = "duplicate"
+	if err = repo.CreateAttempt(t.Context(), duplicate); err == nil {
+		t.Fatal("duplicate login hash accepted")
 	}
 	attempt.Status = "verified"
 	attempt.Identity = domain.RegistrationIdentity{Subject: "private-person"}
@@ -143,7 +157,7 @@ func TestRegistrationRepositoryEncryptedSettingsAuditCASAndAttemptConsumption(t 
 	}
 	var row registrationAttemptModel
 	_ = db.Take(&row).Error
-	if strings.Contains(string(row.PayloadCiphertext), "private-person") {
+	if strings.Contains(string(row.PayloadCiphertext), "private-person") || strings.Contains(string(row.PayloadCiphertext), loginCode) {
 		t.Fatal("plaintext identity")
 	}
 	attempt.ID = "expired"
@@ -151,6 +165,7 @@ func TestRegistrationRepositoryEncryptedSettingsAuditCASAndAttemptConsumption(t 
 	attempt.ExpiresAt = time.Now().Add(-time.Second)
 	attempt.Version = 1
 	attempt.CodeHash = ""
+	attempt.LoginCodeHash = ""
 	if err = repo.CreateAttempt(t.Context(), attempt); err != nil {
 		t.Fatal(err)
 	}

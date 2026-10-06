@@ -3,6 +3,7 @@ package registration
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/subtle"
 	"encoding/base64"
@@ -18,14 +19,14 @@ import (
 	"agent-platform/backend/internal/biz/account/domain"
 )
 
-type WeChatEvent struct {
+type WeChatMessage struct {
 	ToUserName   string
 	FromUserName string
 	CreateTime   int64
 	MsgType      string
 	Event        string
-	EventKey     string
-	Ticket       string
+	Content      string
+	MsgID        uint64 `xml:"MsgId"`
 }
 
 func WeChatSignature(token, timestamp, nonce, encrypted string) string {
@@ -97,24 +98,63 @@ func DecryptWeChat(s domain.RegistrationSettings, query url.Values, encrypted st
 	}
 	return plain[20 : 20+length], nil
 }
-func ParseWeChatEvent(s domain.RegistrationSettings, plain []byte, now time.Time) (WeChatEvent, string, error) {
-	var event WeChatEvent
-	if xml.Unmarshal(plain, &event) != nil || event.ToUserName != s.OfficialAccountID || event.FromUserName == "" || event.MsgType != "event" || event.CreateTime < now.Unix()-300 || event.CreateTime > now.Unix()+300 {
-		return event, "", domain.ErrUnauthenticated
+func ParseWeChatMessage(s domain.RegistrationSettings, plain []byte, now time.Time) (WeChatMessage, error) {
+	var message WeChatMessage
+	if xml.Unmarshal(plain, &message) != nil || message.ToUserName != s.OfficialAccountID || message.FromUserName == "" || len(message.FromUserName) > 256 || message.MsgType == "" || message.CreateTime < now.Unix()-300 || message.CreateTime > now.Unix()+300 {
+		return message, domain.ErrUnauthenticated
 	}
-	scene := event.EventKey
-	switch event.Event {
-	case "subscribe":
-		if !strings.HasPrefix(scene, "qrscene_") {
-			return event, "", nil
-		}
-		scene = strings.TrimPrefix(scene, "qrscene_")
-	case "SCAN":
-	default:
-		return event, "", nil
+	return message, nil
+}
+
+// Passive replies use the same safe-mode envelope as incoming messages and
+// require no customer-service or parameterized QR API permission.
+func WeChatTextReply(s domain.RegistrationSettings, incoming WeChatMessage, content string, now time.Time) ([]byte, error) {
+	reply := struct {
+		XMLName      xml.Name `xml:"xml"`
+		ToUserName   string
+		FromUserName string
+		CreateTime   int64
+		MsgType      string
+		Content      string
+	}{ToUserName: incoming.FromUserName, FromUserName: s.OfficialAccountID, CreateTime: now.Unix(), MsgType: "text", Content: content}
+	body, err := xml.Marshal(reply)
+	if err != nil {
+		return nil, err
 	}
-	if scene == "" || event.Ticket == "" {
-		return event, "", domain.ErrUnauthenticated
+	key, err := base64.StdEncoding.DecodeString(s.EncodingAESKey + "=")
+	if err != nil || len(key) != 32 {
+		return nil, domain.ErrUnauthenticated
 	}
-	return event, scene, nil
+	plain := make([]byte, 20, 20+len(body)+len(s.AppID)+32)
+	if _, err = rand.Read(plain[:16]); err != nil {
+		return nil, err
+	}
+	binary.BigEndian.PutUint32(plain[16:20], uint32(len(body)))
+	plain = append(plain, body...)
+	plain = append(plain, s.AppID...)
+	padding := 32 - len(plain)%32
+	for range padding {
+		plain = append(plain, byte(padding))
+	}
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	ciphertext := make([]byte, len(plain))
+	cipher.NewCBCEncrypter(block, key[:aes.BlockSize]).CryptBlocks(ciphertext, plain)
+	encrypted := base64.StdEncoding.EncodeToString(ciphertext)
+	nonceBytes := make([]byte, 16)
+	if _, err = rand.Read(nonceBytes); err != nil {
+		return nil, err
+	}
+	nonce := base64.RawURLEncoding.EncodeToString(nonceBytes)
+	timestamp := strconv.FormatInt(now.Unix(), 10)
+	envelope := struct {
+		XMLName      xml.Name `xml:"xml"`
+		Encrypt      string
+		MsgSignature string
+		TimeStamp    int64
+		Nonce        string
+	}{Encrypt: encrypted, MsgSignature: WeChatSignature(s.VerificationToken, timestamp, nonce, encrypted), TimeStamp: now.Unix(), Nonce: nonce}
+	return xml.Marshal(envelope)
 }
