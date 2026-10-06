@@ -13744,8 +13744,11 @@ type SetPlatformExecutionDefaultRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	RuntimeEngine   string                 `protobuf:"bytes,1,opt,name=runtime_engine,json=runtimeEngine,proto3" json:"runtime_engine,omitempty"`
 	ProviderModelId string                 `protobuf:"bytes,2,opt,name=provider_model_id,json=providerModelId,proto3" json:"provider_model_id,omitempty"`
-	ValidationRunId string                 `protobuf:"bytes,3,opt,name=validation_run_id,json=validationRunId,proto3" json:"validation_run_id,omitempty"`
-	ExpectedVersion int64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	// Deprecated: ignored. Saving the default does not require a validation Run.
+	//
+	// Deprecated: Marked as deprecated in workspace/v1/workspace.proto.
+	ValidationRunId string `protobuf:"bytes,3,opt,name=validation_run_id,json=validationRunId,proto3" json:"validation_run_id,omitempty"`
+	ExpectedVersion int64  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -13794,6 +13797,7 @@ func (x *SetPlatformExecutionDefaultRequest) GetProviderModelId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in workspace/v1/workspace.proto.
 func (x *SetPlatformExecutionDefaultRequest) GetValidationRunId() string {
 	if x != nil {
 		return x.ValidationRunId
@@ -24793,11 +24797,11 @@ const file_workspace_v1_workspace_proto_rawDesc = "" +
 	"\aversion\x18\a \x01(\x03R\aversion\x12/\n" +
 	"\x13execution_inherited\x18\b \x01(\bR\x12executionInherited\x12@\n" +
 	"\x1cplatform_execution_available\x18\t \x01(\bR\x1aplatformExecutionAvailable\"$\n" +
-	"\"GetPlatformExecutionDefaultRequest\"\xce\x01\n" +
+	"\"GetPlatformExecutionDefaultRequest\"\xd2\x01\n" +
 	"\"SetPlatformExecutionDefaultRequest\x12%\n" +
 	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12*\n" +
-	"\x11provider_model_id\x18\x02 \x01(\tR\x0fproviderModelId\x12*\n" +
-	"\x11validation_run_id\x18\x03 \x01(\tR\x0fvalidationRunId\x12)\n" +
+	"\x11provider_model_id\x18\x02 \x01(\tR\x0fproviderModelId\x12.\n" +
+	"\x11validation_run_id\x18\x03 \x01(\tB\x02\x18\x01R\x0fvalidationRunId\x12)\n" +
 	"\x10expected_version\x18\x04 \x01(\x03R\x0fexpectedVersion\"\x9b\x02\n" +
 	"\x18PlatformExecutionDefault\x12%\n" +
 	"\x0eruntime_engine\x18\x01 \x01(\tR\rruntimeEngine\x12*\n" +

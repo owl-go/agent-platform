@@ -116,7 +116,7 @@ type SessionWorkflowRepository interface {
 // Runtime/Model choice separate from User-owned Personal Settings.
 type PlatformExecutionDefaultRepository interface {
 	GetPlatformExecutionDefault(context.Context) (domain.PlatformExecutionDefault, error)
-	SetPlatformExecutionDefault(context.Context, string, domain.RuntimeEngine, string, string, int64) (domain.PlatformExecutionDefault, error)
+	SetPlatformExecutionDefault(context.Context, string, domain.RuntimeEngine, string, int64) (domain.PlatformExecutionDefault, error)
 }
 
 type HomeOverviewRepository interface {

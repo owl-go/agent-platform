@@ -6,7 +6,7 @@
 
 产品浏览器继续自动跳转 Keycloak。账号管理 → 注册方式提供两个独立开关；关闭默认扫码入口，管理员密码入口持续可用。开放入口同时允许首次注册与已有外部账号登录，关闭不会结束已存在的产品会话。
 
-- 微信公众号：网页展示普通关注二维码和五分钟有效的一次性登录码。新用户关注后将码发送给公众号，已有关注者直接发送；网页保持打开并轮询确认。安全模式文本消息须通过签名、AES-CBC、App ID、公众号原始 ID 和时间校验，再按码 hash 找到同一版本的 Attempt，并以 CAS 绑定 FromUserName 对应身份。普通关注、SCAN、其他文本和明文回调不能确认登录。公众号以加密被动回复发送关注操作说明、确认或无效/过期提示；不调用带参数二维码、客服发送或用户资料 API。GET 服务器握手仍仅校验 signature 并回显 echostr，不确认身份。
+- 微信公众号：网页展示普通关注二维码和五分钟有效的四位数字一次性登录码（保留前导零）。新用户关注后将码发送给公众号，已有关注者直接发送；网页保持打开并轮询确认。安全模式文本消息须通过签名、AES-CBC、App ID、公众号原始 ID 和时间校验，再按码 hash 找到同一版本的 Attempt，并以 CAS 绑定 FromUserName 对应身份。普通关注、SCAN、其他文本和明文回调不能确认登录。公众号以加密被动回复发送关注操作说明、确认或无效/过期提示；不调用带参数二维码、客服发送或用户资料 API。GET 服务器握手仍仅校验 signature 并回显 echostr，不确认身份。
 - 飞书：跳转官方网页授权扫码页，以随机 State 和 HttpOnly 浏览器 Cookie 绑定返回。服务器使用授权码取得 User Token，然后获取 User 信息，要求其 `tenant_key` 与 App ID/App Secret 查询到的企业一致。供应商 User Token 只在当前调用内存在。
 
 首次使用创建无密码、无邮箱的普通 Keycloak User 和本地 User/Personal Settings 投影，并绑定固定 `aw-feishu` 或 `aw-wechat_official` 联邦身份。返回用户重用同一投影；无治理角色默认值，不按邮箱或名称合并现有账号。外部身份 Subject 是 method/App ID/原始身份的 SHA-256，更换 App ID 会产生新的身份命名空间。
@@ -63,13 +63,13 @@ python3 scripts/configure-registration-identity.py check
 
 公开协议入口仅允许已知 provider 下的 `authorize`、`callback`、`status`、`complete`、`token` 和 `jwks` 的指定 HTTP Method；不绕过管理员 API 或普通产品认证。`/register/wechat` 与 `/register/failed` 是公开 Web 状态页，不初始化产品会话；登录码只从绑定 Cookie 的 status 接口读取。
 
-Attempt 的 State、Nonce、浏览器 hash、登录码、身份和 OIDC code hash 存入加密 payload。登录码具有 60 位随机熵，独立的 login_code_hash 列仅保存小写 SHA-256，唯一约束拒绝重复码；它不能作为 OIDC exchange code。Cookie 使用 Secure/HttpOnly/SameSite=Lax；确认还要求同源 Origin 和自定义请求头。Attempt 5 分钟有效，code 一分钟有效；改变配置、关闭方法、过期或 CAS 失配均拒绝。首次有效文本确认锁定一个身份；同一身份重试幂等，其他身份不能覆盖。旧 ticket Attempt 没有登录码，status 返回过期恢复操作；不自动转换。创建新 Attempt 时删除过期记录，最多保留 10,000 个未清理记录；API 每副本最多开始 120 个 Attempt/分钟，供应商调用使用有限超时。
+Attempt 的 State、Nonce、浏览器 hash、登录码、身份和 OIDC code hash 存入加密 payload。登录码由加密随机源均匀生成 `0000`–`9999`，按字符串保留前导零；独立的 login_code_hash 列仅保存小写 SHA-256，唯一约束拒绝重复码；它不能作为 OIDC exchange code。Cookie 使用 Secure/HttpOnly/SameSite=Lax；确认还要求同源 Origin 和自定义请求头。Attempt 5 分钟有效，code 一分钟有效；改变配置、关闭方法、过期或 CAS 失配均拒绝。首次有效文本确认锁定一个身份；同一身份重试幂等，其他身份不能覆盖。旧 ticket 或长码 Attempt 不符合四位数字格式，status 返回过期恢复操作；不自动转换。创建新 Attempt 时删除过期记录，最多保留 10,000 个未清理记录，其中微信 Attempt 最多 100 个；已分配短码保留至原始五分钟期限，OIDC handoff 不提前释放，碰撞最多重试 32 次。已认证发送者五分钟最多提交 5 次新确认，全局一分钟最多 30 次，PostgreSQL 原子共享计数，同一身份的已确认回调重试不计入；达到额度以加密被动回复提示稍后再试，存储失败不确认身份。规则见 [ADR-0045](../adr/0045-four-digit-wechat-login-code.md)。API 每副本最多开始 120 个 Attempt/分钟，供应商调用使用有限超时。
 
 Broker 只接受固定 client ID、client secret、该 provider 的精确 Keycloak 回调，以及 S256 PKCE。其 ID Token 使用 RS256/JWKS、固定 issuer/audience、原请求 nonce 和一分钟 expiry；opaque access_token 无产品或供应商权限，不支持 refresh/token exchange。产品认证仍只验证 Keycloak issuer。不得在日志/证据中记录原始 callback query、Token、登录码、Cookie 或配置秘密。
 
 ## 验证边界
 
-登录码改造已从 `main_temp` 发布 API 和 Web，公众号原配置保持开启；真实 Keycloak 到等待页面、普通二维码、绑定浏览器的登录码接口和拒绝条件已检查。本地与发布证据见 [2026-10-06 验证记录](../evidence/agent-workspace/2026-10-06-wechat-message-code.md)，真实手机发码和完整产品登录仍待验收。
+登录码改造已从 `main_temp` 发布 API 和 Web，公众号原配置保持开启；真实 Keycloak 到等待页面、普通二维码、绑定浏览器的登录码接口和拒绝条件已检查。本地与发布证据见 [2026-10-06 验证记录](../evidence/agent-workspace/2026-10-06-wechat-message-code.md)，四位数字版本及跨副本尝试额度已发布，见 [短码发布验证](../evidence/agent-workspace/2026-10-06-wechat-four-digit-code.md)。真实手机发码和完整产品登录仍待验收。
 
 本地 fake Gateway 覆盖真实供应商协议形状和拒绝条件；Keycloak 集成以 fake 上游身份跑实际联邦身份、PKCE、RS256/JWKS、无邮箱建号和最终产品 OIDC 签发，不能记作真实飞书扫码。
 

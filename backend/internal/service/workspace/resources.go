@@ -328,7 +328,7 @@ func (service *Service) SetPlatformExecutionDefault(ctx context.Context, request
 	if !ok {
 		return nil, publicError(fmt.Errorf("%w: platform execution default persistence is unavailable", workspacedomain.ErrInvalid))
 	}
-	item, err := repository.SetPlatformExecutionDefault(ctx, administrator.UserID, runtime, request.ProviderModelId, request.ValidationRunId, request.ExpectedVersion)
+	item, err := repository.SetPlatformExecutionDefault(ctx, administrator.UserID, runtime, request.ProviderModelId, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}

@@ -519,7 +519,13 @@ message GetSettingsRequest {}
 message UpdateSettingsRequest { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 expected_version = 7; optional bool inherit_platform_execution = 8; }
 message PersonalSettings { string personality = 1; string personality_instructions = 2; repeated RuntimeModelDefault runtime_model_defaults = 3; string default_runtime_engine = 4; string language = 5; string timezone = 6; int64 version = 7; bool execution_inherited = 8; bool platform_execution_available = 9; }
 message GetPlatformExecutionDefaultRequest {}
-message SetPlatformExecutionDefaultRequest { string runtime_engine = 1; string provider_model_id = 2; string validation_run_id = 3; int64 expected_version = 4; }
+message SetPlatformExecutionDefaultRequest {
+  string runtime_engine = 1;
+  string provider_model_id = 2;
+  // Deprecated: ignored. Saving the default does not require a validation Run.
+  string validation_run_id = 3 [deprecated = true];
+  int64 expected_version = 4;
+}
 message PlatformExecutionDefault { string runtime_engine = 1; string provider_model_id = 2; string validation_run_id = 3; string updated_by_user_id = 4; int64 version = 5; google.protobuf.Timestamp updated_at = 6; }
 message RuntimeModelDefault { string runtime_engine = 1; string provider_model_id = 2; }
 message ListRuntimeEnginesRequest {}

@@ -90,14 +90,51 @@ it("passes connector guidance into a new Session composer without posting a mess
   wrapper.unmount();
 });
 
-  it("blocks a new task when an inherited execution pair is no longer verified", async () => {
+  it.each([
+    ["verified", "verified"],
+    ["verified", "unverified"],
+    ["unverified", "verified"],
+    ["unverified", "unverified"],
+  ] as const)("sends the first inherited message with provider %s and model pair %s", async (verificationStatus, compatibilityStatus) => {
     const api = apiStub([]);
     api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({ personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 1, execution_inherited: true, platform_execution_available: true }));
-    api.listModelProviderConnections = vi.fn(async (): Promise<ModelProviderConnection[]> => [{ id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: "verified", custom_endpoint: true, models: [{ id: "model-1", connection_id: "connection-1", model_id: "model", display_name: "Model", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] }], created_at: session.created_at, updated_at: session.updated_at, version: 1 }]);
+    api.listModelProviderConnections = vi.fn(async (): Promise<ModelProviderConnection[]> => [{ id: "connection-1", name: "Provider", provider_type: "openai", endpoint: "https://model.invalid", protocols: ["openai_responses"], api_key_configured: true, verification_status: verificationStatus, custom_endpoint: true, models: [{ id: "model-1", connection_id: "connection-1", model_id: "model", display_name: "Model", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: compatibilityStatus }] }], created_at: session.created_at, updated_at: session.updated_at, version: 1 }]);
     api.getAttachmentDownload = vi.fn(async () => new Blob());
+    api.sendSessionMessage = vi.fn(async () => ({ user_message: messages[0]!, assistant_message: { ...messages[1]!, state: "queued", content: "" } }));
     const wrapper = await mountPageWithAPI(api);
-    expect(wrapper.text()).toContain("开始前完成 3 个步骤");
-    expect(wrapper.get(".setup-guide").text()).toContain("模型供应商");
+    expect(wrapper.find(".setup-guide").exists()).toBe(false);
+    wrapper.get(".composer-editor").element.textContent = "继承默认配置发送首条消息";
+    await wrapper.get(".composer-editor").trigger("input");
+    expect(wrapper.get('.composer-toolbar button[aria-label="发送"]').attributes("disabled")).toBeUndefined();
+    await wrapper.get('.composer-toolbar button[aria-label="发送"]').trigger("click");
+    await flushPromises();
+    expect(api.sendSessionMessage).toHaveBeenCalledWith(session.id, "继承默认配置发送首条消息", [], undefined, { selection_id: "selection-1", file_references: [] });
+    wrapper.unmount();
+  });
+
+  it.each(["runtime unavailable", "no selected model", "no API key", "model unavailable", "incompatible pair", "no compatibility"] as const)("blocks an inherited first message when %s", async (problem) => {
+    const api = apiStub([]);
+    const settings: PersonalSettings = { personality: "direct_efficient", personality_instructions: "", runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-1" }], default_runtime_engine: "codex", language: "zh-CN", timezone: "Asia/Shanghai", version: 1, execution_inherited: true, platform_execution_available: true };
+    const connections = await api.listModelProviderConnections();
+    const connection = connections[0]!;
+    const model = connection.models[0]!;
+    if (problem === "runtime unavailable") api.listRuntimeEngines = vi.fn<PlatformApi["listRuntimeEngines"]>(async () => [{ name: "codex", available: false, native_resume: false, cli_version: "1.0.0" }]);
+    if (problem === "no selected model") settings.runtime_model_defaults = [];
+    if (problem === "no API key") connection.api_key_configured = false;
+    if (problem === "model unavailable") model.available = false;
+    if (problem === "incompatible pair") model.compatibility = [{ runtime_engine: "codex", status: "incompatible" }];
+    if (problem === "no compatibility") model.compatibility = [];
+    api.getSettings = vi.fn(async () => settings);
+    api.listModelProviderConnections = vi.fn(async () => connections);
+    api.getAttachmentDownload = vi.fn(async () => new Blob());
+    api.sendSessionMessage = vi.fn();
+    const wrapper = await mountPageWithAPI(api);
+    expect(wrapper.find(".setup-guide").exists()).toBe(true);
+    wrapper.get(".composer-editor").element.textContent = "暂不可执行";
+    await wrapper.get(".composer-editor").trigger("input");
+    expect(wrapper.get('.composer-toolbar button[aria-label="发送"]').attributes("disabled")).toBeDefined();
+    await wrapper.get('.composer-toolbar button[aria-label="发送"]').trigger("click");
+    expect(api.sendSessionMessage).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 
