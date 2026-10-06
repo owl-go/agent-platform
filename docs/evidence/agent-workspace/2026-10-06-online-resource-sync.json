@@ -1,0 +1,455 @@
+{
+  "verified_at": "2026-10-06T15:02:21.846353+00:00",
+  "scope": "Platform Connector Publications and Administrator-owned Platform Experts/Skills; no private User content or credentials",
+  "counts": {
+    "connectors": 20,
+    "experts": 8,
+    "skills": 12,
+    "directory_skills": 9,
+    "built_in_skills": 3
+  },
+  "connectors": [
+    {
+      "source": "ai-hive",
+      "version": "0.3.0",
+      "directory": "connectors/ai-hive/package",
+      "online_sha256": "9184a303e13e54c7013a290e73ca96989c64118b33748ae4d300b3bae1f68289",
+      "catalog_sha256": "9184a303e13e54c7013a290e73ca96989c64118b33748ae4d300b3bae1f68289",
+      "file_count": 4,
+      "directory_tree_sha256": "e2016acb7f415e8d0ee746de8eb26c0b9f9f8129418a9819aa0bba4902473cd0",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "camscanner",
+      "version": "1.1.8",
+      "directory": "connectors/camscanner/package",
+      "online_sha256": "12879d44e32adbd42011fcfe8b2d93e30f6f271f71310ef780c05acd32f36c23",
+      "catalog_sha256": "12879d44e32adbd42011fcfe8b2d93e30f6f271f71310ef780c05acd32f36c23",
+      "file_count": 17,
+      "directory_tree_sha256": "86c3fbdbc79b741be38a038a37b6cc4ef1ce6d04bd5e9ed36b4dd9c5151b64f1",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "caoliao",
+      "version": "1.0.0",
+      "directory": "connectors/caoliao/package",
+      "online_sha256": "019e3d30ab19bca4fa3983de1214b965e9bd2ed11249123df539ad613ed1d0f1",
+      "catalog_sha256": "019e3d30ab19bca4fa3983de1214b965e9bd2ed11249123df539ad613ed1d0f1",
+      "file_count": 4,
+      "directory_tree_sha256": "d0aa52f11f98b8a63a562a7af280480fb54d31f8b54018bbe7f3faad97d01196",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "dingtalk",
+      "version": "1.0.64",
+      "directory": "connectors/dingtalk/package",
+      "online_sha256": "702b014845c1ad261019b6fb25db2a42c904c378b9ca6a6d4b45f4723547fc6c",
+      "catalog_sha256": "702b014845c1ad261019b6fb25db2a42c904c378b9ca6a6d4b45f4723547fc6c",
+      "file_count": 297,
+      "directory_tree_sha256": "1bb8c3af43d5ffe64983ab93319404fdb2a07b5dd5d4e65e91b68df40eb223d4",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "feishu",
+      "version": "1.0.96",
+      "directory": "connectors/feishu/package",
+      "online_sha256": "44aba68f6002d6aa5c748fb55cee3b648f105dfba7db99a1aae524f9d55f56a6",
+      "catalog_sha256": "f677b0a80b6c511652f0fa5012fb314623fa7cb4c5a1f051b36d4cc8ac2312ed",
+      "file_count": 551,
+      "directory_tree_sha256": "32c3a5c99252984a3a1a5f438d106456a11ccf8a1051d3fbc18890a77a2b0e33",
+      "omitted_files": [],
+      "machine_path_files": [
+        "skills/feishu/references/lark-apps/references/lark-apps-db-execute.md"
+      ]
+    },
+    {
+      "source": "github",
+      "version": "0.1.0",
+      "directory": "connectors/github/package",
+      "online_sha256": "ae22bb4fcf2b27b4bb18c4e3e545ec9bdd57247438cdd6187884609560da24b4",
+      "catalog_sha256": "ae22bb4fcf2b27b4bb18c4e3e545ec9bdd57247438cdd6187884609560da24b4",
+      "file_count": 246,
+      "directory_tree_sha256": "4414205c26c19b79224e6a85d60e37f052b05e8b4ca2391832dfb6a427ba4bba",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "kling-ai",
+      "version": "0.1.0",
+      "directory": "connectors/kling-ai/package",
+      "online_sha256": "6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7",
+      "catalog_sha256": "6a43abe0dfa5b29c3d7fe8992ef12a7c2899068f1b61531e14dbc1b2cef6aee7",
+      "file_count": 4,
+      "directory_tree_sha256": "251cb53bd1b0b4bbc030f2cc236b72e37f0127b3b4587232fcff3041c6bf034d",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "linear",
+      "version": "1.0.0",
+      "directory": "connectors/linear/package",
+      "online_sha256": "677938b0e9d4a479d13e481ae011b784e4c4d3a25f317e75469d3aca9e9bbd39",
+      "catalog_sha256": "677938b0e9d4a479d13e481ae011b784e4c4d3a25f317e75469d3aca9e9bbd39",
+      "file_count": 4,
+      "directory_tree_sha256": "918adf5ea673fd8a407491c601645b0c7e1f736f1f4401cf44bdf539c24ed75a",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "mindbye",
+      "version": "1.0.0",
+      "directory": "connectors/mindbye/package",
+      "online_sha256": "e1f7bbd076ad91403898dfb5b929eae6f29dadc971fd9197ee0d588a9a75cba0",
+      "catalog_sha256": "e1f7bbd076ad91403898dfb5b929eae6f29dadc971fd9197ee0d588a9a75cba0",
+      "file_count": 4,
+      "directory_tree_sha256": "9cf1ad117559fb8cda4bbe50e623722a4b4370513261f95ca8dc3399dfba990b",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "modao",
+      "version": "0.1.1",
+      "directory": "connectors/modao/package",
+      "online_sha256": "95aa27ff3182c64a0bc297a1efd4db2423a1bd469464b4f83c57814f9e493645",
+      "catalog_sha256": "95aa27ff3182c64a0bc297a1efd4db2423a1bd469464b4f83c57814f9e493645",
+      "file_count": 6,
+      "directory_tree_sha256": "baed2f43f149d7012f5d57e4dc621bf7d980b8b08c2a721cff260b24d703cf69",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "moka-hr",
+      "version": "0.1.0",
+      "directory": "connectors/moka-hr/package",
+      "online_sha256": "4928abaf8d99dc10bde2b5d6e0fcdc57d6fba616ce6854f920c71574ff8462c3",
+      "catalog_sha256": "4928abaf8d99dc10bde2b5d6e0fcdc57d6fba616ce6854f920c71574ff8462c3",
+      "file_count": 7,
+      "directory_tree_sha256": "cc3300f46faaf390e11805b6655c51dda3fc5b602fe68f958ce41287e408472f",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "notion",
+      "version": "0.23.15",
+      "directory": "connectors/notion/package",
+      "online_sha256": "660a91d5166392c7a20a6d25406fd4131bc9a5fe26ebbf9e2fe4bb289e1fe5f0",
+      "catalog_sha256": "660a91d5166392c7a20a6d25406fd4131bc9a5fe26ebbf9e2fe4bb289e1fe5f0",
+      "file_count": 5,
+      "directory_tree_sha256": "c25832e98f19e454f41e7331e2fb7ed2f4501a021790b52e0856537ecf200192",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "openboost",
+      "version": "0.1.0",
+      "directory": "connectors/openboost/package",
+      "online_sha256": "9d73b98a675df28e2b3050567e8f732dce81d3a94ec3205f560b6d89021d83af",
+      "catalog_sha256": "9d73b98a675df28e2b3050567e8f732dce81d3a94ec3205f560b6d89021d83af",
+      "file_count": 7,
+      "directory_tree_sha256": "e6c8c8a1479da9b4446302f1054fc43136f30b9be79c24afa7224eb80efaa22d",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "picset-ai",
+      "version": "0.1.0",
+      "directory": "connectors/picset-ai/package",
+      "online_sha256": "0a9798d2ada16d636dbde4ab7f57ac728cd68fb3514ce4bdb7c58468ac9a8463",
+      "catalog_sha256": "0a9798d2ada16d636dbde4ab7f57ac728cd68fb3514ce4bdb7c58468ac9a8463",
+      "file_count": 7,
+      "directory_tree_sha256": "f049f8738d63cebd35063e307c9706ef937606368ae6de051b6246d3d1349919",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "pixso",
+      "version": "1.0.0",
+      "directory": "connectors/pixso/package",
+      "online_sha256": "c6c388adad99a375af6dd327fbacaadb216c4e588312395fc9adffe22b3c52c4",
+      "catalog_sha256": "c6c388adad99a375af6dd327fbacaadb216c4e588312395fc9adffe22b3c52c4",
+      "file_count": 4,
+      "directory_tree_sha256": "3427d559990208b9c1022e12563017e47d1d5826f99edc1fec62f71e993e09e8",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "pkulaw",
+      "version": "1.0.0",
+      "directory": "connectors/pkulaw/package",
+      "online_sha256": "66118421d6d83f98a13e6479113592222dd782fc7970ee177bd971c73db41669",
+      "catalog_sha256": "66118421d6d83f98a13e6479113592222dd782fc7970ee177bd971c73db41669",
+      "file_count": 4,
+      "directory_tree_sha256": "00e09d2e3345bea038c017983fdf91f10456d05e0626035303df4758ac5b1287",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "teambition",
+      "version": "0.3.7",
+      "directory": "connectors/teambition/package",
+      "online_sha256": "90d6d31b7151061dc247494f3b1e520fbd0c411c89c49b856a7d8fdd5ff48f3d",
+      "catalog_sha256": "90d6d31b7151061dc247494f3b1e520fbd0c411c89c49b856a7d8fdd5ff48f3d",
+      "file_count": 9,
+      "directory_tree_sha256": "51007b24b6592aec046f549fe5fd0db211cb03869bd42772f6977f9e0cca0e37",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "tianyancha",
+      "version": "1.0.0",
+      "directory": "connectors/tianyancha/package",
+      "online_sha256": "8e1b4b5d2eb1a7a9ab914a85820e51e9162742a069d3d148c770b3701eeaabec",
+      "catalog_sha256": "8e1b4b5d2eb1a7a9ab914a85820e51e9162742a069d3d148c770b3701eeaabec",
+      "file_count": 4,
+      "directory_tree_sha256": "d5c586c63379a10d12822bcbc2bb3969a3b0241d6a20828c7ceb7e0f18f6ced6",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "wecom",
+      "version": "1.4.2",
+      "directory": "connectors/wecom/package",
+      "online_sha256": "a166ce54b574b0e5a4ce090835431192c8dcb0601300e3449fde839049930cc0",
+      "catalog_sha256": "a166ce54b574b0e5a4ce090835431192c8dcb0601300e3449fde839049930cc0",
+      "file_count": 132,
+      "directory_tree_sha256": "75fe7b553d049d17e76dce92fbfbee0b4df5b8c15c49e87c51c75a189e9d4403",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "source": "xiaoe",
+      "version": "0.1.0",
+      "directory": "connectors/xiaoe/package",
+      "online_sha256": "cfc5ca7f6f6670b41416dc594b1d308fa3fdf2a5507e4386c65071f1ac07c543",
+      "catalog_sha256": "cfc5ca7f6f6670b41416dc594b1d308fa3fdf2a5507e4386c65071f1ac07c543",
+      "file_count": 4,
+      "directory_tree_sha256": "a666045b07422fe258a9252190e7000af998434920f37573bc9530ac6813c114",
+      "omitted_files": [],
+      "machine_path_files": []
+    }
+  ],
+  "skills": [
+    {
+      "name": "Create Connector",
+      "key": "system.create_connector",
+      "code": "backend/internal/systemskills/systemskills.go",
+      "online_sha256": "64eb4ec08833fbb15f036a900650aa624ec683ac1ac365c3660c1a984803312a",
+      "document_sha256": "cd86726def5fca32af2eed5f8c1acef5b15c912e867e2e73095e7efa9da4e1b1"
+    },
+    {
+      "name": "Create Expert",
+      "key": "system.create_expert",
+      "code": "backend/internal/systemskills/systemskills.go",
+      "online_sha256": "8c0a8a2bb36182b21bc2a214555b103a02c5c167409182ad506110c58d93e50c",
+      "document_sha256": "0ed83f899ee4811ce522612c711da84a9fc1f85045d6ba7343d0e79eb05c06df"
+    },
+    {
+      "name": "Create Skill",
+      "key": "system.create_skill",
+      "code": "backend/internal/systemskills/systemskills.go",
+      "online_sha256": "38bd4037958739f7b63fd74e8d6f127c9ad63e21c61139eba6284b637683135b",
+      "document_sha256": "8d4e75f0d55b1323b911877b33221c678be75df043033df82c1d9147d5841787"
+    },
+    {
+      "name": "PDF 文档处理",
+      "key": "default.skill.pdf",
+      "directory": "skills/pdf",
+      "catalog_version": "1.0.0",
+      "online_sha256": "650763d98b9b291764dab0bb1759f9cc62df7d667ffa77302129dfcb98c36a90",
+      "catalog_sha256": "db6bb928479bf3a75dc5a3743a126e52eaa6a48efe215c08a24e7883a5fecb12",
+      "file_count": 11,
+      "directory_tree_sha256": "9e64e96fa5ec828c17bde22c669609a7b752d82c309106e118e6554c1ed5d314",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    },
+    {
+      "name": "PDF图片文字提取",
+      "key": "default.skill.pdf-image-text-extractor",
+      "directory": "skills/pdf-image-text-extractor",
+      "catalog_version": "1.0.0",
+      "online_sha256": "989cc9dd6638481abc0727e3bfbfac8cea62d91394dd6278fc1e04962c61c047",
+      "catalog_sha256": "366aeb5181f49ba7eee680d880a9a97fc477a7d7a2202176be1e9a19995f0c88",
+      "file_count": 5,
+      "directory_tree_sha256": "1b470cd2e561c34cc883c1b1bea5d92ff19e5632318b62692d2a3888fee5a0f0",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    },
+    {
+      "name": "PPT 一键生成大师",
+      "key": "default.skill.ppt-generator",
+      "directory": "skills/ppt-generator",
+      "catalog_version": "1.0.0",
+      "online_sha256": "177ca9a59025586264b2a49d399e3a67ebe3bbb2d41a1c4b3efcf79d99f47d56",
+      "catalog_sha256": "8abe4e3ae5df9a2ce5f99e498a48cf025f55da5624e5ca7e45f9ff15205aee1f",
+      "file_count": 24,
+      "directory_tree_sha256": "68a68411415828fe37d083ff1ffdb63cc4d6603989a569cd868b407213849435",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": [
+        "references/guizang-ppt-skill.md",
+        "references/guizang-ppt-skill__checklist.md",
+        "references/guizang-ppt-skill__layouts-swiss.md",
+        "references/guizang-ppt-skill__swiss-layout-lock.md"
+      ]
+    },
+    {
+      "name": "grill-me",
+      "key": "default.skill.grill-me",
+      "directory": "skills/grill-me",
+      "catalog_version": "1.0.0",
+      "online_sha256": "7adb492e9fcf8d8958580aa6ec4be2b0d01ba6b893b55f2b1f018f622c7138fc",
+      "catalog_sha256": "ba07596380fee6faad8ca3c17a724fa2de1a0cd721fda6546c81faa57c38b851",
+      "file_count": 1,
+      "directory_tree_sha256": "ba300e27ef6f882648f3c5075b42d5a77731c0507d9135a7626975d6cf96672a",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    },
+    {
+      "name": "前端设计",
+      "key": "default.skill.frontend-design",
+      "directory": "skills/frontend-design",
+      "catalog_version": "1.0.0",
+      "online_sha256": "97a1652dce0b37317170823942308d0e5610df137612a93e11f7a77c06656f8f",
+      "catalog_sha256": "2d172bd52df05ba47f0760b4b35a8df5a5d4b801d38741b2f186c421bac325bd",
+      "file_count": 6,
+      "directory_tree_sha256": "9922ac64b7adaaed0b3677436853a55036cb776040c66cb9c0fa469ccc4c5abb",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    },
+    {
+      "name": "周报生成助手",
+      "key": "default.skill.weekly-report",
+      "directory": "skills/weekly-report",
+      "catalog_version": "1.0.0",
+      "online_sha256": "7ff52d8d7506ba092cf5a3d3921b87e1e4937d6babff5344219a79924b8added",
+      "catalog_sha256": "e8262ad0c04faef284a036e812baca26daf986e9ab8e16f96595476703dd4ab7",
+      "file_count": 2,
+      "directory_tree_sha256": "743934e0ebbb02094bc69183a161e9adc4ea2eeb82d3275ddbf74289c6d03363",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    },
+    {
+      "name": "旅行规划与行程安排",
+      "key": "default.skill.travel-planning",
+      "directory": "skills/travel-planning",
+      "catalog_version": "1.0.0",
+      "online_sha256": "f7191954795c98c46c252636746edb441265e98471db4643993c7f5ad3a94e36",
+      "catalog_sha256": "f7191954795c98c46c252636746edb441265e98471db4643993c7f5ad3a94e36",
+      "file_count": 1,
+      "directory_tree_sha256": "d673607a04ec8a44d453cbd693df342520c268aad8971e004c5c7c86f87d133a",
+      "omitted_files": [],
+      "machine_path_files": []
+    },
+    {
+      "name": "腾讯会议",
+      "key": "default.skill.tencent-meeting",
+      "directory": "skills/tencent-meeting",
+      "catalog_version": "1.0.0",
+      "online_sha256": "17d001c186bf73e42e4c8685c2bd1aaf7c6a77491d88717c824c8cd8576b5941",
+      "catalog_sha256": "9e1f02cd93fd7c93b342e933d268980c5ca828daba5e224ebea471183ad1d5c9",
+      "file_count": 15,
+      "directory_tree_sha256": "f75d9a35b52b6bc7dae495654bfe4a278a6b329123356b62841ef9e33ba58651",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    },
+    {
+      "name": "腾讯问卷",
+      "key": "default.skill.tencent-survey",
+      "directory": "skills/tencent-survey",
+      "catalog_version": "1.0.0",
+      "online_sha256": "a03eb9292c15837a3734758b063750de128f7b0ad3a907246927f89dbba100aa",
+      "catalog_sha256": "5f706f687f07d57107478530bd7ef50c5c174d9110993f85a02e1e0c490ef1b1",
+      "file_count": 11,
+      "directory_tree_sha256": "0d50a9479e84f83d64412b840afd37499c94ab88a3d83deb20fdc2363b5967b6",
+      "omitted_files": [
+        "_skillhub_meta.json"
+      ],
+      "machine_path_files": []
+    }
+  ],
+  "experts": [
+    {
+      "name": "AI 工作流架构师",
+      "key": "default.expert.ai-workflow-architect",
+      "directory": "experts/ai-workflow-architect/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "20366a166de20b5bcf7d17ba5c6f35122b6e8aefa811c21cedf6d2693343cfb9",
+      "skill_keys": []
+    },
+    {
+      "name": "UI设计师",
+      "key": "default.expert.ui-designer",
+      "directory": "experts/ui-designer/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "26b41d09ecf0b155ab86536b3760fd14f2a3544db9609917ef2e7efafa40673a",
+      "skill_keys": []
+    },
+    {
+      "name": "亚马逊listing 文案优化大师",
+      "key": "default.expert.amazon-listing",
+      "directory": "experts/amazon-listing/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "77674de059daaff7e139319093786ba988c51c131aca2644487754539b49025a",
+      "skill_keys": []
+    },
+    {
+      "name": "亚马逊广告投放执行专家",
+      "key": "default.expert.amazon-advertising",
+      "directory": "experts/amazon-advertising/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "fbcb3eadeae2df3d666de94c3942a1d5941d3e3277bad6677abf61da7992f652",
+      "skill_keys": []
+    },
+    {
+      "name": "产品管理专家",
+      "key": "default.expert.product-manager",
+      "directory": "experts/product-manager/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "635b15f54e025a5ebe14e3d183f5b1db495609975b2b5f23473b9c2cad4c68e4",
+      "skill_keys": []
+    },
+    {
+      "name": "旅行计划与行程规划师",
+      "key": "default.expert.travel-planning",
+      "directory": "experts/travel-planning/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "b7c3e199460314a1b3e6ebbc6be4d6542566a8d794640848096fa159f1142415",
+      "skill_keys": [
+        "default.skill.travel-planning"
+      ]
+    },
+    {
+      "name": "跨境电商专家",
+      "key": "default.expert.cross-border-ecommerce",
+      "directory": "experts/cross-border-ecommerce/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "71c941399712c36280e723a37dd653906f8b89376f9e678e208365d9573aabd0",
+      "skill_keys": []
+    },
+    {
+      "name": "跨境运营专家",
+      "key": "default.expert.cross-border-operations",
+      "directory": "experts/cross-border-operations/expert.json",
+      "catalog_version": "1.0.0",
+      "definition_sha256": "7cbaf359f91b887b27f9fef15b89c87feedb7825ff5bb1ece107918604de45bf",
+      "skill_keys": []
+    }
+  ]
+}

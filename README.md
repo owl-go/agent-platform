@@ -34,6 +34,8 @@ make deploy
 
 连接器放在 [`connectors/`](connectors/README.md)，Skill 放在 [`skills/`](skills/README.md)，专家放在 [`experts/`](experts/README.md)。首次安装与更新部署都会自动加载这些目录；不需要逐个上传。已有条目复用稳定标识，账号授权仍由使用者配置。
 
+已同步线上 20 个连接器、8 个专家和 9 个业务 Skill；另外 3 个内置创建 Skill 保留在后端代码中。完整文件、专家配置和绑定的[线上核对记录](docs/evidence/agent-workspace/2026-10-06-online-resource-sync.md)包含资源清单与摘要。
+
 修改后可运行 `make resources-check` 检查目录内容；提交并集成到 `main_temp` 后，继续使用 `make install` 或 `make deploy`。
 
 ## 开发
