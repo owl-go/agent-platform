@@ -1,5 +1,7 @@
 # Connector Platform P1 verification — 2026-09-24
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Verified implementation
 
 - Administrator staging and publication require a parsed immutable package plus a passed `cli_connector_conformance` row for the exact bundle SHA-256 and Runtime RepoDigest.
@@ -29,10 +31,10 @@ No official Feishu package was staged or published during this verification, so 
 
 - Integration commit: `6d1f01c` on `main_temp`.
 - Release: `platform-20260924T094307Z`.
-- Source: `/opt/agent-platform/src.release-platform-20260924T094307Z`.
-- Web: `/opt/agent-platform/web/releases/platform-20260924T094307Z`.
-- Pre-cutover backup: `/opt/agent-platform/backups/pre-platform-20260924T094307Z`.
-- Public origin: `https://47-237-108-63.sslip.io`.
+- Source: `/srv/agent-workspace/src.release-platform-20260924T094307Z`.
+- Web: `/srv/agent-workspace/web/releases/platform-20260924T094307Z`.
+- Pre-cutover backup: `/srv/agent-workspace/backups/pre-platform-20260924T094307Z`.
+- Public origin: `https://workspace.example.com`.
 
 The deployment script ran its test, build, frontend test/typecheck/build, backup-integrity, image-build, migration, cutover, and service-health gates without bypasses. Independent checks returned `{"status":"ok"}` and `{"status":"ready"}`. The public and local `index.html` SHA-256 values both equal `ff722d1aaa22d20a268f695bd8e58a34e715b94e7e90bd81bcf63953ef25c568`. API, Worker, Egress Controller, Caddy, the then-configured external retrieval service, PostgreSQL, identity, and MinIO containers were running; health-enabled services reported healthy. Migrations `000054_connector_package_publications.sql`, `000055_connector_feishu_authorization.sql`, and `000056_feishu_connector_installation_projection.sql` were present in `schema_migrations`.
 

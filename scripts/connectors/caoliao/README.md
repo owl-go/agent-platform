@@ -29,7 +29,7 @@ make build
 
 ```bash
 python3 scripts/connectors/caoliao/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /tmp/caoliao-1.0.0.zip \
   --normalized-sha256 '<connectorpackage.Parse 输出的 SHA-256>' \
   --evidence-directory /tmp/caoliao-publication-evidence
@@ -43,7 +43,7 @@ python3 scripts/connectors/caoliao/publish.py \
 
 ## 线上发布证据（2026-10-02）
 
-从 `main_temp` 集成提交 `42d587ac447bbd9a5dcd9b46cddaf0e0a310b6f8` 构建并发布到 [Agent Workspace](https://47-237-108-63.sslip.io/resources?tab=connectors)：
+从 `main_temp` 集成提交 `42d587ac447bbd9a5dcd9b46cddaf0e0a310b6f8` 构建并发布到 [Agent Workspace](https://workspace.example.com/resources?tab=connectors)：
 
 - Publication 为 `available`，版本 `1.0.0`。
 - Revision 为 `65be998a-a7ae-4767-aa70-06425225271c`，规范化包 SHA-256 为 `019e3d30ab19bca4fa3983de1214b965e9bd2ed11249123df539ad613ed1d0f1`。

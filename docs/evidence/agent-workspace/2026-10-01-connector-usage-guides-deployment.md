@@ -1,15 +1,17 @@
 # 连接器使用指引部署验证 — 2026-10-01
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 集成分支：`main_temp`，部署源 Commit：`154e8394122ca3db2bede654797fbd87544ea1f6`。
 - 功能 Commit：`0218cb9`；合并保留当前平台名称/描述、卡片布局、Run Approval identity、Notion/钉钉项目浏览器授权和墨刀/企业微信 Token 连接入口。
 - 发布 ID：`connector-guides-20261001T062000Z`。
-- 源目录：`/opt/agent-platform/src.release-connector-guides-20261001T062000Z`。
-- Web 目录：`/opt/agent-platform/web/releases/connector-guides-20261001T062000Z`。
-- 发布前备份：`/opt/agent-platform/backups/pre-connector-guides-20261001T062000Z`。
+- 源目录：`/srv/agent-workspace/src.release-connector-guides-20261001T062000Z`。
+- Web 目录：`/srv/agent-workspace/web/releases/connector-guides-20261001T062000Z`。
+- 发布前备份：`/srv/agent-workspace/backups/pre-connector-guides-20261001T062000Z`。
 - 前一版本：`modao-20261001`。
-- 公网入口：`https://47-237-108-63.sslip.io`。
+- 公网入口：`https://workspace.example.com`。
 
 ## 已执行的检查
 

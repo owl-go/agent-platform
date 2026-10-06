@@ -1,5 +1,7 @@
 # Shared Assistant free questions — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Behavior and release
 
 The Share Configuration editor no longer exposes “每日自由提问上限” or “允许自由提问”. Every enabled, currently validated share permits free-text input without a per-Assistant daily call cap. Previously saved `free_text_enabled=false` and finite or exhausted daily limits are ignored immediately on reads and public requests, without saving the Assistant, changing its version, or rotating its Token. New saves normalize the two legacy JSON fields to `true` and `0` for client compatibility. Publication validation no longer requires a positive daily cap. Both public SSE and the legacy answer route remove the free-text and daily-counter gates; the obsolete quota adapter is removed. Existing platform rate controls, safety, owner Credits, allowed origins and data-processing acknowledgement still apply.
@@ -7,10 +9,10 @@ The Share Configuration editor no longer exposes “每日自由提问上限” 
 - Feature commit: `f16a9a5` on `codex/assistant-prompt-variables` (pushed).
 - Integrated release commit: `4c153a27282ce86ff3427b698da762ed20106c07` on `main_temp` (pushed before deployment).
 - API/Web release: `assistant-free-questions-20261003-1`.
-- Source: `/opt/agent-platform/src.release-assistant-free-questions-20261003-1`.
-- Web: `/opt/agent-platform/web/releases/assistant-free-questions-20261003-1`.
+- Source: `/srv/agent-workspace/src.release-assistant-free-questions-20261003-1`.
+- Web: `/srv/agent-workspace/web/releases/assistant-free-questions-20261003-1`.
 - API image: `sha256:0dca4d7ba959be29dc483f54ca8aaa1c494531abceb0ad97c98cd20505f7c56e`.
-- Verified backup: `/opt/agent-platform/backups/pre-assistant-free-questions-20261003-1`.
+- Verified backup: `/srv/agent-workspace/backups/pre-assistant-free-questions-20261003-1`.
 - Previous API/source: `assistant-greeting-20261003-1`; previous Web: `assistant-chat-20261003-1`.
 
 ## Executed checks

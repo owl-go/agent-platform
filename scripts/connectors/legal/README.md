@@ -27,9 +27,9 @@ pnpm --dir frontend test src/components/ExtensionManager.test.ts
 
 ```bash
 python3 scripts/connectors/legal/publish.py \
-  --config /opt/agent-platform/config/platform.env \
-  --package-directory /opt/agent-platform/connector-releases/legal-1.0.0 \
-  --evidence-directory /opt/agent-platform/evidence/legal-1.0.0
+  --config /srv/agent-workspace/config/platform.env \
+  --package-directory /srv/agent-workspace/connector-releases/legal-1.0.0 \
+  --evidence-directory /srv/agent-workspace/evidence/legal-1.0.0
 ```
 
 发布器校验 ZIP 与审阅源文件及收据一致，按 normalized SHA-256 复用 Revision，用乐观版本更新 Publication，并幂等安装到执行管理员的 User 视图；已有旧安装仅升级该验收安装。它检查 User 目录、Administrator 正式条目和 Installation 各恰有一个 source，验证品牌投影和认证模式。其他 User 自行安装，已有 User 安装不会被批量升级。无 CLI 临时 Definition 需要清理。

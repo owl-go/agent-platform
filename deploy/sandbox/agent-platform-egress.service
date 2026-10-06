@@ -6,8 +6,8 @@ PartOf=docker.service
 
 [Service]
 Type=oneshot
-EnvironmentFile=-/opt/agent-platform/config/egress.env
-ExecStart=/opt/agent-platform/src/deploy/sandbox/configure-public-egress.sh
+EnvironmentFile=-/srv/agent-workspace/config/egress.env
+ExecStart=/srv/agent-workspace/src/deploy/sandbox/configure-public-egress.sh
 RemainAfterExit=yes
 
 [Install]

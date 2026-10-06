@@ -1,10 +1,12 @@
 # OpenBoost 连接器发布证据 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布结果
 
 - 功能提交：`52db842`，分支 `codex/openboost-connector`；集成提交：`f290f5b51f1b8de08389594aceb5a0b80abd68da`，已推送 `main_temp`。
-- 正式部署：`openboost-20261002`，使用完整 `make deploy`，未跳过门禁。源目录 `/opt/agent-platform/src.release-openboost-20261002`；Web 目录 `/opt/agent-platform/web/releases/openboost-20261002`；备份 `/opt/agent-platform/backups/pre-openboost-20261002`。
-- [平台目录](https://47-237-108-63.sslip.io/resources?tab=connectors)中 `openboost` 0.1.0 为 `available`，CLI 模式、User 身份、`connector_package` driver。
+- 正式部署：`openboost-20261002`，使用完整 `make deploy`，未跳过门禁。源目录 `/srv/agent-workspace/src.release-openboost-20261002`；Web 目录 `/srv/agent-workspace/web/releases/openboost-20261002`；备份 `/srv/agent-workspace/backups/pre-openboost-20261002`。
+- [平台目录](https://workspace.example.com/resources?tab=connectors)中 `openboost` 0.1.0 为 `available`，CLI 模式、User 身份、`connector_package` driver。
 - Revision：`75afb574-5872-4d5a-af39-9a9c6df23a18`。
 - Package SHA-256（实际 Parse 规范化）：`9d73b98a675df28e2b3050567e8f732dce81d3a94ec3205f560b6d89021d83af`。
 - Bundle SHA-256：`7e0a61f9aee4625ff93e32820def36339be4f0b40bf8ed03063ba1c1a2abb3d9`。

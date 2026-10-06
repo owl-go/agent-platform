@@ -1,14 +1,16 @@
 # Workflow Message Channels 部署验证 — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 功能分支：`codex/workflow-message-channels`；功能提交：`ba9c1e4`、`3137c5f`、`c1293ef`。
 - 集成分支：`main_temp`；实际部署源 Commit：`0bf38108f3a0affae47c4967177075156a973784`。
 - 发布 ID：`workflow-channels-20261003-1`；部署约于 10:29 UTC 完成。
-- 公开入口：`https://47-237-108-63.sslip.io`。
-- 源目录：`/opt/agent-platform/src.release-workflow-channels-20261003-1`。
-- Web 目录：`/opt/agent-platform/web/releases/workflow-channels-20261003-1`。
-- 发布前备份：`/opt/agent-platform/backups/pre-workflow-channels-20261003-1`。
+- 公开入口：`https://workspace.example.com`。
+- 源目录：`/srv/agent-workspace/src.release-workflow-channels-20261003-1`。
+- Web 目录：`/srv/agent-workspace/web/releases/workflow-channels-20261003-1`。
+- 发布前备份：`/srv/agent-workspace/backups/pre-workflow-channels-20261003-1`。
 - 备份记录的原源目录：`src.release-assistant-courtesy-20261003-1`；原 Web：`assistant-headerless-20261003-1`。
 
 ## 集成与部署门禁
@@ -41,7 +43,7 @@ PLATFORM_RELEASE_ID=workflow-channels-20261003-1 make deploy
 ```yaml
 message_channels:
   enabled: true
-  callback_base_url: "https://47-237-108-63.sslip.io"
+  callback_base_url: "https://workspace.example.com"
   max_connections: 64
   approved_endpoints: []
 ```
@@ -76,7 +78,7 @@ Worker `/metrics` 实际返回以下四个循环的 started=1、fatal=0：`messa
 - Worker：`sha256:82550fda89d741c1ab615b0b16af924d6a8c22a72f562d348e81dad2d8d50c5e`。
 - Egress Controller：`sha256:ccd474838cc671d6afd20f1dc107ac711adf0f9e3c2666bf607446ce030dbd70`。
 
-本机检查日志：`/tmp/agent-platform-wmc-deploy.log`、`/tmp/agent-platform-wmc-activation.log`、`/tmp/agent-platform-wmc-remote-evidence.log`、`/tmp/agent-platform-wmc-public-evidence.log`、`/tmp/agent-platform-wmc-deploy-production-preflight.log`。部署后验证结果另保存到服务器 `/opt/agent-platform/evidence/workflow-channels-20261003-1`。
+本机检查日志：`/tmp/agent-platform-wmc-deploy.log`、`/tmp/agent-platform-wmc-activation.log`、`/tmp/agent-platform-wmc-remote-evidence.log`、`/tmp/agent-platform-wmc-public-evidence.log`、`/tmp/agent-platform-wmc-deploy-production-preflight.log`。部署后验证结果另保存到服务器 `/srv/agent-workspace/evidence/workflow-channels-20261003-1`。
 
 ## 验证边界
 

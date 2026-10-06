@@ -1,5 +1,7 @@
 # Unified Runtime image deployment - 2026-09-27
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Built candidate
 
 The five fixed Runtime Engine CLIs were built into one Linux image from
@@ -38,7 +40,7 @@ RepoDigest:
 `127.0.0.1:5000/agent-platform/runtime@sha256:b4ad4abd0356ae01129f2e75233c41b4c7833bab44dbd9895e9b3ed4b2a3df37`
 
 The active source is
-`/opt/agent-platform/src.release-platform-20260927T090000Z-unified-runtime`.
+`/srv/agent-workspace/src.release-platform-20260927T090000Z-unified-runtime`.
 API, Worker, Egress Controller, Caddy, the then-configured external retrieval service, the public Web origin, and
 OIDC discovery passed post-cutover health checks. The Administrator's original
 default Runtime Engine and model mappings were restored after validation.

@@ -1,14 +1,16 @@
 # Workflow 产品闭环部署验证 — 2026-09-29
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 集成分支：`main_temp`，部署源 Commit：`8d89c96a647e28850d327ae7c4fc9de678812ef3`。
 - 本轮 Workflow 实现 Commit：`e7d6f3f47dcdf4ec2b9373ecf67126a961b0d934`。
 - 发布 ID：`platform-20260929T043925Z`。
-- 源目录：`/opt/agent-platform/src.release-platform-20260929T043925Z`。
-- Web 目录：`/opt/agent-platform/web/releases/platform-20260929T043925Z`。
-- 发布前备份：`/opt/agent-platform/backups/pre-platform-20260929T043925Z`。
-- 公网入口：`https://47-237-108-63.sslip.io`。
+- 源目录：`/srv/agent-workspace/src.release-platform-20260929T043925Z`。
+- Web 目录：`/srv/agent-workspace/web/releases/platform-20260929T043925Z`。
+- 发布前备份：`/srv/agent-workspace/backups/pre-platform-20260929T043925Z`。
+- 公网入口：`https://workspace.example.com`。
 
 ## 已验证
 

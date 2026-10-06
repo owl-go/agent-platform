@@ -36,7 +36,7 @@ make web-build
 协议测试覆盖 DCR、PKCE、scope、回调篡改/issuer/过期/重放、刷新、上游错误脱敏和重定向拒绝。平台测试覆盖回调认证边界、凭证拆分、规范端点匹配和 Snapshot AAD/owner/expiry（数据库测试需要 PostgreSQL 环境）。发布器先验证已部署回调与上游接受真实 HTTPS callback，再暂存精确 parser SHA-256 的修订，检查 User 和 Administrator 目录各只有一个正式条目及品牌图标。
 
 ```bash
-python3 scripts/connectors/pixso/publish.py --config /opt/agent-platform/config/platform.env \
+python3 scripts/connectors/pixso/publish.py --config /srv/agent-workspace/config/platform.env \
   --package /absolute/path/pixso-1.0.0.zip --normalized-sha256 '<parser SHA-256>' \
   --evidence-directory /absolute/path/pixso-publication-evidence
 ```

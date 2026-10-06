@@ -135,7 +135,11 @@ func (service *Service) ListConnectorPublications(ctx context.Context, _ *worksp
 		if readErr != nil {
 			return nil, publicError(readErr)
 		}
-		response.Items = append(response.Items, connectorPublicationResponse(item, revision))
+		publication := connectorPublicationResponse(item, revision)
+		if err := applyConnectorConformance(ctx, repository, revision, publication.Revision); err != nil {
+			return nil, publicError(err)
+		}
+		response.Items = append(response.Items, publication)
 	}
 	return response, nil
 }
@@ -168,7 +172,11 @@ func (service *Service) StageConnectorPackage(ctx context.Context, request *work
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return connectorRevisionResponse(revision), nil
+	response := connectorRevisionResponse(revision)
+	if err := applyConnectorConformance(ctx, repository, revision, response); err != nil {
+		return nil, publicError(err)
+	}
+	return response, nil
 }
 
 func (service *Service) ListConnectorPublicationRevisions(ctx context.Context, _ *workspacev1.ListConnectorPublicationRevisionsRequest) (*workspacev1.ListConnectorPublicationRevisionsResponse, error) {
@@ -194,8 +202,12 @@ func (service *Service) ListConnectorPublicationRevisions(ctx context.Context, _
 	response := &workspacev1.ListConnectorPublicationRevisionsResponse{Items: make([]*workspacev1.ConnectorPublicationRevision, 0, len(revisions))}
 	for _, revision := range revisions {
 		item := &workspacev1.ConnectorPublicationRevision{Revision: connectorRevisionResponse(revision)}
+		if err := applyConnectorConformance(ctx, repository, revision, item.Revision); err != nil {
+			return nil, publicError(err)
+		}
 		if publication, ok := bySource[revision.PackageSource]; ok && publication.ActiveRevisionID == revision.ID {
 			item.Publication = connectorPublicationResponse(publication, revision)
+			item.Publication.Revision = item.Revision
 		}
 		response.Items = append(response.Items, item)
 	}
@@ -218,11 +230,28 @@ func (service *Service) PublishConnectorRevision(ctx context.Context, request *w
 	if err := validateStagedRevision(revision); err != nil {
 		return nil, publicError(err)
 	}
+	if revision.Mode == domain.ConnectorModeCLI {
+		policy, policyErr := decodeConnectorRevisionPolicy(revision)
+		if policyErr != nil {
+			return nil, publicError(policyErr)
+		}
+		verified, verifyErr := repository.HasConnectorBundleRuntimeConformance(ctx, policy.BundleSHA256, policy.CLI.Runtime.Digest)
+		if verifyErr != nil {
+			return nil, publicError(verifyErr)
+		}
+		if !verified {
+			return nil, publicError(fmt.Errorf("%w: exact bundle and Runtime RepoDigest Conformance evidence is unavailable", domain.ErrInvalid))
+		}
+	}
 	publication, err := repository.PublishConnectorRevision(ctx, principal.UserID, revision.ID, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return connectorPublicationResponse(publication, revision), nil
+	response := connectorPublicationResponse(publication, revision)
+	if err := applyConnectorConformance(ctx, repository, revision, response.Revision); err != nil {
+		return nil, publicError(err)
+	}
+	return response, nil
 }
 
 func (service *Service) DisableConnectorPublication(ctx context.Context, request *workspacev1.DisableConnectorPublicationRequest) (*workspacev1.ConnectorPublication, error) {
@@ -242,7 +271,11 @@ func (service *Service) DisableConnectorPublication(ctx context.Context, request
 	if err != nil {
 		return nil, publicError(err)
 	}
-	return connectorPublicationResponse(publication, revision), nil
+	response := connectorPublicationResponse(publication, revision)
+	if err := applyConnectorConformance(ctx, repository, revision, response.Revision); err != nil {
+		return nil, publicError(err)
+	}
+	return response, nil
 }
 
 func (service *Service) ListConnectorPublicationHealth(ctx context.Context, _ *workspacev1.ListConnectorPublicationHealthRequest) (*workspacev1.ListConnectorPublicationHealthResponse, error) {
@@ -261,6 +294,11 @@ func (service *Service) ListConnectorPublicationHealth(ctx context.Context, _ *w
 	for _, item := range items {
 		policy, _ := decodeConnectorRevisionPolicy(item.Revision)
 		health := &workspacev1.ConnectorPublicationHealth{Source: item.Publication.PackageSource, State: string(item.Publication.State), ActiveRevisionId: item.Revision.ID, PackageSha256: item.Revision.PackageSHA256, RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item.Revision, policy), InstallationCount: item.InstallationCount, ActiveInstallationCount: item.ActiveInstallationCount, ActiveAuthorizationCount: item.ActiveAuthorizationCount}
+		verified := connectorRevisionResponse(item.Revision)
+		if err := applyConnectorConformance(ctx, repository, item.Revision, verified); err != nil {
+			return nil, publicError(err)
+		}
+		health.ConformanceAvailable = verified.ConformanceAvailable
 		if policy.BundleSHA256 != "" {
 			health.BundleSha256 = &policy.BundleSHA256
 		}
@@ -1269,18 +1307,13 @@ func (service *Service) DisconnectConnectorAuthorization(ctx context.Context, re
 }
 
 func connectorRevisionFromPackage(pkg connectorpackage.Package) (domain.ConnectorRevision, string) {
-	policyValue := map[string]any{"auth_mode": pkg.Metadata.AuthMode, "metadata": pkg.Metadata, "mcp": pkg.MCP, "cli": pkg.CLI}
-	if len(pkg.CLIBundle) > 0 {
-		policyValue["cli_bundle_object_key"] = connectorBundleObjectKey(pkg)
-		policyValue["cli_bundle_sha256"] = pkg.CLIBundleSHA256
-	}
-	policy, _ := json.Marshal(policyValue)
+	policy, _ := pkg.RuntimePolicy()
 	revision := domain.ConnectorRevision{PackageSource: pkg.Metadata.Source, Version: pkg.Metadata.Version, Mode: domain.ConnectorMode(pkg.Metadata.Type), PackageSHA256: pkg.SHA256, RuntimePolicy: policy}
-	return revision, fmt.Sprintf("connectors/%s/%s/%s.zip", pkg.Metadata.Source, pkg.Metadata.Version, pkg.SHA256)
+	return revision, pkg.ObjectKey()
 }
 
 func connectorBundleObjectKey(pkg connectorpackage.Package) string {
-	return fmt.Sprintf("cli-connectors/packages/%s/%s/%s.tgz", pkg.Metadata.Source, pkg.Metadata.Version, pkg.CLIBundleSHA256)
+	return pkg.BundleObjectKey()
 }
 
 func buildGuidedConnectorPackage(input guidedConnectorInput) ([]byte, error) {
@@ -1360,13 +1393,35 @@ func validateStagedRevision(revision domain.ConnectorRevision) error {
 	return nil
 }
 
+// Manifest completeness alone is not runtime Conformance. Disabled starter
+// packages have real bundles but no evidence in this installation.
+func applyConnectorConformance(ctx context.Context, repository connectorPackageRepository, revision domain.ConnectorRevision, response *workspacev1.ConnectorRevision) error {
+	if revision.Mode != domain.ConnectorModeCLI {
+		return nil
+	}
+	policy, err := decodeConnectorRevisionPolicy(revision)
+	if err != nil {
+		return err
+	}
+	response.ConformanceAvailable = false
+	if !connectorConformanceAvailable(revision, policy) {
+		return nil
+	}
+	verified, err := repository.HasConnectorBundleRuntimeConformance(ctx, policy.BundleSHA256, policy.CLI.Runtime.Digest)
+	if err != nil {
+		return err
+	}
+	response.ConformanceAvailable = verified
+	return nil
+}
+
 func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.ConnectorRevision {
 	policy, _ := decodeConnectorRevisionPolicy(item)
 	name := policy.Metadata.Name
 	if name == "" {
 		name = item.PackageSource
 	}
-	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: connectorpackage.DisplayName(item.PackageSource, name), Description: connectorpackage.DisplayDescription(item.PackageSource, policy.Metadata.Description), ExamplesZh: append([]string(nil), policy.Metadata.ExamplesZH...), ExamplesEn: append([]string(nil), policy.Metadata.ExamplesEN...), Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: connectorConformanceAvailable(item, policy)}
+	response := &workspacev1.ConnectorRevision{Id: item.ID, Source: item.PackageSource, PackageVersion: item.Version, Mode: string(item.Mode), Sha256: item.PackageSHA256, Name: connectorpackage.DisplayName(item.PackageSource, name), Description: connectorpackage.DisplayDescription(item.PackageSource, policy.Metadata.Description), ExamplesZh: append([]string(nil), policy.Metadata.ExamplesZH...), ExamplesEn: append([]string(nil), policy.Metadata.ExamplesEN...), Icon: connectorpackage.DisplayIcon(item.PackageSource), RuntimeDigests: connectorRuntimeDigests(policy), ConformanceAvailable: item.Mode == domain.ConnectorModeMCP && connectorConformanceAvailable(item, policy)}
 	if policy.CLI != nil {
 		response.AuthenticationDriver = policy.CLI.AuthenticationDriver
 		if len(policy.CLI.ActivationScopes) > 0 {

@@ -1,15 +1,17 @@
 # 扫码注册发布验证 — 2026-10-05
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识与范围
 
 - 功能分支：`codex/scan-registration`；实现提交 `e41fc2c`，迁移顺序修正 `2ec6730`。
 - 通过 `main_temp` 集成，发布构建源：`d3d3d99345b58560260abb41ea176a47237b94b9`，发布前已推送。
 - 发布 ID：`scan-registration-20261005-1`。
-- 公网：[Agent Workspace](https://47-237-108-63.sslip.io)。
-- 源码：`/opt/agent-platform/src.release-scan-registration-20261005-1`。
-- Web：`/opt/agent-platform/web/releases/scan-registration-20261005-1`。
-- Keycloak Theme：`/opt/agent-platform/identity-themes/releases/scan-registration-20261005-1`。
-- 备份：`/opt/agent-platform/backups/pre-scan-registration-20261005-1`。
+- 公网：[Agent Workspace](https://workspace.example.com)。
+- 源码：`/srv/agent-workspace/src.release-scan-registration-20261005-1`。
+- Web：`/srv/agent-workspace/web/releases/scan-registration-20261005-1`。
+- Keycloak Theme：`/srv/agent-workspace/identity-themes/releases/scan-registration-20261005-1`。
+- 备份：`/srv/agent-workspace/backups/pre-scan-registration-20261005-1`。
 
 发布 API、Worker、Web 和登录主题；Keycloak 保留原镜像，仅重建容器以加载新的只读主题目录。Runtime、CLI Builder、Egress Controller、Caddy、PostgreSQL、MinIO 的镜像和运行配置没有更新。两种 Registration Method 尚未开放，需产品 Administrator 填写真实应用凭证后启用。
 
@@ -65,7 +67,7 @@ Broker client secret 和 RSA 2048 PKCS8 签名 Key 在主机上生成，只写�
 
 新增微信和飞书请求回归测试，修复前两项均以实际 Request 的 `text/plain;charset=UTF-8` 失败；改用既有统一 JSON 请求构造器后通过。功能分支提交 `72e10c6`，从 `main_temp` 的 `004cffc66d45a93d3579c14439efe1b0cc710740` 发布。目标 API/管理员组件测试 44 项通过，功能分支完整前端 595 项、集成分支完整前端 604 项通过；两处分支均执行 Web typecheck、生产构建、`go -C backend test ./internal/service/workspace/...`、`git diff --check` 和指引文件一致性检查。生产构建仍有既有 embed chunk 大小提示。
 
-持有主机发布锁，使用 `scripts/deploy-web.sh` 发布 `scan-registration-save-20261005-1`；仅切换 Web，API/Worker 镜像、数据库及身份配置未更新。旧 Web 保留，切换前指针和入口文件备份于 `/opt/agent-platform/backups/pre-scan-registration-save-20261005-1`。当前 `/opt/agent-platform/web/current` 指向新 release，API/Worker 保持 healthy。
+持有主机发布锁，使用 `scripts/deploy-web.sh` 发布 `scan-registration-save-20261005-1`；仅切换 Web，API/Worker 镜像、数据库及身份配置未更新。旧 Web 保留，切换前指针和入口文件备份于 `/srv/agent-workspace/backups/pre-scan-registration-save-20261005-1`。当前 `/srv/agent-workspace/web/current` 指向新 release，API/Worker 保持 healthy。
 
 公网 HTML、API client、账号管理页及入口 JS 与生产构建逐字节相同；Health、Readiness、公开失败页和 OIDC Discovery 均 200，匿名管理员 API 为 401。产物 SHA-256：
 
@@ -80,7 +82,7 @@ Broker client secret 和 RSA 2048 PKCS8 签名 Key 在主机上生成，只写�
 
 ## 真实公众号配置与二维码权限诊断
 
-随后产品 Administrator 在公众平台加入 API IP 白名单并重新保存。2026-10-05 17:16:34（Asia/Shanghai）的微信配置 PUT 返回 200，17:17:24 的服务器 URL 验证 GET 回调返回 200；数据库仅检查非秘密元数据，`wechat_official` 为 enabled=true、ready=true、version=1。API 容器实际公网出口确认是 `47.237.108.63`。这些结果证明本次真实凭证验证、身份入口同步和回调握手通过，不证明二维码或注册完成。
+随后产品 Administrator 在公众平台加入 API IP 白名单并重新保存。2026-10-05 17:16:34（Asia/Shanghai）的微信配置 PUT 返回 200，17:17:24 的服务器 URL 验证 GET 回调返回 200；数据库仅检查非秘密元数据，`wechat_official` 为 enabled=true、ready=true、version=1。API 容器实际公网出口确认是 `203.0.113.10`。这些结果证明本次真实凭证验证、身份入口同步和回调握手通过，不证明二维码或注册完成。
 
 之后 authorize 请求约 530–547 ms 返回 `registration_start_failed`。以保护环境中的已保存配置，在主机上通过实际 Registration Gateway 重放供应商调用；解密仅发生于临时进程内存，不输出配置、请求体、Token、回调秘密或供应商原始错误文本。最小诊断结果：
 

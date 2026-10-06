@@ -2,8 +2,8 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-deploy_host="${WEB_DEPLOY_HOST:?WEB_DEPLOY_HOST is required, for example agent-platform}"
-release_root="${WEB_RELEASE_ROOT:-/opt/agent-platform/web}"
+deploy_host="${WEB_DEPLOY_HOST:?WEB_DEPLOY_HOST is required, for example deploy@example.com}"
+release_root="${WEB_RELEASE_ROOT:-/srv/agent-workspace/web}"
 mode="${1:-deploy}"
 if [[ "$mode" == "activate" ]]; then
   release_id="${2:?usage: deploy-web.sh activate RELEASE_ID}"

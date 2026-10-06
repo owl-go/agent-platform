@@ -28,7 +28,7 @@ go -C backend test ./internal/githubcli/... ./internal/connectorpackage/... ./in
 
 ```bash
 python3 scripts/connectors/github/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package <package-path> --source <source-zip-path> \
   --evidence-directory <evidence-directory>
 ```

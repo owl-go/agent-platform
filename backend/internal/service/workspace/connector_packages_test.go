@@ -1,9 +1,15 @@
 package workspace
 
 import (
+	workspacev1 "agent-platform/backend/api/workspace/v1"
+	accountapplication "agent-platform/backend/internal/biz/account/application"
+	accountdomain "agent-platform/backend/internal/biz/account/domain"
+	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -242,6 +248,73 @@ func TestPKULawProvidedTokenBoundary(t *testing.T) {
 			err := validatePKULawCredentials(policy, []byte(test.credentials))
 			if (err == nil) != test.valid {
 				t.Fatalf("validation = %v, valid = %v", err, test.valid)
+			}
+		})
+	}
+}
+
+// A distributed bundle must not look verified until this installation has
+// recorded the exact bundle/Runtime evidence, and publication must fail closed.
+type starterConnectorRepository struct {
+	workspaceapplication.Repository
+	connectorPackageRepository
+	revision        domain.ConnectorRevision
+	verified        bool
+	verifyErr       error
+	published       bool
+	bundle, runtime string
+}
+
+func (r *starterConnectorRepository) GetConnectorRevision(context.Context, string) (domain.ConnectorRevision, error) {
+	return r.revision, nil
+}
+func (r *starterConnectorRepository) HasConnectorBundleRuntimeConformance(_ context.Context, bundle, runtime string) (bool, error) {
+	r.bundle, r.runtime = bundle, runtime
+	return r.verified, r.verifyErr
+}
+func (r *starterConnectorRepository) PublishConnectorRevision(_ context.Context, owner, revision string, version int64) (domain.ConnectorPublication, error) {
+	r.published = true
+	return domain.ConnectorPublication{PackageSource: r.revision.PackageSource, ActiveRevisionID: revision, State: domain.ConnectorPublicationAvailable, Version: version + 1}, nil
+}
+
+func TestStarterCLIRequiresLocalExactConformance(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		verified      bool
+		verifyErr     error
+		wantPublished bool
+	}{
+		{name: "manifest without local evidence"},
+		{name: "exact local evidence", verified: true, wantPublished: true},
+		{name: "evidence query failure", verifyErr: errors.New("fixture database failure")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bundle, runtime := strings.Repeat("a", 64), "sha256:"+strings.Repeat("b", 64)
+			policy, err := json.Marshal(connectorRevisionPolicy{BundleSHA256: bundle, CLI: &connectorpackage.CLIManifest{Runtime: connectorpackage.ManagedRuntime{Digest: runtime}, Capabilities: []connectorpackage.CLICapability{{}}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := &starterConnectorRepository{revision: domain.ConnectorRevision{ID: "revision", PackageSource: "fixture", Mode: domain.ConnectorModeCLI, RuntimePolicy: policy}, verified: tc.verified, verifyErr: tc.verifyErr}
+			response := connectorRevisionResponse(r.revision)
+			if response.ConformanceAvailable {
+				t.Fatal("a complete manifest was reported as real Conformance")
+			}
+			err = applyConnectorConformance(context.Background(), r, r.revision, response)
+			if (err != nil) != (tc.verifyErr != nil) || response.ConformanceAvailable != tc.verified {
+				t.Fatalf("evidence response=%v err=%v", response.ConformanceAvailable, err)
+			}
+			app, err := workspaceapplication.New(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc := &Service{accounts: &accountapplication.Service{}, workspace: app}
+			ctx := accountapplication.WithPrincipal(context.Background(), accountdomain.Principal{UserID: "administrator", Administrator: true})
+			_, err = svc.PublishConnectorRevision(ctx, &workspacev1.PublishConnectorRevisionRequest{RevisionId: "revision", ExpectedVersion: 1})
+			if r.published != tc.wantPublished || (err == nil) != tc.wantPublished {
+				t.Fatalf("published=%v err=%v", r.published, err)
+			}
+			if r.bundle != bundle || r.runtime != runtime {
+				t.Fatal("Conformance queried a different bundle or Runtime")
 			}
 		})
 	}

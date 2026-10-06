@@ -1,5 +1,7 @@
 # Assistant reply visibility and scrolling — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Diagnosis and behavior
 
 The shared Assistant Conversation thread had no scrolling ownership. Authenticated conversations left the thread at its previous scroll position while responses grew; public conversations separately assigned scrollTop after events, without handling viewport/composer resizing or preserving a reader's position above the bottom.
@@ -22,8 +24,8 @@ Scrolling now belongs to the shared `AssistantConversationThread`. New questions
 - Feature code: `21b786a` on `codex/assistant-prompt-variables`, pushed.
 - Integrated code: `6c0613592c57fcb86d00db4840d83ea0162d9603` on `main_temp`, pushed before deployment.
 - Web release: `assistant-scroll-20261003-1`, built and activated through `scripts/deploy-web.sh` with production OIDC settings.
-- Web path: `/opt/agent-platform/web/releases/assistant-scroll-20261003-1`.
-- Verified protected backup: `/opt/agent-platform/backups/pre-assistant-scroll-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, prior pointers and SHA-256 manifest were verified.
+- Web path: `/srv/agent-workspace/web/releases/assistant-scroll-20261003-1`.
+- Verified protected backup: `/srv/agent-workspace/backups/pre-assistant-scroll-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, prior pointers and SHA-256 manifest were verified.
 
 Public Health and Readiness returned HTTP 200 with statuses `ok` and `ready`; OIDC discovery matched the configured issuer. All 86 production static files returned HTTP 200 and matched local build bytes. Remote entrypoint hashes matched:
 
@@ -32,6 +34,6 @@ Public Health and Readiness returned HTTP 200 with statuses `ok` and `ready`; OI
 
 API, Worker and Egress Controller remained healthy; Caddy remained running. Canonical environment and YAML bytes were unchanged.
 
-Only Web changes. API source remains `/opt/agent-platform/src.release-assistant-embed-types-20261003-1`; API image remains `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e`, and Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. No backend, schema, Runtime or storage implementation changed; their environment-specific gates were not rerun. No User-owned share configuration or private conversation was changed for verification. Live Provider acceptance is not claimed.
+Only Web changes. API source remains `/srv/agent-workspace/src.release-assistant-embed-types-20261003-1`; API image remains `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e`, and Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. No backend, schema, Runtime or storage implementation changed; their environment-specific gates were not rerun. No User-owned share configuration or private conversation was changed for verification. Live Provider acceptance is not claimed.
 
 Rollback: `scripts/deploy-web.sh activate assistant-share-save-20261003-1` with the deployment host configured. Keep configuration and persistent volumes.

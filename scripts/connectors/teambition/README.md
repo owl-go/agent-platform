@@ -44,7 +44,7 @@ go -C backend test ./internal/connectorpackage/... ./internal/cliconnector/...
 
 ```bash
 python3 publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package <package-path> \
   --source <source-zip-path> \
   --evidence-directory <release-evidence-directory>

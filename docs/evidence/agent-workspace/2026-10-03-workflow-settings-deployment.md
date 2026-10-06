@@ -1,16 +1,18 @@
 # 工作流基本信息与消息渠道快速配置部署验证 — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 功能分支：`codex/workflow-basic-knowledge`，功能 Commit：`3d823e8`。
 - 集成分支：`main_temp`，实际 Web 构建源 Commit：`d44d85f8dac23566fdb64006422ca44fdc74a5cb`；无冲突合并，已推送。
 - Web 发布 ID：`workflow-settings-20261003-1`。
-- 公网入口：`https://47-237-108-63.sslip.io`。
-- Web 目录：`/opt/agent-platform/web/releases/workflow-settings-20261003-1`。
-- 发布前记录：`/opt/agent-platform/backups/pre-workflow-settings-20261003-1`，保留原 Web、源目录指针和原首页 SHA-256。
-- 原 Web：`/opt/agent-platform/web/releases/workflow-channels-20261003-1`。
+- 公网入口：`https://workspace.example.com`。
+- Web 目录：`/srv/agent-workspace/web/releases/workflow-settings-20261003-1`。
+- 发布前记录：`/srv/agent-workspace/backups/pre-workflow-settings-20261003-1`，保留原 Web、源目录指针和原首页 SHA-256。
+- 原 Web：`/srv/agent-workspace/web/releases/workflow-channels-20261003-1`。
 
-本次为 Web 发布：知识库选择归入工作流基本信息，原执行资源分组改为环境变量，成功运行后的快速配置增加消息渠道入口。API、Worker、数据库与 Runtime 未重新部署，后端源指针仍为 `/opt/agent-platform/src.release-assistant-no-sources-20261003-1`。
+本次为 Web 发布：知识库选择归入工作流基本信息，原执行资源分组改为环境变量，成功运行后的快速配置增加消息渠道入口。API、Worker、数据库与 Runtime 未重新部署，后端源指针仍为 `/srv/agent-workspace/src.release-assistant-no-sources-20261003-1`。
 
 ## 实际执行
 

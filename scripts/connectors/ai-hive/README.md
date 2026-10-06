@@ -42,7 +42,7 @@ Egress 清单只含已确认的 npm registry 和默认 API 域名。上游媒体
 
 ```bash
 python3 scripts/connectors/ai-hive/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /tmp/ai-hive-0.3.0.zip \
   --normalized-sha256 '<current-connectorpackage.Parse-sha256>' \
   --evidence-directory /tmp/ai-hive-publication-evidence

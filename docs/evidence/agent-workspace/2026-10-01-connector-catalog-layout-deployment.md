@@ -1,15 +1,17 @@
 # 连接器分类与弹窗布局部署验证 — 2026-10-01
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 集成分支：`main_temp`，部署源 Commit：`dfa9f01593320074be3fb155ad4597e4e99e8b53`。
 - 功能 Commit：`8cd9bc8`；合并无冲突。
 - 发布 ID：`connector-layout-20261001T073440Z`。
-- 源目录：`/opt/agent-platform/src.release-connector-layout-20261001T073440Z`。
-- Web 目录：`/opt/agent-platform/web/releases/connector-layout-20261001T073440Z`。
-- 发布前备份：`/opt/agent-platform/backups/pre-connector-layout-20261001T073440Z`。
+- 源目录：`/srv/agent-workspace/src.release-connector-layout-20261001T073440Z`。
+- Web 目录：`/srv/agent-workspace/web/releases/connector-layout-20261001T073440Z`。
+- 发布前备份：`/srv/agent-workspace/backups/pre-connector-layout-20261001T073440Z`。
 - 前一版本：`connector-guides-20261001T062000Z`。
-- 公网入口：`https://47-237-108-63.sslip.io`。
+- 公网入口：`https://workspace.example.com`。
 
 ## 已执行的检查
 

@@ -1,5 +1,7 @@
 # 微信公众号一次性登录码验证
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 日期：2026-10-06。用户批准将带参数二维码改为普通关注二维码加一次性登录码；行为依据见 [ADR 0044](../../adr/0044-wechat-registration-with-message-code.md) 和 [扫码注册规格](../../technical/scan-registration.md)。
 
 ## 本地验证
@@ -21,9 +23,9 @@
 
 集成分支执行 `make test`、`make build`、前端完整测试（55 文件、608 项）、`make web-typecheck`、`make web-build`、`git diff --check` 和指引文件一致性检查，全部通过。临时 PostgreSQL 17 再次实际执行含 `000069`、`000070`、`000071` 的完整迁移链及 Repository race 测试；真实临时 Keycloak 再次执行微信/飞书 OIDC 交接 race 测试通过。
 
-持有发布锁，备份业务库 `pg_dump -Fc`、env/YAML、旧源码/Web 指针和 API/Worker 镜像 ID 到 `/opt/agent-platform/backups/pre-wechat-message-code-20261006-1`。Dump 通过 `pg_restore -l`，全部备份通过 SHA-256 校验；切换前活跃 Run/Session Message 汇总为 0。源码归档本地与主机 SHA-256 均为 `326a4e82f508bb85c02288a4fafcd1222e665863e77df123173adb4e8351cc28`。
+持有发布锁，备份业务库 `pg_dump -Fc`、env/YAML、旧源码/Web 指针和 API/Worker 镜像 ID 到 `/srv/agent-workspace/backups/pre-wechat-message-code-20261006-1`。Dump 通过 `pg_restore -l`，全部备份通过 SHA-256 校验；切换前活跃 Run/Session Message 汇总为 0。源码归档本地与主机 SHA-256 均为 `326a4e82f508bb85c02288a4fafcd1222e665863e77df123173adb4e8351cc28`。
 
-API healthy 后确认线上迁移账本为 `000071_registration_login_codes.sql`，源码指向 `/opt/agent-platform/src.release-wechat-message-code-20261006-1`。身份 Profile 和窄服务角色只执行 `configure-registration-identity.py check`，通过。Web 经 `scripts/deploy-web.sh` 使用生产公开 OIDC 参数构建并原子切换到 `/opt/agent-platform/web/releases/wechat-message-code-20261006-1`。
+API healthy 后确认线上迁移账本为 `000071_registration_login_codes.sql`，源码指向 `/srv/agent-workspace/src.release-wechat-message-code-20261006-1`。身份 Profile 和窄服务角色只执行 `configure-registration-identity.py check`，通过。Web 经 `scripts/deploy-web.sh` 使用生产公开 OIDC 参数构建并原子切换到 `/srv/agent-workspace/web/releases/wechat-message-code-20261006-1`。
 
 | 服务 | 镜像 ID | 状态 |
 |---|---|---|

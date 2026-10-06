@@ -1,14 +1,16 @@
 # Assistant chat and sharing deployment — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Release
 
 - Feature branch: `codex/assistant-prompt-variables`, through `af9f813`.
 - Integrated and pushed `main_temp`: `0a004334c80db45075595d38eb7ba5d0e7790db1`.
 - Release: `assistant-chat-20261003-1`.
-- Source: `/opt/agent-platform/src.release-assistant-chat-20261003-1`.
-- Web: `/opt/agent-platform/web/releases/assistant-chat-20261003-1`.
-- Public origin: `https://47-237-108-63.sslip.io`.
-- Verified backup: `/opt/agent-platform/backups/pre-assistant-chat-20261003-1`.
+- Source: `/srv/agent-workspace/src.release-assistant-chat-20261003-1`.
+- Web: `/srv/agent-workspace/web/releases/assistant-chat-20261003-1`.
+- Public origin: `https://workspace.example.com`.
+- Verified backup: `/srv/agent-workspace/backups/pre-assistant-chat-20261003-1`.
 - Previous source: `src.release-ragflow-knowledge-20261002-4`; previous Web: `knowledge-controls-20261002-1`.
 - API image: `sha256:325ab54efa37077b53c8fdc24d5c37fdabcd2a987f21dee017f7d670459fe8c9`.
 - Worker image: `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`.
@@ -41,4 +43,4 @@ Feature `401b062`, integrated and pushed as `main_temp` `5c7dd5b6d3f8ab8eab18bb2
 
 The regression first reproduced `你好呀` returning the fixed scope refusal in authenticated and public execution, with one classification call, one Knowledge search and a Credit admission. After the fix both tests pass with no model, search or Credit admission. Tests also cover normalized greetings, extended requests, configured greeting FAQ precedence, public welcome-only output, the public free-text gate and the persisted SSE terminal answer. Targeted service/server tests, `make test`, `make build` and `git diff --check` passed on both feature and integrated branches.
 
-API-only release `assistant-greeting-20261003-1` uses source `/opt/agent-platform/src.release-assistant-greeting-20261003-1` and image `sha256:ffa188c88cf6440b1bc7ccd8aa533e78c7cdb5a5633600993fbb468d793d6e21`. Verified business dump/configuration and previous source/Web/API pointers are retained in `/opt/agent-platform/backups/pre-assistant-greeting-20261003-1`. The API became healthy with zero startup errors; public Health/Readiness returned 200 with `ok`/`ready`, and environment/YAML SHA-256 checks remained unchanged. Worker and Web remain on `assistant-chat-20261003-1`; neither was replaced, and no migration or Runtime change was made. The older supplied public token returned 404 on the attempted greeting acceptance, so a completed production greeting on the User's current link is not claimed. No private settings, transcripts or Knowledge content were inspected. No frontend or Runtime gates were rerun for this API-only change.
+API-only release `assistant-greeting-20261003-1` uses source `/srv/agent-workspace/src.release-assistant-greeting-20261003-1` and image `sha256:ffa188c88cf6440b1bc7ccd8aa533e78c7cdb5a5633600993fbb468d793d6e21`. Verified business dump/configuration and previous source/Web/API pointers are retained in `/srv/agent-workspace/backups/pre-assistant-greeting-20261003-1`. The API became healthy with zero startup errors; public Health/Readiness returned 200 with `ok`/`ready`, and environment/YAML SHA-256 checks remained unchanged. Worker and Web remain on `assistant-chat-20261003-1`; neither was replaced, and no migration or Runtime change was made. The older supplied public token returned 404 on the attempted greeting acceptance, so a completed production greeting on the User's current link is not claimed. No private settings, transcripts or Knowledge content were inspected. No frontend or Runtime gates were rerun for this API-only change.

@@ -34,7 +34,7 @@ python3 -m unittest discover -s scripts/connectors/openboost -p 'test_*.py' -v
 
 ```bash
 python3 scripts/connectors/openboost/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /tmp/openboost-0.1.0.zip \
   --source /tmp/openboost-0.1.0.source.zip \
   --evidence-directory /tmp/openboost-publication-evidence

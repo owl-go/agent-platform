@@ -93,7 +93,7 @@ func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analy
 
 func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider, box *secretcrypto.Box, config platformconfig.Config) (*workspaceapplication.Service, error) {
 	repository := workspacerepo.New(database.ORM(), credits)
-	if err := repository.EnsureSystemSkills(ctx, objects); err != nil {
+	if err := repository.EnsureDefaultResources(ctx, objects); err != nil {
 		return nil, err
 	}
 	channelEndpoints := make([]messagechannel.ApprovedEndpoint, 0, len(config.MessageChannels.ApprovedEndpoints))

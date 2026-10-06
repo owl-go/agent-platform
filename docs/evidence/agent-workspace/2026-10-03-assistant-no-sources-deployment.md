@@ -1,5 +1,7 @@
 # Assistant answers without source annotations — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Change and validation
 
 The User requested Assistant answers without document-source marks, then explicitly requested publication. The answer instruction now asks for conclusions, relevant data and explanations without appended source sections, retrieved document names or paths, revision IDs, citation numbers, footnotes or source links. It takes precedence over contradictory citation requirements in custom prompts, response styles or previous answers. Directly relevant business links and substantive answer data remain available.
@@ -19,9 +21,9 @@ The earlier unrelated `main_temp` merge had completed before publication; no con
 - Feature code: `6f584e6` on `codex/assistant-prompt-variables`, pushed.
 - Integrated code: `75ef8fa6f00c487b050838eb2b8b3423b9e629cc` on `main_temp`, pushed before deployment.
 - API/source release: `assistant-no-sources-20261003-1`.
-- Source: `/opt/agent-platform/src.release-assistant-no-sources-20261003-1`.
+- Source: `/srv/agent-workspace/src.release-assistant-no-sources-20261003-1`.
 - API image: `sha256:124a628c84b3e3b9e74c7ffaf398a521ea5fce34cbfb220b03a2ff4242323434`.
-- Verified protected backup: `/opt/agent-platform/backups/pre-assistant-no-sources-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, previous release pointers and backup manifest were verified.
+- Verified protected backup: `/srv/agent-workspace/backups/pre-assistant-no-sources-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, previous release pointers and backup manifest were verified.
 
 Only tracked integrated source was archived and uploaded. The existing service Dockerfile built the API image; a release override activated API only through the production Compose stack with no dependency rebuild. Health and Readiness returned `ok` and `ready` before the source pointer switched. Canonical configuration hashes remained unchanged, preserving the newly enabled message-channel configuration. API, Worker and Egress Controller remained healthy; Caddy remained running.
 
@@ -33,6 +35,6 @@ Only bounded verification metrics were retained; private answer content, source 
 
 ## Scope and rollback
 
-Web remains `/opt/agent-platform/web/releases/workflow-channels-20261003-1`. Worker remains `sha256:82550fda89d741c1ab615b0b16af924d6a8c22a72f562d348e81dad2d8d50c5e`, and Egress Controller remains `sha256:ccd474838cc671d6afd20f1dc107ac711adf0f9e3c2666bf607446ce030dbd70`. No migration, frontend, configuration, Runtime image, identity or persistent volume changed.
+Web remains `/srv/agent-workspace/web/releases/workflow-channels-20261003-1`. Worker remains `sha256:82550fda89d741c1ab615b0b16af924d6a8c22a72f562d348e81dad2d8d50c5e`, and Egress Controller remains `sha256:ccd474838cc671d6afd20f1dc107ac711adf0f9e3c2666bf607446ce030dbd70`. No migration, frontend, configuration, Runtime image, identity or persistent volume changed.
 
-Rollback uses the protected previous source `/opt/agent-platform/src.release-workflow-channels-20261003-1` and API image `sha256:889698d27ca74595674a303885e7ff05c07b228da5302fcc048c130456ef8e78` through the production Compose stack. Verify health before switching the source pointer; retain the current Worker, Web, canonical configuration and volumes.
+Rollback uses the protected previous source `/srv/agent-workspace/src.release-workflow-channels-20261003-1` and API image `sha256:889698d27ca74595674a303885e7ff05c07b228da5302fcc048c130456ef8e78` through the production Compose stack. Verify health before switching the source pointer; retain the current Worker, Web, canonical configuration and volumes.
