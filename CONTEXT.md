@@ -495,7 +495,7 @@ _Avoid_: platform-owned Skill, hidden instruction, automatic installation
 A User's personality, default Runtime Engine, Runtime Engine Settings, language, and time zone. Its default Provider Model and Runtime Engine supply every new Session or Run Conversation's execution configuration, whether or not an Expert or Expert Team is selected.
 
 **Platform Execution Default**:
-The Administrator-managed Runtime Engine and Provider Model pair inherited by Users who have not opted into a personal execution override. It is accepted only with a verified Provider and a successful matching validation Run; that evidence promotes an unverified compatible pair to verified, while an incompatible pair remains forbidden. It is never a silent fallback.
+The Administrator-managed Runtime Engine and Provider Model pair inherited by Users who have not opted into a personal execution override, never used as a silent fallback. An unverified Provider or compatible pair remains selectable, but acceptance requires a successful matching validation Run that verifies the pair without changing the Provider's verification status; incompatible pairs remain forbidden.
 _Avoid_: Organization policy, Expert configuration, Workflow settings
 
 **Personality**:
