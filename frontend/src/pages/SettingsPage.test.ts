@@ -62,15 +62,16 @@ async function openConnectionEditor(api: PlatformApi) {
 }
 
 describe("SettingsPage model provider feedback", () => {
-  it("offers testable pairs and excludes incompatible models from the enterprise default", async () => {
-    const verifiedConnection: ModelProviderConnection = { ...connection, verification_status: "verified", models: [
+  it.each(["verified", "unverified"] as const)("offers models from a %s provider and excludes incompatible models from the enterprise default", async (verificationStatus) => {
+    const providerConnection: ModelProviderConnection = { ...connection, verification_status: verificationStatus, models: [
       { id: "model-verified", connection_id: connection.id, model_id: "verified", display_name: "Verified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
       { id: "model-unverified", connection_id: connection.id, model_id: "unverified", display_name: "Unverified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] },
       { id: "model-incompatible", connection_id: connection.id, model_id: "incompatible", display_name: "Incompatible", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "incompatible" }] },
+      { id: "model-unavailable", connection_id: connection.id, model_id: "unavailable", display_name: "Unavailable", available: false, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "unverified" }] },
     ] };
     const saved = { runtime_engine: "codex" as const, provider_model_id: "model-verified", validation_run_id: "run-success", updated_by_user_id: "user-1", version: 1, updated_at: "2026-09-28T00:00:00Z" };
     const api = apiStub();
-    api.listModelProviderConnections = vi.fn(async () => [verifiedConnection]);
+    api.listModelProviderConnections = vi.fn(async () => [providerConnection]);
     api.getPlatformExecutionDefault = vi.fn(async () => saved);
     api.setPlatformExecutionDefault = vi.fn(async () => saved);
     const wrapper = mount(SettingsPage, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(true) } } });
@@ -80,10 +81,13 @@ describe("SettingsPage model provider feedback", () => {
     expect(card.find('option[value="model-verified"]').exists()).toBe(true);
     expect(card.find('option[value="model-unverified"]').exists()).toBe(true);
     expect(card.find('option[value="model-incompatible"]').exists()).toBe(false);
+    expect(card.find('option[value="model-unavailable"]').exists()).toBe(false);
+    expect(card.get('option[value="model-unverified"]').text()).toContain("未验证");
+    await card.findAll("select")[1]!.setValue("model-unverified");
     await card.find('input[placeholder="Run ID"]').setValue("run-success");
     await card.trigger("submit");
     await flushPromises();
-    expect(api.setPlatformExecutionDefault).toHaveBeenCalledWith({ runtime_engine: "codex", provider_model_id: "model-verified", validation_run_id: "run-success", expected_version: 1 });
+    expect(api.setPlatformExecutionDefault).toHaveBeenCalledWith({ runtime_engine: "codex", provider_model_id: "model-unverified", validation_run_id: "run-success", expected_version: 1 });
     wrapper.unmount();
   });
 

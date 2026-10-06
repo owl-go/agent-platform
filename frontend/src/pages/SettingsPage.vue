@@ -104,7 +104,7 @@ async function saveManualModel() { if (!manualConnection.value) return; try { aw
 function runtimeDefault(runtime: RuntimeEngine) { return settings.value?.runtime_model_defaults.find((item) => item.runtime_engine === runtime)?.provider_model_id ?? ""; }
 function setRuntimeDefault(runtime: RuntimeEngine, modelID: string) { if (!settings.value) return; settings.value.runtime_model_defaults = settings.value.runtime_model_defaults.filter((item) => item.runtime_engine !== runtime); if (modelID) settings.value.runtime_model_defaults.push({ runtime_engine: runtime, provider_model_id: modelID }); }
 function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setRuntimeDefault(runtime, (event.target as HTMLSelectElement).value); }
-function platformDefaultModels(runtime: RuntimeEngine) { return selectableModels.value.filter((item) => item.connection.verification_status === "verified" && item.compatibility.some((entry) => entry.runtime_engine === runtime && entry.status !== "incompatible")); }
+function platformDefaultModels(runtime: RuntimeEngine) { return selectableModels.value.filter((item) => item.compatibility.some((entry) => entry.runtime_engine === runtime && entry.status !== "incompatible")); }
 function setPlatformRuntime(runtime: RuntimeEngine) { platformDefaultForm.value.runtime_engine = runtime; if (!platformDefaultModels(runtime).some((item) => item.id === platformDefaultForm.value.provider_model_id)) platformDefaultForm.value.provider_model_id = ""; }
 async function savePlatformDefault() {
   if (savingPlatformDefault.value) return;

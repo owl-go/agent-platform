@@ -43,8 +43,8 @@ func (repository *Repository) SetPlatformExecutionDefault(ctx context.Context, a
 		if err := tx.Where("id = ?", model.ConnectionID).Take(&connection).Error; err != nil {
 			return err
 		}
-		if connection.VerificationStatus != "verified" || len(connection.APIKeyCiphertext) == 0 {
-			return fmt.Errorf("%w: Model Provider Connection is not verified", domain.ErrInvalid)
+		if len(connection.APIKeyCiphertext) == 0 {
+			return fmt.Errorf("%w: Model Provider Connection has no API Key", domain.ErrInvalid)
 		}
 		var compatibility []domain.RuntimeModelCompatibility
 		if err := json.Unmarshal(model.Compatibility, &compatibility); err != nil {
