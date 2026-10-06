@@ -1,5 +1,7 @@
 # Feishu CLI Connector repair - 2026-09-07
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Reproduced failures
 
 The production Session failed before model execution with `listen unix ...
@@ -92,20 +94,20 @@ did not present an authorization action in the conversation.
 
 ## Deployment
 
-Public origin: `https://47-237-108-63.sslip.io`.
+Public origin: `https://workspace.example.com`.
 
 Codex Runtime RepoDigest:
 
 `127.0.0.1:5000/agent-platform/codex@sha256:9a18fa516d3044f23b3b2588aff83ec66e24c49f7f47b2c98eb5be2f81bf9097`
 
 Active source:
-`/opt/agent-platform/src.release-conversation-auth-2ed11dd-20260907`.
+`/srv/agent-workspace/src.release-conversation-auth-2ed11dd-20260907`.
 
 Active service images:
 
 - API: `sha256:0f6c8a12b945022d89a20864521647431b073e06d0ad9191a64a0688609eb16e`
 - Worker: `sha256:d839142443440f6b48540d32bfca0113f9b45c7bb48c656b921b6309c9beceb1`
-- Web: `/opt/agent-platform/web/releases/conversation-auth-2ed11dd-20260907`
+- Web: `/srv/agent-workspace/web/releases/conversation-auth-2ed11dd-20260907`
 
 The runsc runtime now has `runtimeArgs: ["--host-uds=open"]`. Docker validated
 the configuration before a HUP reload; `create` and `all` were not enabled.

@@ -12,11 +12,11 @@ make deploy
 
 `scripts/deploy-platform.sh` runs the backend and frontend gates, reads only the public Web/OIDC values from the remote env file, creates and verifies business-database, identity-database, and configuration backups, uploads an immutable source release, prebuilds API, Worker, and Egress Controller images, stops the old Worker, removes the retired external retrieval container while retaining its Docker volume for rollback, starts the new API to apply append-only migrations, verifies the latest migration ledger entry, starts the Egress Controller and new Worker, recreates and validates Caddy against the same immutable release, atomically deploys the Web release, and checks public Health, Readiness, OIDC, HTTPS redirect, container health, release identity, and error logs.
 
-The defaults match the production layout:
+The following host and directory are generic examples; set them for your installation:
 
 ```text
-PLATFORM_DEPLOY_HOST=agent-platform
-PLATFORM_DEPLOY_ROOT=/opt/agent-platform
+PLATFORM_DEPLOY_HOST=deploy@example.com
+PLATFORM_DEPLOY_ROOT=/srv/agent-workspace
 ```
 
 Override `PLATFORM_RELEASE_ID` when a caller needs a predetermined immutable release name. `SKIP_DEPLOY_GATES=1` exists only for an explicitly approved emergency release; normal deployments must keep the gates enabled. The script deliberately does not automatically start an old binary after migrations. If the new API fails after the schema changes, it leaves recovery evidence and the pre-deployment backup in place and reports that the Worker may remain stopped. Restore a schema-compatible release or the verified database backup before resuming execution.
@@ -49,24 +49,24 @@ The same overlay starts a dedicated `egress-controller` in the host Network Name
 `worker.runtime_idle_timeout` defaults to the deployed value `30m`. Session and Workflow Runtime containers are stopped after each execution, retain their immutable Docker definition for this idle window, and are then removed by the Worker reaper. Per-execution credential directories are removed immediately after stop and are never retained for the idle window.
 
 ```bash
-docker compose --env-file /opt/agent-platform/config/platform.env \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml config
-docker compose --env-file /opt/agent-platform/config/platform.env \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml up -d --build
 ```
 
 部署文件可以明确覆盖 YAML 路径：
 
 ```bash
-PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.yaml \
-docker compose --env-file /opt/agent-platform/config/platform.env \
+PLATFORM_CONFIG_FILE=/srv/agent-workspace/config/platform.yaml \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml up -d --build
 ```
 
 Verify the base API from inside its private container network:
 
 ```bash
-docker compose --env-file /opt/agent-platform/config/platform.env \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml exec -T api \
   wget -qO- http://127.0.0.1:8080/readyz
 ```
@@ -77,21 +77,21 @@ The `agent-workspace` Keycloak login theme inherits the pinned image's native te
 
 ```bash
 python3 scripts/build-identity-theme.py /tmp/agent-workspace-theme-RELEASE
-rsync -a /tmp/agent-workspace-theme-RELEASE/ agent-platform:/opt/agent-platform/identity-themes/releases/RELEASE/
+rsync -a /tmp/agent-workspace-theme-RELEASE/ deploy@example.com:/srv/agent-workspace/identity-themes/releases/RELEASE/
 ```
 
-Set `KEYCLOAK_THEME_ROOT` in the private host env to the built release directory (or `/opt/agent-platform/identity-themes/current`, a symlink to it). Files must be readable by container UID 1000, with directories 0755 and files 0644. The Compose bind is read-only. Changing a symlink requires recreating only the identity container so Docker resolves the new source; restart alone retains the previous bind. Keep the previous release for rollback. Public CSS/message files contain no credentials; verify `manifest.json` against the uploaded bytes before activation.
+Set `KEYCLOAK_THEME_ROOT` in the private host env to the built release directory (or `/srv/agent-workspace/identity-themes/current`, a symlink to it). Files must be readable by container UID 1000, with directories 0755 and files 0644. The Compose bind is read-only. Changing a symlink requires recreating only the identity container so Docker resolves the new source; restart alone retains the previous bind. Keep the previous release for rollback. Public CSS/message files contain no credentials; verify `manifest.json` against the uploaded bytes before activation.
 
 New realms import `loginTheme=agent-workspace`, `internationalizationEnabled=true`, `supportedLocales=[zh-Hans,en]`, and `defaultLocale=zh-Hans`. An existing realm does not reimport those settings. On the host, export the protected platform env and run the following helper from the integrated release; it authenticates using an HTTPS POST body and changes only those four fields:
 
 ```bash
 set -a
-. /opt/agent-platform/config/platform.env
+. /srv/agent-workspace/config/platform.env
 set +a
-python3 scripts/configure-identity-theme.py backup /opt/agent-platform/backups/RELEASE-appearance.json
+python3 scripts/configure-identity-theme.py backup /srv/agent-workspace/backups/RELEASE-appearance.json
 python3 scripts/configure-identity-theme.py apply
 # Restore appearance when rolling back the mount:
-python3 scripts/configure-identity-theme.py restore /opt/agent-platform/backups/RELEASE-appearance.json
+python3 scripts/configure-identity-theme.py restore /srv/agent-workspace/backups/RELEASE-appearance.json
 ```
 
 Do not print the environment or shell trace these commands. Back up the private host env before updating the mount. For a currently deployed source bundle predating the theme bind, a small Compose override can add the read-only `/opt/keycloak/themes` bind; use the existing project/config files and `up -d --no-deps identity`, then verify OIDC discovery before applying appearance. Future source releases include the bind in `compose.https.yaml`. The helper does not import accounts, modify clients, change authentication policy, or revoke sessions. After activation, verify fresh product entry, Chinese defaults, the language selector, native error/password/reset flows, mobile layout, and public Health/Readiness. Rollback restores the previous bind/env, recreates identity, and restores the backed-up appearance fields.
@@ -100,10 +100,10 @@ Do not print the environment or shell trace these commands. Back up the private 
 
 Set `PUBLIC_HOST` to a DNS name whose A/AAAA record reaches the Worker, allow inbound TCP 80/443 and UDP 443, and set all OIDC URLs to that exact HTTPS origin. `scripts/deploy-web.sh` requires the four `VITE_OIDC_*` values in the release workstation environment and consumes them during the local production build. API and Worker consume `platform.https.yaml` at startup. These values are configuration, not source-code constants.
 
-The Web release root defaults to `/opt/agent-platform/web` and has this layout:
+The Web release root defaults to `/srv/agent-workspace/web` and has this layout:
 
 ```text
-/opt/agent-platform/web/
+/srv/agent-workspace/web/
 ├── current -> releases/<revision>
 └── releases/
     ├── <previous-revision>/
@@ -119,8 +119,8 @@ export VITE_OIDC_CLIENT_ID="agent-platform-web"
 export VITE_OIDC_REDIRECT_URI="https://${PUBLIC_HOST}/auth/callback"
 export VITE_OIDC_POST_LOGOUT_REDIRECT_URI="https://${PUBLIC_HOST}"
 
-WEB_DEPLOY_HOST=agent-platform \
-WEB_RELEASE_ROOT=/opt/agent-platform/web \
+WEB_DEPLOY_HOST=deploy@example.com \
+WEB_RELEASE_ROOT=/srv/agent-workspace/web \
 make web-deploy
 ```
 
@@ -137,19 +137,19 @@ The Keycloak realm import is deployment-owned because it contains bootstrap user
 Start the HTTPS stack with the deployment YAML outside the repository:
 
 ```bash
-chmod 600 /opt/agent-platform/config/platform.env
-chown 65532:65532 /opt/agent-platform/config/platform.https.yaml
-chmod 400 /opt/agent-platform/config/platform.https.yaml
-chown 1000:0 /opt/agent-platform/config/keycloak-realm.json
-chmod 400 /opt/agent-platform/config/keycloak-realm.json
+chmod 600 /srv/agent-workspace/config/platform.env
+chown 65532:65532 /srv/agent-workspace/config/platform.https.yaml
+chmod 400 /srv/agent-workspace/config/platform.https.yaml
+chown 1000:0 /srv/agent-workspace/config/keycloak-realm.json
+chmod 400 /srv/agent-workspace/config/keycloak-realm.json
 
-PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.https.yaml \
-docker compose --env-file /opt/agent-platform/config/platform.env \
+PLATFORM_CONFIG_FILE=/srv/agent-workspace/config/platform.https.yaml \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml \
   -f deploy/platform/compose.https.yaml config --quiet
 
-PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.https.yaml \
-docker compose --env-file /opt/agent-platform/config/platform.env \
+PLATFORM_CONFIG_FILE=/srv/agent-workspace/config/platform.https.yaml \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml \
   -f deploy/platform/compose.https.yaml up -d --build
 ```
@@ -165,7 +165,7 @@ curl --fail --proto '=https' --tlsv1.2 "https://${PUBLIC_HOST}/api/readyz"
 curl --fail --proto '=https' --tlsv1.2 \
   "https://${PUBLIC_HOST}/identity/realms/agent-platform/.well-known/openid-configuration"
 curl --fail --head "http://${PUBLIC_HOST}/" # must redirect to HTTPS
-docker compose --env-file /opt/agent-platform/config/platform.env \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml ps
 ```
 
@@ -176,17 +176,17 @@ Use `docker compose ... logs --since 15m api worker caddy identity` for diagnost
 Keep the previous source bundle or immutable service image references until verification completes. To roll back API or Worker code while preserving PostgreSQL, MinIO, Keycloak, and Caddy volumes:
 
 ```bash
-cd /opt/agent-platform/src.previous
-PLATFORM_CONFIG_FILE=/opt/agent-platform/config/platform.https.yaml \
-docker compose --env-file /opt/agent-platform/config/platform.env \
+cd /srv/agent-workspace/src.previous
+PLATFORM_CONFIG_FILE=/srv/agent-workspace/config/platform.https.yaml \
+docker compose --env-file /srv/agent-workspace/config/platform.env \
   -f deploy/platform/compose.yaml -f deploy/platform/compose.https.yaml up -d --build
 ```
 
 Roll back only the Web UI by atomically selecting an existing static release; this does not restart Caddy or any application service:
 
 ```bash
-WEB_DEPLOY_HOST=agent-platform \
-WEB_RELEASE_ROOT=/opt/agent-platform/web \
+WEB_DEPLOY_HOST=deploy@example.com \
+WEB_RELEASE_ROOT=/srv/agent-workspace/web \
 scripts/deploy-web.sh activate <previous-revision>
 ```
 
@@ -195,3 +195,7 @@ Do not run `down -v`: the named volumes contain persistent product and identity 
 ## Readiness Boundary
 
 The UI and `/readyz` prove only API, database, identity, and frontend availability. A Runtime is selectable only when the deployed RepoDigest has passed its real model, MCP, cancellation, Secret-redaction, Workspace, and gVisor checks. Never insert synthetic Run success or event records to make verification pass.
+
+## Optional Scan Registration
+
+WeChat Official Account and Feishu scan sign-in/register are configured by a product Administrator under User Management → Registration. They default to closed and keep Keycloak as the product credential authority. Deploy the optional broker secrets and run the one-time admin-only identity-profile setup before enabling methods; [scan registration](../../docs/technical/scan-registration.md) documents exact provider permissions, safe-mode callbacks, configuration, and outstanding real-account acceptance. Never reuse Workflow Message Channel or Connector credentials for product registration.

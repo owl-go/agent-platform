@@ -519,7 +519,11 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				return result, failStage(fmt.Errorf("Credit admission was already settled; refusing to replay provider execution"))
 			}
 		}
-		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, agentruntime.NewRedactingEventSink(redactor, sink))
+		publicSink := newChannelResponseSink(agentruntime.NewRedactingEventSink(redactor, sink), progress, job, allRedactValues, !sink.suppressMessages, fmt.Sprintf("步骤 %d/%d", index+1, len(memberJobs)))
+		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, publicSink)
+		if responseSink, ok := publicSink.(*channelResponseSink); ok {
+			responseSink.clear()
+		}
 		runtimeFinishedAt = time.Now()
 		brokerCloseErr := closeBroker()
 		finalizeConnectorEvidence()

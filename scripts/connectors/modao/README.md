@@ -26,7 +26,7 @@ node scripts/connectors/modao/modao.mjs --help
 
 ```bash
 python3 scripts/connectors/modao/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /tmp/modao-0.1.1.zip \
   --source /tmp/modao-0.1.1.source.zip \
   --evidence-directory /tmp/modao-publication-evidence

@@ -1,16 +1,18 @@
 # 工作流知识库多选输入框部署验证 — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 功能分支：`codex/workflow-basic-knowledge`，功能 Commit：`99ca5d0`。
 - 集成分支：`main_temp`，实际 Web 构建源 Commit：`c65dca971f4560f1fdaf43caea7f32719e0724ed`；无冲突合并，已推送。
 - Web 发布 ID：`workflow-knowledge-input-20261003-1`。
-- 公网入口：`https://47-237-108-63.sslip.io`。
-- Web 目录：`/opt/agent-platform/web/releases/workflow-knowledge-input-20261003-1`。
-- 发布前记录：`/opt/agent-platform/backups/pre-workflow-knowledge-input-20261003-1`，保留原 Web、源目录指针和原首页 SHA-256。
-- 原 Web：`/opt/agent-platform/web/releases/workflow-channel-icons-20261003-1`。
+- 公网入口：`https://workspace.example.com`。
+- Web 目录：`/srv/agent-workspace/web/releases/workflow-knowledge-input-20261003-1`。
+- 发布前记录：`/srv/agent-workspace/backups/pre-workflow-knowledge-input-20261003-1`，保留原 Web、源目录指针和原首页 SHA-256。
+- 原 Web：`/srv/agent-workspace/web/releases/workflow-channel-icons-20261003-1`。
 
-知识库选择改为可搜索的多选输入框，选中项以可移除标签显示，没有 Ready 文档的知识库仍不可新增选择。此次仅发布 Web，保留集成分支已有的消息渠道图标与其他更新。API、Worker、数据库和 Runtime 未重新部署；后端源指针仍为 `/opt/agent-platform/src.release-resource-query-isolation-20261003-1`。
+知识库选择改为可搜索的多选输入框，选中项以可移除标签显示，没有 Ready 文档的知识库仍不可新增选择。此次仅发布 Web，保留集成分支已有的消息渠道图标与其他更新。API、Worker、数据库和 Runtime 未重新部署；后端源指针仍为 `/srv/agent-workspace/src.release-resource-query-isolation-20261003-1`。
 
 ## 已执行检查
 

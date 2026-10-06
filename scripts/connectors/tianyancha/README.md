@@ -53,7 +53,7 @@ API 进程访问审核过的 OAuth 域名；模型 Runtime 的 Egress 仅允许 
 
 ```bash
 python3 scripts/connectors/tianyancha/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /absolute/path/tianyancha-1.0.0.zip \
   --normalized-sha256 '<connectorpackage.Parse SHA-256>' \
   --evidence-directory /absolute/path/evidence

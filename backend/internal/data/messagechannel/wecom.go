@@ -3,7 +3,10 @@ package messagechannel
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"agent-platform/backend/internal/biz/workspace/application"
@@ -29,31 +32,71 @@ func wecomRequest(cmd, key string, body any) []byte {
 	data, _ := json.Marshal(map[string]any{"cmd": cmd, "headers": map[string]string{"req_id": key}, "body": body})
 	return data
 }
+func wecomAccountFailure(code string, providerCode int) error {
+	return &application.ChannelAccountFailure{Code: code, ProviderCode: providerCode}
+}
+func wecomConnectionFailure(ctx context.Context, err error) error {
+	var networkError net.Error
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) || (errors.As(err, &networkError) && networkError.Timeout()) {
+		return wecomAccountFailure("wecom_authentication_timeout", 0)
+	}
+	return wecomAccountFailure("wecom_connection_failed", 0)
+}
 func (a *WeCom) open(ctx context.Context, c application.ChannelCredentials) (channelSocket, error) {
 	if c["bot_id"] == "" || c["bot_secret"] == "" {
-		return nil, providerError("wecom_credentials_invalid")
+		return nil, wecomAccountFailure("wecom_credentials_invalid", 0)
 	}
 	socket, err := a.dial(ctx, "wss://openws.work.weixin.qq.com", http.Header{})
 	if err != nil {
-		return nil, err
+		return nil, wecomConnectionFailure(ctx, err)
 	}
+	authenticated := false
+	defer func() {
+		if !authenticated {
+			socket.Close()
+		}
+	}()
 	socket.SetReadLimit(65536)
 	stop := context.AfterFunc(ctx, func() { socket.Close() })
 	defer stop()
-	_ = socket.SetReadDeadline(time.Now().Add(15 * time.Second))
-	_ = socket.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	deadline := time.Now().Add(15 * time.Second)
+	if parent, ok := ctx.Deadline(); ok && parent.Before(deadline) {
+		deadline = parent
+	}
+	if err := socket.SetReadDeadline(deadline); err != nil {
+		return nil, wecomConnectionFailure(ctx, err)
+	}
+	if err := socket.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return nil, wecomConnectionFailure(ctx, err)
+	}
 	key := uuid.NewString()
 	if err := socket.WriteMessage(websocket.TextMessage, wecomRequest("aibot_subscribe", key, map[string]string{"bot_id": c["bot_id"], "secret": c["bot_secret"]})); err != nil {
-		socket.Close()
-		return nil, providerError("provider_identity_failed")
+		return nil, wecomConnectionFailure(ctx, err)
 	}
-	_, data, err := socket.ReadMessage()
-	var frame wecomFrame
-	if err != nil || json.Unmarshal(data, &frame) != nil || frame.Headers.ID != key || frame.Code == nil || *frame.Code != 0 {
-		socket.Close()
-		return nil, providerError("provider_identity_failed")
+	// Callbacks and unrelated receipts are not authentication results. Bound both
+	// time and frame count while waiting for our own subscription receipt.
+	for attempt := 0; attempt < 32; attempt++ {
+		_, data, err := socket.ReadMessage()
+		if err != nil {
+			return nil, wecomConnectionFailure(ctx, err)
+		}
+		var frame wecomFrame
+		if json.Unmarshal(data, &frame) != nil {
+			return nil, wecomAccountFailure("wecom_authentication_invalid", 0)
+		}
+		if frame.Cmd != "" || frame.Headers.ID != key {
+			continue
+		}
+		if frame.Code == nil {
+			return nil, wecomAccountFailure("wecom_authentication_invalid", 0)
+		}
+		if *frame.Code != 0 {
+			return nil, wecomAccountFailure("wecom_authentication_rejected", *frame.Code)
+		}
+		authenticated = true
+		return socket, nil
 	}
-	return socket, nil
+	return nil, wecomAccountFailure("wecom_authentication_invalid", 0)
 }
 func (a *WeCom) Identify(ctx context.Context, c application.ChannelCredentials, _ string) (application.ChannelIdentity, error) {
 	socket, err := a.open(ctx, c)
@@ -97,9 +140,12 @@ func normalizeWeCom(s application.ChannelStored, frame wecomFrame) (domain.Chann
 		timestamp = time.Now().UTC()
 	}
 	// The authenticated smart-bot group callback is delivered only on bot mentions.
-	return domain.ChannelMessage{EventID: event.ID, MessageID: event.ID, SenderID: event.From.ID, ChatID: chat, Group: group, Mentioned: group, Text: event.Text.Content, OccurredAt: timestamp, Reply: map[string]string{}}, true
+	return domain.ChannelMessage{EventID: event.ID, MessageID: event.ID, SenderID: event.From.ID, ChatID: chat, Group: group, Mentioned: group, Text: event.Text.Content, OccurredAt: timestamp, Reply: map[string]string{"req_id": frame.Headers.ID, "received_at": strconv.FormatInt(time.Now().UnixMilli(), 10)}}, true
 }
 func (a *WeCom) Connect(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink) error {
+	return a.ConnectWithHealth(ctx, s, c, sink, nil)
+}
+func (a *WeCom) ConnectWithHealth(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, sink application.ChannelMessageSink, health application.ChannelConnectionHealthSink) error {
 	socket, err := a.open(ctx, c)
 	if err != nil {
 		return err
@@ -110,10 +156,51 @@ func (a *WeCom) Connect(ctx context.Context, s application.ChannelStored, c appl
 	stop := context.AfterFunc(child, func() { socket.Close() })
 	defer stop()
 	session := newSocketSession(child, socket)
-	remove := a.bindings.add(s, session)
-	defer remove()
+	// Temporary sender pairing has no saved channel and cannot send replies.
+	if s.Channel.ID != "" {
+		remove := a.bindings.add(s, session)
+		defer remove()
+	}
+	if health != nil {
+		if err := health(child, "connected"); err != nil {
+			return err
+		}
+	}
 	go session.heartbeat(websocket.TextMessage, 25*time.Second, func() []byte { return wecomRequest("ping", uuid.NewString(), nil) })
-	for child.Err() == nil {
+	// Read receipts independently from the durable callback sink: receipt feedback
+	// itself waits for a socket ACK. A bounded FIFO preserves callback order.
+	messages := make(chan domain.ChannelMessage, 16)
+	failures := make(chan error, 1)
+	readerDone := make(chan struct{})
+	go func() {
+		defer close(readerDone)
+		defer cancel()
+		err := a.readMessages(child, socket, session, s, messages)
+		failures <- err
+	}()
+	defer func() { cancel(); socket.Close(); <-readerDone }()
+	for {
+		select {
+		case <-child.Done():
+			return child.Err()
+		case err := <-failures:
+			return err
+		case m := <-messages:
+			if child.Err() != nil {
+				return child.Err()
+			}
+			commitCtx, commitCancel := context.WithTimeout(child, 10*time.Second)
+			err := sink(commitCtx, m)
+			commitCancel()
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (a *WeCom) readMessages(ctx context.Context, socket channelSocket, session *socketSession, s application.ChannelStored, messages chan<- domain.ChannelMessage) error {
+	for ctx.Err() == nil {
 		_ = socket.SetReadDeadline(time.Now().Add(90 * time.Second))
 		_, data, err := socket.ReadMessage()
 		if err != nil {
@@ -137,21 +224,22 @@ func (a *WeCom) Connect(ctx context.Context, s application.ChannelStored, c appl
 		}
 		if frame.Cmd == "aibot_msg_callback" {
 			if m, ok := normalizeWeCom(s, frame); ok {
-				commitCtx, cancel := context.WithTimeout(child, 10*time.Second)
-				err := sink(commitCtx, m)
-				cancel()
-				if err != nil {
-					return err
+				select {
+				case messages <- m:
+				default:
+					return providerError("provider_receive_overloaded")
 				}
 			}
-			// Smart-bot callbacks do not expose a separate durable ACK. A saved Inbox is
-			// the platform recovery boundary; no receipt or successful answer is fabricated.
+			// No separate durable callback ACK; the committed Inbox is the recovery boundary.
 			continue
 		}
-		session.respond(frame.Headers.ID, data)
+		if frame.Cmd == "" {
+			session.respond(frame.Headers.ID, data)
+		}
 	}
-	return child.Err()
+	return ctx.Err()
 }
+
 func (a *WeCom) Send(ctx context.Context, s application.ChannelStored, _ application.ChannelCredentials, m domain.ChannelMessage, text, key string) application.ChannelSendResult {
 	session := a.bindings.get(s)
 	if session == nil {
@@ -160,7 +248,7 @@ func (a *WeCom) Send(ctx context.Context, s application.ChannelStored, _ applica
 	if m.Group {
 		text = "[" + m.SenderID + "] " + text
 	}
-	data, err := session.request(ctx, key, websocket.TextMessage, wecomRequest("aibot_send_msg", key, map[string]any{"chatid": m.ChatID, "msgtype": "markdown", "markdown": map[string]string{"content": text}}))
+	data, err := session.request(ctx, key, websocket.TextMessage, wecomRequest("aibot_send_msg", key, map[string]any{"chatid": m.ChatID, "msgtype": "markdown", "markdown": map[string]string{"content": safeCardMarkdown(text)}}))
 	if err != nil {
 		return application.ChannelSendResult{State: "outcome_unknown", Code: "provider_send_unconfirmed"}
 	}

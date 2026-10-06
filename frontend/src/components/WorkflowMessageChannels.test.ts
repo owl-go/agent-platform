@@ -24,17 +24,33 @@ const button = (wrapper: ReturnType<typeof widget>, text: string) => wrapper.fin
 const field = (wrapper: ReturnType<typeof widget>, label: string) => wrapper.findAll("label").find(l=>l.text().startsWith(label))!.get("input, textarea");
 vi.mock("qrcode", () => ({ default:{toDataURL:vi.fn(async()=>"data:image/png;base64,cXJjb2Rl")} }));
 describe("Workflow message channels",()=>{
-  it.each(["zh-CN", "en-US"] as const)("pairs a Feishu sender and requires owner confirmation in %s", async(locale)=>{
+  it("connects DingTalk with just Client ID and Client Secret", async()=>{
+    const start=vi.fn(async()=>connectedLogin("dingtalk"));
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start,cancelChannelLogin:vi.fn(async()=>{})});
+    try {
+      await flushPromises();await wrapper.get('[data-provider="dingtalk"]').trigger("click");await flushPromises();
+      await field(wrapper,"Client ID").setValue("app");await field(wrapper,"Client Secret").setValue("secret");
+      expect(button(wrapper,"连接账号").attributes("disabled")).toBeUndefined();
+      await button(wrapper,"连接账号").trigger("click");await flushPromises();
+      expect(start).toHaveBeenCalledWith("workflow",expect.objectContaining({provider:"dingtalk",credentials:{client_id:"app",client_secret:"secret"}}),expect.any(AbortSignal));
+      expect(wrapper.text()).toContain("允许的发送者");
+    } finally {wrapper.unmount();}
+  });
+
+  it.each([
+    ["zh-CN", "feishu"], ["en-US", "feishu"], ["zh-CN", "dingtalk"], ["en-US", "dingtalk"], ["zh-CN", "wecom"], ["en-US", "wecom"],
+  ] as const)("pairs a sender in %s for %s and requires owner confirmation", async(locale,provider)=>{
     vi.useFakeTimers();
     const zh=locale==="zh-CN";
-    const base=connectedLogin("feishu");
+    const base=connectedLogin(provider);
+    const senderID=provider==="dingtalk" ? "staff_identified" : provider==="wecom" ? "wecom_user_identified" : "ou_identified";
     const waiting:ChannelLogin={...base,pairing_status:"waiting",pairing_code:"pair 0123456789abcdef0123456789abcdef",pairing_expires_at:new Date(Date.now()+120000).toISOString()};
-    const pair=vi.fn(async()=>waiting),poll=vi.fn(async()=>({...waiting,pairing_status:"recognized" as const,pairing_code:"",suggested_sender_id:"ou_identified"}));
+    const pair=vi.fn(async()=>waiting),poll=vi.fn(async()=>({...waiting,pairing_status:"recognized" as const,pairing_code:"",suggested_sender_id:senderID}));
     const save=vi.fn(async()=>channel),cancel=vi.fn(async()=>{});
     const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:vi.fn(async()=>base),startChannelSenderPairing:pair,pollChannelLogin:poll,saveMessageChannel:save,cancelChannelLogin:cancel},locale);
     try {
-      await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
-      await field(wrapper,"App ID").setValue("app");await field(wrapper,"App Secret").setValue("secret");
+      await flushPromises();await wrapper.get(`[data-provider="${provider}"]`).trigger("click");await flushPromises();
+      await field(wrapper,provider==="dingtalk" ? "Client ID" : provider==="wecom" ? "Bot ID" : "App ID").setValue("app");await field(wrapper,provider==="dingtalk" ? "Client Secret" : provider==="wecom" ? "Bot Secret" : "App Secret").setValue("secret");
       await button(wrapper,zh?"连接账号":"Connect account").trigger("click");await flushPromises();
       await button(wrapper,zh?"自动识别发送者":"Identify sender automatically").trigger("click");await flushPromises();
       expect(pair).toHaveBeenCalledWith("workflow",{login_id:"login"},expect.any(AbortSignal));
@@ -44,15 +60,15 @@ describe("Workflow message channels",()=>{
       expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe("");
       expect(button(wrapper,zh?"保存":"Save").attributes("disabled")).toBeDefined();expect(save).not.toHaveBeenCalled();
       await button(wrapper,zh?"加入允许的发送者":"Add allowed sender").trigger("click");await flushPromises();
-      expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe("ou_identified");
+      expect((field(wrapper,zh?"允许的发送者":"Allowed senders").element as HTMLInputElement).value).toBe(senderID);
       await button(wrapper,zh?"保存":"Save").trigger("click");await flushPromises();
-      expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({login_id:"login",credentials:{},audience:{sender_ids:["ou_identified"],group_ids:[],allow_direct:true}}),expect.any(AbortSignal));
+      expect(save).toHaveBeenCalledWith("workflow",expect.objectContaining({login_id:"login",credentials:{},audience:{sender_ids:[senderID],group_ids:[],allow_direct:true}}),expect.any(AbortSignal));
     } finally {wrapper.unmount();vi.useRealTimers();}
   });
-  it("pairs an existing saved Feishu account without exposing credentials and preserves its audience", async()=>{
-    const pair=vi.fn(async()=>({...connectedLogin("feishu"),pairing_status:"recognized" as const,suggested_sender_id:"ou_new"})),cancel=vi.fn(async()=>{});
-    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider:"feishu",region:"feishu",audience:{sender_ids:["ou_old"],group_ids:[],allow_direct:true}}]})),startChannelSenderPairing:pair,cancelChannelLogin:cancel});
-    await flushPromises();await wrapper.get('[data-provider="feishu"]').trigger("click");await flushPromises();
+  it.each(["feishu", "dingtalk", "wecom"])("pairs an existing saved %s account without exposing credentials and preserves its audience", async(provider)=>{
+    const pair=vi.fn(async()=>({...connectedLogin(provider),pairing_status:"recognized" as const,suggested_sender_id:"ou_new"})),cancel=vi.fn(async()=>{});
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[{...channel,provider,region:provider==="feishu" ? "feishu" : "",audience:{sender_ids:["ou_old"],group_ids:[],allow_direct:true}}]})),startChannelSenderPairing:pair,cancelChannelLogin:cancel});
+    await flushPromises();await wrapper.get(`[data-provider="${provider}"]`).trigger("click");await flushPromises();
     expect(wrapper.findAll('input[type="password"]')).toHaveLength(0);
     await button(wrapper,"自动识别发送者").trigger("click");await flushPromises();
     expect(pair).toHaveBeenCalledWith("workflow",{channel_id:"channel",version:3},expect.any(AbortSignal));
@@ -93,6 +109,21 @@ describe("Workflow message channels",()=>{
     await button(wrapper,locale==="zh-CN"?"连接账号":"Connect account").trigger("click"); await flushPromises();
     expect(wrapper.get('[role="alert"]').text()).toContain("tenant:tenant:readonly");
     expect(wrapper.get('[role="alert"]').text()).toContain("99991672");
+    expect(wrapper.text()).not.toContain("private-secret");
+    expect(button(wrapper,locale==="zh-CN"?"保存":"Save").attributes("disabled")).toBeDefined();
+    wrapper.unmount();
+  });
+  it.each(["zh-CN", "en-US"] as const)("shows safe WeCom authentication diagnostics in %s", async(locale)=>{
+    const start=vi.fn().mockRejectedValue(Object.assign(new ApiError("validation",422,"wecom_authentication_rejected","request",853000), { message: "private-provider-message" }));
+    const wrapper=widget({listMessageChannels:vi.fn(async()=>({available:true,items:[]})),startChannelLogin:start},locale);
+    await flushPromises(); await wrapper.get('[data-provider="wecom"]').trigger("click"); await flushPromises();
+    await field(wrapper,"Bot ID").setValue("bot"); await field(wrapper,"Bot Secret").setValue("private-secret");
+    await button(wrapper,locale==="zh-CN"?"连接账号":"Connect account").trigger("click"); await flushPromises();
+    const alert=wrapper.get('[role="alert"]').text();
+    expect(alert).toContain("853000");
+    expect(alert).toContain(locale==="zh-CN" ? "API 模式" : "API mode");
+    expect(alert).toContain(locale==="zh-CN" ? "企业微信错误码" : "WeCom error code");
+    expect(wrapper.text()).not.toContain("private-provider-message");
     expect(wrapper.text()).not.toContain("private-secret");
     expect(button(wrapper,locale==="zh-CN"?"保存":"Save").attributes("disabled")).toBeDefined();
     wrapper.unmount();
@@ -195,7 +226,7 @@ describe("Workflow message channels",()=>{
 
   it.each([
     ["telegram", "Telegram", ["Bot Token"]], ["discord", "Discord", ["Bot Token"]], ["slack", "Slack", ["Bot Token", "Signing Secret"]],
-    ["dingtalk", "DingTalk", ["Client ID", "Client Secret", "Enterprise Corp ID"]], ["feishu", "Feishu", ["App ID", "App Secret"]],
+    ["dingtalk", "DingTalk", ["Client ID", "Client Secret"]], ["feishu", "Feishu", ["App ID", "App Secret"]],
     ["matrix", "Matrix", ["HTTPS endpoint", "Access Token"]], ["whatsapp", "WhatsApp", ["Access Token", "App Secret", "Verify Token", "Phone Number ID", "Business Account ID"]],
     ["signal", "Signal", ["HTTPS endpoint", "Bridge Token", "Account ID"]], ["wecom", "WeCom", ["Bot ID", "Bot Secret"]],
     ["qqbot", "QQ Bot", ["App ID", "App Secret"]],
@@ -216,6 +247,15 @@ describe("Workflow message channels",()=>{
       expect(dialog).not.toBeNull();
       expect(dialog.textContent).toContain(`Configure ${name}`);
       for (const label of labels) expect(dialog.textContent).toContain(label);
+      if (provider === "telegram") {
+        const botFather = dialog.querySelector<HTMLAnchorElement>('a[href="https://t.me/BotFather"]')!;
+        expect(botFather.textContent).toContain("Open BotFather");
+        expect(botFather.target).toBe("_blank");
+        expect(botFather.rel).toContain("noopener");
+        expect(dialog.textContent).toContain("/newbot");
+        expect(dialog.textContent).toContain("/mybots");
+      } else expect(dialog.querySelector('a[href="https://t.me/BotFather"]')).toBeNull();
+      if (provider === "dingtalk") expect(dialog.querySelectorAll("input")).toHaveLength(2);
       const secret = dialog.querySelector<HTMLInputElement>('input[type="password"]')!;
       expect(secret).not.toBeNull();
       secret.value = "secret-draft";secret.dispatchEvent(new Event("input", { bubbles: true }));await flushPromises();

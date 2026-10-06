@@ -1,14 +1,16 @@
 # Conversation resource selection deployment verification - 2026-09-06
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Release
 
-- Public origin: `https://47-237-108-63.sslip.io`
+- Public origin: `https://workspace.example.com`
 - Source commit: `58328495c26b5e405b3a4aebce51f14626d2b6b9`
 - Release: `conversation-resources-5832849-20260906`
-- Source: `/opt/agent-platform/src.release-conversation-resources-5832849-20260906`
-- Web: `/opt/agent-platform/web/releases/conversation-resources-5832849-20260906`
-- Backup: `/opt/agent-platform/backups/pre-conversation-resources-5832849-20260906`
-- Previous source: `/opt/agent-platform/src.release-platform-20260906T050137Z`
+- Source: `/srv/agent-workspace/src.release-conversation-resources-5832849-20260906`
+- Web: `/srv/agent-workspace/web/releases/conversation-resources-5832849-20260906`
+- Backup: `/srv/agent-workspace/backups/pre-conversation-resources-5832849-20260906`
+- Previous source: `/srv/agent-workspace/src.release-platform-20260906T050137Z`
 
 The official `scripts/deploy-platform.sh` ran successfully from a separate detached worktree at the source commit. Local browser artifacts and unrelated working-directory files were not included. Deployment gates were enabled.
 

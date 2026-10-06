@@ -1,5 +1,7 @@
 # 微信执行期输入状态 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 实现边界
 
 owner 要求微信等待工作流答案时显示原生“正在输入”。`ChannelTransport` 新增独立可选 Typing port，仅 WeChat 注册；不修改最终答案 Outbox，不把输入状态伪装成文本消息。Worker 在执行启动时异步获取入站 sender 对应的临时 typing_ticket，每五秒刷新 status=1。每次刷新先重新检查 owner、Workflow、Run、Inbox、渠道启用状态、当前配置版本、generation、受众与执行状态。排队和终态不显示，审批等待暂停，恢复后重新取 ticket。
@@ -17,8 +19,8 @@ owner 要求微信等待工作流答案时显示原生“正在输入”。`Chan
 
 功能提交 `ec144eb`，经 `main_temp` 合并为 `0733e90b11d249fe8bcf597c8255698d268a72fd` 并推送；发布标识 `wechat-typing-20261004-1`。只重建和发布 Worker，镜像为 `sha256:9135ca94ec22bcea382bfe19c3e08c4105e69d815a4abdc6d4b653b5aec72824`。切换前无 queued/running/waiting Run 或 generating/waiting Session Message，停止旧 Worker 后启动新 Worker并等待 healthy。API 镜像仍为 `sha256:916fd12d691dc881669a08518cad636c8f58c6363ba84bca869f08ff00ae7d18`，Web 指针不变。
 
-发布前备份 `/opt/agent-platform/backups/pre-wechat-typing-20261004-1`：业务 pgdump 经 `pg_restore -l` 和 SHA-256 校验，配置归档 SHA-256 校验，保存旧源码/Web 指针、API/Worker 镜像与 Migration ledger。配置 SHA-256 和全部 Migration name/checksum 切换后相同。回退使用保存的旧 Worker 镜像与源码指针；没有数据库变更。API/Worker 均 healthy，四个渠道循环 started=1、fatal=0，Worker 启动 ERROR/FATAL/PANIC 行数为零，公网 healthz/readyz 正常。公网 HTML SHA-256 保持 `62799bb3e81f305fa77c180386678936177b9e4143aab935920150469dc654ce`。
+发布前备份 `/srv/agent-workspace/backups/pre-wechat-typing-20261004-1`：业务 pgdump 经 `pg_restore -l` 和 SHA-256 校验，配置归档 SHA-256 校验，保存旧源码/Web 指针、API/Worker 镜像与 Migration ledger。配置 SHA-256 和全部 Migration name/checksum 切换后相同。回退使用保存的旧 Worker 镜像与源码指针；没有数据库变更。API/Worker 均 healthy，四个渠道循环 started=1、fatal=0，Worker 启动 ERROR/FATAL/PANIC 行数为零，公网 healthz/readyz 正常。公网 HTML SHA-256 保持 `62799bb3e81f305fa77c180386678936177b9e4143aab935920150469dc654ce`。
 
-只读真实账号探测在进程内解密最新已准入消息的凭证和回复上下文，使用实际 sender/context_token 请求腾讯官方 HTTPS `getconfig`；拒绝重定向，仅记录 HTTP 状态、数值返回码和 ticket 是否存在。结果 HTTP 200、ret=0、ticket_present=true，见 `/opt/agent-platform/evidence/wechat-typing-20261004-1/readonly-ticket.json`。该探测未发送输入状态或文本、消费 Cursor、创建 Run 或调用模型。临时探测已从本地和服务器删除，凭证及响应 ticket 未保存。
+只读真实账号探测在进程内解密最新已准入消息的凭证和回复上下文，使用实际 sender/context_token 请求腾讯官方 HTTPS `getconfig`；拒绝重定向，仅记录 HTTP 状态、数值返回码和 ticket 是否存在。结果 HTTP 200、ret=0、ticket_present=true，见 `/srv/agent-workspace/evidence/wechat-typing-20261004-1/readonly-ticket.json`。该探测未发送输入状态或文本、消费 Cursor、创建 Run 或调用模型。临时探测已从本地和服务器删除，凭证及响应 ticket 未保存。
 
 已请 owner 发送普通微信问题并确认等待时显示输入状态、答案到达后消失。截至记录时尚无新版本的手机显示确认，也没有普通 Run 的实际 typing lifecycle 日志，因此不能把票据可用和本地测试记为手机显示验收。Runtime、Sandbox、CLI Builder 镜像不变，本轮没有新增 Runtime Digest、Linux/gVisor 或 Production Conformance 证据。

@@ -1,14 +1,16 @@
 # 资源目录加载状态部署验证 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 集成分支：`main_temp`，Web 部署源 Commit：`5cd3ab09ae8e2e77b5aa91306fe9ee15cc7658bd`。
 - 功能 Commit：`b46ee31`、`8776768`；合并无冲突。
 - Web 发布 ID：`resource-loading-20261002T070745Z`。
-- Web 目录：`/opt/agent-platform/web/releases/resource-loading-20261002T070745Z`。
+- Web 目录：`/srv/agent-workspace/web/releases/resource-loading-20261002T070745Z`。
 - 前一 Web 版本：`legal-connectors-20261002-1.0.0`。
-- 回滚记录目录：`/opt/agent-platform/backups/pre-resource-loading-20261002T070745Z`，保存前一 Web 指针与入口文件，二者通过 `SHA256SUMS` 校验；前一完整 Web 版本保留于不可变 releases 目录。
-- 公网入口：`https://47-237-108-63.sslip.io`。
+- 回滚记录目录：`/srv/agent-workspace/backups/pre-resource-loading-20261002T070745Z`，保存前一 Web 指针与入口文件，二者通过 `SHA256SUMS` 校验；前一完整 Web 版本保留于不可变 releases 目录。
+- 公网入口：`https://workspace.example.com`。
 
 ## 已执行的检查
 
@@ -20,7 +22,7 @@
 - 本地产物、远端 Web 当前目录和公网返回的 `index.html` SHA-256 一致：`b61d865a7e19b4abcadb54ba36542e54c0c898e24fbf1e1ce8d44c2e4edb7f6b`。
 - 入口引用的全部静态资源，以及资源中心 JS/CSS，在公网均返回 HTTP 200，SHA-256 与本地产物一致。资源中心 JS 包含 `catalog-loading`，主样式包含骨架屏和减弱动效规则。
 - 公网 `/api/healthz` 返回 `{"status":"ok"}`，`/api/readyz` 返回 `{"status":"ready"}`；OIDC discovery 的 issuer 与生产 HTTPS 配置一致。
-- API、Worker、Egress Controller 保持健康，Caddy 运行；本次静态 Web 发布未重启这些服务。服务源目录仍为 `/opt/agent-platform/src.release-legal-connectors-20261002-1.0.0`。
+- API、Worker、Egress Controller 保持健康，Caddy 运行；本次静态 Web 发布未重启这些服务。服务源目录仍为 `/srv/agent-workspace/src.release-legal-connectors-20261002-1.0.0`。
 
 ## 回滚
 

@@ -1,5 +1,7 @@
 # 飞书发送者一次性配对 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 用户已确认飞书企业自建应用账号连接成功，随后因发送者 Open ID 为空无法保存。用户接受通过一次性配对消息自动识别发送者的方式。此改动提供识别和 owner 确认，不绕过明确 Audience 与真实收发验证。
 
 ## 实现与验证
@@ -32,17 +34,17 @@ git diff --check
 
 ## 发布检查
 
-- 公网入口：`https://47-237-108-63.sslip.io`。
-- 源目录：`/opt/agent-platform/src.release-feishu-sender-pairing-20261004-1`。
-- Web：`/opt/agent-platform/web/releases/feishu-sender-pairing-20261004-1`。
-- 备份：`/opt/agent-platform/backups/pre-feishu-sender-pairing-20261004-1`。业务库与身份库 `pg_restore -l` 及全部备份 SHA-256 校验通过，配置备份保持私有。
+- 公网入口：`https://workspace.example.com`。
+- 源目录：`/srv/agent-workspace/src.release-feishu-sender-pairing-20261004-1`。
+- Web：`/srv/agent-workspace/web/releases/feishu-sender-pairing-20261004-1`。
+- 备份：`/srv/agent-workspace/backups/pre-feishu-sender-pairing-20261004-1`。业务库与身份库 `pg_restore -l` 及全部备份 SHA-256 校验通过，配置备份保持私有。
 - 候选 API `/readyz` 通过；切换前活跃 Run/Session Message 汇总为 0。API、Worker 都 healthy；近五分钟 ERROR/FATAL/PANIC 匹配均为 0。
 - API 镜像 ID：`sha256:9c525691f4ea50e19c823c6176b873c57f8636684ae931a24ec321ba9e95c524`。
 - Worker 镜像 ID：`sha256:cb2c462c5de5e0b0fe63b761feb48e39d36bff77cd9a5b02ef31262786db1065`。
 - 配置 SHA-256 与候选/切换后的 Migration name/checksum 不变，无新 Migration；仅构建 API/Worker/Web。
 - 公网 Health、Readiness、OIDC Discovery 均为 HTTP 200。配对接口未认证调用为 401。HTML、入口、Workflow 详情、API Client 与 i18n 五项文件逐字节匹配本地生产构建；产物包含自动识别与配对状态。
 - HTML SHA-256：`7bbb691d78a2a1d83184458a6e4729207366aa56a61710edbf701d45bd56d41a`。
-- 公网产物、配置/迁移对比、镜像和日志计数保存在 `/opt/agent-platform/evidence/feishu-sender-pairing-20261004-1`，不包含配对码或应用凭证。
+- 公网产物、配置/迁移对比、镜像和日志计数保存在 `/srv/agent-workspace/evidence/feishu-sender-pairing-20261004-1`，不包含配对码或应用凭证。
 
 真实飞书/Lark 配对与完整收发仍待用户验收；自动化协议、假连接与组件测试不能替代真实账号消息验证。已请用户刷新、生成配对消息、私聊发送、确认发送者并保存，无需提供 App Secret。
 

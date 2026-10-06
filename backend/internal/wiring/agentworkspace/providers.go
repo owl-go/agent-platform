@@ -12,6 +12,7 @@ import (
 	workspaceapplication "agent-platform/backend/internal/biz/workspace/application"
 	accountrepo "agent-platform/backend/internal/data/account/gormrepo"
 	"agent-platform/backend/internal/data/account/keycloak"
+	registrationgateway "agent-platform/backend/internal/data/account/registration"
 	"agent-platform/backend/internal/data/account/tokenverifier"
 	aiapplicationrepo "agent-platform/backend/internal/data/aiapplication/gormrepo"
 	"agent-platform/backend/internal/data/aiapplication/modelchat"
@@ -92,7 +93,7 @@ func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analy
 
 func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider, box *secretcrypto.Box, config platformconfig.Config) (*workspaceapplication.Service, error) {
 	repository := workspacerepo.New(database.ORM(), credits)
-	if err := repository.EnsureSystemSkills(ctx, objects); err != nil {
+	if err := repository.EnsureDefaultResources(ctx, objects); err != nil {
 		return nil, err
 	}
 	channelEndpoints := make([]messagechannel.ApprovedEndpoint, 0, len(config.MessageChannels.ApprovedEndpoints))
@@ -143,6 +144,10 @@ func NewSkillStore(objects objectstore.Provider) (*skillstore.Store, error) {
 	return skillstore.New(objects)
 }
 
-func NewHTTPHandlers(service *workspaceservice.Service, authentication kratoshttp.FilterFunc) (platformserver.HTTPHandlers, error) {
+func NewHTTPHandlers(service *workspaceservice.Service, authentication kratoshttp.FilterFunc, accounts *accountapplication.Service, database *gormdb.Database, box *secretcrypto.Box, identity *keycloak.Provider, config platformconfig.Config) (platformserver.HTTPHandlers, error) {
+	registration := accountapplication.NewRegistration(accounts, accountrepo.NewRegistration(database.ORM(), box), identity, registrationgateway.New(nil), config.Accounts.RegistrationBroker.PublicURL, config.Authentication.Issuer, config.Accounts.RegistrationBroker.ClientSecret)
+	if err := service.EnableRegistration(registration, config.Accounts.RegistrationBroker.SigningKey); err != nil {
+		return platformserver.HTTPHandlers{}, err
+	}
 	return platformserver.NewWorkspaceHTTPHandlers(service, authentication)
 }

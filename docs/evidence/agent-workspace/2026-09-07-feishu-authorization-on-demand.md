@@ -1,5 +1,7 @@
 # Feishu authorization on-demand deployment verification - 2026-09-07
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Behavior and correction
 
 Source commit `18ab7e3` changes Conversation authorization recovery to start only
@@ -33,9 +35,9 @@ and scopes.
 The official `scripts/deploy-platform.sh` deployment completed with verified
 business and identity database backups. Active release paths are:
 
-- Source: `/opt/agent-platform/src.release-feishu-auth-on-demand-18ab7e3-20260907`
-- Web: `/opt/agent-platform/web/releases/feishu-auth-on-demand-18ab7e3-20260907`
-- Backup: `/opt/agent-platform/backups/pre-feishu-auth-on-demand-18ab7e3-20260907`
+- Source: `/srv/agent-workspace/src.release-feishu-auth-on-demand-18ab7e3-20260907`
+- Web: `/srv/agent-workspace/web/releases/feishu-auth-on-demand-18ab7e3-20260907`
+- Backup: `/srv/agent-workspace/backups/pre-feishu-auth-on-demand-18ab7e3-20260907`
 
 An authenticated production Chrome session loaded a conversation with the
 Feishu CLI already selected. The authorization recovery card was absent before

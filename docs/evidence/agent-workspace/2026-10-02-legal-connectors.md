@@ -1,8 +1,10 @@
 # 北大法宝与明白律师连接器 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布结果
 
-两个独立 `1.0.0` 官方远程 MCP Connector Package 已发布至[连接器市场](https://47-237-108-63.sslip.io/resources?tab=connectors)，按 source 归入“法务合规”。构建源与操作说明位于 `scripts/connectors/legal/README.md`。
+两个独立 `1.0.0` 官方远程 MCP Connector Package 已发布至[连接器市场](https://workspace.example.com/resources?tab=connectors)，按 source 归入“法务合规”。构建源与操作说明位于 `scripts/connectors/legal/README.md`。
 
 | 服务 | Source | Revision | 验收 Installation | 授权状态 |
 |---|---|---|---|---|
@@ -14,10 +16,10 @@
 ## 包、代码与部署
 
 - 功能提交 `00518ab`（`codex/legal-connectors`），通过 `main_temp` 集成提交 `fb9d7a0` 发布。发布器兼容检查修正提交 `20508d9` 通过 `main_temp` 集成提交 `1fe27cc` 发布；该修正只改变发布脚本、测试与说明，未改变 ZIP 或已部署服务行为。
-- 完整部署 release：`legal-connectors-20261002-1.0.0`。源目录 `/opt/agent-platform/src.release-legal-connectors-20261002-1.0.0`，Web `/opt/agent-platform/web/releases/legal-connectors-20261002-1.0.0`，发布前备份 `/opt/agent-platform/backups/pre-legal-connectors-20261002-1.0.0`。
+- 完整部署 release：`legal-connectors-20261002-1.0.0`。源目录 `/srv/agent-workspace/src.release-legal-connectors-20261002-1.0.0`，Web `/srv/agent-workspace/web/releases/legal-connectors-20261002-1.0.0`，发布前备份 `/srv/agent-workspace/backups/pre-legal-connectors-20261002-1.0.0`。
 - 北大法宝 normalized Package SHA-256：`66118421d6d83f98a13e6479113592222dd782fc7970ee177bd971c73db41669`。
 - 明白律师 normalized Package SHA-256：`e1f7bbd076ad91403898dfb5b929eae6f29dadc971fd9197ee0d588a9a75cba0`。
-- 本地 ZIP 和收据位于功能工作区忽略目录 `outputs/legal/packages`；不含凭证的发布响应与测试、部署日志位于 `outputs/legal/evidence`。远端永久包归档位于 `/opt/agent-platform/connector-releases/legal-1.0.0`，结果位于 `/opt/agent-platform/evidence/legal-1.0.0`。修正后的发布工具从已推送的 `main_temp` 快照复制到包归档的 `tools`，没有改写不可变源 release。
+- 本地 ZIP 和收据位于功能工作区忽略目录 `outputs/legal/packages`；不含凭证的发布响应与测试、部署日志位于 `outputs/legal/evidence`。远端永久包归档位于 `/srv/agent-workspace/connector-releases/legal-1.0.0`，结果位于 `/srv/agent-workspace/evidence/legal-1.0.0`。修正后的发布工具从已推送的 `main_temp` 快照复制到包归档的 `tools`，没有改写不可变源 release。
 - 每个 ZIP 均包含 metadata、内嵌官方品牌 PNG 的 SVG、恰好一个 `mcp.json` 与一个 companion `SKILL.md`。没有 CLI bundle、临时 CLI Definition 或共享外部账号授权需要清理。User 安装与授权保持独立；其他 User 的安装不会被批量升级。
 
 ## 已执行验证

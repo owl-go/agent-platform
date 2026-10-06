@@ -1,12 +1,14 @@
 # Model Provider Deployment Verification — 2026-08-28
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Scope
 
-- Host: `47.237.108.63`
-- Public origin: `https://47-237-108-63.sslip.io`
+- Host: `203.0.113.10`
+- Public origin: `https://workspace.example.com`
 - Product revision: `5891eff` (`79b3cf3` Agent Workspace release plus model-provider, feedback, model-catalog usability, and HTTP Runtime fixes)
-- Release directory: `/opt/agent-platform/src.release-5891eff`
-- Latest pre-deployment backup: `/opt/agent-platform/backups/20260828-model-catalog-5c572be`
+- Release directory: `/srv/agent-workspace/src.release-5891eff`
+- Latest pre-deployment backup: `/srv/agent-workspace/backups/20260828-model-catalog-5c572be`
 
 The backup contains PostgreSQL business and Keycloak custom-format dumps, the deployment configuration archive, the previous release target, and SHA-256 checksums. No Secret value is recorded in this evidence.
 
@@ -51,11 +53,11 @@ The `e8da914` follow-up allows trusted HTTP model gateways and makes provider-sa
 
 The `2403d5d` Web-only follow-up standardizes transient success and failure feedback on one Toast component across Sessions, Workflows, Workflow detail, Experts, Settings, and User administration. The component provides success/error semantics, accessible live regions, manual dismissal, timed dismissal, responsive placement above modal layers, and reduced-motion behavior. All 44 frontend tests, TypeScript checking, and the production build passed before deployment. After the Web-only cutover, API, Worker, and Web remained healthy and the served asset was `assets/index-D3NPOGKa.js`.
 
-The `5c572be` follow-up tries each Model Provider Connection's `/models` endpoint first and falls back to that provider's platform-maintained defaults when the endpoint is unsupported or unusable. An authenticated refresh of the existing OpenAI connection at `http://47.237.108.63:3000/openai` exercised the real HTTP 404 path, stored `gpt-5.6-sol` as an available Provider Model, and cleared both verification and synchronization errors. The API correctly leaves the fallback connection `unverified`, because no provider response was verified. The API, Worker, and Web remained healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-C1QWxwlk.js`.
+The `5c572be` follow-up tries each Model Provider Connection's `/models` endpoint first and falls back to that provider's platform-maintained defaults when the endpoint is unsupported or unusable. An authenticated refresh of the existing OpenAI connection at `http://203.0.113.10:3000/openai` exercised the real HTTP 404 path, stored `gpt-5.6-sol` as an available Provider Model, and cleared both verification and synchronization errors. The API correctly leaves the fallback connection `unverified`, because no provider response was verified. The API, Worker, and Web remained healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-C1QWxwlk.js`.
 
 The `c0890c5` usability follow-up reduces manual model entry to one localized Model field. The create request now accepts only the invocation identifier, and the service uses that value for both invocation and display instead of asking the User for a separate name. All 45 Web tests, the complete Go test suite, TypeScript checking, generated-contract verification, and production builds passed. After cutover, API and Web reported healthy, the public health endpoint returned `{"status":"ok"}`, and the served Web asset was `assets/index-B4k4h9Nr.js`.
 
-The `5891eff` Runtime follow-up aligns the Codex Driver with the product's absolute HTTP-or-HTTPS Endpoint contract while continuing to reject credentials, Query, Fragment, missing Host, and other schemes. A focused regression test reproduced the exact prior `Codex model endpoint must be an HTTPS URL` failure before the fix and passed afterward. Deployment probing then showed that the host-local upstream was healthy but Docker public-IP hairpin access from `agent-public-egress` was refused, so the existing OpenAI connection was switched to the deployment's controlled TLS Relay at `https://47-237-108-63.sslip.io/model-relay/openai`; Caddy still forwards it to the host-local HTTP upstream. A temporary authenticated Codex Session using `gpt-5.6-sol` reached `completed` with non-empty content, was deleted afterward, and Direct Access Grants returned to disabled. API and Worker remained healthy with no error-level log entry.
+The `5891eff` Runtime follow-up aligns the Codex Driver with the product's absolute HTTP-or-HTTPS Endpoint contract while continuing to reject credentials, Query, Fragment, missing Host, and other schemes. A focused regression test reproduced the exact prior `Codex model endpoint must be an HTTPS URL` failure before the fix and passed afterward. Deployment probing then showed that the host-local upstream was healthy but Docker public-IP hairpin access from `agent-public-egress` was refused, so the existing OpenAI connection was switched to the deployment's controlled TLS Relay at `https://workspace.example.com/model-relay/openai`; Caddy still forwards it to the host-local HTTP upstream. A temporary authenticated Codex Session using `gpt-5.6-sol` reached `completed` with non-empty content, was deleted afterward, and Direct Access Grants returned to disabled. API and Worker remained healthy with no error-level log entry.
 
 ## Evidence boundary
 

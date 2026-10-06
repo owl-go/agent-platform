@@ -1,5 +1,7 @@
 # 微信扫码确认后无法完成账号接入 — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 复现
 
 用户在手机微信完成扫码确认，网页的授权轮询仍持续返回 HTTP 422 `invalid_input`。未扫码的公网授权申请与连续四次等待轮询均为 200，排除了原有 30 秒请求期限问题。
@@ -20,9 +22,9 @@
 
 候选 API 通过正常 OIDC Authorization Code + PKCE 登录验证：实际微信二维码申请为 200/waiting，连续两次轮询均为 200/waiting（约 20 秒），取消为 200；伪造登录/保存的服务端证明字段均为 422。候选只绑定回环地址，使用与正式 API 相同的网络、配置和环境；第一次候选未连接 edge 网络导致 OIDC DNS 失败，连接正确网络后检查通过，失败候选未上线。
 
-发布前备份位于服务器 `/opt/agent-platform/backups/pre-wechat-qr-identity-20261003-1`，业务 pgdump 经 `pg_restore -l` 和 SHA-256 清单校验。切换时无非终态 Run，停止 Worker 后重建 API/Worker 并分别等待 healthy，再原子切换源码指针。API 镜像 `sha256:6c2cf48d7a05535c01785f1e867e9c2264f503261ff1d945490464b1cc121393`，Worker 镜像 `sha256:ee46d30d0b185519f4697a37515d26b327b23063dd1b09948cee8224a209d0ee`。
+发布前备份位于服务器 `/srv/agent-workspace/backups/pre-wechat-qr-identity-20261003-1`，业务 pgdump 经 `pg_restore -l` 和 SHA-256 清单校验。切换时无非终态 Run，停止 Worker 后重建 API/Worker 并分别等待 healthy，再原子切换源码指针。API 镜像 `sha256:6c2cf48d7a05535c01785f1e867e9c2264f503261ff1d945490464b1cc121393`，Worker 镜像 `sha256:ee46d30d0b185519f4697a37515d26b327b23063dd1b09948cee8224a209d0ee`。
 
-公网 healthz/readyz 为 ok/ready；九个资源接口均为 200。公网微信二维码申请、两次等待轮询和取消均为 200，伪造登录/保存服务端证明均被 422 拒绝。两服务 healthy，启动 ERROR/FATAL/PANIC 为 0，四个消息渠道循环均 started=1、fatal=0；Migration ledger、配置 SHA-256 与 Web 发布指针保持一致。临时候选 API 和私有环境文件已清理；脱敏候选/公网/切换/后检查日志保存在服务器 `/opt/agent-platform/evidence/wechat-qr-identity-20261003-1`。
+公网 healthz/readyz 为 ok/ready；九个资源接口均为 200。公网微信二维码申请、两次等待轮询和取消均为 200，伪造登录/保存服务端证明均被 422 拒绝。两服务 healthy，启动 ERROR/FATAL/PANIC 为 0，四个消息渠道循环均 started=1、fatal=0；Migration ledger、配置 SHA-256 与 Web 发布指针保持一致。临时候选 API 和私有环境文件已清理；脱敏候选/公网/切换/后检查日志保存在服务器 `/srv/agent-workspace/evidence/wechat-qr-identity-20261003-1`。
 
 ## 验收边界
 

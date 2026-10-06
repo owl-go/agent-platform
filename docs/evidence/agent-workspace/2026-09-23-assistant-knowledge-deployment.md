@@ -1,14 +1,16 @@
 # Assistant conversations and Knowledge Base search deployment — 2026-09-23
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Release
 
 - Integration branch: `main_temp`, source commit `4c2eeea8c7781561a1f496317a42bc80022e2fec`.
 - Included branches: `codex/dedicated-assistant-chat` (`f64c136`) and `codex/knowledge-search` (`83ddcfa`, including implementation commit `990af45`).
 - Release ID: `platform-20260923T114405Z-4c2eeea`.
-- Source: `/opt/agent-platform/src.release-platform-20260923T114405Z-4c2eeea`.
-- Web: `/opt/agent-platform/web/releases/platform-20260923T114405Z-4c2eeea`.
-- Verified pre-cutover backup: `/opt/agent-platform/backups/pre-platform-20260923T114405Z-4c2eeea`.
-- Public origin: `https://47-237-108-63.sslip.io`.
+- Source: `/srv/agent-workspace/src.release-platform-20260923T114405Z-4c2eeea`.
+- Web: `/srv/agent-workspace/web/releases/platform-20260923T114405Z-4c2eeea`.
+- Verified pre-cutover backup: `/srv/agent-workspace/backups/pre-platform-20260923T114405Z-4c2eeea`.
+- Public origin: `https://workspace.example.com`.
 
 The clean integration worktree merged both branches without conflict. The official `scripts/deploy-platform.sh` ran with deployment gates enabled, not `SKIP_DEPLOY_GATES=1`. The pre-cutover backup includes custom-format business and identity PostgreSQL dumps, configuration, and previous source/Web targets; `pg_restore -l` and the backup SHA-256 checks passed before cutover.
 

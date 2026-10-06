@@ -1,5 +1,7 @@
 # Public Assistant header removal — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Behavior and checks
 
 The User requested removal of the Assistant name and new-conversation area from the shared chat because it occupied too much of the floating window. The public page now begins with its message thread, omitting the title, new-conversation button and header spacing. The unused reset handler, icon import and public header style were removed. Both direct public links and iframe embeds use this page. The floating widget keeps its close and reopen controls; the authenticated conversation keeps its existing header and new-conversation action.
@@ -19,8 +21,8 @@ The production build retained its existing advisory warning for chunks larger th
 - Feature code: `461a7d6` on `codex/assistant-prompt-variables`, pushed.
 - Integrated code: `425aeaa747ad42080b7afb40ace145ac2f9aecd9` on `main_temp`, pushed before release.
 - Web release: `assistant-headerless-20261003-1`.
-- Web path: `/opt/agent-platform/web/releases/assistant-headerless-20261003-1`.
-- Protected backup: `/opt/agent-platform/backups/pre-assistant-headerless-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, prior pointers and backup manifest were verified.
+- Web path: `/srv/agent-workspace/web/releases/assistant-headerless-20261003-1`.
+- Protected backup: `/srv/agent-workspace/backups/pre-assistant-headerless-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, prior pointers and backup manifest were verified.
 
 `scripts/deploy-web.sh` built with the production public OIDC values, uploaded and validated the immutable Web release, then atomically activated it. All 86 production static files matched local build bytes. Entry hashes:
 
@@ -33,6 +35,6 @@ Public Health and Readiness returned `ok` and `ready`; OIDC discovery matched th
 
 ## Scope and rollback
 
-API source remains `/opt/agent-platform/src.release-assistant-courtesy-20261003-1`; API image remains `sha256:bb9e7f7a36d72ddfa18080e1a9c43d72a5c8d206d2f0df288bb181364c274327`. Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. No migration, backend, retrieval configuration, Runtime image or persistent volume changed. Existing share links and snippets remain valid and load the updated layout on refresh.
+API source remains `/srv/agent-workspace/src.release-assistant-courtesy-20261003-1`; API image remains `sha256:bb9e7f7a36d72ddfa18080e1a9c43d72a5c8d206d2f0df288bb181364c274327`. Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. No migration, backend, retrieval configuration, Runtime image or persistent volume changed. Existing share links and snippets remain valid and load the updated layout on refresh.
 
 Rollback: configure the deployment host and run `scripts/deploy-web.sh activate assistant-scroll-20261003-1`. Keep API, configuration and volumes unchanged.

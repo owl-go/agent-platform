@@ -1,5 +1,7 @@
 # Embedded public Assistant visitor continuity — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Diagnosis
 
 The User's localhost preview loaded the Assistant and answered a greeting, then showed a failed answer for the next question. Production request metadata showed the greeting POST returning 200, followed by two continuation POSTs returning 404. A fresh HTTPS public metadata response set the visitor Cookie with HttpOnly and `SameSite=Lax`, without Secure or Partitioned. Share Tokens, Cookie values, request bodies, private questions and Knowledge content were not included in the diagnostic output.
@@ -27,9 +29,9 @@ Tests cover the exact two-turn proxy failure, direct HTTPS, HTTP development, mi
 - Feature code: `eb09c8a` on `codex/assistant-prompt-variables`, pushed.
 - Integrated code: `615035d16235ec2486fa681fcf996878925f126a` on `main_temp`, pushed before deployment.
 - API/source release: `assistant-visitor-cookie-20261003-1`.
-- Source: `/opt/agent-platform/src.release-assistant-visitor-cookie-20261003-1`.
+- Source: `/srv/agent-workspace/src.release-assistant-visitor-cookie-20261003-1`.
 - API image: `sha256:971c21956555118bba5e4cc53057fd6d8cbae2df79dd1a00e998ac16f8ddba1a`.
-- Verified protected backup: `/opt/agent-platform/backups/pre-assistant-visitor-cookie-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, prior release pointers and the backup manifest were verified.
+- Verified protected backup: `/srv/agent-workspace/backups/pre-assistant-visitor-cookie-20261003-1`. Business and identity dumps passed `pg_restore -l`; configuration, prior release pointers and the backup manifest were verified.
 
 Only tracked integrated source was archived and uploaded. The API image was built with the existing service Dockerfile. The production Compose stack activated only API with no dependency rebuild; the immutable source pointer switched after health passed. Canonical environment and YAML hashes stayed unchanged. The full platform script was not invoked because it rebuilds unrelated execution images and performs unrelated retired-volume cleanup.
 
@@ -41,4 +43,4 @@ A fresh HTTPS metadata response confirmed HttpOnly=true, Secure=true, SameSite=N
 
 Web remains `assistant-scroll-20261003-1`; Worker remains `sha256:864b3058c31e8dfe5b438017a78187f91084ad53f9c796ab303965a41916bea6`. Runtime/CLI Builder, identity, Egress, retrieval configuration, canonical config and persistent volumes were retained. No migration was added. Real model-backed answering and private Knowledge retrieval were not exercised by this production acceptance check. Existing in-memory conversations created with the missing/old visitor identity require one fresh conversation after the fix.
 
-Rollback uses the protected previous source/image pointers: `/opt/agent-platform/src.release-assistant-embed-types-20261003-1` and API image `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e`, through the production Compose stack, then restores the source pointer after health passes. Retain the current Web, configuration and volumes.
+Rollback uses the protected previous source/image pointers: `/srv/agent-workspace/src.release-assistant-embed-types-20261003-1` and API image `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e`, through the production Compose stack, then restores the source pointer after health passes. Retain the current Web, configuration and volumes.

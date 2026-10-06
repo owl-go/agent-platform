@@ -1,5 +1,7 @@
 # Fullscreen and floating Assistant embedding — 2026-10-03
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Behavior and release
 
 Share Configuration now selects fullscreen iframe or a floating window. The floating window starts expanded or showing only its chat icon. Owners may select PNG, JPEG, WebP or GIF files up to 2 MiB for an independent chat icon, preview locally, save configuration and image together, or restore the default icon. Cancelling does not upload or modify saved settings. Saving enabled sharing keeps the editor open for generating and copying the embed code. The public image proxy validates current publication, Share Token, origin and owner; generated code does not expose private Object Keys. Existing shares default to fullscreen embedding without Token rotation.
@@ -9,10 +11,10 @@ The generated floating snippet uses an isolated Shadow DOM on the host site and 
 - Feature commit: `8a1645c` on `codex/assistant-prompt-variables` (pushed).
 - Integrated release commit: `ae364b6dcac25606dccd3ebef12831075f8b9f06` on `main_temp` (pushed before deployment).
 - API/Web release: `assistant-embed-types-20261003-1`.
-- Source: `/opt/agent-platform/src.release-assistant-embed-types-20261003-1`.
-- Web: `/opt/agent-platform/web/releases/assistant-embed-types-20261003-1`.
+- Source: `/srv/agent-workspace/src.release-assistant-embed-types-20261003-1`.
+- Web: `/srv/agent-workspace/web/releases/assistant-embed-types-20261003-1`.
 - API image: `sha256:73f33c016e1c633851feba773f8cf7f207aac9b66809586c194d36a96646b90e`.
-- Verified backup: `/opt/agent-platform/backups/pre-assistant-embed-types-20261003-1`.
+- Verified backup: `/srv/agent-workspace/backups/pre-assistant-embed-types-20261003-1`.
 - Previous API/source/Web: `assistant-free-questions-20261003-1`.
 
 ## Executed checks

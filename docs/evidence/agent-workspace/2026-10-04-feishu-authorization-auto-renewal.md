@@ -1,5 +1,7 @@
 # 飞书 Connector Authorization 自动续期 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 实现与范围
 
 owner 在微信普通问题被拒绝后要求自动续期。根因是原 Run Conversation 引用的飞书 CLI OAuth 授权已过期。新增 Application 续期用例：Worker 每分钟检查已选飞书授权，到期前五分钟刷新；渠道 Inbox 准入前也检查其 owner 的授权。续期通过现有 Feishu Adapter 进行，HTTP 不持有数据事务，单次限时二十秒。成功轮换加密 Access/Refresh Token，保持账号身份、加密 AAD 和版本化审计；返回的 scopes 可缩小，不能扩大。省略 scope/refresh token 时沿用已有值。旧 access_token + 独立加密 refresh credential 也可迁移为 JSON 凭证。
@@ -17,10 +19,10 @@ owner 在微信普通问题被拒绝后要求自动续期。根因是原 Run Con
 
 ## 发布与实际供应商验证
 
-功能提交 4b203f7，经 main_temp 合并 b3d5a3a 并推送；发布 feishu-renewal-20261004-1。预发布备份 business pgdump/config tar 经 SHA-256 检查，pg_restore -l 检查，保存旧镜像/源码/Web 指针于 /opt/agent-platform/backups/pre-feishu-renewal-20261004-1。候选 API healthy/ready，切换前非终态 Runs 与活跃 Session Messages 均为零；停止旧 Worker 后发布 API 与 Worker。
+功能提交 4b203f7，经 main_temp 合并 b3d5a3a 并推送；发布 feishu-renewal-20261004-1。预发布备份 business pgdump/config tar 经 SHA-256 检查，pg_restore -l 检查，保存旧镜像/源码/Web 指针于 /srv/agent-workspace/backups/pre-feishu-renewal-20261004-1。候选 API healthy/ready，切换前非终态 Runs 与活跃 Session Messages 均为零；停止旧 Worker 后发布 API 与 Worker。
 
 API 镜像 sha256:1328e78cc260c313f66af09886858ca4377f9047034eb58fdf3f1bcaead1913a；Worker 镜像 sha256:bc86a12598bf31f26f7a3a248aa1a57262fff6b9f33a03cfb03aec5b5511e9be。两者 healthy，公网 healthz/readyz HTTP 200，Worker 启动 ERROR/FATAL/panic 行数零；独立 connector-authorization-renewal loop started=1、fatal=0。Web 指针不变，公网 HTML SHA-256 保持 62799bb3e81f305fa77c180386678936177b9e4143aab935920150469dc654ce。没有新 Migration 或配置修改。
 
-实际提前续期探测使用同一 Application、真实 Repository/Cipher 和官方 HTTPS Feishu Adapter。仅在探测的内存 Repository wrapper 中提前到期判断，不修改数据库到期日以制造故障；调用供应商并通过生产保存边界提交新加密授权。renewal_event=renewed，Version 增加一，账号一致，ExpiresAt 延长，测试 PASS（0.64 秒）。未发送业务消息、调用模型、改变资源选择、消费微信 Cursor 或生成 Run。源码、二进制与探测已删除，密钥/令牌/账号正文没有输出或写入证据。服务器安全记录位于 /opt/agent-platform/evidence/feishu-renewal-20261004-1。
+实际提前续期探测使用同一 Application、真实 Repository/Cipher 和官方 HTTPS Feishu Adapter。仅在探测的内存 Repository wrapper 中提前到期判断，不修改数据库到期日以制造故障；调用供应商并通过生产保存边界提交新加密授权。renewal_event=renewed，Version 增加一，账号一致，ExpiresAt 延长，测试 PASS（0.64 秒）。未发送业务消息、调用模型、改变资源选择、消费微信 Cursor 或生成 Run。源码、二进制与探测已删除，密钥/令牌/账号正文没有输出或写入证据。服务器安全记录位于 /srv/agent-workspace/evidence/feishu-renewal-20261004-1。
 
 此证据验证一次真实续期和到期条件的自动化回归；尚未跨真实两小时自然到期周期观察后台刷新，也不证明供应商刷新凭证永久有效。微信手机“正在输入”显示仍需 owner 实测确认。

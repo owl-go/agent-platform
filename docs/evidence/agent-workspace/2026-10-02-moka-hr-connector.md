@@ -1,10 +1,12 @@
 # Moka HR 招聘连接器发布证据 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布与部署
 
 - 功能提交：`df26ce8`，分支 `codex/moka-hr-connector`；部署集成提交：`899e227`，已推送 `main_temp`。集成保留同日其他连接器的并发改动。
-- 正式部署：`moka-hr-20261002-899e227`，由 `scripts/deploy-platform.sh` 执行完整门禁后完成；源目录 `/opt/agent-platform/src.release-moka-hr-20261002-899e227`，Web 目录 `/opt/agent-platform/web/releases/moka-hr-20261002-899e227`，备份 `/opt/agent-platform/backups/pre-moka-hr-20261002-899e227`。
-- [平台目录](https://47-237-108-63.sslip.io/resources?tab=connectors)中 `moka-hr` 0.1.0 状态为 `available`，CLI 模式、平台所有者 `user` 身份、`connector_package` 认证 driver。
+- 正式部署：`moka-hr-20261002-899e227`，由 `scripts/deploy-platform.sh` 执行完整门禁后完成；源目录 `/srv/agent-workspace/src.release-moka-hr-20261002-899e227`，Web 目录 `/srv/agent-workspace/web/releases/moka-hr-20261002-899e227`，备份 `/srv/agent-workspace/backups/pre-moka-hr-20261002-899e227`。
+- [平台目录](https://workspace.example.com/resources?tab=connectors)中 `moka-hr` 0.1.0 状态为 `available`，CLI 模式、平台所有者 `user` 身份、`connector_package` 认证 driver。
 - Revision：`3eef9151-3311-4570-9779-bac73405ce81`。
 - 最终 ZIP 字节 SHA-256：`627b04242822aebb821d01d613984c8701df346cf2f82da8623e2b32ec4357b5`。
 - Package SHA-256（实际 `connectorpackage.Parse` 规范化）：`4928abaf8d99dc10bde2b5d6e0fcdc57d6fba616ce6854f920c71574ff8462c3`。

@@ -60,6 +60,42 @@ type ChannelTypingSession interface {
 	Stop(context.Context) error
 }
 
+// Responses reuse one provider message throughout a Run. State contains only
+// provider identifiers and a bounded, redacted public summary; creation intent
+// is persisted before the network call. Answer drafts are never stored here.
+type ChannelResponseState struct {
+	Phase      string `json:"phase,omitempty"`
+	MessageID  string `json:"message_id,omitempty"`
+	ReactionID string `json:"reaction_id,omitempty"`
+	Summary    string `json:"summary,omitempty"`
+	CreatingAt int64  `json:"creating_at,omitempty"`
+}
+
+// Reactions are optional; a provider without them can use a receipt card.
+type ChannelReactionSender interface {
+	React(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage) (string, error)
+	ClearReaction(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string) error
+}
+type ChannelResponseSender interface {
+	CreateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, ChannelResponsePreview, bool) ChannelSendResult
+	UpdateResponse(context.Context, ChannelStored, ChannelCredentials, domain.ChannelMessage, string, ChannelResponsePreview, bool) ChannelSendResult
+}
+
+// ChannelResponsePreview contains public progress and redacted final-member text.
+// Tool arguments/output, raw events and private reasoning never cross this port.
+type ChannelResponsePreview struct {
+	Answer         string
+	Summary        string
+	Status         string
+	ToolsCompleted int
+	ElapsedSeconds int64
+}
+
+// The executor projects approved public summaries and fixed activity labels.
+type ChannelResponseProgress interface {
+	UpdateChannelResponse(context.Context, ExecutionJob, ChannelResponsePreview)
+}
+
 // ChannelTransport explicitly registers one receive mode and an independent sender.
 // A provider can reuse an implementation across roles without a combined interface
 // or unsupported-method stubs. Registration is fixed at process startup.
@@ -69,6 +105,9 @@ type ChannelTransport struct {
 	StreamReceiver  ChannelStreamReceiver
 	Sender          ChannelSender
 	Typing          ChannelTypingSender
+	Response        ChannelResponseSender
+	// Used after a definite rejection or a locally expired WeCom stream, never an unknown send.
+	ResponseFallback ChannelSender
 }
 
 func (t ChannelTransport) receiver() ChannelReceiver {

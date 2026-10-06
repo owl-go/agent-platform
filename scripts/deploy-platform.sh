@@ -2,8 +2,8 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-deploy_host="${PLATFORM_DEPLOY_HOST:-agent-platform}"
-deploy_root="${PLATFORM_DEPLOY_ROOT:-/opt/agent-platform}"
+deploy_host="${PLATFORM_DEPLOY_HOST:-deploy@example.com}"
+deploy_root="${PLATFORM_DEPLOY_ROOT:-/srv/agent-workspace}"
 remote_env_file="${PLATFORM_ENV_FILE:-${deploy_root}/config/platform.env}"
 remote_config_file="${PLATFORM_CONFIG_FILE:-${deploy_root}/config/platform.https.yaml}"
 release_id="${PLATFORM_RELEASE_ID:-platform-$(date -u +%Y%m%dT%H%M%SZ)}"
@@ -27,8 +27,8 @@ Usage: scripts/deploy-platform.sh
 Build, back up, migrate, and deploy the complete single-Worker platform.
 
 Optional environment:
-  PLATFORM_DEPLOY_HOST       SSH destination (default: agent-platform)
-  PLATFORM_DEPLOY_ROOT       Remote installation root (default: /opt/agent-platform)
+  PLATFORM_DEPLOY_HOST       SSH destination (default placeholder: deploy@example.com)
+  PLATFORM_DEPLOY_ROOT       Remote installation root (default: /srv/agent-workspace)
   PLATFORM_ENV_FILE          Remote Compose env file
   PLATFORM_CONFIG_FILE       Remote API/Worker YAML configuration
   PLATFORM_RELEASE_ID        Immutable source and Web release identifier

@@ -1,13 +1,15 @@
 # Image Generation deployment verification - 2026-09-11
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## Release
 
-- Public origin: `https://47-237-108-63.sslip.io`
+- Public origin: `https://workspace.example.com`
 - Source commit: `d257c289d76e1cbd00aa720663528e35ab794ac7`
 - Release: `platform-20260911T023602Z`
-- Source: `/opt/agent-platform/src.release-platform-20260911T023602Z`
-- Web: `/opt/agent-platform/web/releases/platform-20260911T023602Z`
-- Backup: `/opt/agent-platform/backups/pre-platform-20260911T023602Z`
+- Source: `/srv/agent-workspace/src.release-platform-20260911T023602Z`
+- Web: `/srv/agent-workspace/web/releases/platform-20260911T023602Z`
+- Backup: `/srv/agent-workspace/backups/pre-platform-20260911T023602Z`
 
 The official `scripts/deploy-platform.sh` ran from the clean
 `codex/main-production-release` worktree with deployment gates enabled. The

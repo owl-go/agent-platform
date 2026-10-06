@@ -1051,6 +1051,66 @@
         ]
       }
     },
+    "/api/v1/admin/registration-methods": {
+      "get": {
+        "operationId": "AgentWorkspaceService_GetRegistrationSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RegistrationSettingsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/admin/registration-methods/{provider}": {
+      "put": {
+        "operationId": "AgentWorkspaceService_UpdateRegistrationSettings",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RegistrationMethod"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AgentWorkspaceServiceUpdateRegistrationSettingsBody"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/admin/users": {
       "get": {
         "operationId": "AgentWorkspaceService_ListUsers",
@@ -6524,6 +6584,36 @@
         }
       }
     },
+    "AgentWorkspaceServiceUpdateRegistrationSettingsBody": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "app_id": {
+          "type": "string"
+        },
+        "app_secret": {
+          "type": "string"
+        },
+        "official_account_id": {
+          "type": "string"
+        },
+        "verification_token": {
+          "type": "string"
+        },
+        "encoding_aes_key": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
     "AgentWorkspaceServiceUpdateSessionBody": {
       "type": "object",
       "properties": {
@@ -10560,6 +10650,60 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1RegistrationMethod": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "app_id": {
+          "type": "string"
+        },
+        "app_secret_configured": {
+          "type": "boolean"
+        },
+        "tenant_key": {
+          "type": "string"
+        },
+        "official_account_id": {
+          "type": "string"
+        },
+        "verification_token_configured": {
+          "type": "boolean"
+        },
+        "encoding_aes_key_configured": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "callback_url": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RegistrationSettingsResponse": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1RegistrationMethod"
+          }
         }
       }
     },

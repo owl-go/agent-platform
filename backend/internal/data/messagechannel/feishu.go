@@ -180,6 +180,9 @@ func (a *Feishu) ConnectWithHealth(ctx context.Context, s application.ChannelSto
 	return ctx.Err()
 }
 func (a *Feishu) Send(ctx context.Context, s application.ChannelStored, c application.ChannelCredentials, m domain.ChannelMessage, text, key string) application.ChannelSendResult {
+	if m.Reply["delivery_kind"] != "validation" {
+		return a.sendCard(ctx, s, c, m, text, key, m.Reply["delivery_kind"] != "waiting")
+	}
 	token, err := a.token(ctx, c, s.Channel.Region)
 	if err != nil {
 		return application.ChannelSendResult{State: "retry_wait", Code: "provider_authentication_failed", RetryAfter: time.Minute}

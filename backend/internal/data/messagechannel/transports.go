@@ -35,7 +35,7 @@ func NewTransports(transport http.RoundTripper, options ...TransportOptions) map
 		"matrix":      {Account: matrix, StreamReceiver: matrix, Sender: matrix},
 		"whatsapp":    {Account: whatsapp, WebhookReceiver: whatsapp, Sender: whatsapp},
 		"signal":      {Account: signal, StreamReceiver: signal, Sender: signal},
-		"wecom":       {Account: wecom, StreamReceiver: wecom, Sender: wecom},
+		"wecom":       {Account: wecom, StreamReceiver: wecom, Sender: wecom, Response: wecom, ResponseFallback: wecom},
 		"wechat":      {Account: wechat, StreamReceiver: wechat, Sender: wechat, Typing: wechat},
 		"qqbot":       {Account: qqbot, StreamReceiver: qqbot, Sender: qqbot},
 		"bluebubbles": {Account: bluebubbles, StreamReceiver: bluebubbles, Sender: bluebubbles},
@@ -43,7 +43,7 @@ func NewTransports(transport http.RoundTripper, options ...TransportOptions) map
 		"telegram":    {Account: telegram, WebhookReceiver: telegram, Sender: telegram},
 		"slack":       {Account: slack, WebhookReceiver: slack, Sender: slack},
 		"discord":     {Account: discord, StreamReceiver: discord, Sender: discord},
-		"dingtalk":    {Account: dingtalk, StreamReceiver: dingtalk, Sender: dingtalk},
-		"feishu":      {Account: feishu, StreamReceiver: feishu, Sender: feishu},
+		"dingtalk":    {Account: dingtalk, StreamReceiver: dingtalk, Sender: dingtalk, Response: dingtalk, ResponseFallback: dingtalk},
+		"feishu":      {Account: feishu, StreamReceiver: feishu, Sender: feishu, Response: feishu},
 	}
 }

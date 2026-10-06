@@ -182,14 +182,19 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	monitorDone := make(chan struct{})
 	go worker.monitorCancellation(executionCtx, *job, cancel, monitorDone)
 	stopTyping := func() {}
+	progress := ProgressRecorder(worker.repository)
+	stopResponse := func() {}
 	if worker.channels != nil {
 		stopTyping = worker.channels.TrackExecution(executionCtx, *job)
+		progress, stopResponse = worker.channels.TrackResponse(executionCtx, *job, progress)
 		defer stopTyping()
+		defer stopResponse()
 	}
-	result, executeErr := worker.executor.Execute(executionCtx, *job, worker.repository)
+	result, executeErr := worker.executor.Execute(executionCtx, *job, progress)
 	close(monitorDone)
 	cancel()
 	stopTyping()
+	stopResponse()
 	if executeErr != nil {
 		discardSuccessCommit(result)
 		if ctx.Err() != nil {

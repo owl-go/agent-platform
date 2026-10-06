@@ -1,13 +1,15 @@
 # 自动登录入口部署验证 — 2026-10-02
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 ## 发布标识
 
 - 功能分支：`codex/login-style-refresh`，功能 Commit：`10c832c`、`bd2a65f`。
 - 集成分支：`main_temp`，部署源 Commit：`05d44769c8a4`，合并无冲突。
 - Web 发布 ID：`login-entry-05d44769c8a4`。
-- Web 目录：`/opt/agent-platform/web/releases/login-entry-05d44769c8a4`。
+- Web 目录：`/srv/agent-workspace/web/releases/login-entry-05d44769c8a4`。
 - 发布前检查所见 Web 版本：`tianyancha-region-20261002T1335`，保留供回滚。
-- 公网入口：`https://47-237-108-63.sslip.io`。
+- 公网入口：`https://workspace.example.com`。
 
 ## 已执行的检查
 

@@ -11,7 +11,7 @@
 ```bash
 python3 scripts/connectors/kling-ai/build.py
 python3 scripts/connectors/kling-ai/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /path/to/kling-ai-0.1.0.zip \
   --evidence-directory /path/to/evidence
 ```
@@ -26,7 +26,7 @@ Builder 真正执行当前仓库的 `connectorpackage.Parse`，再保存规范�
 
 ## 当前证据与授权限制
 
-2026-10-01：官方指南、Resource metadata、Authorization Server metadata 与 MCP 401 challenge 已核实；普通 HTTPS 域名的动态注册返回 201，当前部署 `47-237-108-63.sslip.io` 的 HTTPS 回调注册返回 405 安全拦截，本机浏览器与 Linux 部署主机均复现。该上游限制不能用手填 Token 作为替代方案。
+2026-10-01：官方指南、Resource metadata、Authorization Server metadata 与 MCP 401 challenge 已核实；普通 HTTPS 域名的动态注册返回 201，当前部署 `workspace.example.com` 的 HTTPS 回调注册返回 405 安全拦截，本机浏览器与 Linux 部署主机均复现。该上游限制不能用手填 Token 作为替代方案。
 
 本修订尚未完成真实可灵账号授权、授权后 tools/list、图片/视频生成或 Linux + runsc MCP 执行验证。用户明确要求先发布目录。使用 `--activate --allow-unverified-oauth` 可以在授权未验证时先发布；仍检查平台回调适配已部署，并核对正式目录与图标。此选项不创建授权或允许未授权执行，不能把上述协议发现、Fixture 或 ZIP Parse 作为真实账号成功证据。当前包将上传 Egress 限制在 `klingai.com`，上游签名上传到其他域名时应报告限制，需另行审查域名后更新修订。
 

@@ -31,7 +31,7 @@ node scripts/connectors/moka-hr/moka.mjs --help
 
 ```bash
 python3 scripts/connectors/moka-hr/publish.py \
-  --config /opt/agent-platform/config/platform.env \
+  --config /srv/agent-workspace/config/platform.env \
   --package /tmp/moka-hr-0.1.0.zip \
   --source /tmp/moka-hr-0.1.0.source.zip \
   --evidence-directory /tmp/moka-hr-publication-evidence
@@ -53,4 +53,4 @@ make web-build
 
 协议 fixture 严格校验真实 Basic Auth 格式、各路由、方法、body 与 query；覆盖未审阅命令和参数拒绝、身份/路径绕过、日期范围、单页游标、密钥与 base64 反射脱敏、业务错误、HTTP 错误、输出限额及断流。它证明文档协议与本包行为，不能代替真实企业账号验证。当前没有 Moka 企业凭证，真实职位、候选人、面试与企业 API 模块权限均未验证；包不包含任何测试或真实凭证。完整模型 Runtime Production Conformance、存储 Conformance 与业务写入不属于本次验证范围。
 
-2026-10-02 已发布到[平台连接器目录](https://47-237-108-63.sslip.io/resources?tab=connectors)，Revision `3eef9151-3311-4570-9779-bac73405ce81` 为 available，平台 exact bundle × Runtime Conformance 通过，重复发布复用该修订。包、部署、单条目目录与未授权连接入口的验收记录见[发布证据](../../../docs/evidence/agent-workspace/2026-10-02-moka-hr-connector.md)。真实 Moka 企业账号联调仍未执行。
+2026-10-02 已发布到[平台连接器目录](https://workspace.example.com/resources?tab=connectors)，Revision `3eef9151-3311-4570-9779-bac73405ce81` 为 available，平台 exact bundle × Runtime Conformance 通过，重复发布复用该修订。包、部署、单条目目录与未授权连接入口的验收记录见[发布证据](../../../docs/evidence/agent-workspace/2026-10-02-moka-hr-connector.md)。真实 Moka 企业账号联调仍未执行。

@@ -1,5 +1,7 @@
 # 飞书消息渠道账号接入错误诊断 — 2026-10-04
 
+> 公开副本中的部署地址与机器路径已通用化；示例值不代表验收目标。原有日期、结果、版本和证据边界保留。
+
 用户报告连接失败。线上对应 `POST /api/v1/workflows/{id}/channel-logins` 返回 422，原日志和界面只有通用错误，不能判断失败步骤。用户确认企业自建应用已启用机器人、已开通并发布获取企业信息权限；没有证据可直接归因于缺权限。
 
 失败提交的凭证不会保存，截图中的应用也没有可复用的已保存应用凭证，未能对该账号建立无人值守的真实复现。临时只读诊断程序已删除，未输出密钥。自动化验证覆盖错误分类与提示链路；发布后用户刷新并重试，明确回复「已经ok了」，确认账号连接成功。该人工确认不提供此前失败步骤与供应商错误码，原始失败原因仍未确定。
@@ -30,16 +32,16 @@ git diff --check
 
 ## 发布检查
 
-- 公网入口：`https://47-237-108-63.sslip.io`。
-- 源目录：`/opt/agent-platform/src.release-feishu-account-errors-20261004-1`。
-- Web：`/opt/agent-platform/web/releases/feishu-account-errors-20261004-1`。
-- 备份：`/opt/agent-platform/backups/pre-feishu-account-errors-20261004-1`，业务库、身份库 `pg_restore -l` 及全部备份 SHA-256 均通过。
+- 公网入口：`https://workspace.example.com`。
+- 源目录：`/srv/agent-workspace/src.release-feishu-account-errors-20261004-1`。
+- Web：`/srv/agent-workspace/web/releases/feishu-account-errors-20261004-1`。
+- 备份：`/srv/agent-workspace/backups/pre-feishu-account-errors-20261004-1`，业务库、身份库 `pg_restore -l` 及全部备份 SHA-256 均通过。
 - 候选 API 私有 `/readyz` 通过；切换前活跃 Run/Session Message 汇总为 0。API、Worker 都 healthy，近五分钟 ERROR/FATAL/PANIC 匹配数均为 0。
 - API 镜像 ID：`sha256:5e5192d846e865abedf027299751f7a8c7ac4ccafd91eb642f669db17f85fdd3`。
 - Worker 镜像 ID：`sha256:3b82351aec3729183ea60d283ba11ba92a9b9d396ae7b95f7548f7b4b65d40d3`。
 - 配置 SHA-256 与候选/切换后的 Migration name/checksum 不变，无新 Migration；只构建 API/Worker/Web。
 - 公网 Health、Readiness、OIDC Discovery 为 HTTP 200。HTML 与入口、API Client、工作流详情、i18n 五项产物逐字节匹配本地生产构建；工作流详情含具体错误分类，i18n 含权限提示及飞书错误码标签，没有 Tenant Key 输入标签。
-- HTML SHA-256：`21722e2711f84c16a2cdddd0ec2fa2d94d4b9057b8d50f6843817728a6c7aa3e`。公网核对详情保存在 `/opt/agent-platform/evidence/feishu-account-errors-20261004-1/public-evidence.json`。
+- HTML SHA-256：`21722e2711f84c16a2cdddd0ec2fa2d94d4b9057b8d50f6843817728a6c7aa3e`。公网核对详情保存在 `/srv/agent-workspace/evidence/feishu-account-errors-20261004-1/public-evidence.json`。
 
 用户在新版本重试已人工确认真实账号连接成功；Agent 未使用该账号凭证执行无人值守连接测试，也未执行真实消息收发验收。没有新增 Runtime Capability；未执行完整 Linux Sandbox/Production Conformance，专用环境缺口见此前飞书凭证简化发布记录。PostgreSQL/远端对象存储的环境依赖测试 Skip 不计为集成验收。
 
