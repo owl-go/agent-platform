@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -54,6 +55,14 @@ func (s *brokerTestStore) Attempt(_ context.Context, id string) (accountdomain.R
 func (s *brokerTestStore) AttemptByCode(_ context.Context, hash string) (accountdomain.RegistrationAttempt, error) {
 	for _, a := range s.attempts {
 		if a.CodeHash == hash {
+			return a, nil
+		}
+	}
+	return accountdomain.RegistrationAttempt{}, accountdomain.ErrNotFound
+}
+func (s *brokerTestStore) AttemptByLoginCode(_ context.Context, hash string) (accountdomain.RegistrationAttempt, error) {
+	for _, a := range s.attempts {
+		if a.LoginCodeHash == hash {
 			return a, nil
 		}
 	}
@@ -162,6 +171,12 @@ func TestRegistrationKeycloakOIDCHandoffIntegration(t *testing.T) {
 	if base == "" {
 		t.Skip("WORKSPACE_TEST_KEYCLOAK_URL is not set")
 	}
+	for _, provider := range []string{accountdomain.RegistrationFeishu, accountdomain.RegistrationWeChat} {
+		t.Run(provider, func(t *testing.T) { registrationOIDCHandoff(t, base, provider) })
+	}
+}
+
+func registrationOIDCHandoff(t *testing.T, base, providerName string) {
 	issuer := strings.TrimRight(base, "/") + "/realms/scan-fixture"
 	identity, err := keycloak.New(platformconfig.AccountsConfig{KeycloakBaseURL: base, Realm: "scan-fixture", AdminClientID: "scan-admin", AdminClientSecret: "scan-fixture", BootstrapSubject: "admin", BootstrapUsername: "admin", BootstrapEmail: "admin@example.test", BootstrapDisplayName: "Admin"}, nil)
 	if err != nil {
@@ -172,7 +187,7 @@ func TestRegistrationKeycloakOIDCHandoffIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := &brokerTestStore{settings: accountdomain.RegistrationSettings{Provider: accountdomain.RegistrationFeishu, Enabled: true, Ready: true, AppID: "fixture-app-" + uuid.NewString(), Version: 1}, attempts: map[string]accountdomain.RegistrationAttempt{}}
+	store := &brokerTestStore{settings: accountdomain.RegistrationSettings{Provider: providerName, Enabled: true, Ready: true, AppID: "fixture-app-" + uuid.NewString(), OfficialAccountID: "gh_fixture", VerificationToken: "callback-token", EncodingAESKey: base64.RawStdEncoding.EncodeToString(make([]byte, 32)), Version: 1}, attempts: map[string]accountdomain.RegistrationAttempt{}}
 	service := &Service{}
 	server := httptest.NewUnstartedServer(http.HandlerFunc(service.registrationHTTP))
 	listener, err := net.Listen("tcp", "0.0.0.0:0")
@@ -245,6 +260,43 @@ func TestRegistrationKeycloakOIDCHandoffIntegration(t *testing.T) {
 		}
 		prior, _ := url.Parse(destination)
 		destination = prior.ResolveReference(next).String()
+		if providerName == accountdomain.RegistrationWeChat && strings.HasPrefix(destination, publicURL+"/register/wechat?") {
+			page, _ := url.Parse(destination)
+			attemptID := page.Query().Get("id")
+			attempt := store.attempts[attemptID]
+			message := fmt.Sprintf("<xml><ToUserName>%s</ToUserName><FromUserName>openid</FromUserName><CreateTime>%d</CreateTime><MsgType>text</MsgType><Content>%s</Content><MsgId>10001</MsgId></xml>", store.settings.OfficialAccountID, time.Now().Unix(), attempt.LoginCode)
+			phone, _ := encryptedLoginMessage(t, store.settings, message)
+			phone.URL, _ = url.Parse(publicURL + phone.URL.String())
+			phone.RequestURI = ""
+			phoneResponse, err := client.Do(phone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			phoneReply, _ := io.ReadAll(phoneResponse.Body)
+			phoneResponse.Body.Close()
+			if phoneResponse.StatusCode != 200 || !strings.Contains(string(phoneReply), "<Encrypt>") {
+				t.Fatal("encrypted phone confirmation failed")
+			}
+			completion, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, publicURL+"/api/v1/registration/wechat_official/complete?id="+attemptID, nil)
+			completion.Header.Set("Origin", publicURL)
+			completion.Header.Set("X-Registration-Request", "1")
+			for _, cookie := range fixtureCookies[completion.URL.Host] {
+				completion.AddCookie(cookie)
+			}
+			completed, err := client.Do(completion)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result struct {
+				Redirect string `json:"redirect"`
+			}
+			err = json.NewDecoder(completed.Body).Decode(&result)
+			completed.Body.Close()
+			if err != nil || completed.StatusCode != 200 || result.Redirect == "" {
+				t.Fatal("browser completion failed", err)
+			}
+			destination = result.Redirect
+		}
 		if strings.HasPrefix(destination, callback+"?") {
 			break
 		}

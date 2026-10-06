@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base32"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -21,6 +22,7 @@ type RegistrationRepository interface {
 	CreateAttempt(context.Context, domain.RegistrationAttempt) error
 	Attempt(context.Context, string) (domain.RegistrationAttempt, error)
 	AttemptByCode(context.Context, string) (domain.RegistrationAttempt, error)
+	AttemptByLoginCode(context.Context, string) (domain.RegistrationAttempt, error)
 	TransitionAttempt(context.Context, domain.RegistrationAttempt, string) error
 }
 type RegistrationIdentityProvider interface {
@@ -31,7 +33,6 @@ type RegistrationGateway interface {
 	VerifySettings(context.Context, domain.RegistrationSettings) (domain.RegistrationSettings, error)
 	FeishuURL(domain.RegistrationSettings, string, string) string
 	FeishuIdentity(context.Context, domain.RegistrationSettings, string, string) (domain.RegistrationIdentity, error)
-	WeChatQR(context.Context, domain.RegistrationSettings, string) (ticket string, err error)
 }
 type Registration struct {
 	accounts     *Service
@@ -181,12 +182,13 @@ func (s *Registration) Begin(ctx context.Context, provider, redirect, state, non
 	if provider == domain.RegistrationFeishu {
 		destination = s.gateway.FeishuURL(settings, s.Callback(provider), id)
 	} else {
-		ticket, e := s.gateway.WeChatQR(ctx, settings, id)
+		code, e := RegistrationLoginCode()
 		if e != nil {
 			return attempt, "", "", e
 		}
-		attempt.TicketHash = RegistrationHash(ticket)
-		destination = "https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=" + url.QueryEscape(ticket)
+		attempt.LoginCode = code
+		attempt.LoginCodeHash = RegistrationHash(code)
+		destination = "https://open.weixin.qq.com/qr/code?username=" + url.QueryEscape(settings.OfficialAccountID)
 	}
 	attempt.QRURL = destination
 	if err = s.repo.CreateAttempt(ctx, attempt); err != nil {
@@ -227,8 +229,12 @@ func (s *Registration) VerifyFeishu(ctx context.Context, id, browser, code strin
 	a.Status = "verified"
 	return s.repo.TransitionAttempt(ctx, a, "waiting")
 }
-func (s *Registration) VerifyWeChat(ctx context.Context, id, ticket, externalID string) error {
-	a, err := s.repo.Attempt(ctx, id)
+func (s *Registration) VerifyWeChat(ctx context.Context, code, externalID string) error {
+	code = NormalizeRegistrationLoginCode(code)
+	if code == "" {
+		return domain.ErrUnauthenticated
+	}
+	a, err := s.repo.AttemptByLoginCode(ctx, RegistrationHash(code))
 	if err != nil {
 		return err
 	}
@@ -236,7 +242,7 @@ func (s *Registration) VerifyWeChat(ctx context.Context, id, ticket, externalID 
 	if err != nil {
 		return err
 	}
-	if a.Provider != domain.RegistrationWeChat || a.ConfigVersion != settings.Version || !time.Now().Before(a.ExpiresAt) || a.TicketHash == "" || a.TicketHash != RegistrationHash(ticket) {
+	if a.Provider != domain.RegistrationWeChat || a.ConfigVersion != settings.Version || !time.Now().Before(a.ExpiresAt) || a.LoginCodeHash == "" || a.LoginCodeHash != RegistrationHash(code) {
 		return domain.ErrUnauthenticated
 	}
 	identity, err := domain.NewRegistrationIdentity(a.Provider, settings.AppID, externalID, "微信用户")
@@ -251,7 +257,44 @@ func (s *Registration) VerifyWeChat(ctx context.Context, id, ticket, externalID 
 	}
 	a.Identity = identity
 	a.Status = "verified"
-	return s.repo.TransitionAttempt(ctx, a, "waiting")
+	err = s.repo.TransitionAttempt(ctx, a, "waiting")
+	if errors.Is(err, domain.ErrConflict) {
+		// WeChat may deliver the same message concurrently to different replicas.
+		// A CAS winner is an idempotent success only for that same identity.
+		current, readErr := s.repo.Attempt(ctx, a.ID)
+		if readErr == nil && current.Provider == a.Provider && current.ConfigVersion == a.ConfigVersion && current.Status != "waiting" && time.Now().Before(current.ExpiresAt) && current.Identity.Subject == identity.Subject {
+			return nil
+		}
+	}
+	return err
+}
+
+const registrationCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+// Twelve random base32 characters provide 60 bits of entropy. Codes have their
+// own lookup hash and never act as an OIDC token or browser authorization.
+func RegistrationLoginCode() (string, error) {
+	bytes := make([]byte, 8)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	code := base32.NewEncoding(registrationCodeAlphabet).WithPadding(base32.NoPadding).EncodeToString(bytes)[:12]
+	return "AW-" + code[:4] + "-" + code[4:8] + "-" + code[8:], nil
+}
+
+func NormalizeRegistrationLoginCode(value string) string {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	value = strings.ReplaceAll(value, "-", "")
+	if len(value) != 14 || !strings.HasPrefix(value, "AW") {
+		return ""
+	}
+	code := value[2:]
+	for _, c := range code {
+		if !strings.ContainsRune(registrationCodeAlphabet, c) {
+			return ""
+		}
+	}
+	return "AW-" + code[:4] + "-" + code[4:8] + "-" + code[8:]
 }
 func (s *Registration) Complete(ctx context.Context, id, browser string) (domain.RegistrationAttempt, string, error) {
 	a, err := s.BrowserAttempt(ctx, id, browser)

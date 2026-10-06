@@ -124,18 +124,3 @@ func (g *Gateway) wechatToken(ctx context.Context, s domain.RegistrationSettings
 	}
 	return result.AccessToken, nil
 }
-func (g *Gateway) WeChatQR(ctx context.Context, s domain.RegistrationSettings, scene string) (string, error) {
-	token, err := g.wechatToken(ctx, s)
-	if err != nil {
-		return "", err
-	}
-	var result struct {
-		Ticket    string `json:"ticket"`
-		ErrorCode int    `json:"errcode"`
-	}
-	err = g.request(ctx, "POST", "https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token="+url.QueryEscape(token), "", map[string]any{"expire_seconds": 300, "action_name": "QR_STR_SCENE", "action_info": map[string]any{"scene": map[string]string{"scene_str": scene}}}, &result)
-	if err != nil || result.ErrorCode != 0 || result.Ticket == "" {
-		return "", ErrProvider
-	}
-	return result.Ticket, nil
-}

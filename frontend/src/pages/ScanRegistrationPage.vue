@@ -6,6 +6,8 @@ import { localeStorageKey } from "../i18n";
 const { t, locale } = useI18n();
 const id = new URLSearchParams(window.location.search).get("id") ?? "";
 const qrURL = ref("");
+const loginCode = ref("");
+const copied = ref(false);
 const loading = ref(true);
 const status = ref<"waiting" | "completing" | "expired" | "completionFailed">("waiting");
 const controller = new AbortController();
@@ -13,18 +15,23 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let deadline = Date.now() + 300_000;
 const endpoint = "/api/v1/registration/wechat_official/";
 function setLanguage() { locale.value = locale.value === "en-US" ? "zh-CN" : "en-US"; localStorage.setItem(localeStorageKey, locale.value); document.documentElement.lang = locale.value; }
+async function copyCode() {
+  try { await navigator.clipboard.writeText(loginCode.value); copied.value = true; }
+  catch { copied.value = false; }
+}
 async function poll() {
   if (controller.signal.aborted) return;
   if (!/^[A-Za-z0-9_-]{43}$/.test(id) || Date.now() >= deadline) { loading.value = false; status.value = "expired"; return; }
   try {
     const response = await fetch(`${endpoint}status?id=${encodeURIComponent(id)}`, { signal: controller.signal, cache: "no-store", credentials: "same-origin" });
     if (!response.ok) { loading.value = false; status.value = response.status === 410 ? "expired" : "completionFailed"; return; }
-    const result = await response.json() as { status: string; qr_url: string; expires_at: string };
+    const result = await response.json() as { status: string; qr_url: string; login_code: string; expires_at: string };
     const qr = new URL(result.qr_url);
-    if (qr.origin !== "https://mp.weixin.qq.com" || qr.pathname !== "/cgi-bin/showqrcode") throw new Error("Invalid QR");
+    if (qr.origin !== "https://open.weixin.qq.com" || qr.pathname !== "/qr/code" || !qr.searchParams.get("username")) throw new Error("Invalid QR");
+    if (!/^AW-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(result.login_code)) throw new Error("Invalid login code");
     const expires = Date.parse(result.expires_at);
     if (!Number.isFinite(expires)) throw new Error("Invalid expiry");
-    qrURL.value = qr.href; deadline = expires; loading.value = false;
+    qrURL.value = qr.href; loginCode.value = result.login_code; deadline = expires; loading.value = false;
     if (result.status === "verified") {
       status.value = "completing";
       const completed = await fetch(`${endpoint}complete?id=${encodeURIComponent(id)}`, { method: "POST", signal: controller.signal, credentials: "same-origin", headers: { "X-Registration-Request": "1" } });
@@ -50,6 +57,12 @@ onUnmounted(() => { controller.abort(); clearTimeout(timer); });
       <h1>{{ t('registration.scanTitle') }}</h1><p>{{ t('registration.scanHint') }}</p>
       <el-skeleton v-if="loading" :rows="4" animated />
       <img v-if="qrURL && status === 'waiting'" class="registration-qr" :src="qrURL" :alt="t('registration.qrAlt')" referrerpolicy="no-referrer">
+      <div v-if="loginCode && status === 'waiting'" class="registration-login-code">
+        <span>{{ t('registration.loginCode') }}</span>
+        <code>{{ loginCode }}</code>
+        <el-button @click="copyCode">{{ t(copied ? 'common.copied' : 'common.copy') }}</el-button>
+        <small>{{ t('registration.codeHint') }}</small>
+      </div>
       <p role="status" aria-live="polite">{{ t(`registration.${status}`) }}</p>
       <div class="registration-actions"><a href="/">{{ t('registration.back') }}</a><el-button text @click="setLanguage">{{ t('registration.language') }}</el-button></div>
     </el-card>
@@ -61,5 +74,8 @@ onUnmounted(() => { controller.abort(); clearTimeout(timer); });
 .registration-card h1 { font-size: var(--aw-font-size-title); margin: 0; }
 .registration-card p { margin: 0; color: var(--aw-n7); line-height: 1.6; overflow-wrap: anywhere; }
 .registration-qr { display: block; width: 240px; max-width: 100%; aspect-ratio: 1; margin: var(--aw-space-4) auto; }
+.registration-login-code { display: grid; justify-items: center; gap: var(--aw-space-3); text-align: center; }
+.registration-login-code code { font-family: var(--aw-font-mono); font-size: var(--aw-font-size-title); overflow-wrap: anywhere; }
+.registration-login-code small { color: var(--aw-n7); line-height: 1.6; }
 .registration-actions { display: flex; justify-content: space-between; align-items: center; gap: var(--aw-space-3); flex-wrap: wrap; }
 </style>

@@ -38,6 +38,7 @@ type registrationAttemptModel struct {
 	Provider          string
 	Status            string
 	CodeHash          *string
+	LoginCodeHash     *string
 	PayloadCiphertext []byte
 	ExpiresAt         time.Time
 	Version           int64
@@ -131,7 +132,11 @@ func (r *RegistrationRepository) attemptModel(a domain.RegistrationAttempt) (reg
 	if a.CodeHash != "" {
 		code = &a.CodeHash
 	}
-	return registrationAttemptModel{ID: a.ID, Provider: a.Provider, Status: a.Status, CodeHash: code, PayloadCiphertext: cipher, ExpiresAt: a.ExpiresAt, Version: a.Version}, nil
+	var loginCode *string
+	if a.LoginCodeHash != "" {
+		loginCode = &a.LoginCodeHash
+	}
+	return registrationAttemptModel{ID: a.ID, Provider: a.Provider, Status: a.Status, CodeHash: code, LoginCodeHash: loginCode, PayloadCiphertext: cipher, ExpiresAt: a.ExpiresAt, Version: a.Version}, nil
 }
 func (r *RegistrationRepository) CreateAttempt(ctx context.Context, a domain.RegistrationAttempt) error {
 	row, err := r.attemptModel(a)
@@ -184,6 +189,16 @@ func (r *RegistrationRepository) AttemptByCode(ctx context.Context, hash string)
 	var row registrationAttemptModel
 	if err := r.db.WithContext(ctx).Where("code_hash=?", hash).Take(&row).Error; err != nil {
 		return domain.RegistrationAttempt{}, domain.ErrNotFound
+	}
+	return r.decodeAttempt(row)
+}
+func (r *RegistrationRepository) AttemptByLoginCode(ctx context.Context, hash string) (domain.RegistrationAttempt, error) {
+	var row registrationAttemptModel
+	if err := r.db.WithContext(ctx).Where("provider=? AND login_code_hash=?", domain.RegistrationWeChat, hash).Take(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.RegistrationAttempt{}, domain.ErrNotFound
+		}
+		return domain.RegistrationAttempt{}, err
 	}
 	return r.decodeAttempt(row)
 }
