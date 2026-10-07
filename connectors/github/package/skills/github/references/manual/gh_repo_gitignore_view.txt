@@ -1,0 +1,29 @@
+Source: https://cli.github.com/manual/gh_repo_gitignore_view
+
+gh repo gitignore view
+
+gh repo gitignore view <template>
+
+View an available repository .gitignore template.
+
+<template> is a case-sensitive .gitignore template name.
+
+For a list of available templates, run gh repo gitignore list.
+
+Examples
+
+# View the Go gitignore template
+$ gh repo gitignore view Go
+
+# View the Python gitignore template
+$ gh repo gitignore view Python
+
+# Create a new .gitignore file using the Go template
+$ gh repo gitignore view Go > .gitignore
+
+# Create a new .gitignore file using the Python template
+$ gh repo gitignore view Python > .gitignore
+
+See also
+
+  gh repo gitignore

@@ -1,0 +1,44 @@
+Source: https://cli.github.com/manual/gh_project_item-create
+
+gh project item-create
+
+Create a draft issue item in a project
+
+gh project item-create [<number>] [flags]
+
+Options
+
+		--body <string>
+
+	Body for the draft issue
+
+		--format <string>
+
+	Output format: {json}
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--owner <string>
+
+	Login of the owner. Use "@me" for the current user.
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+		--title <string>
+
+	Title for the draft issue
+
+Examples
+
+# Create a draft issue in the current user's project "1"
+$ gh project item-create 1 --owner "@me" --title "new item" --body "new item body"
+
+See also
+
+  gh project

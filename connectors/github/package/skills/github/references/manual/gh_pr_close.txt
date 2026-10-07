@@ -1,0 +1,30 @@
+Source: https://cli.github.com/manual/gh_pr_close
+
+gh pr close
+
+Close a pull request
+
+gh pr close {<number> | <url> | <branch>} [flags]
+
+Options
+
+	-c, 
+		--comment <string>
+
+	Leave a closing comment
+
+	-d, 
+		--delete-branch
+
+	Delete the local and remote branch after close
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh pr

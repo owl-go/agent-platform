@@ -1,0 +1,55 @@
+Source: https://cli.github.com/manual/gh_issue_status
+
+gh issue status
+
+Show status of relevant issues
+
+gh issue status [flags]
+
+Options
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+JSON Fields
+
+assignees, author, blockedBy, blocking, body, closed, closedAt, closedByPullRequestsReferences, comments, createdAt, id, isPinned, issueType, labels, milestone, number, parent, projectCards, projectItems, reactionGroups, state, stateReason, subIssues, subIssuesSummary, title, updatedAt, url
+
+See also
+
+  gh issue
+
+    In use
+
+      # Viewing issues relevant to you
+~/Projects/my-project$ gh issue status
+Issues assigned to you
+  #8509 [Fork] Improve how Desktop handles forks  (epic:fork, meta)
+
+Issues mentioning you
+  #8938 [Fork] Add create fork flow entry point at commit warning  (epic:fork)
+  #8509 [Fork] Improve how Desktop handles forks  (epic:fork, meta)
+
+Issues opened by you
+  #8936 [Fork] Hide PR number badges on branches that have an upstream PR  (epic:fork)
+  #6386 Improve no editor detected state on conflicts modal  (enhancement)
+
+~/Projects/my-project$

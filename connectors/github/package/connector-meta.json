@@ -1,0 +1,17 @@
+{
+  "auth_mode": "oauth",
+  "description": "GitHub 仓库、Issue、PR 与评论、Actions、Release、Projects 和搜索；通过浏览器设备授权连接。",
+  "examples_en": [
+    "List issues in a selected repository",
+    "Comment on a selected issue"
+  ],
+  "examples_zh": [
+    "查询指定仓库的 Issue",
+    "在指定 Issue 发表评论"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "name": "GitHub",
+  "source": "github",
+  "type": "cli",
+  "version": "0.1.0"
+}

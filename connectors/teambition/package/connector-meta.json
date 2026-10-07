@@ -1,0 +1,17 @@
+{
+  "auth_mode": "oauth",
+  "description": "Teambition 项目与任务查询、任务创建和移动、发表和读取任务评论；通过浏览器 OAuth + PKCE 授权连接。",
+  "examples_en": [
+    "List my Teambition projects",
+    "Create a task in a selected project"
+  ],
+  "examples_zh": [
+    "查询我参与的钉钉项目",
+    "在指定项目创建任务"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "name": "钉钉项目",
+  "source": "teambition",
+  "type": "cli",
+  "version": "0.3.7"
+}

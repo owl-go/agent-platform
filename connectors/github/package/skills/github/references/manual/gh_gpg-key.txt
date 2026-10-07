@@ -1,0 +1,17 @@
+Source: https://cli.github.com/manual/gh_gpg-key
+
+gh gpg-key
+
+Manage GPG keys registered with your GitHub account.
+
+Available commands
+
+  gh gpg-key add
+
+  gh gpg-key delete
+
+  gh gpg-key list
+
+See also
+
+  gh

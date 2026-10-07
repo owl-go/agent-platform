@@ -37,7 +37,7 @@ func (defaultResourceSeedRecord) TableName() string { return "default_resource_s
 // Existing administrator resources, publications and every private resource
 // remain under their existing owner's control.
 func (repository *Repository) EnsureDefaultResources(ctx context.Context, objects objectstore.Provider) error {
-	catalog, err := defaultresources.Load()
+	catalog, err := defaultresources.LoadContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 			skills[definition.Key] = id
 		}
 		for _, definition := range catalog.Skills {
-			archive, err := defaultresources.Archive(definition.Archive)
+			archive, err := catalog.Archive(definition.Archive)
 			if err != nil {
 				return err
 			}
@@ -91,7 +91,7 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 			}
 		}
 		for _, definition := range catalog.Connectors {
-			if err := seedConnector(ctx, tx, objects, administrator.ID, definition); err != nil {
+			if err := seedConnector(ctx, tx, objects, administrator.ID, catalog, definition); err != nil {
 				return fmt.Errorf("initialize default Connector %s: %w", definition.Source, err)
 			}
 		}
@@ -255,8 +255,8 @@ func seedExpert(tx *gorm.DB, owner string, definition defaultresources.Expert, s
 	return saveSeed(tx, "expert", definition.Key, row.ID, definition.Version, digest, true)
 }
 
-func seedConnector(ctx context.Context, tx *gorm.DB, objects objectstore.Provider, owner string, definition defaultresources.Connector) error {
-	pkg, err := defaultresources.ParseConnector(definition)
+func seedConnector(ctx context.Context, tx *gorm.DB, objects objectstore.Provider, owner string, catalog defaultresources.Catalog, definition defaultresources.Connector) error {
+	pkg, err := catalog.ParseConnector(definition)
 	if err != nil {
 		return err
 	}

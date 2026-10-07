@@ -1,0 +1,1 @@
+{"source":"feishu","version":"1.0.96","type":"cli","name":"飞书","description":"使用已审核的 CLI 能力操作飞书资源。","examples_zh":["创建飞书云文档","搜索飞书群聊","发送飞书消息","创建飞书任务"],"examples_en":["Create a Feishu document","Search Feishu chats","Send a Feishu message","Create a Feishu task"],"minPlatformVersion":"1.0.0","auth_mode":"oauth"}

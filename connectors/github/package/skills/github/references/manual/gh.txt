@@ -1,0 +1,89 @@
+Source: https://cli.github.com/manual/gh
+
+gh
+
+Work seamlessly with GitHub from the command line.
+
+Core commands
+
+  gh auth
+
+  gh browse
+
+  gh codespace
+
+  gh discussion
+
+  gh gist
+
+  gh issue
+
+  gh org
+
+  gh pr
+
+  gh project
+
+  gh release
+
+  gh repo
+
+  gh skill
+
+GitHub Actions commands
+
+  gh cache
+
+  gh run
+
+  gh workflow
+
+Additional commands
+
+  gh agent-task
+
+  gh alias
+
+  gh api
+
+  gh attestation
+
+  gh completion
+
+  gh config
+
+  gh copilot
+
+  gh extension
+
+  gh gpg-key
+
+  gh label
+
+  gh licenses
+
+  gh preview
+
+  gh ruleset
+
+  gh search
+
+  gh secret
+
+  gh ssh-key
+
+  gh status
+
+  gh variable
+
+Options
+
+		--version
+
+	Show gh version
+
+Examples
+
+$ gh issue create
+$ gh repo clone cli/cli
+$ gh pr checkout 321

@@ -1,0 +1,18 @@
+Source: https://cli.github.com/manual/gh_gpg-key_delete
+
+gh gpg-key delete
+
+Delete a GPG key from your GitHub account
+
+gh gpg-key delete <key-id> [flags]
+
+Options
+
+	-y, 
+		--yes
+
+	Skip the confirmation prompt
+
+See also
+
+  gh gpg-key

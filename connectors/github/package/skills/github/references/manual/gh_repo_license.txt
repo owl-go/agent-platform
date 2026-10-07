@@ -1,0 +1,15 @@
+Source: https://cli.github.com/manual/gh_repo_license
+
+gh repo license
+
+Explore repository licenses
+
+Available commands
+
+  gh repo license list
+
+  gh repo license view
+
+See also
+
+  gh repo

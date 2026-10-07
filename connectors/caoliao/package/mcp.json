@@ -1,0 +1,6 @@
+{
+  "transport": "streamable_http",
+  "url": "https://mcp.objqr.com/mcp",
+  "egress_hosts": ["mcp.objqr.com"],
+  "timeout_seconds": 30
+}

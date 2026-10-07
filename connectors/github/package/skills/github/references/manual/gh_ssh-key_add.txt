@@ -1,0 +1,22 @@
+Source: https://cli.github.com/manual/gh_ssh-key_add
+
+gh ssh-key add
+
+Add an SSH key to your GitHub account
+
+gh ssh-key add [<key-file>] [flags]
+
+Options
+
+	-t, 
+		--title <string>
+
+	Title for the new key
+
+		--type <string> (default "authentication")
+
+	Type of the ssh key: {authentication|signing}
+
+See also
+
+  gh ssh-key

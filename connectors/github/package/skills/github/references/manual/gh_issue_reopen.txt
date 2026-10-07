@@ -1,0 +1,25 @@
+Source: https://cli.github.com/manual/gh_issue_reopen
+
+gh issue reopen
+
+Reopen issue
+
+gh issue reopen {<number> | <url>} [flags]
+
+Options
+
+	-c, 
+		--comment <string>
+
+	Add a reopening comment
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh issue

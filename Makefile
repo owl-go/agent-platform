@@ -1,9 +1,9 @@
 .PHONY: build test deploy web-build web-typecheck web-deploy oidc-browser-acceptance runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance
 
-build:
+build: resources-check
 	cd backend && go build ./...
 
-test:
+test: resources-check
 	cd backend && go test ./...
 
 deploy:
@@ -23,7 +23,10 @@ deploy-test:
 	python3 -m unittest discover -s scripts -p 'installation_test.py'
 	bash -n scripts/deploy-platform.sh scripts/deploy-platform-infrastructure.sh scripts/install-platform.sh
 
-.PHONY: install deploy-setup deploy-check deploy-test
+resources-check:
+	go -C backend run ./cmd/resourcecheck --root ..
+
+.PHONY: install deploy-setup deploy-check deploy-test resources-check
 
 web-build:
 	pnpm --dir frontend build

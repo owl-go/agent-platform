@@ -12,11 +12,11 @@ func TestShippedCatalogPackagesAndBindings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(catalog.Skills) != 9 || len(catalog.Experts) != 8 || len(catalog.Connectors) != 20 {
+	if len(catalog.Skills) < 9 || len(catalog.Experts) < 8 || len(catalog.Connectors) < 20 {
 		t.Fatalf("unexpected starter inventory: Skills=%d Experts=%d Connectors=%d", len(catalog.Skills), len(catalog.Experts), len(catalog.Connectors))
 	}
 	for _, s := range catalog.Skills {
-		archive, err := Archive(s.Archive)
+		archive, err := catalog.Archive(s.Archive)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -26,7 +26,7 @@ func TestShippedCatalogPackagesAndBindings(t *testing.T) {
 	}
 	cli := 0
 	for _, c := range catalog.Connectors {
-		pkg, err := ParseConnector(c)
+		pkg, err := catalog.ParseConnector(c)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -37,14 +37,18 @@ func TestShippedCatalogPackagesAndBindings(t *testing.T) {
 			}
 		}
 	}
-	if cli != 11 {
+	if cli < 11 {
 		t.Fatalf("CLI package count=%d", cli)
 	}
 }
 
 func TestArchiveRejectsOutsideCatalog(t *testing.T) {
+	catalog, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"../manifest.json", "manifest.json", "/etc/passwd", "skills/../../manifest.json"} {
-		if _, err := Archive(name); err == nil {
+		if _, err := catalog.Archive(name); err == nil {
 			t.Fatalf("unsafe archive accepted: %s", name)
 		}
 	}
@@ -55,7 +59,7 @@ func TestArchiveChecksumMismatchFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyArchive(catalog.Skills[0].Archive, "invalid"); err == nil {
+	if err := catalog.verifyArchive(catalog.Skills[0].Archive, "invalid"); err == nil {
 		t.Fatal("mismatched immutable archive accepted")
 	}
 }

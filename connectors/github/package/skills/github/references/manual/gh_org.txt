@@ -1,0 +1,17 @@
+Source: https://cli.github.com/manual/gh_org
+
+gh org
+
+Work with GitHub organizations.
+
+General commands
+
+  gh org list
+
+Examples
+
+$ gh org list
+
+See also
+
+  gh

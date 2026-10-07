@@ -1,0 +1,386 @@
+{
+  "auth_url_domains": [
+    "account.teambition.com"
+  ],
+  "authentication_driver": "connector_package",
+  "bundle_path": "node_modules/.bin/teambition",
+  "capabilities": [
+    {
+      "argv_prefix": [
+        "--version"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_46dcd820f40e03f1",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "--help"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_0bdbc8fb00a40fb6",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "tools",
+        "list"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_cbf37d9e11e80dee",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "tools",
+        "describe"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_bc0833d1165f3121",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "tools",
+        "call",
+        "teambition.docs.search"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_8818e3a5921b677d",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "tools",
+        "call",
+        "teambition.docs.get"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_051ca8a9eb9c204c",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "user",
+        "me"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_8d7e00466a0a99e6",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "user:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "query"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_4357369f3275f9b6",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project:read",
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "task-query"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_617ba786e7221141",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project:read",
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "file-detail-query"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_06bfab032926cd67",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project:read",
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "task",
+        "query"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_38af7fd29d191b82",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "task",
+        "activity"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_52bb9a69b713a336",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "task",
+        "comment"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_9d05be5323e9b129",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "task:write"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "task",
+        "create"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_250d6fbf5aea7c4b",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "task:write"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "task",
+        "move"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_3cf48ee24b736414",
+      "identities": [
+        "user"
+      ],
+      "risk": "high",
+      "scopes": [
+        "task:write"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "project",
+        "--help"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_f8ef0f83c01d870f",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "project:read",
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "task",
+        "--help"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_b1aa7084b24b7785",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [
+        "task:read"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "member",
+        "--help"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_f9263aff5d5a10d0",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    },
+    {
+      "argv_prefix": [
+        "dingtalk",
+        "--help"
+      ],
+      "egress_hosts": [
+        "open.teambition.com"
+      ],
+      "id": "tb_ed121218e46a949b",
+      "identities": [
+        "user"
+      ],
+      "risk": "low",
+      "scopes": [],
+      "timeout_seconds": 120
+    }
+  ],
+  "commands": {
+    "auth": {
+      "argv": [
+        "platform",
+        "auth"
+      ]
+    },
+    "init": {
+      "argv": [
+        "platform",
+        "init"
+      ]
+    },
+    "status": {
+      "argv": [
+        "platform",
+        "status"
+      ]
+    },
+    "unAuth": {
+      "argv": [
+        "platform",
+        "unauth"
+      ]
+    }
+  },
+  "egress_hosts": [
+    "open.teambition.com"
+  ],
+  "executable": "teambition",
+  "resource_limits": {
+    "child_processes": 64,
+    "concurrency": 1,
+    "cpu_millis": 1000,
+    "memory_mib": 512,
+    "timeout_seconds": 180
+  },
+  "runtime": {
+    "digest": "sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b",
+    "kind": "node",
+    "version": "24.15.0"
+  },
+  "status_match": {
+    "equals": true,
+    "json_path": "$.configured"
+  },
+  "timeout_seconds": 120
+}

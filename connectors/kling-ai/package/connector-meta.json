@@ -1,0 +1,19 @@
+{
+  "source": "kling-ai",
+  "version": "0.1.0",
+  "type": "mcp",
+  "name": "可灵 AI",
+  "description": "通过可灵官方 MCP 生成图片和视频，查询任务、主体素材与个人空间灵感值",
+  "examples_zh": [
+    "用可灵生成一张雨后上海街头的电影感图片",
+    "将这张参考图制作成 5 秒运镜视频",
+    "查询可灵生成任务的状态和结果链接"
+  ],
+  "examples_en": [
+    "Generate a cinematic image of a Shanghai street after rain with Kling AI",
+    "Animate this reference image into a five-second camera movement video",
+    "Check a Kling AI generation task and return its result links"
+  ],
+  "minPlatformVersion": "1.0.0",
+  "auth_mode": "oauth"
+}

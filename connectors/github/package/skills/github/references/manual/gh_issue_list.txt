@@ -1,0 +1,144 @@
+Source: https://cli.github.com/manual/gh_issue_list
+
+gh issue list
+
+gh issue list [flags]
+
+List issues in a GitHub repository. By default, this only lists open issues.
+
+The search query syntax is documented here:
+https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
+
+On supported GitHub hosts, advanced issue search syntax can be used in the
+--search query. For more information about advanced issue search, see:
+https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests#building-advanced-filters-for-issues
+
+Options
+
+		--app <string>
+
+	Filter by GitHub App author
+
+	-a, 
+		--assignee <string>
+
+	Filter by assignee
+
+	-A, 
+		--author <string>
+
+	Filter by author (use --app to filter by a GitHub App)
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-l, 
+		--label <strings>
+
+	Filter by label
+
+	-L, 
+		--limit <int> (default 30)
+
+	Maximum number of issues to fetch
+
+		--mention <string>
+
+	Filter by mention
+
+	-m, 
+		--milestone <string>
+
+	Filter by milestone number or title
+
+	-S, 
+		--search <query>
+
+	Search issues with query
+
+	-s, 
+		--state <string> (default "open")
+
+	Filter by state: {open|closed|all}
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+		--type <name>
+
+	Filter by issue type name
+
+	-w, 
+		--web
+
+	List issues in the web browser
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+ALIASES
+
+gh issue ls
+
+JSON Fields
+
+assignees, author, blockedBy, blocking, body, closed, closedAt, closedByPullRequestsReferences, comments, createdAt, id, isPinned, issueType, labels, milestone, number, parent, projectCards, projectItems, reactionGroups, state, stateReason, subIssues, subIssuesSummary, title, updatedAt, url
+
+Examples
+
+$ gh issue list --label "bug" --label "help wanted"
+$ gh issue list --author monalisa
+$ gh issue list --app dependabot
+$ gh issue list --assignee "@me"
+$ gh issue list --milestone "The big 1.0"
+$ gh issue list --search "error no:assignee sort:created-asc"
+$ gh issue list --state all
+$ gh issue list --type Bug
+
+See also
+
+  gh issue
+
+    In use
+
+  Default behavior
+
+  You will see the most recent 30 open items.
+
+      # Viewing a list of open issues
+~/Projects/my-project$ gh issue list
+
+Issues for owner/repo
+
+#14  Update the remote url if it changed  (bug)
+#14  PR commands on a detached head       (enhancement)
+#13  Support for GitHub Enterprise        (wontfix)
+#8   Add an easier upgrade command        (bug)
+
+~/Projects/my-project$
+
+  Filtering with flags
+
+  You can use flags to filter the list for your specific use cases.
+
+      # Viewing a list of closed issues assigned to a user
+~/Projects/my-project$ gh issue list --state closed --assignee user
+
+Issues for owner/repo
+
+#13  Enable discarding submodule changes  (bug)
+#8   Upgrade to latest react              (upgrade)
+
+~/Projects/my-project$

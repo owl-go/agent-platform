@@ -1,23 +1,19 @@
-// Package defaultresources owns the credential-free starter catalog shipped in
-// the service binary. It has no database, authorization or availability state.
+// Package defaultresources loads credential-free platform definitions from a
+// release directory. It has no database, authorization or availability state.
 package defaultresources
 
 import (
 	"bytes"
 	"crypto/sha256"
-	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"path"
 	"strings"
 
 	"agent-platform/backend/internal/connectorpackage"
+	"agent-platform/backend/internal/systemskills"
 )
-
-//go:embed assets
-var assets embed.FS
 
 type Skill struct {
 	Key     string `json:"key"`
@@ -51,61 +47,80 @@ type Catalog struct {
 	Skills     []Skill     `json:"skills"`
 	Experts    []Expert    `json:"experts"`
 	Connectors []Connector `json:"connectors"`
+	archives   map[string][]byte
 }
 
-func Load() (Catalog, error) {
-	data, err := assets.ReadFile("assets/manifest.json")
-	if err != nil {
-		return Catalog{}, fmt.Errorf("read default resource manifest: %w", err)
-	}
-	var catalog Catalog
+func decodeDefinition(data []byte, target any) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(&catalog); err != nil {
-		return Catalog{}, fmt.Errorf("decode default resource manifest: %w", err)
+	if err := decoder.Decode(target); err != nil {
+		return fmt.Errorf("decode resource definition: %w", err)
 	}
-	if err = decoder.Decode(new(any)); err != io.EOF {
-		return Catalog{}, fmt.Errorf("default resource manifest contains trailing data")
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return fmt.Errorf("resource definition contains trailing data")
 	}
+	return nil
+}
+
+func (catalog Catalog) validate() error {
 	seen := map[string]bool{}
+	names := map[string]bool{}
+	for _, definition := range systemskills.Definitions() {
+		seen["skill:"+definition.Key] = true
+		names["skill:"+strings.ToLower(strings.TrimSpace(definition.Name))] = true
+	}
 	check := func(kind, key, version string) error {
-		if strings.TrimSpace(key) == "" || strings.TrimSpace(version) == "" || seen[kind+":"+key] {
+		if !resourceKey.MatchString(key) || !resourceVersion.MatchString(version) || seen[kind+":"+key] {
 			return fmt.Errorf("invalid or duplicate default %s key %q", kind, key)
 		}
 		seen[kind+":"+key] = true
 		return nil
 	}
-	for _, s := range catalog.Skills {
-		if err = check("skill", s.Key, s.Version); err != nil {
-			return Catalog{}, err
+	checkName := func(kind, name string) error {
+		key := kind + ":" + strings.ToLower(strings.TrimSpace(name))
+		if names[key] {
+			return fmt.Errorf("duplicate %s catalog name %q", kind, name)
 		}
-		if err = verifyArchive(s.Archive, s.SHA256); err != nil {
-			return Catalog{}, err
+		names[key] = true
+		return nil
+	}
+	for _, s := range catalog.Skills {
+		if err := checkName("skill", s.Name); err != nil {
+			return err
+		}
+		if err := check("skill", s.Key, s.Version); err != nil {
+			return err
+		}
+		if err := catalog.verifyArchive(s.Archive, s.SHA256); err != nil {
+			return err
 		}
 	}
 	for _, e := range catalog.Experts {
-		if err = check("expert", e.Key, e.Version); err != nil {
-			return Catalog{}, err
+		if err := checkName("expert", e.Name); err != nil {
+			return err
+		}
+		if err := check("expert", e.Key, e.Version); err != nil {
+			return err
 		}
 		for _, key := range e.SkillKeys {
 			if !seen["skill:"+key] {
-				return Catalog{}, fmt.Errorf("default Expert %s references unknown Skill %s", e.Key, key)
+				return fmt.Errorf("default Expert %s references unknown Skill %s", e.Key, key)
 			}
 		}
 	}
 	for _, c := range catalog.Connectors {
-		if err = check("connector", c.Source, c.Version); err != nil {
-			return Catalog{}, err
+		if err := check("connector", c.Source, c.Version); err != nil {
+			return err
 		}
-		if err = verifyArchive(c.Archive, c.SHA256); err != nil {
-			return Catalog{}, err
+		if err := catalog.verifyArchive(c.Archive, c.SHA256); err != nil {
+			return err
 		}
 	}
-	return catalog, nil
+	return nil
 }
 
-func verifyArchive(name, expected string) error {
-	data, err := Archive(name)
+func (catalog Catalog) verifyArchive(name, expected string) error {
+	data, err := catalog.Archive(name)
 	if err != nil {
 		return err
 	}
@@ -116,19 +131,16 @@ func verifyArchive(name, expected string) error {
 	return nil
 }
 
-func Archive(name string) ([]byte, error) {
-	if path.Clean(name) != name || strings.Contains(name, "\\") || (!strings.HasPrefix(name, "skills/") && !strings.HasPrefix(name, "connectors/")) {
-		return nil, fmt.Errorf("default archive has invalid directory")
+func (catalog Catalog) Archive(name string) ([]byte, error) {
+	data, ok := catalog.archives[name]
+	if !ok {
+		return nil, fmt.Errorf("archive %s is outside the loaded resource catalog", name)
 	}
-	data, err := assets.ReadFile("assets/" + name)
-	if err != nil {
-		return nil, fmt.Errorf("read default archive %s: %w", name, err)
-	}
-	return data, nil
+	return bytes.Clone(data), nil
 }
 
-func ParseConnector(c Connector) (connectorpackage.Package, error) {
-	data, err := Archive(c.Archive)
+func (catalog Catalog) ParseConnector(c Connector) (connectorpackage.Package, error) {
+	data, err := catalog.Archive(c.Archive)
 	if err != nil {
 		return connectorpackage.Package{}, err
 	}

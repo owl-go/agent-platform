@@ -1,0 +1,44 @@
+Source: https://cli.github.com/manual/gh_project_view
+
+gh project view
+
+View a project
+
+gh project view [<number>] [flags]
+
+Options
+
+		--format <string>
+
+	Output format: {json}
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--owner <string>
+
+	Login of the owner. Use "@me" for the current user.
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-w, 
+		--web
+
+	Open a project in the browser
+
+Examples
+
+# View the current user's project "1"
+$ gh project view 1
+
+# Open user monalisa's project "1" in the browser
+$ gh project view 1 --owner monalisa --web
+
+See also
+
+  gh project

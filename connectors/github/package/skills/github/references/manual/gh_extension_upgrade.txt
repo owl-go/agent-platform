@@ -1,0 +1,25 @@
+Source: https://cli.github.com/manual/gh_extension_upgrade
+
+gh extension upgrade
+
+Upgrade installed extensions
+
+gh extension upgrade {<name> | --all} [flags]
+
+Options
+
+		--all
+
+	Upgrade all extensions
+
+		--dry-run
+
+	Only display upgrades
+
+		--force
+
+	Force upgrade extension
+
+See also
+
+  gh extension

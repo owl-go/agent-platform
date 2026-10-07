@@ -1,0 +1,52 @@
+Source: https://cli.github.com/manual/gh_workflow_list
+
+gh workflow list
+
+gh workflow list [flags]
+
+List workflow files, hiding disabled workflows by default.
+
+Options
+
+	-a, 
+		--all
+
+	Include disabled workflows
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-L, 
+		--limit <int> (default 50)
+
+	Maximum number of workflows to fetch
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+ALIASES
+
+gh workflow ls
+
+JSON Fields
+
+id, name, path, state
+
+See also
+
+  gh workflow

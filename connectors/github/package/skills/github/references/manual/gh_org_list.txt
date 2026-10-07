@@ -1,0 +1,30 @@
+Source: https://cli.github.com/manual/gh_org_list
+
+gh org list
+
+List organizations for the authenticated user.
+
+gh org list [flags]
+
+Options
+
+	-L, 
+		--limit <int> (default 30)
+
+	Maximum number of organizations to list
+
+ALIASES
+
+gh org ls
+
+Examples
+
+# List the first 30 organizations
+$ gh org list
+
+# List more organizations
+$ gh org list --limit 100
+
+See also
+
+  gh org

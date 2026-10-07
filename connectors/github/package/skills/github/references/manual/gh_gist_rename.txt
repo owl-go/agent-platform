@@ -1,0 +1,11 @@
+Source: https://cli.github.com/manual/gh_gist_rename
+
+gh gist rename
+
+gh gist rename {<id> | <url>} <old-filename> <new-filename>
+
+Rename a file in the given gist ID / URL.
+
+See also
+
+  gh gist

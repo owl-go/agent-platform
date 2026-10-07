@@ -1,0 +1,43 @@
+Source: https://cli.github.com/manual/gh_workflow_view
+
+gh workflow view
+
+View the summary of a workflow
+
+gh workflow view [<workflow-id> | <workflow-name> | <filename>] [flags]
+
+Options
+
+	-r, 
+		--ref <string>
+
+	The branch or tag name which contains the version of the workflow file you'd like to view
+
+	-w, 
+		--web
+
+	Open workflow in the browser
+
+	-y, 
+		--yaml
+
+	View the workflow yaml file
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+Examples
+
+# Interactively select a workflow to view
+$ gh workflow view
+
+# View a specific workflow
+$ gh workflow view 0451
+
+See also
+
+  gh workflow

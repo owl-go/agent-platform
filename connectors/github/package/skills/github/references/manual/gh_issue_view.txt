@@ -1,0 +1,75 @@
+Source: https://cli.github.com/manual/gh_issue_view
+
+gh issue view
+
+gh issue view {<number> | <url>} [flags]
+
+Display the title, body, and other information about an issue.
+
+With --web flag, open the issue in a web browser instead.
+
+Options
+
+	-c, 
+		--comments
+
+	View issue comments
+
+	-q, 
+		--jq <expression>
+
+	Filter JSON output using a jq expression
+
+		--json <fields>
+
+	Output JSON with the specified fields
+
+	-t, 
+		--template <string>
+
+	Format JSON output using a Go template; see "gh help formatting"
+
+	-w, 
+		--web
+
+	Open an issue in the browser
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+JSON Fields
+
+assignees, author, blockedBy, blocking, body, closed, closedAt, closedByPullRequestsReferences, comments, createdAt, id, isPinned, issueType, labels, milestone, number, parent, projectCards, projectItems, reactionGroups, state, stateReason, subIssues, subIssuesSummary, title, updatedAt, url
+
+See also
+
+  gh issue
+
+    In use
+
+  In terminal
+
+  By default, we will display items in the terminal.
+
+      # Viewing an issue in terminal
+~/Projects/my-project$ gh issue view 21
+Issue title
+opened by user. 0 comments. (label)
+
+  Issue body
+
+View this issue on GitHub: https://github.com/owner/repo/issues/21
+~/Projects/my-project$
+
+  In the browser
+
+  Quickly open an item in the browser using --web or -w
+
+      # Viewing an issue in the browser
+~/Projects/my-project$ gh issue view 21 --web
+Opening https://github.com/owner/repo/issues/21 in your browser.
+~/Projects/my-project$

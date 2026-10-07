@@ -1,0 +1,29 @@
+Source: https://cli.github.com/manual/gh_gist_delete
+
+gh gist delete
+
+gh gist delete {<id> | <url>} [flags]
+
+Delete a GitHub gist.
+
+To delete a gist interactively, use gh gist delete with no arguments.
+
+To delete a gist non-interactively, supply the gist id or url.
+
+Options
+
+		--yes
+
+	Confirm deletion without prompting
+
+Examples
+
+# Delete a gist interactively
+$ gh gist delete
+
+# Delete a gist non-interactively
+$ gh gist delete 1234
+
+See also
+
+  gh gist

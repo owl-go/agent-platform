@@ -1,0 +1,106 @@
+Source: https://cli.github.com/manual/gh_repo_fork
+
+gh repo fork
+
+gh repo fork [<repository>] [-- <gitflags>...] [flags]
+
+Create a fork of a repository.
+
+With no argument, creates a fork of the current repository. Otherwise, forks
+the specified repository.
+
+By default, the new fork is set to be your origin remote and any existing
+origin remote is renamed to upstream. To alter this behavior, you can set
+a name for the new fork's remote with --remote-name.
+
+The upstream remote will be set as the default remote repository.
+
+Additional git clone flags can be passed after --.
+
+Options
+
+		--clone
+
+	Clone the fork
+
+		--default-branch-only
+
+	Only include the default branch in the fork
+
+		--fork-name <string>
+
+	Rename the forked repository
+
+		--org <string>
+
+	Create the fork in an organization
+
+		--remote
+
+	Add a git remote for the fork
+
+		--remote-name <string> (default "origin")
+
+	Specify the name for the new remote
+
+Examples
+
+# Fork a repository
+$ gh repo fork owner/repo
+
+# Fork a repository and clone it locally
+$ gh repo fork owner/repo --clone
+
+# Fork a repository without cloning it, skip the prompt
+$ gh repo fork owner/repo --clone=false
+
+See also
+
+  gh repo
+
+    In use
+
+  With no arguments
+
+      Inside a git repository, and without any arguments, we will automatically create a fork on GitHub on your account
+      for your current directory. It will then prompt if you want to set an upstream remote.
+
+      # Create a fork for the current repository.
+~/Projects/cli$ gh repo fork
+- Forking cli/cli...
+✓ Created fork user/cli
+? Would you like to add a remote for the fork? Yes
+✓ Renamed origin remote to upstream
+✓ Added remote origin
+~/Projects/cli$
+
+  With arguments
+
+      If you pass a repository in OWNER/REPO format, `gh` will automatically create a fork on GitHub on your account and
+      ask if you want to clone it. This works inside or outside of a git repository.
+
+      # Create a fork for another repository.
+~/Projects$ gh repo fork cli/cli
+- Forking cli/cli...
+✓ Created fork cli/cli
+? Would you like to clone the fork? Yes
+Cloning into 'cli'...
+✓ Cloned fork
+~/Projects$ cd cli
+~/Projects/cli$
+
+  Using flags
+
+    Use flags to skip prompts about adding a git remote for the fork, or about cloning the forked repository locally.
+
+      # Skipping remote prompts using flags
+~/Projects/cli$ gh repo fork --remote=false
+- Forking cli/cli...
+✓ Created fork user/cli
+~/Projects/cli$
+
+      # Skipping clone prompts using flags
+~/Projects$ gh repo fork cli/cli --clone=false
+- Forking cli/cli...
+✓ Created fork user/cli
+~/Projects$

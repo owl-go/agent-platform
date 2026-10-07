@@ -26,7 +26,7 @@ Domain 与 Application 不依赖 GORM、HTTP、对象存储、Runtime CLI 或 YA
 
 ## 默认资源初始化
 
-API 与 Worker 在账号 Bootstrap 完成后复用 `Repository.EnsureDefaultResources`，将随二进制分发的无凭据资源写入现有 Expert、Skill、Connector Revision/Publication seam。Migration `000072_default_resource_seeds.sql` 保存按资源稳定键与版本管理的初始化记录；它是 Adapter 层的升级账本，不引入新的 Domain 聚合。并发、失败、升级和权限边界见[默认资源分发](default-resources.md)。
+API 与 Worker 在账号 Bootstrap 完成后复用 `Repository.EnsureDefaultResources`，将镜像中只读的 `connectors/`、`skills/`、`experts/` 目录定义写入现有 Expert、Skill、Connector Revision/Publication seam。目录根路径由镜像的 `AGENT_WORKSPACE_RESOURCE_ROOT` 指定；本地 Go 命令可从工作目录向上发现仓库 `resources.json` 标记。加载先冻结并校验全部包，再进入初始化事务；构建/发布脚本不作为第二来源。Migration `000072_default_resource_seeds.sql` 保存按资源稳定键与版本管理的初始化记录；它是 Adapter 层的升级账本，不引入新的 Domain 聚合。并发、失败、升级和权限边界见[默认资源分发](default-resources.md)。
 
 ## 所有权
 

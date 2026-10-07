@@ -1,0 +1,16 @@
+Source: https://cli.github.com/manual/gh_config_clear-cache
+
+gh config clear-cache
+
+Clear the cli cache
+
+gh config clear-cache
+
+Examples
+
+# Clear the cli cache
+$ gh config clear-cache
+
+See also
+
+  gh config

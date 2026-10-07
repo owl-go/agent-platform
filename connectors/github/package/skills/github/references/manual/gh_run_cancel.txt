@@ -1,0 +1,24 @@
+Source: https://cli.github.com/manual/gh_run_cancel
+
+gh run cancel
+
+Cancel a workflow run
+
+gh run cancel [<run-id>] [flags]
+
+Options
+
+		--force
+
+	Force cancel a workflow run
+
+Options inherited from parent commands
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+See also
+
+  gh run

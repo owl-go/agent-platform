@@ -1,0 +1,35 @@
+Source: https://cli.github.com/manual/gh_ruleset
+
+gh ruleset
+
+Repository rulesets are a way to define a set of rules that apply to a repository.
+These commands allow you to view information about them.
+
+Available commands
+
+  gh ruleset check
+
+  gh ruleset list
+
+  gh ruleset view
+
+Options
+
+	-R, 
+		--repo <[HOST/]OWNER/REPO>
+
+	Select another repository using the [HOST/]OWNER/REPO format
+
+ALIASES
+
+gh rs
+
+Examples
+
+$ gh ruleset list
+$ gh ruleset view --repo OWNER/REPO --web
+$ gh ruleset check branch-name
+
+See also
+
+  gh
