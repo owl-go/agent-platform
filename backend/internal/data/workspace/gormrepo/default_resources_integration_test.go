@@ -20,41 +20,61 @@ import (
 	"github.com/google/uuid"
 )
 
-func defaultResourceFixture(t *testing.T) (*Repository, string, defaultresources.Catalog) {
+func defaultResourceRepositoryFixture(t *testing.T) (*Repository, string) {
 	t.Helper()
 	db := conversationTestDatabase(t)
 	owner := uuid.NewString()
 	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name,administrator,bootstrap_administrator) VALUES(?,?,?,?,?,true,true)", owner, owner, "fixture-admin", "fixture-admin@example.test", "Fixture Administrator").Error; err != nil {
 		t.Fatal(err)
 	}
-	catalog, err := defaultresources.Load()
+	return New(db, nil), owner
+}
+
+func defaultResourceFixture(t *testing.T) (*Repository, string, defaultresources.Catalog) {
+	t.Helper()
+	repo, owner := defaultResourceRepositoryFixture(t)
+	source := os.Getenv(defaultresources.RootEnvironment)
+	if source == "" {
+		var err error
+		source, err = os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for {
+			if _, err := os.Stat(filepath.Join(source, "resources.json")); err == nil {
+				break
+			}
+			parent := filepath.Dir(source)
+			if parent == source {
+				t.Fatal("resource fixture root missing")
+			}
+			source = parent
+		}
+	}
+	// These repository tests exercise initialization transactions and bindings.
+	// Load their real, small directory packages instead of repeatedly assembling
+	// every CLI bundle before discarding all but these three definitions.
+	root := t.TempDir()
+	marker, err := os.ReadFile(filepath.Join(source, "resources.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(catalog.Skills) == 0 || len(catalog.Experts) == 0 || len(catalog.Connectors) == 0 {
-		t.Fatal("starter catalog must include Skills, Experts and Connectors")
+	if err := os.WriteFile(filepath.Join(root, "resources.json"), marker, 0644); err != nil {
+		t.Fatal(err)
 	}
-	// Directory enumeration order is independent from resource identity. Keep
-	// concurrency tests focused on the same bound Expert and a small MCP package.
-	for _, item := range catalog.Skills {
-		if item.Key == "default.skill.travel-planning" {
-			catalog.Skills = []defaultresources.Skill{item}
-			break
+	for _, directory := range []string{"skills/travel-planning", "experts/travel-planning", "connectors/ai-hive"} {
+		if err := os.CopyFS(filepath.Join(root, directory), os.DirFS(filepath.Join(source, directory))); err != nil {
+			t.Fatal(err)
 		}
 	}
-	for _, item := range catalog.Experts {
-		if item.Key == "default.expert.travel-planning" {
-			catalog.Experts = []defaultresources.Expert{item}
-			break
-		}
+	catalog, err := defaultresources.LoadDirectory(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, item := range catalog.Connectors {
-		if item.Source == "ai-hive" {
-			catalog.Connectors = []defaultresources.Connector{item}
-			break
-		}
+	if len(catalog.Skills) != 1 || len(catalog.Experts) != 1 || len(catalog.Connectors) != 1 {
+		t.Fatal("transaction fixture must contain exactly one bound Expert, Skill and MCP package")
 	}
-	return New(db, nil), owner, catalog
+	return repo, owner, catalog
 }
 
 func TestDefaultResourcesConcurrentInstallAndUpgrade(t *testing.T) {
@@ -182,13 +202,15 @@ func TestDefaultResourceFailureRollsBackCatalog(t *testing.T) {
 }
 
 func TestDefaultCatalogFreshInstallDoesNotAuthorizeOrVerifyCLI(t *testing.T) {
-	repo, _, _ := defaultResourceFixture(t)
+	repo, _ := defaultResourceRepositoryFixture(t)
 	catalog, err := defaultresources.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
 	objects := memory.New()
-	if err := repo.EnsureDefaultResources(context.Background(), objects); err != nil {
+	// Exercise the full installer with the already validated catalog. Public
+	// directory discovery and repeated startup are covered by the directory test.
+	if err := repo.ensureResources(context.Background(), objects, catalog); err != nil {
 		t.Fatal(err)
 	}
 	for table, want := range map[string]int64{"skills": int64(len(catalog.Skills) + 3), "experts": int64(len(catalog.Experts)), "connector_package_publications": int64(len(catalog.Connectors)), "connector_installations": 0, "connector_authorizations": 0, "cli_connector_conformance": 0} {
