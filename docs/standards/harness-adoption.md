@@ -29,7 +29,7 @@ last-reviewed: 2026-10-07
 | 数据库 DB-001–006 | PostgreSQL 实体、所有权、事务、并发和不可变追加迁移 | [服务架构的数据库与事务说明](../technical/service-architecture.md)、[Migration](../../backend/internal/infrastructure/gormdb/migrations)、各 Data Model/Repository | G-DB；当前语义继续在技术规格说明，具体迁移再补兼容、恢复与规模证据，不生成空模型/迁移计划。 |
 | 需求 REQ-001–005 | User/Administrator 的产品行为、权限、输入边界和验收 | [产品规格](../product/agent-workspace-requirements.md)、相关产品专项及 [Issue 使用约定](../agents/issue-tracker.md) | G-DOC 与实际行为门禁；保留已有需求与 tickets，以具体任务 AC 连接实现和结果。 |
 | 测试 TST-001–005 | 单元、集成、契约、回归、浏览器和目标环境验证 | [E2E 策略](../testing/e2e.md)、[Production Conformance](../technical/production-conformance.md)、相邻测试、[CI](../../.github/workflows/ci.yml) | 所有适用 G-*；复用现有测试策略，结果区分通过、失败、未验证和不适用。 |
-| UI UI-001–005 | Vue 页面、状态、响应式、双语、键盘与视觉验收 | [UI 标准](frontend-ui.md)、[前端入口](../../frontend/AGENTS.md)、[Design Tokens](../../frontend/src/design-tokens.css)、相关产品规格 | G-WEB、G-E2E；沿用已有标准和组件，UI 清单不扩大已批准产品范围。 |
+| UI UI-001–005 | Vue 页面、状态、响应式、双语、键盘与视觉验收 | [UI 标准](frontend-ui.md)、[UI 规格与验收](../specs/frontend-ui-acceptance.md)、[前端入口](../../frontend/AGENTS.md)、[Design Tokens](../../frontend/src/design-tokens.css)、相关产品规格 | G-WEB、G-E2E；沿用已有标准和组件，UI 清单不扩大已批准产品范围。 |
 
 ## 技术栈与规则落地
 

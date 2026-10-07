@@ -2,6 +2,8 @@
 
 本文件适用于 `frontend` 下的全部界面改动。视觉 Token、布局、组件状态、响应式、动效和无障碍的权威规范是 `docs/standards/frontend-ui.md`；本文件只补充前端实施流程与产品文案约束。新增页面应复用现有交互语言，不为视觉装饰添加没有产品含义的信息。
 
+状态矩阵、表单提交与恢复、目标视口、键盘和视觉验收读 `docs/specs/frontend-ui-acceptance.md`，按本次页面变化选择 AC-UI-* 并关联实际证据；验证命令与环境读 `docs/standards/quality-gates.md` 的 G-WEB/G-E2E。
+
 ## 实施顺序
 
 1. 先读 `docs/standards/frontend-ui.md`，再检查相邻页面和已有组件，确认可复用的 Element Plus 组件、布局和交互状态。

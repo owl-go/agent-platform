@@ -51,7 +51,7 @@
 - **领域命名或模型关系**：读 `CONTEXT.md`。修改术语、实体边界或持久语义时同步更新它。
 - **产品行为、账号、会话、工作流或界面边界**：读 `docs/product/agent-workspace-requirements.md`。
 - **Workflow Message Channel 账号接入、发送者配对、收发验证、动态回复或重试**：读 `docs/technical/workflow-message-channels.md`；部署检查与真实账号验收以其中的日期化证据分别判定。
-- **前端视觉、布局、组件状态或无障碍**：读 `docs/standards/frontend-ui.md`；只实现当前产品契约已有的数据与操作，不用占位数据伪造目标能力。
+- **前端视觉、布局、组件状态或无障碍**：读 `docs/standards/frontend-ui.md`；状态矩阵、表单交互、视口与设计验收读 `docs/specs/frontend-ui-acceptance.md`。只实现当前产品契约已有的数据与操作，不用占位数据伪造目标能力。
 - **Runtime 契约、事件、错误或恢复**：读 `docs/technical/runtime-adapter.md`。
 - **CLI 参数、镜像版本或 Capability**：读 `docs/technical/runtime-images.md`，同时检查对应 Driver、Dockerfile 和镜像测试。
 - **Container 隔离、挂载、Egress 或 Reconcile**：读 `docs/technical/sandbox-runner.md`。
