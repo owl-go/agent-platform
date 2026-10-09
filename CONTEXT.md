@@ -9,7 +9,7 @@ The product in which an authenticated User creates private Sessions, configures 
 _Avoid_: Coding Agent Platform, multi-agent system
 
 **User**:
-An authenticated person who exclusively owns their Sessions, Workflows, Expert Teams, Personal Settings, Credit Balance, Credit Ledger, and privately created Experts, Skills, and MCP Connectors. A User may also access Platform Resources and Department Resources within their current Identity Group memberships.
+An authenticated person who exclusively owns their Sessions, Workflows, Personal Settings, Credit Balance, Credit Ledger, and privately owned resources. A User may also access Platform Resources and Department Resources within their current Identity Group memberships.
 _Avoid_: Organization member, Team member, product role
 
 **Administrator**:
@@ -361,16 +361,32 @@ _Avoid_: Runtime log, model claim, Response Snapshot, Artifact
 ## Experts, Skills, And Connectors
 
 **Platform Resource**:
-An Expert, Skill, or MCP Connector owned by an Administrator and visible to every authenticated User in the platform section of its catalog. Administrator-created resources remain editable only by that Administrator; default Expert and Skill originals distributed with the platform are immutable and may be selected alongside private resources.
+An Expert, Expert Team, Skill, or MCP Connector owned by an Administrator and visible to every authenticated User in the platform section of its catalog. Administrator-created resources remain editable only by that Administrator; default originals distributed with the platform are immutable and may be selected alongside private resources.
 _Avoid_: shared User resource, public credential, CLI Connector Definition
 
 **Expert**:
-A reusable specialist profile with an Icon, display name, display-only Introduction, visible structured guidance, and selected Skills and Connectors. Its Core Capability, Operating Procedure, Output Standard, and Cautions form its injected guidance; it does not select a Provider Model or Runtime Engine.
+A reusable specialist profile with a display name, display-only Introduction, visible Expert Guidance, and selected Skills and Connectors. It does not select a Provider Model or Runtime Engine.
 _Avoid_: Persona, Workflow
+
+**Expert Guidance**:
+The single authoritative, User-visible instruction document defining an Expert's capabilities, working method, output expectations, and constraints. Introduction remains separate display content rather than part of this guidance.
+_Avoid_: hidden prompt, duplicated form instructions, Introduction
+
+**Expert Package**:
+A portable, credential-free definition of one Expert or Expert Team, including its profile, Expert Guidance, and any bundled Skills or profile images. Its external dependencies do not grant an external account authorization.
+_Avoid_: Connector Package, credential bundle, Runtime image
+
+**Expert Package Revision**:
+An immutable content version of an Expert Package retained by a selection or execution snapshot. Updating the active package does not rewrite a retained revision.
+_Avoid_: mutable Expert, Connector Revision, Runtime image version
 
 **Profile Icon**:
 A preset symbol and background color that visually identify an Expert or Expert Team. It always has a default and is not a User-uploaded image.
 _Avoid_: Avatar file, Artifact, attachment
+
+**Profile Image**:
+An optional image that visually identifies an Expert, Expert Team, or Team Member instead of its default Profile Icon. It is profile content rather than an execution deliverable.
+_Avoid_: Artifact, attachment, Profile Icon
 
 **Introduction**:
 The display-only summary of an Expert or Expert Team. It is never injected into model instructions.
@@ -392,36 +408,40 @@ _Avoid_: Artifact format, hidden prompt
 Optional visible, User-authored constraints and pitfalls an Expert must consider while working.
 _Avoid_: platform policy, hidden prompt
 
-**Derived Expertise Tag**:
-A rebuildable, system-derived label projected from an Expert's Core Capability for discovery and display. It is not User-authored guidance.
-_Avoid_: User-authored tag, Core Capability, managed taxonomy
-
 **Expert Team**:
-A reusable named profile with an Icon, Introduction, display-only Core Capability, and an ordered list of Team Members. The same Expert may fill more than one distinctly named Team Member role, and each execution uses an immutable snapshot of its selected team.
+A reusable specialist profile created by an Administrator, with an Introduction, a Team Lead, and named Team Members whose work the Team Lead coordinates for a task. Each execution uses an immutable snapshot of its selected team.
 _Avoid_: User team, organization, visual workflow
 
+**Team Lead**:
+The role in one Expert Team responsible for interpreting the task, delegating work to selected Team Members, and producing the official response from their results.
+_Avoid_: Administrator, User, final ordered member
+
 **Team Member**:
-A stably identified, named role in one Expert Team that references an Expert and has role-specific labels. Its member name, labels, and order may change without replacing its identity; the same Expert may be referenced by multiple Team Members with isolated execution contexts.
+A stably identified, named role owned by one Expert Team, with its own Expert Guidance, resource bindings, and role-specific labels. Creating it from a catalog Expert copies that definition; later changes to the source Expert do not change the member.
 _Avoid_: Expert, User, organization member
 
 **Member Label**:
-A User-authored label describing one Team Member's responsibility within an Expert Team. It is distinct from the referenced Expert's Derived Expertise Tags.
-_Avoid_: Derived Expertise Tag, Expert capability
+A User-authored label describing one Team Member's responsibility within an Expert Team. It is role guidance rather than a discovery category.
+_Avoid_: automatically generated tag, Expert category, Expert capability
+
+**Delegated Task**:
+A bounded unit of work assigned by a Team Lead to one Team Member during an Expert Team Execution. Its identity distinguishes the requested work from the member that performs it and from any later retry of that work.
+_Avoid_: Workflow, Run, Team Member, model invocation
 
 **Subagent**:
 A platform-managed execution of one Team Member in its own isolated execution context inside an Expert Team. It uses the execution configuration frozen for the current response or Run; Runtime-specific native subagent support is not required for this behavior.
 _Avoid_: Expert selected alone, simulated persona, Runtime capability
 
 **Expert Team Execution**:
-A fail-fast collaboration in which the platform schedules every Subagent in Team Member order. Each Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes using the shared frozen execution configuration. The final member produces the official response and retry restarts the whole collaboration.
-_Avoid_: Parallel fan-out, arbitrary agent graph, coordinator synthesis
+A platform-controlled collaboration in which the Team Lead delegates work as the task requires and produces the official response. Members retain isolated execution contexts, and the platform bounds delegation, concurrency, and consumption.
+_Avoid_: fixed-order chain, arbitrary agent graph, simulated personas
 
 **Expert Snapshot**:
-The immutable Expert or Expert Team definition used by a Session response or Run, including visible profile content, structured Expert guidance, Team Member roles, member order, and exact Skill and Connector revisions. A later specialist selection or source-profile edit does not change this snapshot.
+The immutable Expert or Expert Team definition used by a Session response or Run, including its visible profile, Expert Guidance, team roles, and exact selected resource content. A later specialist selection or source-profile edit does not change this snapshot.
 _Avoid_: Current Expert, mutable team, execution configuration snapshot
 
 **Incomplete Expert**:
-A migrated or partially edited Expert missing required Introduction, Core Capability, Operating Procedure, or Output Standard content. It remains visible and editable but cannot be selected for a new Session or Run Conversation until completed.
+A migrated or partially edited Expert missing required Introduction or usable Expert Guidance. It remains visible and editable but cannot be selected for a new Session or Run Conversation until completed.
 _Avoid_: unavailable execution configuration, deleted Expert
 
 **Connector**:

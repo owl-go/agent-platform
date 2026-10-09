@@ -2,6 +2,14 @@
 
 状态：从仓库目录分发完整无凭据资源，通过 API/Worker 现有启动入口自动初始化。目录原版沿用现有默认资源权限；初始化不代表外部供应商、模型引擎或当前 Linux Worker 已通过验收。
 
+## 专家资源包重构方向
+
+2026-10-09 已确认的[专家与专家团重构设计](../product/expert-package-team-refactor.md)要求平台专家和平台专家团统一从顶层 `experts/` 目录直接加载。目标结构为 `experts/<key>/.plugin/plugin.json` 配合 `agents/`、可选 `skills/` 和 `avatars/`；清单声明专家或专家团类型，新增子目录自动发现，无需修改中心资源清单。
+
+目标加载器沿用以下已有初始化边界：启动前校验完整目录定义、稳定 Key 与版本/摘要冲突检查、Bootstrap Administrator 归属、默认原版不可修改、重复及并发初始化幂等、升级保留身份与历史快照、保护已有自定义资源、移除目录不删除数据库资源。目录初始化不提供账号授权或运行验收证据。
+
+该方向仍待最终设计确认和实现。下文的 `expert.json` 格式及仅初始化单个 Expert 的行为描述当前实现；它们不是新专家团目录加载已完成的证据。重构将同步迁移目录内容、扩展类型化加载与初始化，并验证全新安装、重复启动、并发、升级和失败路径。
+
 ## 分发内容
 
 正式资源的权威来源为顶层 `connectors/`、`skills/`、`experts/`。根 `resources.json` 仅记录 Catalog 版本 `1.0.0`，不列举资源；新增子目录自动发现，无需修改中心清单。当前内容来自已有 Platform Experts/Skills 和有效 Connector Publications 的无凭据导出，只保留定义，不分发账号、User Installation/Authorization、模型连接、凭据或原环境 Conformance 记录。
