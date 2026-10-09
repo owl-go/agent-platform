@@ -43,10 +43,15 @@
 
 ## 文档路由
 
+- **规范初始化、基线升级或规则例外**：读 `docs/standards/harness-adoption.md`，保留版本、六类适用性与项目约定；个人 skill 更新不自动改变项目规则。
+- **架构、代码、数据库、需求、测试或 UI 变化**：按触发类别读 `docs/standards/engineering-baseline.md` 的对应章节，再沿下列路由读取当前产物；规则与实现、生产验收分别判断。
+- **代码组织、错误、资源与依赖**：按基线代码章节和采用记录的技术栈映射检查；版本与命令以仓库清单、配置为准。
+- **实体、索引、事务或迁移**：读 `docs/technical/service-architecture.md` 的数据库与事务说明、受影响 Model/Repository 和不可变 Migration；兼容与恢复证据按 `docs/standards/quality-gates.md` 的 G-DB 补齐。
+- **验证选择、回归或任务交接**：读 `docs/standards/quality-gates.md`；跨层浏览器验证再读 `docs/testing/e2e.md`。用任务 AC、规则 ID 和门禁关联真实结果，长期任务持续记录进度、失败恢复与下一步。
 - **领域命名或模型关系**：读 `CONTEXT.md`。修改术语、实体边界或持久语义时同步更新它。
 - **产品行为、账号、会话、工作流或界面边界**：读 `docs/product/agent-workspace-requirements.md`。
 - **Workflow Message Channel 账号接入、发送者配对、收发验证、动态回复或重试**：读 `docs/technical/workflow-message-channels.md`；部署检查与真实账号验收以其中的日期化证据分别判定。
-- **前端视觉、布局、组件状态或无障碍**：读 `docs/standards/frontend-ui.md`；只实现当前产品契约已有的数据与操作，不用占位数据伪造目标能力。
+- **前端视觉、布局、组件状态或无障碍**：读 `docs/standards/frontend-ui.md`；状态矩阵、表单交互、视口与设计验收读 `docs/specs/frontend-ui-acceptance.md`。只实现当前产品契约已有的数据与操作，不用占位数据伪造目标能力。
 - **Runtime 契约、事件、错误或恢复**：读 `docs/technical/runtime-adapter.md`。
 - **CLI 参数、镜像版本或 Capability**：读 `docs/technical/runtime-images.md`，同时检查对应 Driver、Dockerfile 和镜像测试。
 - **Container 隔离、挂载、Egress 或 Reconcile**：读 `docs/technical/sandbox-runner.md`。
