@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Portable Experts and lead-coordinated Expert Teams
@@ -20,4 +20,4 @@ The Team Lead returns validated structured delegation or completion actions. The
 
 Limit exhaustion fails explicitly and stops remaining work. The two-hour budget measures active execution; it pauses only when all execution waits for User approval, whose individual expiry remains at most fifteen minutes. Worker interruption fails the interrupted response, retains usage and safe operation facts, and leaves retry to the User. The Task Panel projects real delegation, member state, invocation count, consumption, file conflicts, and expandable member results; the Team Lead alone provides the official answer.
 
-The confirmed design remains pending final shared-understanding review in [the refactor design](../product/expert-package-team-refactor.md). This proposal will replace ADR-0022's fixed-order execution and final-member response decision, ADR-0026's independently authored structured guidance fields, and the product's private-team creation and automatic discovery-tag rules after that review. The existing implementation still follows the earlier contracts; this record claims no implementation, deployment, or conformance evidence.
+The User confirmed the complete shared understanding on 2026-10-09 in [the refactor design](../product/expert-package-team-refactor.md). For the new refactor, this accepted decision replaces ADR-0022’s fixed-order execution and final-member response decision, ADR-0026’s independently authored structured guidance fields, and the product’s private-team creation and automatic discovery-tag rules. Historical execution remains compatible with the earlier contracts as described above. The existing implementation still follows the earlier contracts; this record claims no implementation, deployment, or conformance evidence.

@@ -1,6 +1,6 @@
 # Expert Packages and Expert Team Refactor
 
-Status: design decisions settled on 2026-10-09; final shared-understanding review pending. Includes Administrator-only team creation, deletion of legacy ordinary-User-owned team definitions, and removal of automatic tags and separate classification. No implementation or deployment is asserted.
+Status: shared understanding confirmed by the User on 2026-10-09; implementation pending. Includes Administrator-only team creation, deletion of legacy ordinary-User-owned team definitions, and removal of automatic tags and separate classification. No implementation or deployment is asserted.
 
 ## Confirmed directions
 
@@ -85,11 +85,11 @@ The existing Task Panel displays persisted delegated tasks, member states, invoc
 
 The implementation on the design baseline stores Experts as structured fields and catalog-resource references. Expert Teams have stable member identities and invoke every member in fixed order, with the final member providing the official response. Expert and Expert Team management does not yet provide the proposed package import/export contract, authoritative Markdown guidance, or Team Lead delegation.
 
-This proposal changes established contracts. [ADR-0046](../adr/0046-portable-experts-and-lead-coordinated-teams.md) records the confirmed direction and the intended replacement scope for [ADR-0022](../adr/0022-platform-managed-sequential-expert-teams.md) and [ADR-0026](../adr/0026-separate-expert-guidance-from-execution-and-connectors.md). The root [glossary](../../CONTEXT.md) records the resolved domain meanings; that vocabulary is not implementation evidence. Existing product and technical contracts continue to describe current behavior until this design is finalized and their replacement scope is explicitly recorded.
+This proposal changes established contracts. [ADR-0046](../adr/0046-portable-experts-and-lead-coordinated-teams.md) records the confirmed direction and the intended replacement scope for [ADR-0022](../adr/0022-platform-managed-sequential-expert-teams.md) and [ADR-0026](../adr/0026-separate-expert-guidance-from-execution-and-connectors.md). The root [glossary](../../CONTEXT.md) records the resolved domain meanings; that vocabulary is not implementation evidence. This confirmed design governs the refactor. Existing product and technical contracts continue to describe the earlier implementation until their affected sections are updated with implementation and validation evidence.
 
 ## Final review
 
-All interview decisions are settled. The only remaining step before implementation is the User's final confirmation of the complete shared understanding, including deletion of ordinary-User-owned team definitions and removal of automatic tags and separate classification.
+All interview decisions are settled and the User confirmed the complete shared understanding, including deletion of ordinary-User-owned team definitions, removal of automatic tags and separate classification, and directory loading of both platform resource types. No further design approval is pending.
 
 ## Implementation and validation scope
 
@@ -97,7 +97,7 @@ The refactor covers the Domain model and immutable snapshots, package parsing an
 
 Required focused tests cover package safety and content conflicts; automatic Expert/Expert Team directory discovery, repeat/concurrent initialization, managed upgrades, immutable originals, and preservation of custom resources; ordinary-User rejection of every team creation path; resource visibility and private-content isolation; removal of private-team definitions and mutable references without changing immutable history; exact revision retention; lossless conversion and historical retry; absence of automatic tag generation and category fields; roster/action validation; three-member concurrency and repeated-call identities; parallel file conflicts; transactional reservations and settlements; repair and global limits; approval expiry and active-time accounting; cancellation and interruption; and user-visible final versus member output. The implementation must execute affected package tests, backend test/build gates, frontend typecheck/build and focused interaction tests, `make resources-check`, and PostgreSQL migration/permission/accounting/default-resource integration checks when the database environment is available.
 
-Real Runtime and Linux sandbox acceptance remains a separate gate for each applicable exact image and engine. Passing local fake-runtime tests does not establish model coordination quality or production conformance. Work continues on the same development branch; commits and pushes follow the repository instructions, while integration and any release use the prescribed `main_temp` path.
+Real Runtime and Linux sandbox acceptance remains a separate gate for each applicable exact image and engine. Passing local fake-runtime tests does not establish model coordination quality or production conformance. Following the User’s explicit repository consolidation request, development starts on `codex/expert-team-refactor`, created from the refreshed `main` at tag `v1.0.2`. The earlier design branch is preserved, and its confirmed documents are carried into this development branch. Commits and pushes follow the repository instructions, while integration and any release use the prescribed `main_temp` path. Progress and acceptance tracking are recorded in [the execution ticket](../tickets/expert-package-team-refactor-execution.md).
 
 ## Evidence
 
