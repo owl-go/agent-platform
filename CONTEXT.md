@@ -365,8 +365,16 @@ An Expert, Skill, or MCP Connector owned by an Administrator and visible to ever
 _Avoid_: shared User resource, public credential, CLI Connector Definition
 
 **Expert**:
-A reusable specialist profile with an Icon, display name, display-only Introduction, visible structured guidance, and selected Skills and Connectors. Its Core Capability, Operating Procedure, Output Standard, and Cautions form its injected guidance; it does not select a Provider Model or Runtime Engine.
+A reusable specialist profile with a display name, display-only Introduction, visible Expert Guidance, and selected Skills and Connectors. It does not select a Provider Model or Runtime Engine.
 _Avoid_: Persona, Workflow
+
+**Expert Guidance**:
+The single authoritative, User-visible instruction document defining an Expert's capabilities, working method, output expectations, and constraints. Introduction remains separate display content rather than part of this guidance.
+_Avoid_: hidden prompt, duplicated form instructions, Introduction
+
+**Expert Package**:
+A portable, credential-free definition of one Expert or Expert Team, including its profile, Expert Guidance, and any bundled Skills or profile images. Its external dependencies do not grant an external account authorization.
+_Avoid_: Connector Package, credential bundle, Runtime image
 
 **Profile Icon**:
 A preset symbol and background color that visually identify an Expert or Expert Team. It always has a default and is not a User-uploaded image.
@@ -397,8 +405,12 @@ A rebuildable, system-derived label projected from an Expert's Core Capability f
 _Avoid_: User-authored tag, Core Capability, managed taxonomy
 
 **Expert Team**:
-A reusable named profile with an Icon, Introduction, display-only Core Capability, and an ordered list of Team Members. The same Expert may fill more than one distinctly named Team Member role, and each execution uses an immutable snapshot of its selected team.
+A reusable specialist profile with an Introduction, a Team Lead, and named Team Members whose work the Team Lead coordinates for a task. Each execution uses an immutable snapshot of its selected team.
 _Avoid_: User team, organization, visual workflow
+
+**Team Lead**:
+The role in one Expert Team responsible for interpreting the task, delegating work to selected Team Members, and producing the official response from their results.
+_Avoid_: Administrator, User, final ordered member
 
 **Team Member**:
 A stably identified, named role in one Expert Team that references an Expert and has role-specific labels. Its member name, labels, and order may change without replacing its identity; the same Expert may be referenced by multiple Team Members with isolated execution contexts.
@@ -413,8 +425,8 @@ A platform-managed execution of one Team Member in its own isolated execution co
 _Avoid_: Expert selected alone, simulated persona, Runtime capability
 
 **Expert Team Execution**:
-A fail-fast collaboration in which the platform schedules every Subagent in Team Member order. Each Subagent receives the current task, bounded conversation context, attachments, and all preceding Subagent results, then executes using the shared frozen execution configuration. The final member produces the official response and retry restarts the whole collaboration.
-_Avoid_: Parallel fan-out, arbitrary agent graph, coordinator synthesis
+A platform-controlled collaboration in which the Team Lead delegates work as the task requires and produces the official response. Members retain isolated execution contexts, and the platform bounds delegation, concurrency, and consumption.
+_Avoid_: fixed-order chain, arbitrary agent graph, simulated personas
 
 **Expert Snapshot**:
 The immutable Expert or Expert Team definition used by a Session response or Run, including visible profile content, structured Expert guidance, Team Member roles, member order, and exact Skill and Connector revisions. A later specialist selection or source-profile edit does not change this snapshot.
