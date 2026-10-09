@@ -19,3 +19,7 @@ markdown.renderer.rules.link_open = (tokens, index, options, _environment, rende
 export function renderMarkdown(value: string): string {
   return markdown.render(value);
 }
+
+export function renderInlineMarkdown(value: string): string {
+  return markdown.renderInline(value);
+}
