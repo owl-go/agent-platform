@@ -4,6 +4,8 @@ Status: design confirmed on 2026-10-09; refreshed development branch established
 
 The [confirmed design](../product/expert-package-team-refactor.md) and [ADR-0046](../adr/0046-portable-experts-and-lead-coordinated-teams.md) govern this task. The User explicitly approved Administrator-only Expert Teams, deletion of ordinary-User-owned team definitions without altering private historical snapshots, removal of automatic tags and separate classification, and direct discovery of both platform resource types from `experts/`.
 
+The synthesized implementation specification is published as [Issue #71](https://github.com/owl-go/agent-platform/issues/71), labeled `ready-for-agent`. It includes 68 User Stories and AC-EX-01 through AC-EX-10. On 2026-10-09 the User confirmed the test seams: the existing authenticated API is the main acceptance entry, the existing Executor and replaceable Runtime Adapter cover execution behavior, real PostgreSQL covers migration/concurrency/accounting, and component/browser checks cover the interface. No production API is added solely for testing. Publication and this confirmation do not establish implementation or test completion.
+
 ## Repository preparation
 
 The User requested consolidation before implementation, excluding the existing design branch. Pending feature branches were merged into `main_temp` and then into `main` through [PR #70](https://github.com/owl-go/agent-platform/pull/70), using a merge commit to preserve branch ancestry. `main` and `main_temp` now point to `fa701ab2709d3347d28953970fbc44c5bdda9d0c`. Annotated tag `v1.0.2` marks that baseline and has been pushed.
