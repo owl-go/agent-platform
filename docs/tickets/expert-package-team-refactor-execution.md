@@ -16,6 +16,35 @@ Git history, detached worktree heads, and non-cache ignored local files were arc
 
 Preparation validation: `make test`, `make build`, frontend tests (55 files, 626 tests), `make web-typecheck`, `make web-build`, `make resources-check`, Markdown relative-link checks, `git diff --check`, and the `AGENTS.md`/`CLAUDE.md` mirror check passed. Local PostgreSQL tests were skipped without a DSN. All four jobs of CI run `37915977726` passed, including the backend PostgreSQL and race checks, generated contracts, frontend, and deployment checks. Local component browser checks passed at 1440×1000 and 390×844; screenshots are retained in the local archive. These checks validate the integrated baseline and do not establish the new refactor’s behavior or production deployment.
 
+## Published implementation tickets
+
+On 2026-10-09 the User approved the 22-ticket breakdown. Each ticket is published with `ready-for-agent`; the 32 blocking edges are native GitHub issue dependencies and are also listed in each ticket body. The parent Issue #71 remains unchanged. Publication does not establish implementation or acceptance. Read-back verification matched all 22 approved bodies, titles, open states and labels, and all 32 exact dependencies. The initial unblocked frontier is Issues #72, #73, and #74.
+
+| Ticket | Published issue | Blocked by |
+|---|---|---|
+| T01 | [#72 — 以 Markdown 指引创建、编辑和执行单专家](https://github.com/owl-go/agent-platform/issues/72) | None |
+| T02 | [#73 — 移除自动标签生成和独立分类](https://github.com/owl-go/agent-platform/issues/73) | None |
+| T03 | [#74 — 管理员维护专家团，普通用户选择平台专家团](https://github.com/owl-go/agent-platform/issues/74) | None |
+| T04 | [#75 — 删除旧私人专家团并保留私有历史重试](https://github.com/owl-go/agent-platform/issues/75) | [#74](https://github.com/owl-go/agent-platform/issues/74) |
+| T05 | [#76 — 编辑独立团队成员并明确指定领队](https://github.com/owl-go/agent-platform/issues/76) | [#72](https://github.com/owl-go/agent-platform/issues/72), [#74](https://github.com/owl-go/agent-platform/issues/74) |
+| T06 | [#77 — 通过中性 ZIP 导入导出专家](https://github.com/owl-go/agent-platform/issues/77) | [#72](https://github.com/owl-go/agent-platform/issues/72) |
+| T07 | [#78 — 管理员通过 ZIP 导入导出独立专家团](https://github.com/owl-go/agent-platform/issues/78) | [#76](https://github.com/owl-go/agent-platform/issues/76), [#77](https://github.com/owl-go/agent-platform/issues/77) |
+| T08 | [#79 — 从目录初始化和升级平台专家](https://github.com/owl-go/agent-platform/issues/79) | [#77](https://github.com/owl-go/agent-platform/issues/77) |
+| T09 | [#80 — 从同一目录初始化和升级平台专家团](https://github.com/owl-go/agent-platform/issues/80) | [#78](https://github.com/owl-go/agent-platform/issues/78), [#79](https://github.com/owl-go/agent-platform/issues/79) |
+| T10 | [#81 — 编辑和携带专家头像与开场提示](https://github.com/owl-go/agent-platform/issues/81) | [#78](https://github.com/owl-go/agent-platform/issues/78) |
+| T11 | [#82 — 会话式创建统一专家与管理员专家团](https://github.com/owl-go/agent-platform/issues/82) | [#81](https://github.com/owl-go/agent-platform/issues/81) |
+| T12 | [#83 — 在 Session 中由领队按需委派并给出正式回答](https://github.com/owl-go/agent-platform/issues/83) | [#76](https://github.com/owl-go/agent-platform/issues/76) |
+| T13 | [#84 — 在 Workflow 中完成领队协作并成功后提交 Workspace](https://github.com/owl-go/agent-platform/issues/84) | [#83](https://github.com/owl-go/agent-platform/issues/83) |
+| T14 | [#85 — 执行包内技能并绑定用户自己的连接器](https://github.com/owl-go/agent-platform/issues/85) | [#78](https://github.com/owl-go/agent-platform/issues/78), [#84](https://github.com/owl-go/agent-platform/issues/84) |
+| T15 | [#86 — 并行执行三个成员并由领队处理文件冲突](https://github.com/owl-go/agent-platform/issues/86) | [#84](https://github.com/owl-go/agent-platform/issues/84) |
+| T16 | [#87 — 允许一次任务修复并拒绝未完成的必需工作](https://github.com/owl-go/agent-platform/issues/87) | [#83](https://github.com/owl-go/agent-platform/issues/83) |
+| T17 | [#88 — 按响应 Credit 预算准入每次调用](https://github.com/owl-go/agent-platform/issues/88) | [#83](https://github.com/owl-go/agent-platform/issues/83) |
+| T18 | [#89 — 全体等待审批时暂停主动执行计时](https://github.com/owl-go/agent-platform/issues/89) | [#86](https://github.com/owl-go/agent-platform/issues/86) |
+| T19 | [#90 — 中断后明确失败并由用户决定重试](https://github.com/owl-go/agent-platform/issues/90) | [#86](https://github.com/owl-go/agent-platform/issues/86) |
+| T20 | [#91 — 在 Task Panel 展示真实委派与成员结果](https://github.com/owl-go/agent-platform/issues/91) | [#86](https://github.com/owl-go/agent-platform/issues/86), [#87](https://github.com/owl-go/agent-platform/issues/87) |
+| T21 | [#92 — 收口旧写入和目录原件，保留历史读取](https://github.com/owl-go/agent-platform/issues/92) | [#73](https://github.com/owl-go/agent-platform/issues/73), [#80](https://github.com/owl-go/agent-platform/issues/80), [#82](https://github.com/owl-go/agent-platform/issues/82), [#84](https://github.com/owl-go/agent-platform/issues/84) |
+| T22 | [#93 — 完成跨入口验收和迁移恢复证据](https://github.com/owl-go/agent-platform/issues/93) | [#85](https://github.com/owl-go/agent-platform/issues/85), [#88](https://github.com/owl-go/agent-platform/issues/88), [#89](https://github.com/owl-go/agent-platform/issues/89), [#90](https://github.com/owl-go/agent-platform/issues/90), [#91](https://github.com/owl-go/agent-platform/issues/91), [#92](https://github.com/owl-go/agent-platform/issues/92) |
+
 ## Acceptance tracking
 
 Each acceptance item requires implementation and focused evidence before completion. These items are all pending; the baseline checks above do not count as refactor acceptance.
