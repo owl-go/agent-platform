@@ -413,12 +413,16 @@ The role in one Expert Team responsible for interpreting the task, delegating wo
 _Avoid_: Administrator, User, final ordered member
 
 **Team Member**:
-A stably identified, named role in one Expert Team that references an Expert and has role-specific labels. Its member name, labels, and order may change without replacing its identity; the same Expert may be referenced by multiple Team Members with isolated execution contexts.
+A stably identified, named role owned by one Expert Team, with its own Expert Guidance, resource bindings, and role-specific labels. Creating it from a catalog Expert copies that definition; later changes to the source Expert do not change the member.
 _Avoid_: Expert, User, organization member
 
 **Member Label**:
-A User-authored label describing one Team Member's responsibility within an Expert Team. It is distinct from the referenced Expert's Derived Expertise Tags.
+A User-authored label describing one Team Member's responsibility within an Expert Team. It is distinct from system-derived discovery tags.
 _Avoid_: Derived Expertise Tag, Expert capability
+
+**Delegated Task**:
+A bounded unit of work assigned by a Team Lead to one Team Member during an Expert Team Execution. Its identity distinguishes the requested work from the member that performs it and from any later retry of that work.
+_Avoid_: Workflow, Run, Team Member, model invocation
 
 **Subagent**:
 A platform-managed execution of one Team Member in its own isolated execution context inside an Expert Team. It uses the execution configuration frozen for the current response or Run; Runtime-specific native subagent support is not required for this behavior.
@@ -429,7 +433,7 @@ A platform-controlled collaboration in which the Team Lead delegates work as the
 _Avoid_: fixed-order chain, arbitrary agent graph, simulated personas
 
 **Expert Snapshot**:
-The immutable Expert or Expert Team definition used by a Session response or Run, including visible profile content, structured Expert guidance, Team Member roles, member order, and exact Skill and Connector revisions. A later specialist selection or source-profile edit does not change this snapshot.
+The immutable Expert or Expert Team definition used by a Session response or Run, including its visible profile, Expert Guidance, team roles, and exact selected resource content. A later specialist selection or source-profile edit does not change this snapshot.
 _Avoid_: Current Expert, mutable team, execution configuration snapshot
 
 **Incomplete Expert**:
