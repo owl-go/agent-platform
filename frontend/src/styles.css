@@ -544,10 +544,11 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
   .image-preview-hint { padding-bottom: max(16px,env(safe-area-inset-bottom)); }
 }
 
-.runtime-activity-current { min-width: 0; }
-.runtime-activity-current strong { flex: none; white-space: nowrap; }
-.runtime-activity-current small { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.runtime-activity-current { display: grid; grid-template-columns: 7px minmax(0,1fr); min-width: 0; }
+.runtime-activity-current strong { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.runtime-activity-current small { grid-column: 2; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .activity-pulse { flex: none; }
+.runtime-activity-current > .activity-pulse { align-self: start; margin-top: 6px; }
 .runtime-activity li div { min-width: 0; }
 .runtime-activity li strong { flex: none; white-space: nowrap; }
 .runtime-activity li small { min-width: 0; overflow-wrap: anywhere; }
@@ -1055,7 +1056,7 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .runtime-activity-current { min-height: 38px; padding: 9px 12px; border: 1px solid var(--aw-running-border); border-radius: var(--aw-radius-input); background: var(--aw-running-soft); }
 .runtime-activity-current strong { color: var(--aw-n10); font: 600 12.5px/1.5 var(--aw-font-mono); }
 .activity-pulse { width: 7px; height: 7px; background: var(--aw-running); }
-.runtime-activity-history > summary { display: flex; align-items: center; gap: 8px; min-height: 34px; color: var(--aw-n8); }
+.runtime-activity-history > summary { display: flex; flex-wrap: wrap; width: 100%; align-items: center; gap: 8px; min-height: 34px; color: var(--aw-n8); }
 .runtime-activity-history > summary strong { font-size: 12.5px; font-weight: 600; }
 .runtime-activity-history > summary small { color: var(--aw-n6); font: 11.5px/1.5 var(--aw-font-mono); }
 .runtime-activity .activity-summary-group > summary { min-height: 38px; padding: 9px 12px; border-color: var(--aw-n4); border-radius: var(--aw-radius-input); background: var(--aw-n1); color: var(--aw-n8); }
