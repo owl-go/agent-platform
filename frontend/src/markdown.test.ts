@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderMarkdown } from "./markdown";
+import { renderInlineMarkdown, renderMarkdown } from "./markdown";
 
 describe("renderMarkdown", () => {
   it("renders common Markdown structures", () => {
@@ -26,5 +26,19 @@ describe("renderMarkdown", () => {
 
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
+  });
+});
+
+describe("renderInlineMarkdown", () => {
+  it("formats summary emphasis without block elements", () => {
+    expect(renderInlineMarkdown("**Samples** and `prices`")).toBe("<strong>Samples</strong> and <code>prices</code>");
+  });
+
+  it("keeps untrusted HTML, unsafe links and remote images inert", () => {
+    const html = renderInlineMarkdown('<img src=x onerror=alert(1)> [x](javascript:alert(1)) ![tracker](https://example.com/pixel.gif)');
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain('href="javascript:');
+    expect(html).toContain("&lt;img");
+    expect(html).toContain("tracker");
   });
 });

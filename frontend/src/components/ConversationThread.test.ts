@@ -17,6 +17,34 @@ function mountThread(messages: ConversationMessage[], locale: "zh-CN" | "en-US" 
 afterEach(() => vi.restoreAllMocks());
 
 describe("ConversationThread", () => {
+  it("renders a long public summary once with inline formatting in the current activity", () => {
+    const detail = "**Organizing price samples** I'm thinking about needing stronger primary samples for other subcategories. " + "Checking evidence. ".repeat(12);
+    const wrapper = mountThread([{
+      id: "assistant-summary", role: "assistant", content: "", state: "running", timestamp: "2026-10-09T08:08:30Z",
+      currentActivity: { id: 1, label: detail, detail },
+      activities: [{ id: 1, label: detail, kind: "reasoning", state: "running", items: [{ id: 1, label: "思考过程", detail }] }],
+    }]);
+
+    const current = wrapper.get(".runtime-activity-current");
+    expect(current.text().split("Organizing price samples")).toHaveLength(2);
+    expect(current.get("strong strong").text()).toBe("Organizing price samples");
+    expect(current.find("small").exists()).toBe(false);
+    expect(wrapper.get(".activity-summary-group > summary strong strong").text()).toBe("Organizing price samples");
+    wrapper.unmount();
+  });
+
+  it("keeps distinct command details as literal text", () => {
+    const detail = "cli --filter '**samples**'";
+    const wrapper = mountThread([{
+      id: "assistant-command", role: "assistant", content: "", state: "running", timestamp: "2026-10-09T08:08:30Z",
+      currentActivity: { id: 1, label: "执行工具操作", detail },
+      activities: [{ id: 1, label: "执行工具操作", kind: "tool", state: "running", items: [{ id: 1, label: "命令", detail }] }],
+    }]);
+    expect(wrapper.get(".runtime-activity-current small").text()).toBe(detail);
+    expect(wrapper.get(".runtime-activity-current small").find("strong").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it("renders Session and Workflow-shaped messages through the same transcript", () => {
     const wrapper = mountThread([
       { id: "user-1", role: "user", content: "用户原文", state: "succeeded", timestamp: "2026-08-25T12:00:00Z" },
