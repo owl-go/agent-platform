@@ -72,3 +72,10 @@ func TestApplyCatalogResultRecordsDiscoveryFailureWithoutDefaults(t *testing.T) 
 		t.Fatalf("unexpected failed discovery result: connection=%+v models=%+v", connection, result)
 	}
 }
+
+func TestPublicProviderNameConflict(t *testing.T) {
+	err := kratoserrors.FromError(publicError(errors.Join(domain.ErrProviderNameConflict, errors.New("private SQL credential"))))
+	if err.Code != http.StatusConflict || err.Reason != "model_provider_name_conflict" || err.Message != "Model Provider Connection name already exists; choose another name" {
+		t.Fatalf("name conflict must remain distinct from version conflict: %v", err)
+	}
+}

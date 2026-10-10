@@ -17,6 +17,7 @@ import (
 var (
 	ErrNotFound                      = errors.New("resource not found")
 	ErrConflict                      = errors.New("resource conflicts with current state")
+	ErrProviderNameConflict          = errors.New("Model Provider Connection name already exists")
 	ErrInvalid                       = errors.New("resource is invalid")
 	ErrQueueFull                     = errors.New("workflow queue is full")
 	ErrWorkflowCredentialUnavailable = errors.New("workflow credential secret is unavailable")

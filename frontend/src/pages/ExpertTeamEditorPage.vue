@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, Plus, X } from "@lucide/vue";
@@ -37,7 +38,7 @@ onMounted(async () => {
 function addMember() { const expert = experts.value.find((item) => item.id === selectedExpertID.value); if (expert && form.value.members.length < 10) form.value.members.push({ id: crypto.randomUUID(), name: expert.name, expert_id: expert.id, labels: [] }); selectedExpertID.value = ""; }
 function move(index: number, offset: number) { const target = index + offset; if (target < 0 || target >= form.value.members.length) return; const [member] = form.value.members.splice(index, 1); form.value.members.splice(target, 0, member!); }
 function dropMember(target: number) { const source = draggedIndex.value; draggedIndex.value = undefined; if (source === undefined || source === target) return; const [member] = form.value.members.splice(source, 1); form.value.members.splice(target, 0, member!); }
-async function save() { saving.value = true; try { if (team.value) await api.updateExpertTeam(team.value.id, form.value, team.value.version); else await api.createExpertTeam(form.value); toast.value = { kind: "success", message: t("experts.teamSaved") }; window.setTimeout(() => void router.push("/experts?tab=teams"), 350); } catch { toast.value = { kind: "error", message: t("experts.teamSaveFailed") }; } finally { saving.value = false; } }
+async function save() { saving.value = true; try { if (team.value) await api.updateExpertTeam(team.value.id, form.value, team.value.version); else await api.createExpertTeam(form.value); toast.value = { kind: "success", message: t("experts.teamSaved") }; window.setTimeout(() => void router.push("/experts?tab=teams"), 350); } catch (cause) { toast.value = { kind: "error", message: saveErrorMessage(cause, t, "experts.teamSaveFailed") }; } finally { saving.value = false; } }
 async function remove() { if (!team.value) return; try { await api.deleteExpertTeam(team.value.id); await router.push("/experts?tab=teams"); } catch { toast.value = { kind: "error", message: t("experts.deleteTeamFailed") }; } }
 </script>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Plus } from "@element-plus/icons-vue";
@@ -55,7 +56,7 @@ async function create() {
     createDialogOpen.value = false;
   } catch (cause) {
     if (created) await api.deleteSmartAssistant(created.id).catch(() => undefined);
-    error.value = created ? t("aiApplications.iconUploadFailed") : cause instanceof ApiError && cause.code === "assistant_model_unavailable" ? t("aiApplications.modelUnavailable") : t("aiApplications.saveFailed");
+    error.value = saveErrorMessage(cause, t, created ? "aiApplications.iconUploadFailed" : "aiApplications.saveFailed");
   } finally { creating.value = false; }
 }
 function openCreate() { createDialogOpen.value = true; }
@@ -95,7 +96,7 @@ async function toggleState(item: SmartAssistant) {
     }
     const updated = await api.setSmartAssistantState(item.id, next, item.version);
     items.value = items.value.map((candidate) => candidate.id === updated.id ? updated : candidate);
-  } catch { error.value = t("aiApplications.saveFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "aiApplications.saveFailed"); }
 }
 async function inspectPublication(item: SmartAssistant) {
   try {

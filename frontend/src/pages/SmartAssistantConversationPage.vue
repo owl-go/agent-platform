@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -109,7 +110,7 @@ async function clearConversation() {
   try {
     const created = await api.createAssistantConversation(assistantID.value);
     await router.push(`/ai-apps/assistants/${encodeURIComponent(assistantID.value)}/conversations/${encodeURIComponent(created.id)}`);
-  } catch { error.value = t("aiApplications.chat.newFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "aiApplications.chat.newFailed"); }
   finally { creating.value = false; }
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { inject, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeft } from "@lucide/vue";
@@ -47,8 +48,8 @@ async function save() {
     else await api.createExpert(form.value);
     toast.value = { kind: "success", message: t("experts.saved") };
     window.setTimeout(() => void router.push("/experts"), 350);
-  } catch {
-    toast.value = { kind: "error", message: t("experts.saveFailed") };
+  } catch (cause) {
+    toast.value = { kind: "error", message: saveErrorMessage(cause, t, "experts.saveFailed") };
   } finally {
     saving.value = false;
   }

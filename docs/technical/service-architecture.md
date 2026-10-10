@@ -79,6 +79,8 @@ AI Creation 使用普通 Proto/HTTP API 管理 Image Model、Prompt Optimization
 - `GET /api/v1/workflows/{workflow_id}/workspace/download?path=...`：认证后流式下载 Workspace 文件。
 - Workspace HTTP API 只提供目录查看、文本预览和文件下载；Git Clone 由 `/api/v1/workflows/{workflow_id}/git-source` 设置入口完成。
 
+保存失败使用现有 Kratos Error 的 `reason`、公开 `message` 与 `X-Request-ID`：前端保留 `invalid_input` / `invalid_request_body` 的公开校验说明，其他供应商原始说明不进入通用提示。公共错误格式器被各保存入口复用，优先展示明确业务原因，并提供已知故障类别和恢复动作；未知原因如实标记，保留请求编号。Model Provider Connection 的名称唯一约束在 GORM Adapter 中转换为领域名称冲突，新增与改名返回 HTTP 409 / `model_provider_name_conflict`；版本 CAS 失败继续返回 HTTP 412 / `version_conflict`。未识别的数据库错误保留内部 cause，不向 API 回传 SQL、约束内容或凭证。
+
 ## Secret
 
 Model Provider API Key、Workflow Secret 环境变量、MCP Secret、CLI App ID/App Secret/Token、Git HTTPS 密码/Token 和 Git SSH 私钥使用服务端数据密钥加密。读取 API 只返回 `configured` 或外部身份元数据，不返回明文，Administrator 也无权读取 User Connector Secret。Workflow SSH config 不是 Secret，但只接受无命令执行能力的连接字段；Git Clone 时与私钥一起物化到隔离的临时 HOME，私钥文件名匹配受限的 `IdentityFile`，并继续使用管理员固定的 `known_hosts`。执行时其他 Secret 物化为单次任务的 0600 文件，经公共 Entrypoint 或 Wrapper 导入；Runtime 输出、Event、结果和 Artifact 在持久化前使用精确值脱敏。
