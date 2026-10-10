@@ -79,7 +79,7 @@ AI Creation 使用普通 Proto/HTTP API 管理 Image Model、Prompt Optimization
 - `GET /api/v1/workflows/{workflow_id}/workspace/download?path=...`：认证后流式下载 Workspace 文件。
 - Workspace HTTP API 只提供目录查看、文本预览和文件下载；Git Clone 由 `/api/v1/workflows/{workflow_id}/git-source` 设置入口完成。
 
-保存失败使用现有 Kratos Error 的 `reason`、公开 `message` 与 `X-Request-ID`：前端保留 `invalid_input` / `invalid_request_body` 的公开校验说明，其他供应商原始说明不进入通用提示。公共错误格式器被各保存入口复用，优先展示明确业务原因，并提供已知故障类别和恢复动作；未知原因如实标记，保留请求编号。Model Provider Connection 的名称唯一约束在 GORM Adapter 中转换为领域名称冲突，新增与改名返回 HTTP 409 / `model_provider_name_conflict`；版本 CAS 失败继续返回 HTTP 412 / `version_conflict`。未识别的数据库错误保留内部 cause，不向 API 回传 SQL、约束内容或凭证。
+保存失败使用现有 Kratos Error 的 `reason`、公开 `message` 与 `X-Request-ID`：前端保留 `invalid_input` / `invalid_request_body` 的公开校验说明，其他供应商原始说明不进入通用提示。公共错误格式器被各保存入口复用，优先展示明确业务原因，并提供已知故障类别和恢复动作；未知原因如实标记，保留请求编号。生产 PostgreSQL Dialector 的错误转换同时保留 GORM 标准分类与原始 cause（包括 SQLSTATE 和约束名）；集成测试使用 API/Worker 的实际数据库连接工厂验证该行为。Model Provider Connection 的名称唯一约束在 GORM Adapter 中转换为领域名称冲突，新增与改名返回 HTTP 409 / `model_provider_name_conflict`；版本 CAS 失败继续返回 HTTP 412 / `version_conflict`。未识别的数据库错误保留内部 cause，不向 API 回传 SQL、约束内容或凭证。
 
 ## Secret
 
