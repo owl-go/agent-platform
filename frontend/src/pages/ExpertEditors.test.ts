@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type Expert, type ExpertInput, type ExpertTeamInput, type PlatformApi } from "../api/client";
+import { platformApiKey, type Expert, type ExpertTeamInput, type PlatformApi } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import ExpertEditorPage from "./ExpertEditorPage.vue";
@@ -22,28 +22,16 @@ function mountOptions(api: PlatformApi, router: ReturnType<typeof createAppRoute
 }
 
 describe("Expert editors", () => {
-  it("saves one authoritative Markdown document without execution settings", async () => {
-    const createExpert = vi.fn(async (input: ExpertInput) => ({ ...experts[0], ...input }));
-    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), createExpert } as unknown as PlatformApi;
+  it("routes direct Expert creation through the Create Expert Skill", async () => {
+    const api = { createExpert: vi.fn() } as unknown as PlatformApi;
     const router = createAppRouter(createMemoryHistory());
     await router.push("/experts/new");
     const wrapper = mount(ExpertEditorPage, mountOptions(api, router));
     await flushPromises();
-    expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
-    expect(wrapper.find(".extension-manager").exists()).toBe(false);
-    expect(wrapper.find(".expert-resource-selector").exists()).toBe(true);
-    expect(wrapper.find(".form-grid > label .icon-picker-upload").exists()).toBe(false);
-    const inputs = wrapper.findAll('input[type="text"]');
-    const textareas = wrapper.findAll("textarea");
-    await inputs[0]!.setValue("架构专家");
-    await wrapper.get('button[aria-label="code"]').trigger("click");
-    await textareas[0]!.setValue("展示用简介");
-    expect(textareas).toHaveLength(2);
-    await textareas[1]!.setValue("# 架构设计\n\n先分析约束，再提出方案。");
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-    expect(createExpert).toHaveBeenCalledWith(expect.objectContaining({ icon: "code", introduction: "展示用简介", guidance: "# 架构设计\n\n先分析约束，再提出方案。" }));
-    expect(wrapper.text()).not.toContain("运行引擎");
+    expect(router.currentRoute.value.path).toBe("/sessions");
+    expect(router.currentRoute.value.query.create_expert).toBe("true");
+    expect(api.createExpert).not.toHaveBeenCalled();
+    expect(wrapper.find("textarea").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -87,4 +75,13 @@ describe("Expert editors", () => {
     expect(listExperts).not.toHaveBeenCalled();
     wrapper.unmount();
   });
+});
+
+it("opens existing Team editing with only member resource dropdowns", async () => {
+ const team = {id: "team", name: "Review team", mutable: true, version: 1, lead_member_id: "lead", introduction: "Review together", core_capability: "Review", starter_prompts: ["Review a plan"], members: [{id: "lead", name: "Lead", labels: ["Coordination"], expert: experts[0]}, {id: "reviewer", name: "Reviewer", labels: ["Review"], expert: experts[1]}]};
+ const api = {listExperts: vi.fn(async () => experts), getExpertTeam: vi.fn(async () => team), listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => [])} as unknown as PlatformApi;
+ const router = createAppRouter(createMemoryHistory()); await router.push("/expert-teams/team");
+ const wrapper = mount(ExpertTeamEditorPage, mountOptions(api, router, true)); await flushPromises();
+ expect(api.getExpertTeam).toHaveBeenCalledWith("team"); expect(api.listExperts).not.toHaveBeenCalled(); expect(api.listSkills).toHaveBeenCalledTimes(1);
+ expect(wrapper.find("textarea").exists()).toBe(false); expect(wrapper.find(".member-picker").exists()).toBe(false); expect(wrapper.findAllComponents({name: "ExpertResourceSelector"})).toHaveLength(2); wrapper.unmount();
 });

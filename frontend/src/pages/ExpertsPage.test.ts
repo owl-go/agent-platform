@@ -62,7 +62,11 @@ describe("ExpertsPage", () => {
     expect(wrapper.find(".filter-label").exists()).toBe(false);
     expect(wrapper.find(".tag-filter").exists()).toBe(false);
     expect(wrapper.find(".expert-tags").exists()).toBe(false);
-    expect(wrapper.find("a[href='/experts/new']").exists()).toBe(true);
+    expect(wrapper.find("a[href='/experts/new']").exists()).toBe(false);
+    expect(wrapper.get(".catalog-head-actions").text()).toContain("添加专家");
+    expect(wrapper.get(".catalog-head-actions").findAll("button")).toHaveLength(2);
+    expect(wrapper.find(".package-copy-name").exists()).toBe(false);
+    expect(wrapper.get(".catalog-head-actions").find(".el-select").exists()).toBe(false);
   });
 
   it("reveals only my Experts from the header action", async () => {
@@ -114,6 +118,23 @@ it("imports an Expert ZIP and shows its saved definition without starting a Sess
  const wrapper=mount(ExpertsPage,{global:{plugins:[router,createAppI18n({getItem:()=>"zh-CN"},"zh-CN")],provide:{[platformApiKey as symbol]:testApi}}});await flushPromises();
  const file=new File(["fixture"],"expert.zip",{type:"application/zip"});
  const input=wrapper.get<HTMLInputElement>("input.package-import-file");Object.defineProperty(input.element,"files",{value:[file]});await input.trigger("change");await flushPromises();
- expect(testApi.importExpertPackage).toHaveBeenCalledWith(file,undefined);
+ expect(testApi.importExpertPackage).toHaveBeenCalledWith(file);
  expect(wrapper.findComponent({name:"CatalogDetails"}).props("expert")?.guidance).toBe("# Imported");expect(router.currentRoute.value.path).toBe("/resources");wrapper.unmount();
+});
+
+it("creates through the Create Expert Skill from the add menu", async () => {
+ const router = createAppRouter(createMemoryHistory()); await router.push("/experts");
+ const testApi = api(); const wrapper = mount(ExpertsPage, { global: { plugins: [router, createAppI18n({getItem: () => "zh-CN"}, "zh-CN")], provide: {[platformApiKey as symbol]: testApi} } }); await flushPromises();
+ wrapper.getComponent({name: "ElDropdown"}).vm.$emit("command", "create"); await flushPromises();
+ expect(router.currentRoute.value.path).toBe("/sessions"); expect(router.currentRoute.value.query.create_expert).toBe("true"); expect(router.currentRoute.value.query.new).toBeTruthy(); wrapper.unmount();
+});
+it("rejects invalid ZIP files before upload and preserves the catalog on server rejection", async () => {
+ const router = createAppRouter(createMemoryHistory()); await router.push("/experts");
+ const testApi = api(); testApi.importExpertPackage = vi.fn(async () => { throw new Error("invalid profile"); });
+ const wrapper = mount(ExpertsPage, {global: {plugins: [router, createAppI18n({getItem: () => "zh-CN"}, "zh-CN")], provide: {[platformApiKey as symbol]: testApi}}}); await flushPromises();
+ const input = wrapper.get<HTMLInputElement>("input.package-import-file");
+ Object.defineProperty(input.element, "files", {value: [new File(["invalid"], "expert.json")], configurable: true}); await input.trigger("change"); await flushPromises();
+ expect(testApi.importExpertPackage).not.toHaveBeenCalled(); expect(wrapper.text()).toContain("100 MiB");
+ Object.defineProperty(input.element, "files", {value: [new File(["invalid"], "expert.zip")], configurable: true}); await input.trigger("change"); await flushPromises();
+ expect(testApi.importExpertPackage).toHaveBeenCalledTimes(1); expect(wrapper.text()).toContain("导入失败"); expect(wrapper.get(".expert-card h2").text()).toBe("架构专家"); expect(input.element.value).toBe(""); wrapper.unmount();
 });

@@ -87,7 +87,7 @@ Object.assign(zh.experts, {
   basic: "基本信息", basicHint: "能力介绍仅用于目录展示；执行指令会在专家运行时注入。", instructionHint: "这是专家唯一的角色指令，不会添加隐藏提示词。",
   expertiseHint: "最多 10 个标签，每个不超过 20 个字符。", addTag: "添加标签", tagPlaceholder: "输入后按 Enter", extensions: "扩展",
   extensionsHint: "绑定此专家可以使用的 MCP 与 Skills。", extensionFailed: "扩展操作失败", saved: "专家已保存", teamSaved: "专家团已保存",
-  saveFailed: "保存失败，请检查名称、能力介绍和执行指令", teamSaveFailed: "保存失败，专家团需要 2–10 位不同的可用专家",
+  saveFailed: "保存失败，请检查资源是否可用；版本冲突时请重新打开后再试。", teamSaveFailed: "保存失败，专家团需要 2–10 位不同的可用专家",
   operationFailed: "操作失败", saveSucceeded: "保存成功", teamInfo: "团队信息", teamInfoHint: "介绍只用于展示，团队不包含额外执行指令。",
   teamName: "专家团名称", members: "团队成员", membersHint: "领队根据任务委派成员并汇总结果。显示顺序不决定执行顺序。",
   chooseExpert: "选择可用专家", add: "添加", sequential: "领队协调", moveUp: "上移 {name}", moveDown: "下移 {name}", removeMember: "移除 {name}",
@@ -157,7 +157,7 @@ Object.assign(en.experts, {
   basic: "Basic information", basicHint: "The capability introduction is display-only; the execution instruction is injected while this Expert runs.", instructionHint: "This is the Expert's only role instruction. No hidden prompt is added.",
   expertiseHint: "Up to 10 tags, 20 characters each.", addTag: "Add tag", tagPlaceholder: "Type and press Enter", extensions: "Extensions",
   extensionsHint: "Bind the MCP servers and Skills this Expert may use.", extensionFailed: "Extension operation failed", saved: "Expert saved", teamSaved: "Expert Team saved",
-  saveFailed: "Save failed. Check the name, capability introduction, and execution instruction.", teamSaveFailed: "Save failed. A team requires 2–10 distinct available Experts.",
+  saveFailed: "Save failed. Check resource availability; reopen the resource if its version changed.", teamSaveFailed: "Save failed. A team requires 2–10 distinct available Experts.",
   operationFailed: "Operation failed", saveSucceeded: "Saved", teamInfo: "Team information", teamInfoHint: "The introduction is display-only. A team has no additional execution instruction.",
   teamName: "Team name", members: "Team members", membersHint: "The Team Lead delegates work and synthesizes results. Display order does not determine execution order.",
   chooseExpert: "Choose an available Expert", add: "Add", sequential: "Lead coordination", moveUp: "Move {name} up", moveDown: "Move {name} down", removeMember: "Remove {name}",
@@ -713,3 +713,6 @@ Object.assign((en as unknown as { channels: Record<string, unknown> }).channels,
 
 Object.assign(zh.sessions,{resourceActionTeam:"专家团创建预览"});
 Object.assign(en.sessions,{resourceActionTeam:"Expert Team creation preview"});
+
+Object.assign(zh.experts, { addExpert: "添加专家", addTeam: "添加专家团", commonTasks: "可以帮你做", invalidPackageFile: "请选择不超过 100 MiB 的专家 ZIP 包。", readOnly: "此资源仅可查看。" });
+Object.assign(en.experts, { addExpert: "Add Expert", addTeam: "Add Expert Team", commonTasks: "Can help you with", invalidPackageFile: "Choose an Expert ZIP package up to 100 MiB.", readOnly: "This resource is read-only." });
