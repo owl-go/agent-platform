@@ -23,4 +23,8 @@
 
 ## 发布
 
-本次通过 `main_temp` 发布；实际发布与公共资源检查完成后补记。
+功能提交 `c48121f` 已推送并经 `main_temp` 集成。第一次 `make deploy` 在切换前被 2 GiB 可用空间门禁阻止，可用空间为 2,003,763,200 字节，原版本仍在运行。只执行 `docker builder prune --force` 清理未使用的构建缓存，Docker 报告回收 3.856 GB；随后可用空间为 5,859,905,536 字节，API 与 Worker 仍健康。没有删除备份、发布目录、镜像、容器或数据卷。
+
+重试原发布命令成功，固定来源为 `c48121fc4373da4cecc66aa9ecdba2b2e28315c3`，发布编号 `app-20261010T113738Z-ff3ce29f`，只更新前端。只读脚本 `output/playwright/verify-expert-draft-release.py` 核实来源与发布指针，并检查目录组件包含 draft 参数、新卡片结构及本地化任务入口，同时已移除直接调用 sendSessionMessage 的逻辑。
+
+公共 HTTPS 健康、Readiness、OIDC 和入口资源检查通过；从公网回读 `ResourceCenterPage-BRhcnRiX.js`、`index-CyMnwV8x.css` 并与实际发布逐字节比较一致。API 与 Worker 均为 healthy，后端镜像和来源摘要通过既有核验。上述公共资源检查不替代真实账号发送验收。
