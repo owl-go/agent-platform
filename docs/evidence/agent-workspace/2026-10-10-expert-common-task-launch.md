@@ -24,4 +24,8 @@ AC-TASK-01/02/04 对应 UI-002、COD-002/006、AC-UI-03/05，AC-TASK-03 对应 U
 
 ## 发布
 
-代码与证据将经 `main_temp` 集成，发布及线上静态资源核验结果在实际执行后补记。
+功能提交 `678d2e1` 已推送并经 `main_temp` 集成。`make deploy` 发布固定来源 `678d2e1c1047f5641a769ff03e475bd690a12abb`，发布编号 `app-20261010T105641Z-a1c0be1c`，只更新前端。
+
+发布后的只读脚本 `output/playwright/verify-expert-task-release.py` 核实来源修订和前端发布指针，公共 HTTPS 健康、Readiness、OIDC、入口及静态内容均通过。包含新任务交互的 `ResourceCenterPage-Dpzvh-xK.js` 和 `index-DNhjqaa_.css` 已从公网下载并与服务器发布字节逐项比较；相关 `assistant-embed.js` 样式产物也一致。API 与 Worker 均为 healthy，后端镜像和来源摘要仍通过既有检查。本次没有数据库或后端实现改动，也没有新增生产数据。
+
+发布检查证明新前端资源已生效，不替代真实账号点击、API 提交和模型响应的生产闭环；这些仍未验收。
