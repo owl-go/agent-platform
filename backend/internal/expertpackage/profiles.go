@@ -9,15 +9,16 @@ import (
 )
 
 type TeamProfile struct {
-	StarterPrompts []string `json:"starter_prompts,omitempty"`
-	AvatarFile     string   `json:"avatar_file,omitempty"`
-	Name           string   `json:"name"`
-	Introduction   string   `json:"introduction"`
-	Icon           string   `json:"icon,omitempty"`
-	IconBackground string   `json:"icon_background,omitempty"`
-	CoreCapability string   `json:"core_capability"`
-	LeadMemberID   string   `json:"lead_member_id"`
-	Members        []Member `json:"members"`
+	Translations   *DisplayTranslations `json:"translations,omitempty"`
+	StarterPrompts []string             `json:"starter_prompts,omitempty"`
+	AvatarFile     string               `json:"avatar_file,omitempty"`
+	Name           string               `json:"name"`
+	Introduction   string               `json:"introduction"`
+	Icon           string               `json:"icon,omitempty"`
+	IconBackground string               `json:"icon_background,omitempty"`
+	CoreCapability string               `json:"core_capability"`
+	LeadMemberID   string               `json:"lead_member_id"`
+	Members        []Member             `json:"members"`
 }
 
 type Member struct {
@@ -29,6 +30,9 @@ type Member struct {
 
 func readProfile(profile *Profile, files map[string][]byte, used map[string]bool) (domain.ExpertInput, error) {
 	var result domain.ExpertInput
+	if err := profile.Translations.validate(profile.Name, profile.Introduction, profile.StarterPrompts); err != nil {
+		return result, err
+	}
 	guidance, ok := files[profile.GuidanceFile]
 	if !ok || used[profile.GuidanceFile] || !strings.HasPrefix(profile.GuidanceFile, "agents/") || !strings.HasSuffix(profile.GuidanceFile, ".md") {
 		return result, fmt.Errorf("%w: Expert needs its own referenced Markdown document", domain.ErrInvalid)

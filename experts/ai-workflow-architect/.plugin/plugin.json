@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.ai-workflow-architect",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "AI 工作流架构师",
@@ -13,6 +13,26 @@
       "把这项业务流程设计成 AI 工作流方案",
       "评审现有工作流的提示词、工具和失败处理",
       "为工作流制定验证用例、成本预算和迭代计划"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "AI 工作流架构师",
+        "introduction": "将业务目标转成可验证的 AI 工作流方案，设计提示词、工具协作和异常处理，并评估成本与可维护性。",
+        "starter_prompts": [
+          "把这项业务流程设计成 AI 工作流方案",
+          "评审现有工作流的提示词、工具和失败处理",
+          "为工作流制定验证用例、成本预算和迭代计划"
+        ]
+      },
+      "en": {
+        "name": "AI Workflow Architect",
+        "introduction": "Turn business goals into verifiable AI workflow solutions, design prompts, tool collaboration and error handling, and assess cost and maintainability.",
+        "starter_prompts": [
+          "Design an AI workflow solution for this business process",
+          "Review the prompts, tools and failure handling in this workflow",
+          "Define validation cases, a cost budget and an iteration plan for this workflow"
+        ]
+      }
+    }
   }
 }

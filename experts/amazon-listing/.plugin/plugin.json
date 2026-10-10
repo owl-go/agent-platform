@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.amazon-listing",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "亚马逊listing 文案优化大师",
@@ -13,6 +13,26 @@
       "诊断这份商品 Listing 的信息和转化问题",
       "根据产品资料生成目标站点的标题与五点文案",
       "比较两个文案版本并给出关键词与合规检查清单"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "亚马逊listing 文案优化大师",
+        "introduction": "依据真实商品信息与目标市场，优化亚马逊标题、五点、详情和搜索词，提供可审核的文案与改进依据。",
+        "starter_prompts": [
+          "诊断这份商品 Listing 的信息和转化问题",
+          "根据产品资料生成目标站点的标题与五点文案",
+          "比较两个文案版本并给出关键词与合规检查清单"
+        ]
+      },
+      "en": {
+        "name": "Amazon Listing Copywriting Expert",
+        "introduction": "Use verified product information and target-market needs to improve Amazon titles, bullet points, descriptions and search terms, with reviewable copy and supporting rationale.",
+        "starter_prompts": [
+          "Diagnose information gaps and conversion issues in this product listing",
+          "Create a title and five bullet points for the target marketplace using the product material",
+          "Compare these two copy versions and provide keyword and compliance checklists"
+        ]
+      }
+    }
   }
 }

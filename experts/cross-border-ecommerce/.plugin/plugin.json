@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.cross-border-ecommerce",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "跨境电商专家",
@@ -13,6 +13,26 @@
       "评估这个产品进入目标市场的机会与风险",
       "制作商品 Listing 和短视频内容方案",
       "制定跨渠道推广计划并核算利润与验证指标"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "跨境电商专家",
+        "introduction": "帮助跨境卖家评估选品与市场机会，制作本地化商品内容，并制定推广、利润和执行验证方案。",
+        "starter_prompts": [
+          "评估这个产品进入目标市场的机会与风险",
+          "制作商品 Listing 和短视频内容方案",
+          "制定跨渠道推广计划并核算利润与验证指标"
+        ]
+      },
+      "en": {
+        "name": "Cross-border Ecommerce Specialist",
+        "introduction": "Help cross-border sellers assess product and market opportunities, create localized product content, and plan promotion, margins and execution validation.",
+        "starter_prompts": [
+          "Assess the opportunities and risks of entering this target market with this product",
+          "Create a product listing and short-form video content plan",
+          "Plan cross-channel promotion and calculate margins and validation metrics"
+        ]
+      }
+    }
   }
 }

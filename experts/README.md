@@ -4,7 +4,7 @@
 
 清单声明 `schema_version: 1`、稳定 `id`、语义 `version` 和 `kind: expert` 或 `expert_team`。专家含名称、展示简介和 `guidance_file`；专家团含明确的 `lead_member_id` 及 2–10 位独立成员。显示顺序不决定执行顺序。成员手工责任 labels 可保留，不生成标签或分类。
 
-随仓 8 位专家当前使用 `1.2.0`，每位包含能力简介、完整 Markdown 指引和三条具体常用任务。创建专家的 Skill 同样生成这份 profile；旧模板中的能力、流程、交付标准和注意事项正文合并到指引，不再作为独立 Expert 写入字段。
+随仓 8 位专家当前使用 `1.3.0`，每位包含中英双语名称、能力简介、三条逐条对应的常用任务和完整 Markdown 指引。`translations.zh-CN` 与默认中文字段一致，`translations.en` 保存英文文案。创建专家的 Skill 同样生成这份 profile；旧模板中的能力、流程、交付标准和注意事项正文合并到指引，不再作为独立 Expert 写入字段。
 
 可引用目录 Skill 的稳定 `skill_keys`，或在 `skills/<key>/` 携带包内技能。`avatars/` 可携带有效 PNG、JPEG、GIF、WebP；每个 profile 最多三条 `starter_prompts`。外部连接器只声明来源、类型与版本，不携带账号授权。详见[资源包技术契约](../docs/technical/portable-experts.md)。
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.product-manager",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "产品管理专家",
@@ -13,6 +13,26 @@
       "把这个产品想法整理成需求规格和验收标准",
       "比较需求优先级并制定迭代路线图",
       "根据用户反馈和指标评审当前产品方案"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "产品管理专家",
+        "introduction": "将用户问题与业务目标转成需求规格、优先级和迭代计划，结合研究与指标证据评审产品方案。",
+        "starter_prompts": [
+          "把这个产品想法整理成需求规格和验收标准",
+          "比较需求优先级并制定迭代路线图",
+          "根据用户反馈和指标评审当前产品方案"
+        ]
+      },
+      "en": {
+        "name": "Product Management Expert",
+        "introduction": "Turn user problems and business goals into requirements, priorities and iteration plans, using research and metrics to review product proposals.",
+        "starter_prompts": [
+          "Turn this product idea into requirements and acceptance criteria",
+          "Compare requirement priorities and build an iteration roadmap",
+          "Review the current product proposal using user feedback and metrics"
+        ]
+      }
+    }
   }
 }

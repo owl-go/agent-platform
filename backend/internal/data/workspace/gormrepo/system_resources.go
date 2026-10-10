@@ -96,6 +96,7 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 			skills[definition.Key] = id
 		}
 		for _, definition := range catalog.Experts {
+			var sourcePackage *expertpackage.Package
 			if definition.Archive != "" {
 				archive, err := catalog.Archive(definition.Archive)
 				if err != nil {
@@ -111,9 +112,15 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 					return err
 				}
 				definition.BundledSkills = pkg.Expert.BundledSkills
+				sourcePackage = &pkg
 			}
 			if err := seedExpert(tx, administrator.ID, definition, skills); err != nil {
 				return fmt.Errorf("initialize default Expert %s: %w", definition.Key, err)
+			}
+			if sourcePackage != nil && sourcePackage.Manifest.Version == definition.Version && sourcePackage.Expert.Name == definition.Name && sourcePackage.Expert.Introduction == definition.Introduction && sourcePackage.Expert.Guidance == definition.Guidance {
+				if err := retainDefaultPackage(tx, administrator.ID, "expert", definition.Key, *sourcePackage); err != nil {
+					return err
+				}
 			}
 		}
 		for _, definition := range catalog.Teams {
@@ -133,6 +140,9 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 			definition.Definition = pkg.Team
 			if err := seedExpertTeam(tx, administrator.ID, definition, skills); err != nil {
 				return fmt.Errorf("initialize default Expert Team %s: %w", definition.Key, err)
+			}
+			if err := retainDefaultPackage(tx, administrator.ID, "expert_team", definition.Key, pkg); err != nil {
+				return err
 			}
 		}
 		for _, definition := range catalog.Connectors {

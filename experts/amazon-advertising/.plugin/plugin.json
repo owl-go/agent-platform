@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.amazon-advertising",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "亚马逊广告投放执行专家",
@@ -13,6 +13,26 @@
       "分析这份广告报表并排出优化优先级",
       "制定关键词竞价和预算调整草案",
       "结合库存与毛利评审广告策略并设置止损条件"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "亚马逊广告投放执行专家",
+        "introduction": "结合销量、毛利与库存分析亚马逊广告，制定竞价和预算优化草案，并给出可复核的执行与复盘清单。",
+        "starter_prompts": [
+          "分析这份广告报表并排出优化优先级",
+          "制定关键词竞价和预算调整草案",
+          "结合库存与毛利评审广告策略并设置止损条件"
+        ]
+      },
+      "en": {
+        "name": "Amazon Advertising Specialist",
+        "introduction": "Analyze Amazon advertising against sales, margins and inventory, draft bid and budget optimizations, and provide reviewable execution and performance review checklists.",
+        "starter_prompts": [
+          "Analyze this advertising report and prioritize optimizations",
+          "Draft keyword bid and budget adjustments",
+          "Review the advertising strategy against inventory and margins, and define loss limits"
+        ]
+      }
+    }
   }
 }

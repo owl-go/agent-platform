@@ -29,6 +29,7 @@ var packageIdentity = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,127}$`)
 var packageVersion = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`)
 
 type Profile struct {
+	Translations   *DisplayTranslations               `json:"translations,omitempty"`
 	Connectors     []domain.ExpertConnectorDependency `json:"connectors,omitempty"`
 	StarterPrompts []string                           `json:"starter_prompts,omitempty"`
 	AvatarFile     string                             `json:"avatar_file,omitempty"`
@@ -141,6 +142,9 @@ func Parse(ctx context.Context, archive []byte) (Package, error) {
 			return result, fmt.Errorf("%w: Team profile is required", domain.ErrInvalid)
 		}
 		profile := manifest.Team
+		if err := profile.Translations.validate(profile.Name, profile.Introduction, profile.StarterPrompts); err != nil {
+			return result, err
+		}
 		teamIcon, avatarErr := readAvatar(profile.Icon, profile.AvatarFile, files, used)
 		if avatarErr != nil {
 			return result, avatarErr

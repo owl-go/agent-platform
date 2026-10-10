@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.ui-designer",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "UI设计师",
@@ -13,6 +13,26 @@
       "根据需求设计页面布局、状态和交互方案",
       "评审这些界面的可用性与视觉一致性",
       "制定组件规范和移动端适配的研发交接清单"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "UI设计师",
+        "introduction": "把产品需求转成清晰的界面与交互方案，设计组件和页面状态，并检查响应式、可用性与无障碍问题。",
+        "starter_prompts": [
+          "根据需求设计页面布局、状态和交互方案",
+          "评审这些界面的可用性与视觉一致性",
+          "制定组件规范和移动端适配的研发交接清单"
+        ]
+      },
+      "en": {
+        "name": "UI Design Expert",
+        "introduction": "Turn product requirements into clear interfaces and interactions, design components and page states, and review responsiveness, usability and accessibility.",
+        "starter_prompts": [
+          "Design page layouts, states and interactions from these requirements",
+          "Review the usability and visual consistency of these interfaces",
+          "Create component specifications and a mobile adaptation handoff checklist"
+        ]
+      }
+    }
   }
 }

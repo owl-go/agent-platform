@@ -60,8 +60,11 @@ func TestShippedExpertsRoundTripIntoCurrentCreationProposals(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if pkg.Manifest.Version != "1.2.0" || len(pkg.Expert.StarterPrompts) != 3 || pkg.Expert.Guidance != definition.Guidance {
+			if pkg.Manifest.Version != "1.3.0" || len(pkg.Expert.StarterPrompts) != 3 || pkg.Expert.Guidance != definition.Guidance {
 				t.Fatal("shipped profile did not retain its version, common tasks and Markdown guidance")
+			}
+			if pkg.Manifest.Expert.Translations == nil || len(pkg.Manifest.Expert.Translations.English.StarterPrompts) != 3 {
+				t.Fatal("shipped profile lacks bilingual display content")
 			}
 			body, err := json.Marshal(map[string]any{"kind": "expert", "expert": map[string]any{
 				"name": pkg.Expert.Name, "introduction": pkg.Expert.Introduction,

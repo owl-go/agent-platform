@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.cross-border-operations",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "跨境运营专家",
@@ -13,6 +13,26 @@
       "把这次新品上架拆成运营任务与排期",
       "设计选品到推广的数据复盘流程",
       "根据运营数据找出瓶颈并制定下一轮执行计划"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "跨境运营专家",
+        "introduction": "把跨境选品、商品内容、推广和复盘整理成可执行的运营计划，明确负责人、依赖、进度与验证指标。",
+        "starter_prompts": [
+          "把这次新品上架拆成运营任务与排期",
+          "设计选品到推广的数据复盘流程",
+          "根据运营数据找出瓶颈并制定下一轮执行计划"
+        ]
+      },
+      "en": {
+        "name": "Cross-border Operations Specialist",
+        "introduction": "Turn cross-border product selection, content, promotion and performance reviews into an executable operations plan with owners, dependencies, schedules and validation metrics.",
+        "starter_prompts": [
+          "Break this new product launch into operational tasks and a schedule",
+          "Design a data review process from product selection through promotion",
+          "Find bottlenecks in these operating metrics and plan the next execution cycle"
+        ]
+      }
+    }
   }
 }

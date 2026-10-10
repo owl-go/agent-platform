@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "default.expert.travel-planning",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "expert",
   "expert": {
     "name": "旅行计划与行程规划师",
@@ -16,6 +16,26 @@
       "按这些日期和预算制定每日旅行行程",
       "比较两条旅行路线的费用、交通和体力负担",
       "核对现有行程并补充预订清单与天气备选方案"
-    ]
+    ],
+    "translations": {
+      "zh-CN": {
+        "name": "旅行计划与行程规划师",
+        "introduction": "根据日期、预算和同行需求设计旅行路线、每日行程及预算，核对动态信息并提供可调整的备选方案。",
+        "starter_prompts": [
+          "按这些日期和预算制定每日旅行行程",
+          "比较两条旅行路线的费用、交通和体力负担",
+          "核对现有行程并补充预订清单与天气备选方案"
+        ]
+      },
+      "en": {
+        "name": "Travel Planning Specialist",
+        "introduction": "Design travel routes, daily itineraries and budgets around dates, budget and group needs, verify changing information, and provide adaptable alternatives.",
+        "starter_prompts": [
+          "Create a daily travel itinerary for these dates and this budget",
+          "Compare the costs, transport and physical demands of these two travel routes",
+          "Check this itinerary and add a booking checklist and bad-weather alternatives"
+        ]
+      }
+    }
   }
 }
