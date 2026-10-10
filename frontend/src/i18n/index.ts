@@ -714,8 +714,8 @@ Object.assign((en as unknown as { channels: Record<string, unknown> }).channels,
 Object.assign(zh.sessions,{resourceActionTeam:"专家团创建预览"});
 Object.assign(en.sessions,{resourceActionTeam:"Expert Team creation preview"});
 
-Object.assign(zh.experts, { addExpert: "添加专家", addTeam: "添加专家团", commonTasks: "可以帮你做", invalidPackageFile: "请选择不超过 100 MiB 的专家 ZIP 包。", readOnly: "此资源仅可查看。" });
-Object.assign(en.experts, { addExpert: "Add Expert", addTeam: "Add Expert Team", commonTasks: "Can help you with", invalidPackageFile: "Choose an Expert ZIP package up to 100 MiB.", readOnly: "This resource is read-only." });
+Object.assign(zh.experts, { addExpert: "添加专家", addTeam: "添加专家团", commonTasks: "可以帮你做", sendTask: "使用{name}发送：{prompt}", taskSending: "正在发送…", taskSendFailed: "未能打开会话或发送任务，请重试。", invalidPackageFile: "请选择不超过 100 MiB 的专家 ZIP 包。", readOnly: "此资源仅可查看。" });
+Object.assign(en.experts, { addExpert: "Add Expert", addTeam: "Add Expert Team", commonTasks: "Can help you with", sendTask: "Send with {name}: {prompt}", taskSending: "Sending…", taskSendFailed: "Could not open the conversation or send the task. Try again.", invalidPackageFile: "Choose an Expert ZIP package up to 100 MiB.", readOnly: "This resource is read-only." });
 
 Object.assign(zh.experts, { myTeams: "我的专家团", teamDescription: "团队描述", loadTeamExpertsFailed: "加载专家列表失败，请重试。", teamSettingsInvalid: "请填写团队名称和描述（分别不超过 100 和 2000 字节），选择 2–10 位成员，并从成员中指定领队。", teamSettingsSaveFailed: "保存专家团失败，请检查成员是否可用；版本冲突时请重新打开后再试。" });
 Object.assign(en.experts, { myTeams: "My Expert Teams", teamDescription: "Team description", loadTeamExpertsFailed: "Could not load Experts. Retry the request.", teamSettingsInvalid: "Enter a team name and description (up to 100 and 2000 bytes), choose 2–10 members, and select a lead from those members.", teamSettingsSaveFailed: "Could not save the team. Check member availability; reopen the team if its version changed." });

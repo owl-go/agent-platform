@@ -23,6 +23,8 @@ The catalog header offers My Experts and Add Expert; Add Expert opens Create Exp
 
 Automatic tag generation and separate Expert/Expert Team classification are removed from this refactor. The catalog, editor, package manifest, and creation proposals do not introduce tag or category fields. Capability and applicability are expressed through the profile's Introduction and Expert Guidance. The existing asynchronous Expert tag-generation path is removed; legacy stored projection fields may only be retained for migration or historical reading, not refreshed or displayed as a new product feature. User-authored member responsibility labels remain distinct role guidance.
 
+Clicking a common task explicitly sends its text in a new Session using the displayed Expert or Expert Team. Sending shows progress and prevents repeated clicks; a failed request preserves the modal and reuses an already-created Session on retry. Opening details or clicking Summon alone does not send a message.
+
 ## Ownership and permissions
 
 Ordinary Users may create private Experts. Administrators may create Platform Experts and Platform Expert Teams. Expert Team creation is Administrator-only across direct API calls, manual and conversational creation, package import, copying, and any guided creation confirmation. Ordinary Users may browse and select available Platform Expert Teams; choosing a team never grants access to an Administrator's account authorization.

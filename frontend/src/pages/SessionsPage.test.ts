@@ -90,6 +90,20 @@ it("passes connector guidance into a new Session composer without posting a mess
   wrapper.unmount();
 });
 
+it("opens the accepted catalog task and its specialist without creating or posting again", async () => {
+ const prompt = "根据需求设计页面布局、状态和交互方案";
+ const api = apiStub([{ ...messages[0]!, content: prompt }, { ...messages[1]!, state: "queued", content: "" }]);
+ api.listSessions = vi.fn(async () => [{ ...session, expert_id: "ui-designer" }]);
+ const selection = await api.getConversationSelection({ session_id: session.id });
+ api.getConversationSelection = vi.fn(async () => ({ ...selection, expert_id: "ui-designer", name: "UI设计师" }));
+ api.createSession = vi.fn(); api.sendSessionMessage = vi.fn();
+ api.getAttachmentDownload = vi.fn(async () => new Blob());
+ const wrapper = await mountPageWithAPI(api, `/sessions?open=${session.id}`);
+ expect(wrapper.text()).toContain(prompt); expect(wrapper.get(".conversation-head").text()).toContain("UI设计师");
+ expect(api.streamSessionMessage).toHaveBeenCalled();
+ expect(api.createSession).not.toHaveBeenCalled(); expect(api.sendSessionMessage).not.toHaveBeenCalled(); wrapper.unmount();
+});
+
   it.each([
     ["verified", "verified"],
     ["verified", "unverified"],

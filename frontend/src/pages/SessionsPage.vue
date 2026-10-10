@@ -185,7 +185,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", resumeAssistantStream);
   await refresh();
   if (route.query.new) await create();
-  else if (typeof route.query.open === "string") { const item = sessions.value.find((session) => session.id === route.query.open); if (item) await open(item); }
+  else if (typeof route.query.open === "string") { const item = sessions.value.find((session) => session.id === route.query.open); if (item && selected.value?.id !== item.id) await open(item); }
 });
 watch(() => route.query.new, (value) => { if (value) void create(); });
 watch(() => route.query.open, (value) => { if (typeof value === "string") { const item = sessions.value.find((session) => session.id === value); if (item) void open(item); } });
