@@ -166,9 +166,11 @@ describe("WorkflowDetailPage", () => {
     await wrapper.get(".run-conversation-head .back-link").trigger("click");
     await wrapper.findAll('.run-row[role="button"]')[0]!.trigger("click");
     await flushPromises();
-    const connector = wrapper.get('.run-composer .composer-connector[aria-label="飞书"]');
-    expect(connector.classes()).toContain("is-off");
-    expect(connector.attributes("title")).toContain("未用于当前对话");
+    expect(wrapper.find('.run-composer .composer-connector[aria-label="飞书"]').exists()).toBe(false);
+    await wrapper.get(".run-conversation-head .back-link").trigger("click");
+    await wrapper.findAll('.run-row[role="button"]')[1]!.trigger("click");
+    await flushPromises();
+    expect(wrapper.get('.run-composer .composer-connector[aria-label="飞书"]').attributes("title")).toContain("已用于当前对话");
     wrapper.unmount();
   });
 

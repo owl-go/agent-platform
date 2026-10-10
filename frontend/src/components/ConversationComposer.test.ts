@@ -13,9 +13,11 @@ import { conversationApiStub, emptySelection } from "../test/conversation";
 import ConversationComposer from "./ConversationComposer.vue";
 
 const skill = { id: "pdf", name: "PDF 文档处理" } as Skill;
-async function setup(options: { fail?: boolean; initial?: boolean; initialConnector?: ConnectorLaunch; initialPrompt?: string; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; installationVersion?: number; dingtalk?: boolean; notion?: boolean; managedDisabled?: boolean; provided?: boolean; modao?: boolean; moka?: boolean; teambition?: boolean; camscanner?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; disabledConnector?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
+async function setup(options: { fail?: boolean; initial?: boolean; initialConnector?: ConnectorLaunch; initialPrompt?: string; session?: string; scope?: ConversationScope; owner?: string; authorization?: boolean; activation?: boolean; managed?: boolean; managedAuthorized?: boolean; managedRefreshable?: boolean; managedSetupComplete?: boolean; installationVersion?: number; dingtalk?: boolean; notion?: boolean; managedDisabled?: boolean; provided?: boolean; modao?: boolean; moka?: boolean; teambition?: boolean; camscanner?: boolean; noScopes?: boolean; taskCapability?: boolean; documentCapability?: boolean; disabledConnector?: boolean; disabledMCP?: boolean; inheritedConnector?: boolean; authorizationRequest?: CLIAuthorizationRequest } = {}) {
  const connectorName = options.moka ? "Moka HR 招聘" : options.modao ? "墨刀" : options.notion ? "Notion" : options.teambition ? "钉钉项目" : options.provided ? "企业微信" : options.dingtalk ? "钉钉" : "飞书 CLI";
  const initial = { ...emptySelection(), name: "Reviewer", expert_id: "expert-1", mcp_servers: [{ id: "mcp-1", name: "Search", revision: "1" }], cli_connectors: options.authorization ? [{ id: options.managed ? "installation-1" : "feishu", name: connectorName, revision: "3" }] : [], disabled_connectors: options.disabledConnector ? [`cli:${options.managed ? "installation-1" : "feishu"}`] : [] };
+ if (options.disabledMCP) initial.disabled_connectors.push("mcp:mcp-1");
+ if (options.inheritedConnector) { initial.inherited_cli_connectors = initial.cli_connectors; initial.cli_connectors = []; initial.inherited_mcp_servers = initial.mcp_servers; initial.mcp_servers = []; }
  const definition = { id: options.managed ? "installation-1" : "feishu", name: options.managed ? connectorName : "飞书 CLI", state: options.managedDisabled ? "disabled" : "available", authentication_driver: options.provided || options.notion || options.teambition ? "connector_package" : options.dingtalk ? "dingtalk" : "feishu", managed_installation: options.managed, managed_authorized: options.managedAuthorized, capabilities: options.noScopes ? [] : [{ id: "send", argv_prefix: ["im", "+messages-send"], risk: "high", identities: ["user"], scopes: options.camscanner ? [] : options.teambition ? ["user:read", "project:read", "task:read"] : options.dingtalk || options.provided || options.notion ? [] : ["im:message", "im:message.send_as_user"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }, ...(options.taskCapability ? [{ id: "task_create", argv_prefix: ["task", "+create"], risk: "high", identities: ["user"], scopes: ["task:task:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 60 }] : []), ...(options.documentCapability ? [{ id: "docs_create", argv_prefix: ["docs", "+create"], risk: "high", identities: ["user"], scopes: ["docx:document:create", "docx:document:write_only"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }, { id: "mail_send", argv_prefix: ["mail", "+send"], risk: "high", identities: ["user"], scopes: ["mail:mail:write"], egress_hosts: ["open.feishu.cn"], timeout_seconds: 120 }] : [])] } as CLIConnectorDefinition;
  const enabled = { id: "enable-1", definition_id: definition.id, state: "enabled" as const, version: 1 };
  let refreshed = false;
@@ -47,6 +49,29 @@ async function setup(options: { fail?: boolean; initial?: boolean; initialConnec
 afterEach(() => { localStorage.clear(); document.body.replaceChildren(); vi.restoreAllMocks(); });
 
 describe("ConversationComposer", () => {
+ it.each([false, true].flatMap(inheritedConnector => [{ scope: { session_id: "session-1" }, inheritedConnector }, { scope: { workflow_id: "workflow-1", run_id: "run-2" }, inheritedConnector }]))("hides a removed Connector from the toolbar in %j", async ({ scope, inheritedConnector }) => {
+  const { wrapper } = await setup({ scope, inheritedConnector, authorization: true, managed: true, managedAuthorized: true, disabledConnector: true });
+  try {
+   expect(wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(false);
+  } finally { wrapper.unmount(); }
+ });
+ it.each([false, true])("hides an excluded MCP Connector (inherited: %s)", async inheritedConnector => {
+  const { wrapper } = await setup({ disabledMCP: true, inheritedConnector });
+  try { expect(wrapper.find('.composer-connector[aria-label="Search"]').exists()).toBe(false); }
+  finally { wrapper.unmount(); }
+ });
+ it("retains a selected Connector when removal fails", async () => {
+  const { wrapper, api } = await setup({ authorization: true, managed: true, managedAuthorized: true, inheritedConnector: true });
+  try {
+   vi.mocked(api.resolveConversationSelection).mockRejectedValueOnce(new Error("offline"));
+   await wrapper.get('.composer-connector[aria-label="飞书 CLI"]').trigger("click");
+   await flushPromises();
+   const selectionSwitch = [...document.querySelectorAll<HTMLElement>(".connector-switch")].find(item => item.textContent?.includes("飞书 CLI"))?.querySelector<HTMLElement>(".el-switch");
+   expect(selectionSwitch).toBeDefined(); selectionSwitch?.click(); await flushPromises();
+   expect(wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(true);
+   expect(wrapper.text()).toContain("资源选择未保存，请重试");
+  } finally { wrapper.unmount(); }
+ });
  it.each([{ session_id: "session-1" }, { workflow_id: "workflow-1", run_id: "run-1" }])("uses catalog names for legacy managed MCP labels in %j", async (scope) => {
   const connectors = [{ id: "mindbye", name: "明白律师" }, { id: "pkulaw", name: "北大法宝" }, { id: "caoliao", name: "草料二维码" }];
   const initial = { ...emptySelection(), mcp_servers: [{ id: "mindbye", name: "mindbye", revision: "1" }, { id: "private-search", name: "保留的私人检索名称", revision: "1" }] };
@@ -421,43 +446,46 @@ describe("ConversationComposer", () => {
   expect(api.disableCLIConnector).not.toHaveBeenCalled();
   wrapper.unmount();
  });
- it("keeps a disabled Run Connector legible and reselects it without deactivating the account", async () => {
+ it.each([false, true])("reselects a removed Run Connector from the picker and hides it when removed again (inherited: %s)", async inheritedConnector => {
   const scope = { workflow_id: "workflow-1", run_id: "run-2" };
-  const { wrapper, api } = await setup({ scope, authorization: true, managed: true, managedAuthorized: true, disabledConnector: true });
-  const connector = wrapper.get('.composer-connector[aria-label="飞书 CLI"]');
-  expect(connector.classes()).toContain("is-off");
-  await connector.trigger("click");
-  await flushPromises();
-  const selectionSwitch = [...document.querySelectorAll<HTMLElement>(".connector-switch")].find((item) => item.textContent?.includes("飞书 CLI"))?.querySelector<HTMLElement>(".el-switch");
-  expect(selectionSwitch).not.toBeNull();
-  expect(selectionSwitch?.classList.contains("is-checked")).toBe(false);
-  expect(connector.attributes("title")).toContain("未用于当前对话");
-  selectionSwitch?.click();
-  await flushPromises();
-  expect(api.resolveConversationSelection).toHaveBeenLastCalledWith(scope, expect.objectContaining({ disabled_connectors: [], cli_connector_ids: ["installation-1"] }));
-  expect(api.disableConnectorInstallation).not.toHaveBeenCalled();
-  expect(wrapper.get('.composer-connector[aria-label="飞书 CLI"]').classes()).not.toContain("is-off");
-  expect(selectionSwitch?.classList.contains("is-checked")).toBe(true);
-  selectionSwitch?.click();
-  await flushPromises();
-  expect(api.resolveConversationSelection).toHaveBeenLastCalledWith(scope, expect.objectContaining({ disabled_connectors: ["cli:installation-1"], cli_connector_ids: [] }));
-  expect(api.disableConnectorInstallation).not.toHaveBeenCalled();
-  wrapper.unmount();
+  const { wrapper, api } = await setup({ scope, inheritedConnector, authorization: true, managed: true, managedAuthorized: true, disabledConnector: true });
+  try {
+   expect(wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(false);
+   await wrapper.get(".composer-plus").trigger("click");
+   await wrapper.findAll(".composer-menu button").find(button => button.text() === "连接器")!.trigger("click");
+   await wrapper.get(".composer-connector-option button").trigger("click");
+   await flushPromises();
+   expect(api.resolveConversationSelection).toHaveBeenLastCalledWith(scope, expect.objectContaining({ disabled_connectors: [], cli_connector_ids: ["installation-1"] }));
+   const connector = wrapper.get('.composer-connector[aria-label="飞书 CLI"]');
+   expect(connector.attributes("title")).toContain("用于当前对话");
+   await connector.trigger("click");
+   await flushPromises();
+   const selectionSwitch = [...document.querySelectorAll<HTMLElement>(".connector-switch")].find(item => item.textContent?.includes("飞书 CLI"))?.querySelector<HTMLElement>(".el-switch");
+   expect(selectionSwitch?.classList.contains("is-checked")).toBe(true);
+   selectionSwitch?.click();
+   await flushPromises();
+   expect(api.resolveConversationSelection).toHaveBeenLastCalledWith(scope, expect.objectContaining({ disabled_connectors: ["cli:installation-1"], cli_connector_ids: [] }));
+   expect(wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(false);
+   expect(api.disableConnectorInstallation).not.toHaveBeenCalled();
+  } finally { wrapper.unmount(); }
+  const reopened = await setup({ scope, inheritedConnector, authorization: true, managed: true, managedAuthorized: true });
+  try { expect(reopened.wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(false); }
+  finally { reopened.wrapper.unmount(); }
  });
- it("requires account authorization before reselecting an unavailable Run Connector", async () => {
+ it("requires account authorization before reselecting an unavailable Run Connector from the picker", async () => {
   vi.spyOn(window, "open").mockReturnValue(null);
   const { wrapper, api } = await setup({ scope: { workflow_id: "workflow-1", run_id: "run-2" }, authorization: true, managed: true, disabledConnector: true, managedSetupComplete: true });
-  vi.mocked(api.resolveConversationSelection).mockClear();
-  await wrapper.get('.composer-connector[aria-label="飞书 CLI"]').trigger("click");
-  await flushPromises();
-  const selectionSwitch = [...document.querySelectorAll<HTMLElement>(".connector-switch")].find((item) => item.textContent?.includes("飞书 CLI"))?.querySelector<HTMLElement>(".el-switch");
-  expect(selectionSwitch?.classList.contains("is-checked")).toBe(false);
-  selectionSwitch?.click();
-  await flushPromises();
-  expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user"]);
-  expect(api.resolveConversationSelection).not.toHaveBeenCalled();
-  expect(wrapper.get('.composer-connector[aria-label="飞书 CLI"]').classes()).toContain("is-off");
-  wrapper.unmount();
+  try {
+   vi.mocked(api.resolveConversationSelection).mockClear();
+   expect(wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(false);
+   await wrapper.get(".composer-plus").trigger("click");
+   await wrapper.findAll(".composer-menu button").find(button => button.text() === "连接器")!.trigger("click");
+   await wrapper.get(".composer-connector-option button").trigger("click");
+   await flushPromises();
+   expect(api.beginConnectorAuthorizationFlow).toHaveBeenCalledWith("installation-1", "user", ["im:message", "im:message.send_as_user"]);
+   expect(api.resolveConversationSelection).not.toHaveBeenCalled();
+   expect(wrapper.find('.composer-connector[aria-label="飞书 CLI"]').exists()).toBe(false);
+  } finally { wrapper.unmount(); }
  });
  it("refreshes an expired Feishu grant when the user activates the Connector", async () => {
   vi.spyOn(window, "open").mockReturnValue(null);
