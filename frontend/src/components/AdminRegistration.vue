@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { inject, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useI18n } from "vue-i18n";
@@ -37,10 +38,10 @@ async function save(item: RegistrationMethod) {
     methods.value = methods.value.map((entry) => entry.provider === item.provider ? saved : entry);
     forms.value[item.provider] = formFor(saved);
     ElMessage.success(t("registration.saved"));
-  } catch {
+  } catch (cause) {
     // A failed Keycloak synchronization may have persisted a closed pending
     // version. Reload its CAS before retrying, and discard typed secrets.
-    await load(); error.value = t("registration.failed");
+    await load(); error.value = saveErrorMessage(cause, t, "registration.failed");
   } finally { saving.value = undefined; }
 }
 </script>

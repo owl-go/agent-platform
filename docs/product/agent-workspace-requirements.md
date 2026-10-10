@@ -429,6 +429,8 @@ Expert, Skill, Connector, and Knowledge Base catalogs show card-shaped loading s
 
 ## 10. Personal Settings
 
+- Every failed save preserves a specific public business or field-validation cause when available; the interface must not replace it with a generic retry message. Name conflicts and version conflicts are distinct. Authentication, permission, missing resources, size limits, rate limits, network failures, and unavailable services provide their corresponding recovery action. Unclassified failures report that their cause is unknown and include the request identifier when supplied; raw storage, provider diagnostics, and credentials are never displayed.
+
 - Personality choices are gentle-professional, direct-efficient, lively-friendly, and custom.
 - A User may add personality guidance to any preset; custom requires guidance.
 - The selected Personality applies globally to Session responses and Workflow Runs.

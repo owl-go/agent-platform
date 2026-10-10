@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Archive, ArchiveRestore, PanelRightOpen, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
@@ -309,7 +310,7 @@ async function confirmWorkflowSave() {
     workflowLinks.value[workflowDraftMessageID.value] = created.link;
     workflowDraft.value = undefined;
     await router.push({ path: `/workflows/${created.workflow.id}`, query: { open_run: created.validation_run.id, from_session: created.link.session_id } });
-  } catch { error.value = t("sessions.workflowSave.createFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "sessions.workflowSave.createFailed"); }
   finally { savingWorkflow.value = false; }
 }
 async function create() {
@@ -333,8 +334,8 @@ async function create() {
     launchPrompt.value = prompt ? { sessionID: item.id, text: prompt } : undefined;
     sessions.value.unshift(item);
     await router.replace({ path: "/sessions" }); await open(item);
-  } catch {
-    error.value = t("errors.validation");
+  } catch (cause) {
+    error.value = saveErrorMessage(cause, t, "errors.validation");
     if (route.query.new) await router.replace({ path: "/sessions" });
   } finally {
     creating.value = false;
@@ -677,7 +678,7 @@ async function saveRename(item: Session) {
   cancelRename();
   if (!title || title === item.title) return;
   try { const updated = await api.renameSession(item.id, title, item.version); Object.assign(item, updated); if (selected.value?.id === item.id) selected.value = updated; }
-  catch { error.value = t("errors.conflict"); }
+  catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
 }
 function requestRemove(item: Session, event?: Event) {
   pendingDelete.value = item;

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
+import { saveErrorMessage } from "../api/saveErrors";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type Expert, type ExpertInput, type ExpertTeam, type ExpertTeamInput, type MCPServer, type Skill, type CLIConnectorDefinition, type CLIConnectorEnablement } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -55,7 +56,7 @@ async function save() {
       ? await api.updateExpert(props.expert.id, JSON.parse(JSON.stringify(expertInput.value)) as ExpertInput, props.expert.version)
       : await api.updateExpertTeam(props.team!.id, JSON.parse(JSON.stringify(teamInput.value)) as ExpertTeamInput, props.team!.version);
     if (!disposed) emit("saved", result);
-  } catch { if (!disposed) error.value = t("experts.saveFailed"); }
+  } catch (cause) { if (!disposed) error.value = saveErrorMessage(cause, t, "experts.saveFailed"); }
   finally { if (!disposed) saving.value = false; }
 }
 </script>

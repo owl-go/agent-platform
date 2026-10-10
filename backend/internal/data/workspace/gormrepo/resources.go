@@ -15,6 +15,7 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
@@ -793,7 +794,7 @@ func (repository *Repository) CreateModelProviderConnection(ctx context.Context,
 	}
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&row).Error; err != nil {
-			return err
+			return modelProviderSaveError(err)
 		}
 		if err := tx.Create(&modelProviderCredentialVersionRecord{ConnectionID: row.ID, ConnectionVersion: 1, APIKeyCiphertext: ciphertext}).Error; err != nil {
 			return err
@@ -826,7 +827,7 @@ func (repository *Repository) UpdateModelProviderConnection(ctx context.Context,
 		}
 		result := tx.Model(&modelProviderConnectionRecord{}).Where("credential_owner_user_id = ? AND id = ? AND version = ?", ownerID, connectionID, expectedVersion).Updates(updates)
 		if result.Error != nil {
-			return result.Error
+			return modelProviderSaveError(result.Error)
 		}
 		if result.RowsAffected != 1 {
 			return domain.ErrConflict
@@ -1458,4 +1459,13 @@ func nonNilDependencies(v []domain.ExpertConnectorDependency) []domain.ExpertCon
 		return []domain.ExpertConnectorDependency{}
 	}
 	return v
+}
+
+// Classify only the connection-name constraint; unrelated storage failures retain their cause.
+func modelProviderSaveError(err error) error {
+	var failure *pgconn.PgError
+	if errors.As(err, &failure) && failure.Code == "23505" && failure.ConstraintName == "model_provider_connections_owner_user_id_name_key" {
+		return errors.Join(domain.ErrProviderNameConflict, err)
+	}
+	return err
 }

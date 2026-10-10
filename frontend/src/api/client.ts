@@ -146,9 +146,9 @@ export function runtimeEngineDisplayName(runtime?: RuntimeEngine | string | null
 }
 export type Personality = "gentle_professional" | "direct_efficient" | "lively_friendly" | "custom";
 
-export type ApiErrorKind = "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";
+export type ApiErrorKind = "network" | "unauthenticated" | "forbidden" | "not_found" | "conflict" | "validation" | "rate_limited" | "unavailable" | "unknown";
 export class ApiError extends Error {
-  constructor(public readonly kind: ApiErrorKind, public readonly status: number, public readonly code: string, public readonly requestID = "", public readonly providerCode?: number) {
+  constructor(public readonly kind: ApiErrorKind, public readonly status: number, public readonly code: string, public readonly requestID = "", public readonly providerCode?: number, public readonly detail = "") {
     super(code || `request_failed_${status}`);
     this.name = "ApiError";
   }
@@ -875,14 +875,22 @@ async function request<T>(accessToken: string, path: string, init: RequestInit =
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
   headers.set("Authorization", `Bearer ${accessToken}`);
-  const response = await fetch(path, { ...init, headers });
+  const response = await fetch(path, { ...init, headers }).catch((cause: unknown) => {
+    if (cause instanceof TypeError) throw new ApiError("network", 0, "network_error");
+    throw cause;
+  });
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as { reason?: string; message?: string; error?: string; metadata?: { provider_code?: unknown } };
     const code = body.reason ?? body.error ?? body.message ?? `request_failed_${response.status}`;
     const kind: ApiErrorKind = response.status === 401 ? "unauthenticated" : response.status === 403 ? "forbidden" : response.status === 404 ? "not_found" : response.status === 409 || response.status === 412 ? "conflict" : response.status === 400 || response.status === 413 || response.status === 422 ? "validation" : response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : "unknown";
     const rawProviderCode = body.metadata?.provider_code;
     const providerCode = typeof rawProviderCode === "string" && /^\d{1,10}$/.test(rawProviderCode) ? Number(rawProviderCode) : undefined;
-    throw new ApiError(kind, response.status, code, response.headers.get("X-Request-ID") ?? "", providerCode);
+    // Preserve only the platform's public validation message. Provider diagnostics and
+    // unexpected server responses must never become user-facing credential leaks.
+    const detail = (code === "invalid_input" || code === "invalid_request_body") && response.status < 500 && typeof body.message === "string"
+      ? body.message.replace(/^(?:resource is invalid|invalid credit configuration|invalid image configuration|invalid AI application configuration):\s*/i, "").slice(0, 1000)
+      : "";
+    throw new ApiError(kind, response.status, code, response.headers.get("X-Request-ID") ?? "", providerCode, detail);
   }
   if (response.status === 204) return undefined as T;
   return response.json().then(normalizeTimestamps) as Promise<T>;

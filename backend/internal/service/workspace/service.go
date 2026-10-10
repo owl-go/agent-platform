@@ -226,6 +226,8 @@ func publicError(err error) error {
 		return kratoserrors.New(http.StatusForbidden, "access_denied", "access denied")
 	case errors.Is(err, accountdomain.ErrNotFound), errors.Is(err, workspacedomain.ErrNotFound):
 		return kratoserrors.New(http.StatusNotFound, "resource_not_found", "resource not found")
+	case errors.Is(err, workspacedomain.ErrProviderNameConflict):
+		return kratoserrors.New(http.StatusConflict, "model_provider_name_conflict", "Model Provider Connection name already exists; choose another name")
 	case errors.Is(err, accountdomain.ErrConflict), errors.Is(err, workspacedomain.ErrConflict):
 		return kratoserrors.New(http.StatusPreconditionFailed, "version_conflict", "resource version changed")
 	case errors.Is(err, workspacedomain.ErrQueueFull):

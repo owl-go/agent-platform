@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -6,7 +7,7 @@ import { Download, Pencil, Trash2, Upload } from "@lucide/vue";
 import * as XLSX from "xlsx";
 import IconPicker from "../components/IconPicker.vue";
 import { assistantModelOptions } from "../assistantModels";
-import { ApiError, platformApiKey, type ApplicationKnowledgeBase, type ModelProviderConnection, type SmartAssistant, type SmartAssistantFAQ, type SmartAssistantInput } from "../api/client";
+import { platformApiKey, type ApplicationKnowledgeBase, type ModelProviderConnection, type SmartAssistant, type SmartAssistantFAQ, type SmartAssistantInput } from "../api/client";
 import { renderMarkdown } from "../markdown";
 
 const api = inject(platformApiKey)!;
@@ -49,12 +50,7 @@ function input(state = assistant.value?.state): SmartAssistantInput | undefined 
   return { name: assistant.value.name.trim(), icon: assistant.value.icon, description: assistant.value.description ?? "", introduction: assistant.value.introduction, scenario: assistant.value.scenario, prompt: assistant.value.prompt ?? "", preprocess_prompt: assistant.value.preprocess_prompt ?? "", provider_model_id: assistant.value.provider_model_id, response_style: assistant.value.response_style, knowledge_base_ids: assistant.value.knowledge_base_ids, expert_id: assistant.value.expert_id, expert_team_id: assistant.value.expert_team_id, state, share: { ...assistant.value.share, token: undefined, enabled: assistant.value.share.enabled, allowed_origins: assistant.value.share.allowed_origins ?? [], width: assistant.value.share.width || "100%", height: assistant.value.share.height || 600, free_text_enabled: true, daily_call_limit: 0, data_processing_acknowledged: assistant.value.share.data_processing_acknowledged ?? false } };
 }
 function errorMessage(cause: unknown, fallback: string) {
-  if (!(cause instanceof ApiError)) return t(fallback);
-  if (cause.code === "invalid_input") return t("aiApplications.validationFailed");
-  if (cause.code === "version_conflict") return t("aiApplications.versionConflict");
-  if (cause.code === "resource_conflict") return t("aiApplications.conflict");
-  if (cause.code === "assistant_model_unavailable") return t("aiApplications.modelUnavailable");
-  return t(fallback);
+  return saveErrorMessage(cause, t, fallback);
 }
 async function save(state = assistant.value?.state) { if (!assistant.value) return false; const payload = input(state); if (!payload) return false; if (!payload.provider_model_id || !modelOptions.value.some((option) => option.value === payload.provider_model_id)) { error.value = t("aiApplications.modelUnavailable"); return false; } saving.value = true; try { assistant.value = await api.updateSmartAssistant(id, payload, assistant.value.version); return true; } catch (cause) { error.value = errorMessage(cause, "aiApplications.saveFailed"); return false; } finally { saving.value = false; } }
 async function uploadIcon(file: File) {
@@ -128,7 +124,7 @@ async function importFAQs(event: Event) {
       }
     }
     faqs.value = [...faqs.value].sort((left, right) => left.display_order - right.display_order);
-  } catch { error.value = t("aiApplications.faq.importFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "aiApplications.faq.importFailed"); }
 }
 function exportFAQs() {
   const sheet = XLSX.utils.json_to_sheet(faqs.value.map((faq) => ({ 问题: faq.question, 答案: faq.answer_markdown })), { header: ["问题", "答案"] });
