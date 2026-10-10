@@ -141,6 +141,8 @@
 
 ## 环境证据边界
 
+本报告记录部署前的本地阶段；随后 User 授权的实际应用发布见[部署验证](2026-10-10-expert-refactor-deployment.md)，不将后续发布扩张为本地测试中的生产模型或隔离证据。
+
 没有部署或生产数据库迁移；没有新的固定 Runtime RepoDigest 模型协作质量验收或 Linux + runsc sandbox/production conformance。macOS fake Adapter 只证明平台执行合同。远端 Aliyun OSS 与独立 MinIO conformance 所需环境未提供，完整 Go 的相关环境依赖测试存在 Skip；浏览器中的真实 MinIO 不等于完整存储 conformance。旧已发表生产证据也不扩张为本次新策略的证据。
 
 ## 审查及提交

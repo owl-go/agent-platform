@@ -95,3 +95,7 @@ Executed checks include the focused PostgreSQL tests above, the Runtime Executor
 ## Final implementation evidence — 2026-10-10
 
 All 22 implementation slices are complete on the same branch. [The local acceptance report](../evidence/agent-workspace/2026-10-10-expert-refactor-local-acceptance.md) maps every one of the 68 User Stories and all ten acceptance groups to the executed seams and records migration recovery, browser and gate evidence. Generated verification passed. Review against `5269ea8` resolved all three Standards and two Spec findings, with regression tests and read-only follow-up review. No deployment, new exact-image Runtime conformance or Linux sandbox evidence is asserted; the parent Issue remains unchanged.
+
+## Application release — 2026-10-10
+
+After explicit deployment authorization, `f797cbd` was integrated into `main_temp` and released as `app-20261010T023906Z-67257daa`. API / Worker / Web verification and all thirteen new migrations passed; restricted backups remain on the server. [The deployment report](../evidence/agent-workspace/2026-10-10-expert-refactor-deployment.md) records actual versions, history counts, preserved custom Experts and the remaining production-model / Linux conformance boundaries. The preceding local-stage statement remains historical evidence, and the parent Issue is unchanged.
