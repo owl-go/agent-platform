@@ -1311,10 +1311,10 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .expert-capability-description { margin: 0; line-height: 1.7; white-space: pre-wrap; }
 .expert-common-tasks { margin-top: 24px; }
 .expert-common-tasks h3 { font-size: 14px; margin: 0 0 12px; }
-.expert-common-tasks ul { margin: 0; padding-left: 20px; display: grid; gap: 10px; line-height: 1.6; }
-.expert-task-prompt { width: 100%; padding: var(--aw-space-1) var(--aw-space-2); border: 0; border-radius: var(--aw-radius-control); background: transparent; color: var(--aw-primary); text-align: left; line-height: inherit; overflow-wrap: anywhere; }
-.expert-task-prompt:hover:not(:disabled) { background: var(--aw-n2); text-decoration: underline; }
-.expert-task-prompt:disabled { color: var(--aw-n7); cursor: default; }
+.expert-task-list { display: grid; gap: var(--aw-space-3); }
+.expert-task-prompt { display: block; width: 100%; padding: var(--aw-space-4) var(--aw-space-5); border: 1px solid transparent; border-radius: var(--aw-radius-card); background: var(--aw-n2); color: var(--aw-n8); text-align: left; line-height: 1.6; overflow-wrap: anywhere; transition: border-color var(--aw-motion-fast), background var(--aw-motion-fast); }
+.expert-task-prompt:hover:not(:disabled) { border-color: var(--aw-n4); background: var(--aw-n3); }
+.expert-task-prompt:disabled { color: var(--aw-n7); cursor: not-allowed; }
 
 .expert-team-settings { display: grid; gap: 16px; }
 .expert-team-settings fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 16px; }

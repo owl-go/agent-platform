@@ -90,6 +90,28 @@ it("passes connector guidance into a new Session composer without posting a mess
   wrapper.unmount();
 });
 
+it.each(["expert", "team"] as const)("fills a launched %s task and sends only after the User edits and submits it", async (kind) => {
+ const prompt = "根据需求设计页面布局、状态和交互方案";
+ const api = apiStub([]);
+ api.listSessions = vi.fn(async () => []);
+ const field = kind === "expert" ? "expert_id" : "expert_team_id";
+ const created = { ...session, id: "draft-session", [field]: "specialist" };
+ api.createSession = vi.fn(async () => created);
+ const selection = await api.getConversationSelection({ session_id: created.id });
+ api.getConversationSelection = vi.fn(async () => ({ ...selection, [field]: "specialist", name: "UI设计师" }));
+ api.getAttachmentDownload = vi.fn(async () => new Blob());
+ api.sendSessionMessage = vi.fn(async () => ({ user_message: messages[0]!, assistant_message: messages[1]! }));
+ const wrapper = await mountPageWithAPI(api, `/sessions?new=launch&${field}=specialist&draft=${encodeURIComponent(prompt)}`);
+ expect(api.createSession).toHaveBeenCalledExactlyOnceWith({ expert_id: kind === "expert" ? "specialist" : undefined, expert_team_id: kind === "team" ? "specialist" : undefined });
+ expect(wrapper.get(".composer-editor").text()).toBe(prompt);
+ expect(wrapper.get(".conversation-head").text()).toContain("UI设计师");
+ expect(api.sendSessionMessage).not.toHaveBeenCalled(); expect(api.streamSessionMessage).not.toHaveBeenCalled();
+ wrapper.get(".composer-editor").element.textContent = `${prompt}，先讨论首页`;
+ await wrapper.get(".composer-editor").trigger("input");
+ await wrapper.get('.composer-toolbar button[aria-label="发送"]').trigger("click"); await flushPromises();
+ expect(api.sendSessionMessage).toHaveBeenCalledExactlyOnceWith(created.id, `${prompt}，先讨论首页`, [], undefined, { selection_id: selection.id, file_references: [] }); wrapper.unmount();
+});
+
 it("opens the accepted catalog task and its specialist without creating or posting again", async () => {
  const prompt = "根据需求设计页面布局、状态和交互方案";
  const api = apiStub([{ ...messages[0]!, content: prompt }, { ...messages[1]!, state: "queued", content: "" }]);

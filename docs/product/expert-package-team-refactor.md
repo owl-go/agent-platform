@@ -23,7 +23,7 @@ The catalog header offers My Experts and Add Expert; Add Expert opens Create Exp
 
 Automatic tag generation and separate Expert/Expert Team classification are removed from this refactor. The catalog, editor, package manifest, and creation proposals do not introduce tag or category fields. Capability and applicability are expressed through the profile's Introduction and Expert Guidance. The existing asynchronous Expert tag-generation path is removed; legacy stored projection fields may only be retained for migration or historical reading, not refreshed or displayed as a new product feature. User-authored member responsibility labels remain distinct role guidance.
 
-Clicking a common task explicitly sends its text in a new Session using the displayed Expert or Expert Team. Sending shows progress and prevents repeated clicks; a failed request preserves the modal and reuses an already-created Session on retry. Opening details or clicking Summon alone does not send a message.
+Common tasks appear as full-width neutral cards with quoted text. Clicking a card opens a new Session using the displayed Expert or Expert Team and fills the editable composer, without sending or starting execution. The User sends explicitly. Pending navigation prevents repeated clicks, and failure retains the modal for retry. Opening details or clicking Summon alone does not send a message.
 
 ## Ownership and permissions
 
