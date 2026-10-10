@@ -489,7 +489,7 @@ func runResponse(item workspacedomain.Run) *workspacev1.Run {
 	for _, stage := range item.ExpertStages {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
-	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
+	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption, coordinatedStages(item.ExpertStages))
 	for _, evidence := range item.Evidence {
 		response.Evidence = append(response.Evidence, evidenceResponse(evidence))
 	}

@@ -963,6 +963,9 @@ func (repository *Repository) closeCommandApproval(ctx context.Context, approval
 }
 
 func transitionApprovalExecution(tx *gorm.DB, request cliconnector.ApprovalRequest, resume bool, approvalID, eventType string) error {
+	if handled, err := transitionTeamApproval(tx, request, resume, approvalID, eventType); handled {
+		return err
+	}
 	from, to := "running", "waiting_for_user"
 	if resume {
 		from, to = to, from

@@ -3,6 +3,7 @@
 package defaultresources
 
 import (
+	"agent-platform/backend/internal/biz/workspace/domain"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -24,17 +25,31 @@ type Skill struct {
 	SHA256  string `json:"sha256"`
 }
 type Expert struct {
-	Key                string   `json:"key"`
-	Version            string   `json:"version"`
-	Name               string   `json:"name"`
-	Icon               string   `json:"icon"`
-	IconBackground     string   `json:"icon_background"`
-	Introduction       string   `json:"introduction"`
-	CoreCapability     string   `json:"core_capability"`
-	OperatingProcedure string   `json:"operating_procedure"`
-	OutputStandard     string   `json:"output_standard"`
-	Cautions           string   `json:"cautions"`
-	SkillKeys          []string `json:"skill_keys"`
+	ConnectorDependencies []domain.ExpertConnectorDependency `json:"connector_dependencies,omitempty"`
+	StarterPrompts        []string                           `json:"starter_prompts,omitempty"`
+	BundledSkills         []domain.SkillSnapshot             `json:"bundled_skills,omitempty"`
+	Guidance              string                             `json:"guidance,omitempty"`
+	Archive               string                             `json:"archive,omitempty"`
+	SHA256                string                             `json:"sha256,omitempty"`
+	Key                   string                             `json:"key"`
+	Version               string                             `json:"version"`
+	Name                  string                             `json:"name"`
+	Icon                  string                             `json:"icon"`
+	IconBackground        string                             `json:"icon_background"`
+	Introduction          string                             `json:"introduction"`
+	CoreCapability        string                             `json:"core_capability"`
+	OperatingProcedure    string                             `json:"operating_procedure"`
+	OutputStandard        string                             `json:"output_standard"`
+	Cautions              string                             `json:"cautions"`
+	SkillKeys             []string                           `json:"skill_keys"`
+}
+type Team struct {
+	Key             string
+	Version         string
+	SHA256          string
+	Archive         string
+	Definition      domain.ExpertTeamInput
+	MemberSkillKeys map[string][]string
 }
 type Connector struct {
 	Source  string `json:"source"`
@@ -46,6 +61,7 @@ type Catalog struct {
 	Version    string      `json:"version"`
 	Skills     []Skill     `json:"skills"`
 	Experts    []Expert    `json:"experts"`
+	Teams      []Team      `json:"teams,omitempty"`
 	Connectors []Connector `json:"connectors"`
 	archives   map[string][]byte
 }
@@ -65,6 +81,7 @@ func decodeDefinition(data []byte, target any) error {
 func (catalog Catalog) validate() error {
 	seen := map[string]bool{}
 	names := map[string]bool{}
+	packages := map[string]bool{}
 	for _, definition := range systemskills.Definitions() {
 		seen["skill:"+definition.Key] = true
 		names["skill:"+strings.ToLower(strings.TrimSpace(definition.Name))] = true
@@ -96,6 +113,10 @@ func (catalog Catalog) validate() error {
 		}
 	}
 	for _, e := range catalog.Experts {
+		if packages[e.Key] {
+			return fmt.Errorf("duplicate Expert Package identity")
+		}
+		packages[e.Key] = true
 		if err := checkName("expert", e.Name); err != nil {
 			return err
 		}
@@ -105,6 +126,31 @@ func (catalog Catalog) validate() error {
 		for _, key := range e.SkillKeys {
 			if !seen["skill:"+key] {
 				return fmt.Errorf("default Expert %s references unknown Skill %s", e.Key, key)
+			}
+		}
+	}
+	for _, team := range catalog.Teams {
+		if packages[team.Key] {
+			return fmt.Errorf("duplicate Expert Package identity")
+		}
+		packages[team.Key] = true
+		if err := check("expert_team", team.Key, team.Version); err != nil {
+			return err
+		}
+		if err := checkName("expert_team", team.Definition.Name); err != nil {
+			return err
+		}
+		if err := team.Definition.Validate(); err != nil {
+			return err
+		}
+		if err := team.Definition.ValidateLead(); err != nil {
+			return err
+		}
+		for _, keys := range team.MemberSkillKeys {
+			for _, key := range keys {
+				if !seen["skill:"+key] {
+					return fmt.Errorf("default Team %s references unknown Skill %s", team.Key, key)
+				}
 			}
 		}
 	}

@@ -48,6 +48,9 @@ func (repository *Repository) CancelResourceCreationAction(ctx context.Context, 
 }
 
 func (repository *Repository) CreateResourceCreationAction(ctx context.Context, ownerID, sessionID string, messageID int64, proposal resourceaction.Proposal) (workspacedomain.ResourceCreationAction, error) {
+	if err := proposal.Validate(); err != nil {
+		return workspacedomain.ResourceCreationAction{}, fmt.Errorf("%w: %v", workspacedomain.ErrInvalid, err)
+	}
 	payload, err := proposal.JSON()
 	if err != nil {
 		return workspacedomain.ResourceCreationAction{}, err
@@ -56,6 +59,15 @@ func (repository *Repository) CreateResourceCreationAction(ctx context.Context, 
 	now := time.Now().UTC()
 	row := resourceCreationActionRecord{ID: uuid.NewString(), OwnerID: ownerID, SessionID: sessionID, MessageID: messageID, Kind: proposal.Kind, State: "pending", Name: name, Description: description, Payload: payload, ExpiresAt: now.Add(15 * time.Minute), CreatedAt: now, UpdatedAt: now, Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if proposal.Kind == resourceaction.TeamKind {
+			if err := requireTeamAdministrator(tx, ownerID); err != nil {
+				return err
+			}
+		}
+		var session sessionRecord
+		if err := tx.Where("id=? AND owner_user_id=?", sessionID, ownerID).Take(&session).Error; err != nil {
+			return mapNotFound(err)
+		}
 		if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
@@ -72,6 +84,10 @@ func (repository *Repository) GetResourceCreationAction(ctx context.Context, own
 		return workspacedomain.ResourceCreationAction{}, resourceaction.Proposal{}, mapNotFound(err)
 	}
 	proposal, err := decodeActionProposal(row.Payload)
+	if err != nil && row.Kind == resourceaction.ExpertKind && row.State != "pending" && row.State != "processing" && row.State != "failed" {
+		// Terminal legacy actions remain readable as inert history, never writable previews.
+		return resourceCreationActionDomain(row), resourceaction.Proposal{}, nil
+	}
 	if err != nil {
 		return workspacedomain.ResourceCreationAction{}, resourceaction.Proposal{}, err
 	}

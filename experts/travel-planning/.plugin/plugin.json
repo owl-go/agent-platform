@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.travel-planning",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "旅行计划与行程规划师",
+    "introduction": "帮助个人和家庭把旅行想法整理成有依据、可执行、可调整的旅行计划与每日行程。",
+    "icon": "sparkles",
+    "icon_background": "sage",
+    "guidance_file": "agents/expert.md",
+    "skill_keys": [
+      "default.skill.travel-planning"
+    ]
+  }
+}

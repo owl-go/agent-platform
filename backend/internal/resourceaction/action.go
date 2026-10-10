@@ -1,6 +1,8 @@
 package resourceaction
 
 import (
+	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/strictjson"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -11,6 +13,7 @@ const (
 	EndMarker     = "</platform-action>"
 	SkillKind     = "skill"
 	ExpertKind    = "expert"
+	TeamKind      = "expert_team"
 	ConnectorKind = "connector"
 )
 
@@ -20,6 +23,7 @@ type Proposal struct {
 	Kind        string             `json:"kind"`
 	UserMessage string             `json:"user_message"`
 	Skill       *SkillProposal     `json:"skill,omitempty"`
+	Team        *TeamProposal      `json:"expert_team,omitempty"`
 	Expert      *ExpertProposal    `json:"expert,omitempty"`
 	Connector   *ConnectorProposal `json:"connector,omitempty"`
 }
@@ -47,17 +51,44 @@ type SkillProposal struct {
 }
 
 type ExpertProposal struct {
-	Name                      string   `json:"name"`
-	Introduction              string   `json:"introduction"`
-	CoreCapability            string   `json:"core_capability"`
-	OperatingProcedure        string   `json:"operating_procedure"`
-	OutputStandard            string   `json:"output_standard"`
-	Cautions                  string   `json:"cautions,omitempty"`
-	Icon                      string   `json:"icon,omitempty"`
-	IconBackground            string   `json:"icon_background,omitempty"`
-	SkillIDs                  []string `json:"skill_ids,omitempty"`
-	MCPServerIDs              []string `json:"mcp_server_ids,omitempty"`
-	CLIConnectorDefinitionIDs []string `json:"cli_connector_definition_ids,omitempty"`
+	Name                      string                             `json:"name"`
+	Introduction              string                             `json:"introduction"`
+	Guidance                  string                             `json:"guidance"`
+	Icon                      string                             `json:"icon,omitempty"`
+	IconBackground            string                             `json:"icon_background,omitempty"`
+	StarterPrompts            []string                           `json:"starter_prompts,omitempty"`
+	SkillIDs                  []string                           `json:"skill_ids,omitempty"`
+	MCPServerIDs              []string                           `json:"mcp_server_ids,omitempty"`
+	CLIConnectorDefinitionIDs []string                           `json:"cli_connector_definition_ids,omitempty"`
+	Connectors                []domain.ExpertConnectorDependency `json:"connector_dependencies,omitempty"`
+}
+type TeamProposal struct {
+	Name           string               `json:"name"`
+	Introduction   string               `json:"introduction"`
+	CoreCapability string               `json:"core_capability"`
+	Icon           string               `json:"icon,omitempty"`
+	IconBackground string               `json:"icon_background,omitempty"`
+	StarterPrompts []string             `json:"starter_prompts,omitempty"`
+	LeadMemberID   string               `json:"lead_member_id"`
+	Members        []TeamMemberProposal `json:"members"`
+}
+type TeamMemberProposal struct {
+	ID     string         `json:"id"`
+	Name   string         `json:"name"`
+	Labels []string       `json:"labels,omitempty"`
+	Expert ExpertProposal `json:"expert"`
+}
+
+func (p ExpertProposal) Input() domain.ExpertInput {
+	return domain.ExpertInput{Name: p.Name, Introduction: p.Introduction, Guidance: p.Guidance, Icon: p.Icon, IconBackground: p.IconBackground, StarterPrompts: p.StarterPrompts, SkillIDs: p.SkillIDs, MCPServerIDs: p.MCPServerIDs, CLIConnectorDefinitionIDs: p.CLIConnectorDefinitionIDs, ConnectorDependencies: p.Connectors}
+}
+func (p TeamProposal) Input() domain.ExpertTeamInput {
+	input := domain.ExpertTeamInput{Name: p.Name, Introduction: p.Introduction, CoreCapability: p.CoreCapability, Icon: p.Icon, IconBackground: p.IconBackground, StarterPrompts: p.StarterPrompts, LeadMemberID: p.LeadMemberID}
+	for _, member := range p.Members {
+		definition := member.Expert.Input()
+		input.Members = append(input.Members, domain.ExpertTeamMemberInput{ID: member.ID, Name: member.Name, Labels: member.Labels, Definition: &definition})
+	}
+	return input
 }
 
 // Parse extracts and validates a platform proposal from assistant output.
@@ -73,7 +104,10 @@ func Parse(content string) (Proposal, string, bool, error) {
 	}
 	end += start + len(BeginMarker)
 	var proposal Proposal
-	if err := json.Unmarshal([]byte(strings.TrimSpace(content[start+len(BeginMarker):end])), &proposal); err != nil {
+	if len(content) > 4*1024*1024 || strings.Count(content, BeginMarker) != 1 || strings.Count(content, EndMarker) != 1 {
+		return Proposal{}, content, true, fmt.Errorf("invalid resource proposal envelope")
+	}
+	if err := strictjson.Decode([]byte(strings.TrimSpace(content[start+len(BeginMarker):end])), &proposal); err != nil {
 		return Proposal{}, content, true, fmt.Errorf("decode resource action: %w", err)
 	}
 	if err := proposal.Validate(); err != nil {
@@ -87,7 +121,7 @@ func Parse(content string) (Proposal, string, bool, error) {
 }
 
 func (proposal Proposal) Validate() error {
-	if proposal.Kind != SkillKind && proposal.Kind != ExpertKind && proposal.Kind != ConnectorKind {
+	if proposal.Kind != SkillKind && proposal.Kind != ExpertKind && proposal.Kind != ConnectorKind && proposal.Kind != TeamKind {
 		return fmt.Errorf("unsupported resource action kind %q", proposal.Kind)
 	}
 	switch proposal.Kind {
@@ -108,14 +142,34 @@ func (proposal Proposal) Validate() error {
 			return fmt.Errorf("generated Skill proposal requires document")
 		}
 	case ExpertKind:
-		if proposal.Expert == nil || strings.TrimSpace(proposal.Expert.Name) == "" {
-			return fmt.Errorf("Expert proposal requires a name")
+		if proposal.Expert == nil || proposal.Team != nil || proposal.Skill != nil || proposal.Connector != nil {
+			return fmt.Errorf("Expert proposal requires one profile")
 		}
-		for field, value := range map[string]string{"introduction": proposal.Expert.Introduction, "core_capability": proposal.Expert.CoreCapability, "operating_procedure": proposal.Expert.OperatingProcedure, "output_standard": proposal.Expert.OutputStandard} {
-			if strings.TrimSpace(value) == "" {
-				return fmt.Errorf("Expert proposal requires %s", field)
+		input := proposal.Expert.Input()
+		if strings.TrimSpace(input.Guidance) == "" || strings.TrimSpace(input.Introduction) == "" {
+			return fmt.Errorf("Expert needs Introduction and Markdown guidance")
+		}
+		return input.Validate()
+	case TeamKind:
+		if proposal.Team == nil || proposal.Expert != nil || proposal.Skill != nil || proposal.Connector != nil {
+			return fmt.Errorf("Team proposal requires one profile")
+		}
+		input := proposal.Team.Input()
+		if err := input.Validate(); err != nil {
+			return err
+		}
+		if err := input.ValidateLead(); err != nil {
+			return err
+		}
+		for _, member := range input.Members {
+			if strings.TrimSpace(member.Definition.Guidance) == "" {
+				return fmt.Errorf("member needs Markdown guidance")
+			}
+			if err := member.Definition.Validate(); err != nil {
+				return err
 			}
 		}
+		return nil
 	case ConnectorKind:
 		if proposal.Connector == nil {
 			return fmt.Errorf("Connector proposal is required")
@@ -141,6 +195,9 @@ func (proposal Proposal) NameAndDescription() (string, string) {
 	}
 	if proposal.Kind == ConnectorKind && proposal.Connector != nil {
 		return strings.TrimSpace(proposal.Connector.Name), strings.TrimSpace(proposal.Connector.Description)
+	}
+	if proposal.Team != nil {
+		return strings.TrimSpace(proposal.Team.Name), strings.TrimSpace(proposal.Team.Introduction)
 	}
 	if proposal.Expert != nil {
 		return strings.TrimSpace(proposal.Expert.Name), strings.TrimSpace(proposal.Expert.Introduction)

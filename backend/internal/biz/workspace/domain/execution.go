@@ -8,6 +8,7 @@ import (
 // ExecutionSnapshot freezes every mutable selection required by a Workflow Run.
 // Secret fields remain encrypted at rest and are decrypted only by the Worker.
 type ExecutionSnapshot struct {
+	Coordination                *TeamCoordinationSnapshot  `json:"coordination,omitempty"`
 	TeamProfile                 *ExpertTeamProfileSnapshot `json:"team_profile,omitempty"`
 	SelectionKey                string                     `json:"selection_key,omitempty"`
 	SchemaVersion               int                        `json:"schema_version,omitempty"`
@@ -35,10 +36,13 @@ type ExecutionSnapshot struct {
 // ExpertTeamProfileSnapshot preserves the catalog identity independently of
 // the ordered member instructions used by the Runtime.
 type ExpertTeamProfileSnapshot struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Icon           string `json:"icon"`
-	IconBackground string `json:"icon_background"`
+	StarterPrompts []string `json:"starter_prompts,omitempty"`
+	LeadMemberID   string   `json:"lead_member_id,omitempty"`
+	Version        int64    `json:"version,omitempty"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Icon           string   `json:"icon"`
+	IconBackground string   `json:"icon_background"`
 }
 
 // ExecutionStageSnapshot is the complete immutable identity of one model invocation.
@@ -101,8 +105,21 @@ func ModelProtocolForRuntime(runtime RuntimeEngine, protocols []string) (string,
 // OrderedStages hides snapshot schema compatibility from execution callers.
 func (snapshot ExecutionSnapshot) OrderedStages() ([]ExecutionStageSnapshot, error) {
 	if len(snapshot.Stages) > 0 {
-		if snapshot.SchemaVersion != 2 || snapshot.RuntimeEngine != "" || snapshot.ProviderModel.ID != "" || snapshot.Expert != nil || snapshot.ExpertTeam != nil {
+		if (snapshot.SchemaVersion != 2 && snapshot.SchemaVersion != 3) || snapshot.RuntimeEngine != "" || snapshot.ProviderModel.ID != "" || snapshot.Expert != nil || snapshot.ExpertTeam != nil {
 			return nil, fmt.Errorf("%w: Execution Snapshot mixes stage and legacy schemas", ErrInvalid)
+		}
+		if snapshot.SchemaVersion == 3 {
+			if snapshot.Coordination == nil {
+				return nil, fmt.Errorf("%w: coordination definition is absent", ErrInvalid)
+			}
+			if snapshot.TeamProfile != nil && snapshot.TeamProfile.LeadMemberID != snapshot.Coordination.LeadMemberID {
+				return nil, fmt.Errorf("%w: frozen Team Lead differs from strategy", ErrInvalid)
+			}
+			if err := snapshot.Coordination.Validate(snapshot.Stages); err != nil {
+				return nil, err
+			}
+		} else if snapshot.Coordination != nil {
+			return nil, fmt.Errorf("%w: coordination cannot use historical ordered schema", ErrInvalid)
 		}
 		stages := append([]ExecutionStageSnapshot(nil), snapshot.Stages...)
 		for index, stage := range stages {
@@ -154,11 +171,13 @@ type ProviderModelSnapshot struct {
 }
 
 type ExpertSnapshot struct {
+	StarterPrompts         []string `json:"starter_prompts,omitempty"`
 	ID                     string   `json:"id"`
 	Name                   string   `json:"name"`
 	Icon                   string   `json:"icon,omitempty"`
 	IconBackground         string   `json:"icon_background,omitempty"`
 	Introduction           string   `json:"introduction,omitempty"`
+	Guidance               string   `json:"guidance,omitempty"`
 	CoreCapability         string   `json:"core_capability,omitempty"`
 	OperatingProcedure     string   `json:"operating_procedure,omitempty"`
 	OutputStandard         string   `json:"output_standard,omitempty"`

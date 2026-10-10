@@ -166,7 +166,14 @@ func New(config platformconfig.Config, box *secretcrypto.Box, objects objectstor
 	}, nil
 }
 
-func (executor *Executor) Execute(ctx context.Context, job application.ExecutionJob, progress application.ProgressRecorder) (result application.ExecutionResult, returnErr error) {
+func (executor *Executor) Execute(ctx context.Context, job application.ExecutionJob, progress application.ProgressRecorder) (application.ExecutionResult, error) {
+	if job.Snapshot.SchemaVersion == 3 {
+		return executor.executeCoordinated(ctx, job, progress)
+	}
+	return executor.executeStages(ctx, job, progress, invocationOptions{})
+}
+
+func (executor *Executor) executeStages(ctx context.Context, job application.ExecutionJob, progress application.ProgressRecorder, options invocationOptions) (result application.ExecutionResult, returnErr error) {
 	startedAt := time.Now()
 	var runtimeStartedAt time.Time
 	var runtimeFinishedAt time.Time
@@ -187,6 +194,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	if err != nil {
 		return result, err
 	}
+	if options.position > 0 {
+		executionStages[0].Position = options.position
+	}
 	firstStage := executionStages[0]
 	job.Snapshot.SelectionKey = firstStage.SelectionKey
 	job.Snapshot.RuntimeEngine, job.Snapshot.ProviderModel = firstStage.RuntimeEngine, firstStage.ProviderModel
@@ -202,7 +212,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		job.Snapshot.ExpertTeam = team
 	}
 	runtimeConfig, ok := executor.config.Worker.Runtimes[string(job.Snapshot.RuntimeEngine)]
-	if job.Snapshot.SelectionKey != "" {
+	if job.Snapshot.SelectionKey != "" || options.role != "" {
 		runtimeConfig.NativeResume = false
 	}
 	if !ok || !runtimeConfig.Available {
@@ -230,7 +240,24 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			returnErr = errors.Join(returnErr, os.RemoveAll(nativeState))
 		}
 	}()
-	workspace, persistent, baseline, err := executor.stageWorkspaceAt(job, slot.workspace)
+	var persistent string
+	var baseline map[string]string
+	if options.workspaceSeed != "" {
+		temporaryJob := job
+		temporaryJob.Kind = application.JobSession
+		workspace, persistent, baseline, err = executor.stageWorkspaceAt(temporaryJob, slot.workspace)
+		if err == nil {
+			err = copyTree(options.workspaceSeed, workspace)
+		}
+		if err == nil {
+			baseline, err = workspaceManifest(workspace)
+		}
+		if err == nil {
+			err = preparePersistentWorkspaceTree(workspace, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID)
+		}
+	} else {
+		workspace, persistent, baseline, err = executor.stageWorkspaceAt(job, slot.workspace)
+	}
 	if err != nil {
 		return result, err
 	}
@@ -251,12 +278,20 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, err
 		}
 	}
-	sink := &eventSink{runID: job.ID, job: job, progress: progress}
+	runtimeID := job.ID
+	if options.id != "" {
+		runtimeID = options.id
+	}
+	sink := &eventSink{runID: runtimeID, job: job, progress: progress, suppressAll: options.role != ""}
 	executionTTL := executor.executionTTL
 	if executionTTL <= 0 {
 		executionTTL = 2 * time.Hour
 	}
-	executionCtx, cancel := context.WithTimeout(ctx, executionTTL)
+	executionCtx, cancel := context.WithCancel(ctx)
+	if options.role == "" {
+		cancel()
+		executionCtx, cancel = context.WithTimeout(ctx, executionTTL)
+	}
 	defer cancel()
 	memberJobs := []application.ExecutionJob{job}
 	if team := job.Snapshot.ExpertTeam; team != nil {
@@ -290,7 +325,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		stageRuntimeConfig, available := executor.config.Worker.Runtimes[string(executionStage.RuntimeEngine)]
 		// Explicit resource selection uses platform history until Resume with
 		// changing resources has its own conformance evidence.
-		if executionStage.SelectionKey != "" {
+		if executionStage.SelectionKey != "" || options.role != "" {
 			stageRuntimeConfig.NativeResume = false
 		}
 		if !available || !stageRuntimeConfig.Available {
@@ -301,6 +336,16 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		value := workspacedomain.ExpertStage{ProviderModelID: executionStage.ProviderModel.ID, ProviderModelName: executionStage.ProviderModel.Name, RuntimeEngine: executionStage.RuntimeEngine, Position: executionStage.Position, Total: len(executionStages), State: "running", StartedAt: time.Now().UTC()}
 		if executionStage.Expert != nil {
 			value.ExpertID, value.ExpertName = executionStage.Expert.ID, executionStage.Expert.Name
+		}
+		if options.role != "" {
+			value.InvocationID = options.id
+			value.TaskID = options.task.ID
+			value.TeamMemberID = executionStage.TeamMemberID
+			value.TeamMemberName = executionStage.TeamMemberName
+			value.Role = options.role
+			value.Required = options.task.Required
+			value.RepairOf = options.task.RepairOf
+			value.Total = options.total
 		}
 		stage := &value
 		var evidenceMu sync.Mutex
@@ -346,6 +391,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			message := cause.Error()
 			if stageRedactor != nil {
 				message = string(stageRedactor.Bytes([]byte(message)))
+			}
+			if options.role != "" {
+				message = "Member execution failed"
 			}
 			stage.Error, stage.EndedAt = message, time.Now().UTC()
 			stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
@@ -394,7 +442,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(connectorErr)
 		}
-		variables, environmentFiles, redactValues, prepareErr := executor.memberEnvironment(executionCtx, memberJob)
+		variables, environmentFiles, redactValues, fileModes, prepareErr := executor.memberEnvironment(executionCtx, memberJob)
 		if prepareErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(prepareErr)
@@ -407,7 +455,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			allRedactValues = append(allRedactValues, append([]byte(nil), value...))
 		}
 		allRedactValues = append(allRedactValues, redactValues...)
-		environment, materializeErr := executor.materializer.CreateAt(credentials.Request{Ref: job.ID, Variables: variables, Files: environmentFiles, RedactValues: redactValues}, stageSlot.credentials)
+		environment, materializeErr := executor.materializer.CreateAt(credentials.Request{Ref: job.ID, Variables: variables, Files: environmentFiles, FileModes: fileModes, RedactValues: redactValues}, stageSlot.credentials)
 		if materializeErr != nil {
 			_ = releaseWarmLease(ctx, lease)
 			return result, failStage(materializeErr)
@@ -479,7 +527,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			runtimeStartedAt = time.Now()
 		}
 		runtimeRequest := agentruntime.ExecuteRequest{
-			RunID: job.ID, WorkspacePath: workspace, Instruction: instruction, Model: executionStage.ProviderModel.ModelID,
+			RunID: runtimeID, WorkspacePath: workspace, Instruction: instruction, Model: executionStage.ProviderModel.ModelID,
 			ModelEndpoint: executionStage.ProviderModel.Endpoint, ModelProvider: executionStage.ProviderModel.ProviderType, ModelProtocols: executionStage.ProviderModel.Protocols, CheckpointRef: checkpoint, EnvironmentRef: job.ID, MCPConfigPath: mcpConfigPath(memberJob),
 			Attachments: stageAttachments,
 		}
@@ -489,7 +537,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, failStage(err)
 		}
 		var creditAdmission creditsdomain.Admission
-		if executor.credits != nil && job.Kind != application.JobExpertTagProjection {
+		if executor.credits != nil {
 			protocol := executionStage.ModelProtocol
 			if protocol == "" {
 				protocol, err = workspacedomain.ModelProtocolForRuntime(executionStage.RuntimeEngine, executionStage.ProviderModel.Protocols)
@@ -503,8 +551,12 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			if executionStage.CreditRate != nil {
 				frozenRate = &creditsdomain.ModelCreditRate{RevisionID: executionStage.CreditRate.RevisionID, InputMultiplierMicros: executionStage.CreditRate.InputMultiplierMicros, OutputMultiplierMicros: executionStage.CreditRate.OutputMultiplierMicros, Fallback: creditsdomain.Amount(executionStage.CreditRate.FallbackHundredths)}
 			}
+			responseID := ""
+			if options.role != "" {
+				responseID = job.ID
+			}
 			creditAdmission, err = executor.credits.Admit(executionCtx, creditsapplication.AdmissionRequest{
-				UserID: job.OwnerID, ExecutionID: job.ID, StagePosition: executionStage.Position,
+				UserID: job.OwnerID, ExecutionID: runtimeID, StagePosition: executionStage.Position, ResponseID: responseID, ResponseBudget: creditsdomain.Amount(options.creditBudget),
 				Timezone: job.Timezone, ProviderType: executionStage.ProviderModel.ProviderType,
 				Protocol: protocol, ModelID: executionStage.ProviderModel.ModelID, FrozenRate: frozenRate,
 			})
@@ -519,7 +571,20 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				return result, failStage(fmt.Errorf("Credit admission was already settled; refusing to replay provider execution"))
 			}
 		}
-		publicSink := newChannelResponseSink(agentruntime.NewRedactingEventSink(redactor, sink), progress, job, allRedactValues, !sink.suppressMessages, fmt.Sprintf("步骤 %d/%d", index+1, len(memberJobs)))
+		publicSink := newChannelResponseSink(agentruntime.NewRedactingEventSink(redactor, sink), progress, job, allRedactValues, !sink.suppressMessages && options.role == "", fmt.Sprintf("步骤 %d/%d", index+1, len(memberJobs)))
+		if options.onModelStart != nil {
+			if err := options.onModelStart(); err != nil {
+				if executor.credits != nil {
+					abortCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+					err = errors.Join(err, executor.credits.Abort(abortCtx, creditAdmission))
+					cancel()
+				}
+				_ = releaseWarmLease(ctx, lease)
+				_ = environment.Cleanup()
+				return result, failStage(err)
+			}
+		}
+		stage.ModelInvoked = options.role != ""
 		runtimeResult, executeErr := runworker.New(adapter).Execute(executionCtx, runtimeRequest, publicSink)
 		if responseSink, ok := publicSink.(*channelResponseSink); ok {
 			responseSink.clear()
@@ -529,7 +594,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		finalizeConnectorEvidence()
 		var settlementErr error
 		var intermediateSettlement *application.CreditSettlement
-		if executor.credits != nil && job.Kind != application.JobExpertTagProjection {
+		if executor.credits != nil {
 			usage := creditsdomain.Usage{InputTokens: runtimeResult.Usage.InputTokens, OutputTokens: runtimeResult.Usage.OutputTokens, Known: runtimeResult.Usage.Reported}
 			consumption, calculateErr := creditsdomain.CalculateConsumption(usage, creditAdmission.Rate)
 			hasMeasuredUsage := usage.Known && calculateErr == nil
@@ -604,6 +669,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			teamNativePromotions = append(teamNativePromotions, nativeStatePromotion{temporary: filepath.Join(stageNativeState, "sessions"), persistent: stageNativePersistent})
 		}
 		stage.State, stage.FinalText, stage.EndedAt = "succeeded", finalMessage, time.Now().UTC()
+		if options.role == "lead" {
+			stage.FinalText = ""
+		}
 		stage.ElapsedMS = stage.EndedAt.Sub(stage.StartedAt).Milliseconds()
 		result.ExpertStages = append(result.ExpertStages, *stage)
 		if intermediateSettlement != nil {
@@ -616,8 +684,10 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 				result.CreditSettlements = append(result.CreditSettlements, *intermediateSettlement)
 				return result, err
 			}
-		} else if err := recordExpertStage(executionCtx, progress, job, *stage); err != nil {
-			return result, err
+		} else if options.role == "" {
+			if err := recordExpertStage(executionCtx, progress, job, *stage); err != nil {
+				return result, err
+			}
 		}
 	}
 	if err := os.Remove(filepath.Join(workspace, filepath.Base(containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory)))); err != nil {
@@ -629,7 +699,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, err
 		}
 	}
-	if nativeState != "" {
+	if nativeState != "" && options.role == "" {
 		nativeSessions := filepath.Join(nativeState, "sessions")
 		if err := sanitizeNativeState(nativeSessions, redactor); err != nil {
 			return result, err
@@ -638,7 +708,7 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		teamNativeRoots = append(teamNativeRoots, nativeState)
 	}
 	var artifacts []application.ExecutionArtifact
-	if persistent != "" || job.Kind == application.JobSession {
+	if persistent != "" || job.Kind == application.JobSession || options.role != "" {
 		used, err := executionWorkspaceSize(workspace)
 		if err != nil {
 			return result, err
@@ -646,7 +716,11 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 		if used > workspacefs.WorkspaceLimit {
 			return result, fmt.Errorf("Runtime output exceeds the 1 GiB Workspace limit")
 		}
-		artifacts, err = executor.persistChangedFiles(executionCtx, job, workspace, baseline, finalMessage, redactor)
+		publishedMessage := finalMessage
+		if options.role != "" {
+			publishedMessage = ""
+		}
+		artifacts, err = executor.persistChangedFiles(executionCtx, job, workspace, baseline, publishedMessage, redactor)
 		if err != nil {
 			return result, err
 		}
@@ -661,6 +735,10 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 	}
 	if len(teamNativePromotions) > 0 {
 		result.SuccessCommit = &nativeStateCommit{promotions: teamNativePromotions, temporaryRoots: teamNativeRoots}
+	}
+	if options.workspaceAfter != nil {
+		*options.workspaceAfter = workspace
+		retainWorkspace = true
 	}
 	result.FinalMessage, result.CheckpointRef, result.Artifacts = finalMessage, checkpointAfter, artifacts
 	return result, nil
@@ -696,7 +774,9 @@ type redactedExecutionError struct {
 	original error
 }
 
-func (err redactedExecutionError) Error() string { return err.message }
+func (err redactedExecutionError) Error() string      { return err.message }
+func (err redactedExecutionError) As(target any) bool { return errors.As(err.original, target) }
+
 func (err redactedExecutionError) Is(target error) bool {
 	return errors.Is(err.original, target)
 }
@@ -714,22 +794,22 @@ func releaseWarmLease(ctx context.Context, lease runtimeLease) error {
 	return lease.Release(cleanupCtx)
 }
 
-func (executor *Executor) memberEnvironment(ctx context.Context, job application.ExecutionJob) (map[string]string, map[string][]byte, [][]byte, error) {
+func (executor *Executor) memberEnvironment(ctx context.Context, job application.ExecutionJob) (map[string]string, map[string][]byte, [][]byte, map[string]os.FileMode, error) {
 	variables, err := executor.environment(job)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
-	files, extensionVariables, redactValues, err := executor.extensionFiles(ctx, job)
+	files, extensionVariables, redactValues, modes, err := executor.extensionContent(ctx, job)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	for name, value := range extensionVariables {
 		if _, exists := variables[name]; exists {
-			return nil, nil, nil, fmt.Errorf("MCP credential environment collides with %s", name)
+			return nil, nil, nil, nil, fmt.Errorf("MCP credential environment collides with %s", name)
 		}
 		variables[name] = value
 	}
-	return variables, files, redactValues, nil
+	return variables, files, redactValues, modes, nil
 }
 
 func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory, brokerSocket string) containerprocess.Config {
@@ -744,9 +824,6 @@ func (executor *Executor) containerConfig(job application.ExecutionJob, runtime 
 }
 
 func recordExpertStage(ctx context.Context, progress application.ProgressRecorder, job application.ExecutionJob, stage workspacedomain.ExpertStage) error {
-	if job.Kind == application.JobExpertTagProjection {
-		return nil
-	}
 	if progress == nil {
 		return fmt.Errorf("Runtime progress recorder is required")
 	}
@@ -897,6 +974,9 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		executionKind, executionID = "session", fmt.Sprint(job.AssistantMessageID)
 	}
 	stageID := fmt.Sprintf("%s:%s:stage:%d", executionKind, executionID, stagePosition)
+	if job.StageIdentity != "" {
+		stageID = job.StageIdentity
+	}
 	lifecycle := func(checkCtx context.Context, definition cliconnector.Definition, _ cliconnector.Request) error {
 		if definition.ManagedInstallation {
 			if repository, ok := executor.cliCredentials.(connectorPackageCLIRepository); ok {
@@ -912,7 +992,7 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	broker, err := cliconnector.NewBroker(cliconnector.BrokerConfig{
 		Definitions: definitions, RuntimeDigest: runtimeDigest, Wrapper: cliconnector.Wrapper{Process: process, LifecycleCheck: lifecycle},
 		ResolveEnvironment: executor.cliEnvironmentResolver(job.OwnerID),
-		Approval:           executor.cliApprovals, ApprovalContext: cliconnector.ApprovalContext{
+		Approval:           teamApprovalCoordinator(ctx, executor.cliApprovals), ApprovalContext: cliconnector.ApprovalContext{
 			OwnerID: job.OwnerID, ExecutionKind: executionKind, ExecutionID: executionID, StageID: stageID,
 		},
 		ObserveInvocation: observe,
@@ -1140,8 +1220,6 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 			conversationID = job.WorkflowID
 		}
 		scope = "workflow-conversation:" + job.OwnerID + ":" + conversationID
-	case application.JobExpertTagProjection:
-		scope = "expert-tag-projection:" + job.OwnerID + ":" + job.ExpertID
 	default:
 		return "", warmSlot{}, fmt.Errorf("job kind %q cannot use a warm Runtime container", job.Kind)
 	}
@@ -1541,29 +1619,30 @@ func anthropicBaseURL(providerType, endpoint string) string {
 	return base + "/anthropic"
 }
 
-func (executor *Executor) extensionFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
+func (executor *Executor) extensionContent(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, map[string]os.FileMode, error) {
+	modes := map[string]os.FileMode{}
 	files, extensionVariables, redactValues, err := executor.nativeMCPFiles(ctx, job)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	for _, skill := range job.Snapshot.Skills {
 		body, object, err := executor.objects.Get(ctx, skill.ObjectKey)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("load Skill %q: %w", skill.Name, err)
+			return nil, nil, nil, nil, fmt.Errorf("load Skill %q: %w", skill.Name, err)
 		}
 		archive, readErr := io.ReadAll(io.LimitReader(body, 50<<20+1))
 		closeErr := body.Close()
 		if readErr != nil || closeErr != nil {
-			return nil, nil, nil, errors.Join(readErr, closeErr)
+			return nil, nil, nil, nil, errors.Join(readErr, closeErr)
 		}
 		digest := sha256.Sum256(archive)
 		actual := hex.EncodeToString(digest[:])
 		if len(archive) > 50<<20 || actual != skill.SHA256 || object.SHA256 != skill.SHA256 {
-			return nil, nil, nil, fmt.Errorf("Skill %q archive integrity check failed", skill.Name)
+			return nil, nil, nil, nil, fmt.Errorf("Skill %q archive integrity check failed", skill.Name)
 		}
 		reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("open Skill %q archive: %w", skill.Name, err)
+			return nil, nil, nil, nil, fmt.Errorf("open Skill %q archive: %w", skill.Name, err)
 		}
 		for _, entry := range reader.File {
 			name := filepath.ToSlash(filepath.Clean(entry.Name))
@@ -1571,13 +1650,15 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 				continue
 			}
 			if name == ".." || strings.HasPrefix(name, "../") || strings.HasPrefix(name, "/") || entry.Mode()&os.ModeSymlink != 0 {
-				return nil, nil, nil, fmt.Errorf("Skill %q contains an unsafe path", skill.Name)
+				return nil, nil, nil, nil, fmt.Errorf("Skill %q contains an unsafe path", skill.Name)
 			}
 			content, err := readZipFile(entry)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, nil, err
 			}
-			files[filepath.ToSlash(filepath.Join("skills", skill.ID, name))] = content
+			resourceName := filepath.ToSlash(filepath.Join("skills", skill.ID, name))
+			files[resourceName] = content
+			modes[resourceName] = entry.Mode().Perm()
 		}
 	}
 	type connectorSkillPackage struct {
@@ -1598,7 +1679,7 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 			if connector.AuthenticationDriver == "feishu" {
 				resources, err := connectorpackage.OfficialFeishuSkillResources("1.0.93")
 				if err != nil {
-					return nil, nil, nil, fmt.Errorf("load platform Feishu Skill: %w", err)
+					return nil, nil, nil, nil, fmt.Errorf("load platform Feishu Skill: %w", err)
 				}
 				for name, body := range resources {
 					files[filepath.ToSlash(filepath.Join("connector-skills", connector.ID, name))] = body
@@ -1607,31 +1688,31 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 			continue
 		}
 		if len(connector.PackageSHA256) != 64 {
-			return nil, nil, nil, fmt.Errorf("Connector %q package digest is unavailable", connector.Name)
+			return nil, nil, nil, nil, fmt.Errorf("Connector %q package digest is unavailable", connector.Name)
 		}
 		body, object, err := executor.objects.Get(ctx, connector.PackageObjectKey)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("load Connector %q Skill package: %w", connector.Name, err)
+			return nil, nil, nil, nil, fmt.Errorf("load Connector %q Skill package: %w", connector.Name, err)
 		}
 		archive, readErr := io.ReadAll(io.LimitReader(body, 50<<20+1))
 		closeErr := body.Close()
 		if readErr != nil || closeErr != nil {
-			return nil, nil, nil, errors.Join(readErr, closeErr)
+			return nil, nil, nil, nil, errors.Join(readErr, closeErr)
 		}
 		digest := sha256.Sum256(archive)
 		if len(archive) > 50<<20 || hex.EncodeToString(digest[:]) != connector.PackageSHA256 || object.SHA256 != connector.PackageSHA256 {
-			return nil, nil, nil, fmt.Errorf("Connector %q Skill package integrity check failed", connector.Name)
+			return nil, nil, nil, nil, fmt.Errorf("Connector %q Skill package integrity check failed", connector.Name)
 		}
 		pkg, err := connectorpackage.Parse(archive)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Connector %q Skill package is invalid: %w", connector.Name, err)
+			return nil, nil, nil, nil, fmt.Errorf("Connector %q Skill package is invalid: %w", connector.Name, err)
 		}
 		if pkg.Metadata.Type != connector.Mode {
-			return nil, nil, nil, fmt.Errorf("Connector %q Skill package mode differs from its snapshot", connector.Name)
+			return nil, nil, nil, nil, fmt.Errorf("Connector %q Skill package mode differs from its snapshot", connector.Name)
 		}
 		reader, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("open Connector %q Skill package: %w", connector.Name, err)
+			return nil, nil, nil, nil, fmt.Errorf("open Connector %q Skill package: %w", connector.Name, err)
 		}
 		root := filepath.ToSlash(filepath.Join("connector-skills", connector.ID))
 		if len(pkg.Skills) > 1 {
@@ -1647,15 +1728,18 @@ func (executor *Executor) extensionFiles(ctx context.Context, job application.Ex
 			}
 			content, err := readZipFile(entry)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("read Connector %q Skill resource: %w", connector.Name, err)
+				return nil, nil, nil, nil, fmt.Errorf("read Connector %q Skill resource: %w", connector.Name, err)
 			}
 			files[root+"/"+entry.Name] = content
+			modes[root+"/"+entry.Name] = entry.Mode().Perm()
 			if len(pkg.Skills) == 1 && strings.HasPrefix(entry.Name, pkg.Skills[0].Directory+"/") {
-				files[root+"/"+strings.TrimPrefix(entry.Name, pkg.Skills[0].Directory+"/")] = content
+				shortName := root + "/" + strings.TrimPrefix(entry.Name, pkg.Skills[0].Directory+"/")
+				files[shortName] = content
+				modes[shortName] = entry.Mode().Perm()
 			}
 		}
 	}
-	return files, extensionVariables, redactValues, nil
+	return files, extensionVariables, redactValues, modes, nil
 }
 
 func mcpConfigPath(job application.ExecutionJob) string {
@@ -1701,7 +1785,7 @@ func (executor *Executor) stageWorkspaceAt(job application.ExecutionJob, tempora
 		_ = os.RemoveAll(temporary)
 		return "", "", nil, err
 	}
-	if job.Kind == application.JobSession || job.Kind == application.JobExpertTagProjection {
+	if job.Kind == application.JobSession {
 		return temporary, "", nil, nil
 	}
 	persistent = filepath.Join(root, filepath.FromSlash(job.Snapshot.WorkspacePath))
@@ -1856,22 +1940,26 @@ func buildInstruction(job application.ExecutionJob, attachments []agentruntime.A
 	var sections []string
 	if job.Snapshot.Expert != nil {
 		expert := job.Snapshot.Expert
-		for _, guidance := range []struct {
-			heading string
-			value   string
-		}{
-			{heading: "Core Capability", value: expert.CoreCapability},
-			{heading: "Operating Procedure", value: expert.OperatingProcedure},
-			{heading: "Output Standard", value: expert.OutputStandard},
-			{heading: "Cautions", value: expert.Cautions},
-		} {
-			if value := strings.TrimSpace(guidance.value); value != "" {
-				sections = append(sections, guidance.heading+":\n"+value)
+		if strings.TrimSpace(expert.Guidance) != "" {
+			sections = append(sections, expert.Guidance)
+		} else {
+			for _, guidance := range []struct {
+				heading string
+				value   string
+			}{
+				{heading: "Core Capability", value: expert.CoreCapability},
+				{heading: "Operating Procedure", value: expert.OperatingProcedure},
+				{heading: "Output Standard", value: expert.OutputStandard},
+				{heading: "Cautions", value: expert.Cautions},
+			} {
+				if value := strings.TrimSpace(guidance.value); value != "" {
+					sections = append(sections, guidance.heading+":\n"+value)
+				}
 			}
-		}
-		if len(sections) == 0 {
-			if instruction := strings.TrimSpace(expert.ExecutionInstruction); instruction != "" {
-				sections = append(sections, "Expert Execution Instruction (follow for this execution):\n"+instruction)
+			if len(sections) == 0 {
+				if instruction := strings.TrimSpace(expert.ExecutionInstruction); instruction != "" {
+					sections = append(sections, "Expert Execution Instruction (follow for this execution):\n"+instruction)
+				}
 			}
 		}
 	}
@@ -2062,6 +2150,7 @@ type eventSink struct {
 	job              application.ExecutionJob
 	progress         application.ProgressRecorder
 	suppressMessages bool
+	suppressAll      bool
 }
 
 func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) error {
@@ -2070,6 +2159,9 @@ func (sink *eventSink) Publish(ctx context.Context, event agentruntime.Event) er
 	}
 	if sink.progress == nil {
 		return fmt.Errorf("Runtime progress recorder is required")
+	}
+	if sink.suppressAll {
+		return nil
 	}
 	if sink.suppressMessages && (event.Kind == agentruntime.EventMessageCompleted || event.Kind == agentruntime.EventRuntimeCompleted) {
 		return nil
@@ -2150,4 +2242,9 @@ func mergeSuccessfulWorkspace(persistent, temporary string) error {
 		return err
 	}
 	return os.RemoveAll(backup)
+}
+
+func (executor *Executor) extensionFiles(ctx context.Context, job application.ExecutionJob) (map[string][]byte, map[string]string, [][]byte, error) {
+	files, variables, values, _, err := executor.extensionContent(ctx, job)
+	return files, variables, values, err
 }

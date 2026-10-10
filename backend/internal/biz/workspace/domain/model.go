@@ -18,6 +18,7 @@ var (
 	ErrNotFound                      = errors.New("resource not found")
 	ErrConflict                      = errors.New("resource conflicts with current state")
 	ErrInvalid                       = errors.New("resource is invalid")
+	ErrForbidden                     = errors.New("resource access denied")
 	ErrQueueFull                     = errors.New("workflow queue is full")
 	ErrWorkflowCredentialUnavailable = errors.New("workflow credential secret is unavailable")
 )
@@ -304,19 +305,21 @@ func ValidateKnowledgeDocumentState(state KnowledgeDocumentState) error {
 }
 
 type ResponseSnapshot struct {
-	SchemaVersion     int                      `json:"schema_version,omitempty"`
-	Stages            []ExecutionStageSnapshot `json:"stages,omitempty"`
-	ProviderModelID   string                   `json:"provider_model_id"`
-	ConnectionID      string                   `json:"connection_id"`
-	ConnectionName    string                   `json:"connection_name"`
-	ProviderType      string                   `json:"provider_type"`
-	ModelID           string                   `json:"model_id"`
-	ModelName         string                   `json:"model_name"`
-	Endpoint          string                   `json:"endpoint"`
-	Protocols         []string                 `json:"protocols"`
-	RuntimeEngine     RuntimeEngine            `json:"runtime_engine"`
-	Compatibility     string                   `json:"compatibility"`
-	ConnectionVersion int64                    `json:"connection_version"`
+	Coordination      *TeamCoordinationSnapshot  `json:"coordination,omitempty"`
+	TeamProfile       *ExpertTeamProfileSnapshot `json:"team_profile,omitempty"`
+	SchemaVersion     int                        `json:"schema_version,omitempty"`
+	Stages            []ExecutionStageSnapshot   `json:"stages,omitempty"`
+	ProviderModelID   string                     `json:"provider_model_id"`
+	ConnectionID      string                     `json:"connection_id"`
+	ConnectionName    string                     `json:"connection_name"`
+	ProviderType      string                     `json:"provider_type"`
+	ModelID           string                     `json:"model_id"`
+	ModelName         string                     `json:"model_name"`
+	Endpoint          string                     `json:"endpoint"`
+	Protocols         []string                   `json:"protocols"`
+	RuntimeEngine     RuntimeEngine              `json:"runtime_engine"`
+	Compatibility     string                     `json:"compatibility"`
+	ConnectionVersion int64                      `json:"connection_version"`
 }
 
 type MCPServer struct {
@@ -798,33 +801,48 @@ type Workflow struct {
 }
 
 type ExpertInput struct {
-	Name                      string
-	Icon                      string
-	IconBackground            string
-	Introduction              string
-	CoreCapability            string
-	OperatingProcedure        string
-	OutputStandard            string
-	Cautions                  string
-	CapabilityIntroduction    string
-	ExecutionInstruction      string
-	ProviderModelID           string
-	RuntimeEngine             RuntimeEngine
-	ExpertiseTags             []string
-	MCPServerIDs              []string
-	SkillIDs                  []string
-	CLIConnectorDefinitionIDs []string
+	ConnectorDependencies     []ExpertConnectorDependency `json:"connector_dependencies,omitempty"`
+	StarterPrompts            []string                    `json:"starter_prompts,omitempty"`
+	BundledSkills             []SkillSnapshot             `json:"bundled_skills,omitempty"`
+	Name                      string                      `json:"name,omitempty"`
+	Icon                      string                      `json:"icon,omitempty"`
+	IconBackground            string                      `json:"icon_background,omitempty"`
+	Introduction              string                      `json:"introduction,omitempty"`
+	Guidance                  string                      `json:"guidance,omitempty"`
+	CoreCapability            string                      `json:"core_capability,omitempty"`
+	OperatingProcedure        string                      `json:"operating_procedure,omitempty"`
+	OutputStandard            string                      `json:"output_standard,omitempty"`
+	Cautions                  string                      `json:"cautions,omitempty"`
+	CapabilityIntroduction    string                      `json:"capability_introduction,omitempty"`
+	ExecutionInstruction      string                      `json:"execution_instruction,omitempty"`
+	ProviderModelID           string                      `json:"provider_model_id,omitempty"`
+	RuntimeEngine             RuntimeEngine               `json:"runtime_engine,omitempty"`
+	ExpertiseTags             []string                    `json:"expertise_tags,omitempty"`
+	MCPServerIDs              []string                    `json:"mcp_server_ids,omitempty"`
+	SkillIDs                  []string                    `json:"skill_ids,omitempty"`
+	CLIConnectorDefinitionIDs []string                    `json:"cli_connector_definition_ids,omitempty"`
 }
 
 func (input ExpertInput) Validate() error {
+	if err := ValidateExpertDependencies(input.ConnectorDependencies); err != nil {
+		return err
+	}
+	if err := ValidateStarterPrompts(input.StarterPrompts); err != nil {
+		return err
+	}
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert name must contain 1-100 characters", ErrInvalid)
 	}
-	if err := icon.Validate(input.Icon); err != nil {
+	if err := icon.ValidateProfile(input.Icon); err != nil {
 		return fmt.Errorf("%w: invalid Expert icon", ErrInvalid)
 	}
 	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || strings.TrimSpace(input.OperatingProcedure) != "" || strings.TrimSpace(input.OutputStandard) != "" || strings.TrimSpace(input.Cautions) != ""
-	if structured {
+	if strings.TrimSpace(input.Guidance) != "" {
+		if len(input.Guidance) > 100_000 || len(input.Introduction) > 2_000 {
+			return fmt.Errorf("%w: Expert guidance or Introduction exceeds limits", ErrInvalid)
+		}
+		structured = true
+	} else if structured {
 		for _, field := range []struct {
 			name  string
 			value string
@@ -869,6 +887,9 @@ func (input ExpertInput) Validate() error {
 }
 
 type Expert struct {
+	ConnectorDependencies     []ExpertConnectorDependency `json:"connector_dependencies,omitempty"`
+	StarterPrompts            []string                    `json:"starter_prompts,omitempty"`
+	BundledSkills             []SkillSnapshot
 	ID                        string
 	OwnerID                   string
 	Platform                  bool
@@ -878,6 +899,7 @@ type Expert struct {
 	Icon                      string
 	IconBackground            string
 	Introduction              string
+	Guidance                  string
 	CoreCapability            string
 	OperatingProcedure        string
 	OutputStandard            string
@@ -897,7 +919,31 @@ type Expert struct {
 	TagProjectionError        string
 }
 
+// MarkdownGuidance converts compatibility inputs without changing authored text.
+// Display metadata never becomes an execution instruction.
+func (input ExpertInput) MarkdownGuidance() string {
+	if strings.TrimSpace(input.Guidance) != "" {
+		return input.Guidance
+	}
+	var sections []string
+	for _, field := range []struct{ heading, value string }{
+		{"Core Capability", input.CoreCapability}, {"Operating Procedure", input.OperatingProcedure},
+		{"Output Standard", input.OutputStandard}, {"Cautions", input.Cautions},
+	} {
+		if field.value != "" {
+			sections = append(sections, "# "+field.heading+"\n\n"+field.value)
+		}
+	}
+	if input.ExecutionInstruction != "" && input.ExecutionInstruction != input.OperatingProcedure {
+		sections = append(sections, "# Execution Instruction\n\n"+input.ExecutionInstruction)
+	}
+	return strings.Join(sections, "\n\n")
+}
+
 func (expert Expert) Available() bool {
+	if strings.TrimSpace(expert.Guidance) != "" {
+		return true
+	}
 	if strings.TrimSpace(expert.Introduction) != "" || strings.TrimSpace(expert.CoreCapability) != "" || strings.TrimSpace(expert.OperatingProcedure) != "" || strings.TrimSpace(expert.OutputStandard) != "" {
 		return strings.TrimSpace(expert.Introduction) != "" && strings.TrimSpace(expert.CoreCapability) != "" && strings.TrimSpace(expert.OperatingProcedure) != "" && strings.TrimSpace(expert.OutputStandard) != ""
 	}
@@ -928,6 +974,8 @@ func ValidateExpertiseTags(tags []string) error {
 }
 
 type ExpertTeamInput struct {
+	StarterPrompts         []string `json:"starter_prompts,omitempty"`
+	LeadMemberID           string
 	Name                   string
 	Icon                   string
 	IconBackground         string
@@ -940,10 +988,12 @@ type ExpertTeamInput struct {
 }
 
 type ExpertTeamMemberInput struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	ExpertID string   `json:"expert_id"`
-	Labels   []string `json:"labels"`
+	ID         string          `json:"id"`
+	Name       string          `json:"name"`
+	ExpertID   string          `json:"expert_id,omitempty"`
+	Definition *ExpertInput    `json:"definition,omitempty"`
+	Skills     []SkillSnapshot `json:"skills,omitempty"`
+	Labels     []string        `json:"labels"`
 }
 
 type ExpertTeamMember struct {
@@ -956,11 +1006,23 @@ type ExpertTeamMember struct {
 
 var teamMemberID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 
+func (input ExpertTeamInput) ValidateLead() error {
+	for _, member := range input.Members {
+		if member.ID == input.LeadMemberID && input.LeadMemberID != "" {
+			return nil
+		}
+	}
+	return fmt.Errorf("%w: explicitly select a Team Lead from the member roster", ErrInvalid)
+}
+
 func (input ExpertTeamInput) Validate() error {
+	if err := ValidateStarterPrompts(input.StarterPrompts); err != nil {
+		return err
+	}
 	if name := strings.TrimSpace(input.Name); len(name) < 1 || len(name) > 100 {
 		return fmt.Errorf("%w: Expert Team name must contain 1-100 characters", ErrInvalid)
 	}
-	if err := icon.Validate(input.Icon); err != nil {
+	if err := icon.ValidateProfile(input.Icon); err != nil {
 		return fmt.Errorf("%w: invalid Expert Team icon", ErrInvalid)
 	}
 	structured := strings.TrimSpace(input.Introduction) != "" || strings.TrimSpace(input.CoreCapability) != "" || len(input.Members) > 0
@@ -981,7 +1043,7 @@ func (input ExpertTeamInput) Validate() error {
 		ids, names := map[string]struct{}{}, map[string]struct{}{}
 		for _, member := range input.Members {
 			id, name, expertID := strings.TrimSpace(member.ID), strings.TrimSpace(member.Name), strings.TrimSpace(member.ExpertID)
-			if !teamMemberID.MatchString(id) || expertID == "" || len([]rune(name)) < 1 || len([]rune(name)) > 100 {
+			if !teamMemberID.MatchString(id) || (expertID == "" && member.Definition == nil) || len([]rune(name)) < 1 || len([]rune(name)) > 100 {
 				return fmt.Errorf("%w: Team Member ID, name, and Expert are required", ErrInvalid)
 			}
 			if _, exists := ids[id]; exists {
@@ -1022,8 +1084,14 @@ func (input ExpertTeamInput) Validate() error {
 }
 
 type ExpertTeam struct {
+	StarterPrompts         []string `json:"starter_prompts,omitempty"`
+	LeadMemberID           string
 	ID                     string
 	OwnerID                string
+	Platform               bool
+	Mutable                bool
+	Immutable              bool
+	SystemKey              string
 	Name                   string
 	Icon                   string
 	IconBackground         string
@@ -1202,14 +1270,15 @@ func CompatibilityForProtocols(protocols []string) []RuntimeModelCompatibility {
 }
 
 type Settings struct {
-	Personality             string
-	PersonalityInstructions string
-	RuntimeModelDefaults    map[RuntimeEngine]string
-	DefaultRuntimeEngine    RuntimeEngine
-	Language                string
-	Timezone                string
-	Version                 int64
-	ExecutionInherited      bool
+	TeamCreditBudgetHundredths int64
+	Personality                string
+	PersonalityInstructions    string
+	RuntimeModelDefaults       map[RuntimeEngine]string
+	DefaultRuntimeEngine       RuntimeEngine
+	Language                   string
+	Timezone                   string
+	Version                    int64
+	ExecutionInherited         bool
 }
 
 type PlatformExecutionDefault struct {
@@ -1222,6 +1291,9 @@ type PlatformExecutionDefault struct {
 }
 
 func (settings Settings) Validate() error {
+	if settings.TeamCreditBudgetHundredths < 0 || settings.TeamCreditBudgetHundredths > 1_000_000_000_000 {
+		return fmt.Errorf("%w: invalid Team response admission budget", ErrInvalid)
+	}
 	switch settings.Personality {
 	case "gentle_professional", "direct_efficient", "lively_friendly":
 	case "custom":
@@ -1282,20 +1354,29 @@ type Run struct {
 }
 
 type ExpertStage struct {
-	ExpertID          string                  `json:"expert_id"`
-	ExpertName        string                  `json:"expert_name"`
-	ProviderModelID   string                  `json:"provider_model_id"`
-	ProviderModelName string                  `json:"provider_model_name"`
-	RuntimeEngine     RuntimeEngine           `json:"runtime_engine"`
-	Position          int                     `json:"position"`
-	Total             int                     `json:"total"`
-	State             string                  `json:"state"`
-	ElapsedMS         int64                   `json:"elapsed_ms"`
-	FinalText         string                  `json:"final_text,omitempty"`
-	Error             string                  `json:"error,omitempty"`
-	StartedAt         time.Time               `json:"started_at,omitempty"`
-	EndedAt           time.Time               `json:"ended_at,omitempty"`
-	CreditConsumption *CreditStageConsumption `json:"credit_consumption,omitempty"`
+	InvocationID       string                  `json:"invocation_id,omitempty"`
+	TaskID             string                  `json:"task_id,omitempty"`
+	TeamMemberID       string                  `json:"team_member_id,omitempty"`
+	TeamMemberName     string                  `json:"team_member_name,omitempty"`
+	Role               string                  `json:"role,omitempty"`
+	Required           bool                    `json:"required,omitempty"`
+	RepairOf           string                  `json:"repair_of,omitempty"`
+	ModelInvoked       bool                    `json:"model_invoked,omitempty"`
+	WorkspaceConflicts []TeamWorkspaceConflict `json:"workspace_conflicts,omitempty"`
+	ExpertID           string                  `json:"expert_id"`
+	ExpertName         string                  `json:"expert_name"`
+	ProviderModelID    string                  `json:"provider_model_id"`
+	ProviderModelName  string                  `json:"provider_model_name"`
+	RuntimeEngine      RuntimeEngine           `json:"runtime_engine"`
+	Position           int                     `json:"position"`
+	Total              int                     `json:"total"`
+	State              string                  `json:"state"`
+	ElapsedMS          int64                   `json:"elapsed_ms"`
+	FinalText          string                  `json:"final_text,omitempty"`
+	Error              string                  `json:"error,omitempty"`
+	StartedAt          time.Time               `json:"started_at,omitempty"`
+	EndedAt            time.Time               `json:"ended_at,omitempty"`
+	CreditConsumption  *CreditStageConsumption `json:"credit_consumption,omitempty"`
 }
 
 // CreditConsumption is the safe, owner-visible accounting result for a turn.
@@ -1328,4 +1409,16 @@ func ValidateWorkspacePath(value string) (string, error) {
 		return "", fmt.Errorf("%w: invalid Workspace path", ErrInvalid)
 	}
 	return clean, nil
+}
+
+func ValidateStarterPrompts(prompts []string) error {
+	if len(prompts) > 3 {
+		return fmt.Errorf("%w: at most three starter prompts", ErrInvalid)
+	}
+	for _, p := range prompts {
+		if len(strings.TrimSpace(p)) == 0 || len(p) > 2000 {
+			return fmt.Errorf("%w: starter prompt must contain 1-2000 bytes", ErrInvalid)
+		}
+	}
+	return nil
 }

@@ -22,5 +22,5 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Printf("Resource directories validated: %d Connector Packages, %d Skills, %d Experts (+3 built-in creation Skills)\n", len(catalog.Connectors), len(catalog.Skills), len(catalog.Experts))
+	fmt.Printf("Resource directories validated: %d Connector Packages, %d Skills, %d Experts, %d Expert Teams (+3 built-in creation Skills)\n", len(catalog.Connectors), len(catalog.Skills), len(catalog.Experts), len(catalog.Teams))
 }

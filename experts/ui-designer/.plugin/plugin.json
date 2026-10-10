@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.ui-designer",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "UI设计师",
+    "introduction": "精通设计系统和组件库，追求像素级完美，打造美观、易用、响应式且无障碍的用户界面。",
+    "icon": "sparkles",
+    "icon_background": "sage",
+    "guidance_file": "agents/expert.md"
+  }
+}

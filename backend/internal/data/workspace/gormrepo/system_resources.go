@@ -12,6 +12,7 @@ import (
 
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/defaultresources"
+	"agent-platform/backend/internal/expertpackage"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/skillstore"
 	"agent-platform/backend/internal/systemskills"
@@ -52,7 +53,16 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 	if objects == nil {
 		return fmt.Errorf("default resource Object Store is required")
 	}
-	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	cleanups := []func(){}
+	accepted := false
+	defer func() {
+		if !accepted {
+			for _, cleanup := range cleanups {
+				cleanup()
+			}
+		}
+	}()
+	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec("SELECT pg_advisory_xact_lock(hashtext('agent-workspace.default-resources'))").Error; err != nil {
 			return fmt.Errorf("lock default resources: %w", err)
 		}
@@ -86,8 +96,43 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 			skills[definition.Key] = id
 		}
 		for _, definition := range catalog.Experts {
+			if definition.Archive != "" {
+				archive, err := catalog.Archive(definition.Archive)
+				if err != nil {
+					return err
+				}
+				pkg, err := expertpackage.Parse(ctx, archive)
+				if err != nil {
+					return err
+				}
+				cleanup, err := pkg.InstallBundledSkills(ctx, objects, administrator.ID, "default-"+pkg.SHA256)
+				cleanups = append(cleanups, cleanup)
+				if err != nil {
+					return err
+				}
+				definition.BundledSkills = pkg.Expert.BundledSkills
+			}
 			if err := seedExpert(tx, administrator.ID, definition, skills); err != nil {
 				return fmt.Errorf("initialize default Expert %s: %w", definition.Key, err)
+			}
+		}
+		for _, definition := range catalog.Teams {
+			archive, err := catalog.Archive(definition.Archive)
+			if err != nil {
+				return err
+			}
+			pkg, err := expertpackage.Parse(ctx, archive)
+			if err != nil {
+				return err
+			}
+			cleanup, err := pkg.InstallBundledSkills(ctx, objects, administrator.ID, "default-"+pkg.SHA256)
+			cleanups = append(cleanups, cleanup)
+			if err != nil {
+				return err
+			}
+			definition.Definition = pkg.Team
+			if err := seedExpertTeam(tx, administrator.ID, definition, skills); err != nil {
+				return fmt.Errorf("initialize default Expert Team %s: %w", definition.Key, err)
 			}
 		}
 		for _, definition := range catalog.Connectors {
@@ -97,6 +142,8 @@ func (repository *Repository) ensureResources(ctx context.Context, objects objec
 		}
 		return nil
 	})
+	accepted = err == nil
+	return err
 }
 
 func readSeed(tx *gorm.DB, kind, key, version, digest string) (defaultResourceSeedRecord, error) {
@@ -196,7 +243,7 @@ func seedExpert(tx *gorm.DB, owner string, definition defaultresources.Expert, s
 		}
 		ids = append(ids, skills[key])
 	}
-	input := domain.ExpertInput{Name: definition.Name, Icon: definition.Icon, IconBackground: definition.IconBackground, Introduction: definition.Introduction, CoreCapability: definition.CoreCapability, OperatingProcedure: definition.OperatingProcedure, OutputStandard: definition.OutputStandard, Cautions: definition.Cautions, SkillIDs: ids}
+	input := domain.ExpertInput{Name: definition.Name, Icon: definition.Icon, IconBackground: definition.IconBackground, Introduction: definition.Introduction, Guidance: definition.Guidance, CoreCapability: definition.CoreCapability, OperatingProcedure: definition.OperatingProcedure, OutputStandard: definition.OutputStandard, Cautions: definition.Cautions, SkillIDs: ids}
 	if err := input.Validate(); err != nil {
 		return err
 	}
@@ -236,18 +283,22 @@ func seedExpert(tx *gorm.DB, owner string, definition defaultresources.Expert, s
 	row.NameNormalized = normalizeResourceName(definition.Name)
 	row.Icon = definition.Icon
 	row.IconBackground = definition.IconBackground
+	row.Guidance = input.MarkdownGuidance()
 	row.Introduction = definition.Introduction
 	row.CoreCapability = definition.CoreCapability
 	row.OperatingProcedure = definition.OperatingProcedure
 	row.OutputStandard = definition.OutputStandard
 	row.Cautions = definition.Cautions
+	row.ConnectorDependencies = jsonBytes(nonNilDependencies(definition.ConnectorDependencies))
+	row.StarterPrompts = jsonBytes(nonNilStrings(definition.StarterPrompts))
+	row.BundledSkills, _ = json.Marshal(nonNilSkills(definition.BundledSkills))
 	row.SkillIDs, _ = json.Marshal(ids)
 	row.MCPServerIDs = []byte("[]")
 	row.CLIConnectorDefinitionIDs = []byte("[]")
 	row.ExpertiseTags = []byte("[]")
-	row.TagProjectionStatus = "queued"
+	row.TagProjectionStatus = "idle"
 	now := time.Now().UTC()
-	row.TagProjectionRequestedAt = &now
+	row.TagProjectionRequestedAt = nil
 	row.UpdatedAt = now
 	if err = tx.Save(&row).Error; err != nil {
 		return err

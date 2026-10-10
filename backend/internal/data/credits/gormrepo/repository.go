@@ -106,6 +106,8 @@ type rateRecord struct {
 func (rateRecord) TableName() string { return "model_credit_rate_revisions" }
 
 type admissionRecord struct {
+	ResponseID         string        `gorm:"column:response_id"`
+	ResponseBudget     domain.Amount `gorm:"column:response_budget_hundredths"`
 	Source             string        `gorm:"column:source;primaryKey"`
 	UserID             string        `gorm:"column:user_id"`
 	ExecutionID        string        `gorm:"column:execution_id"`
@@ -174,6 +176,9 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		var existing admissionRecord
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("source = ?", admission.Source).Take(&existing).Error
 		if err == nil {
+			if existing.UserID != admission.UserID || existing.ResponseID != admission.ResponseID || existing.ResponseBudget != admission.ResponseBudget {
+				return domain.ErrConflict
+			}
 			admission = toAdmission(existing)
 			return nil
 		}
@@ -182,6 +187,9 @@ func (repository *Repository) Admit(ctx context.Context, admission domain.Admiss
 		}
 		account, err := repository.ensureAccountTx(tx, admission.UserID, admission.Timezone, admission.StartedAt)
 		if err != nil {
+			return err
+		}
+		if err := admitResponseBudget(tx, admission); err != nil {
 			return err
 		}
 		imageDaily, imagePersistent, err := activeImageReservations(tx, admission.UserID, account.CreditDay)
@@ -899,11 +907,11 @@ func fromAdmission(value domain.Admission) (admissionRecord, error) {
 	if err != nil {
 		return admissionRecord{}, err
 	}
-	return admissionRecord{Source: value.Source, UserID: value.UserID, ExecutionID: value.ExecutionID, StagePosition: value.StagePosition, CreditDay: day, Timezone: value.Timezone, RateRevisionID: value.Rate.RevisionID, InputMultiplier: value.Rate.InputMultiplierMicros, OutputMultiplier: value.Rate.OutputMultiplierMicros, Fallback: value.Rate.Fallback, Reserved: value.Reserved, DailyReserved: value.DailyReserved, PersistentReserved: value.PersistentReserved, StartedAt: value.StartedAt}, nil
+	return admissionRecord{ResponseID: value.ResponseID, ResponseBudget: value.ResponseBudget, Source: value.Source, UserID: value.UserID, ExecutionID: value.ExecutionID, StagePosition: value.StagePosition, CreditDay: day, Timezone: value.Timezone, RateRevisionID: value.Rate.RevisionID, InputMultiplier: value.Rate.InputMultiplierMicros, OutputMultiplier: value.Rate.OutputMultiplierMicros, Fallback: value.Rate.Fallback, Reserved: value.Reserved, DailyReserved: value.DailyReserved, PersistentReserved: value.PersistentReserved, StartedAt: value.StartedAt}, nil
 }
 
 func toAdmission(row admissionRecord) domain.Admission {
-	return domain.Admission{UserID: row.UserID, ExecutionID: row.ExecutionID, StagePosition: row.StagePosition, Source: row.Source, Timezone: row.Timezone, CreditDay: row.CreditDay.Format(time.DateOnly), StartedAt: row.StartedAt, Reserved: row.Reserved, DailyReserved: row.DailyReserved, PersistentReserved: row.PersistentReserved, Settled: row.SettledAt != nil, Rate: domain.ModelCreditRate{RevisionID: row.RateRevisionID, InputMultiplierMicros: row.InputMultiplier, OutputMultiplierMicros: row.OutputMultiplier, Fallback: row.Fallback}}
+	return domain.Admission{ResponseID: row.ResponseID, ResponseBudget: row.ResponseBudget, UserID: row.UserID, ExecutionID: row.ExecutionID, StagePosition: row.StagePosition, Source: row.Source, Timezone: row.Timezone, CreditDay: row.CreditDay.Format(time.DateOnly), StartedAt: row.StartedAt, Reserved: row.Reserved, DailyReserved: row.DailyReserved, PersistentReserved: row.PersistentReserved, Settled: row.SettledAt != nil, Rate: domain.ModelCreditRate{RevisionID: row.RateRevisionID, InputMultiplierMicros: row.InputMultiplier, OutputMultiplierMicros: row.OutputMultiplier, Fallback: row.Fallback}}
 }
 
 func toRate(row rateRecord) domain.ModelCreditRate {

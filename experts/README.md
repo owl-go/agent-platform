@@ -1,7 +1,9 @@
-# 专家目录
+# 专家与专家团目录
 
-每个专家放在 `<name>/expert.json`，参考 [travel-planning/expert.json](travel-planning/expert.json)。
+每个 `experts/<key>/` 子目录放一个资源包，入口为 `.plugin/plugin.json`。示例见 [旅行专家清单](travel-planning/.plugin/plugin.json) 和 [Markdown 指引](travel-planning/agents/expert.md)。新增子目录自动发现，无需更新中心清单。
 
-填写稳定 `key`、`version`、名称、图标、简介、核心能力、工作流程、输出标准和可选注意事项。`skill_keys` 引用 Skill 的稳定 Key，加载时自动解析成本安装的 ID；也可引用三个 `system.create_*` Skill。定义不包含模型设置或用户凭据。
+清单声明 `schema_version: 1`、稳定 `id`、语义 `version` 和 `kind: expert` 或 `expert_team`。专家含名称、展示简介和 `guidance_file`；专家团含明确的 `lead_member_id` 及 2–10 位独立成员。显示顺序不决定执行顺序。成员手工责任 labels 可保留，不生成标签或分类。
 
-更新内容时增加 `version`，运行 `make resources-check` 后提交并部署。首次安装自动创建，重复启动复用已有专家和绑定；同名管理员自建资源保留，目录原版通过发布更新。
+可引用目录 Skill 的稳定 `skill_keys`，或在 `skills/<key>/` 携带包内技能。`avatars/` 可携带有效 PNG、JPEG、GIF、WebP；每个 profile 最多三条 `starter_prompts`。外部连接器只声明来源、类型与版本，不携带账号授权。详见[资源包技术契约](../docs/technical/portable-experts.md)。
+
+更改内容须增加版本，运行 `make resources-check`。初始化和升级复用稳定资源身份；目录原件属于 Bootstrap Administrator 且不可编辑或删除。同名管理员自建资源受保护，移除目录不会删除已初始化资源。发布仍须经过 `main_temp` 及适用验收；目录校验不证明外部授权或 Runtime Conformance。

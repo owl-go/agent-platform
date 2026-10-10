@@ -1,6 +1,6 @@
 # Expert Package and Expert Team execution
 
-Status: design confirmed on 2026-10-09; refreshed development branch established; application implementation pending.
+Status: design confirmed on 2026-10-09; refreshed development branch established; application implementation completed; final local acceptance and review in progress.
 
 The [confirmed design](../product/expert-package-team-refactor.md) and [ADR-0046](../adr/0046-portable-experts-and-lead-coordinated-teams.md) govern this task. The User explicitly approved Administrator-only Expert Teams, deletion of ordinary-User-owned team definitions without altering private historical snapshots, removal of automatic tags and separate classification, and direct discovery of both platform resource types from `experts/`.
 
@@ -47,7 +47,7 @@ On 2026-10-09 the User approved the 22-ticket breakdown. Each ticket is publishe
 
 ## Acceptance tracking
 
-Each acceptance item requires implementation and focused evidence before completion. These items are all pending; the baseline checks above do not count as refactor acceptance.
+Each acceptance item requires implementation and focused evidence before completion. Final implementation evidence is recorded in [the local acceptance report](../evidence/agent-workspace/2026-10-10-expert-refactor-local-acceptance.md). Earlier progress sections below describe their dated state; baseline checks do not count as refactor acceptance.
 
 | ID | Given / action / observable result | Rules and gates |
 |---|---|---|
@@ -67,3 +67,31 @@ Each acceptance item requires implementation and focused evidence before complet
 Start with the neutral package validation boundary and authoritative guidance model, then directory discovery and immutable revision persistence. Enforce Team permissions and migrate private definitions with representative PostgreSQL fixtures. Extend the versioned execution snapshot and coordinator above the existing Runtime Adapter, including Workspace merge and accounting. Finally update authoring, package transfer, and the Task Panel against the real API contracts.
 
 Historical migrations remain immutable. Database deletion and conversion require a new migration and documented forward-repair/data-restoration behavior. No production migration, release, or Runtime conformance is claimed. Exact-image and Linux sandbox evidence remains a separate environment gate. Keep progress, failures, recovery steps, and actual commands in this ticket as implementation proceeds.
+
+## Implementation evidence — 2026-10-09
+
+Implementation is in progress on `codex/expert-team-refactor`; the User selected `5269ea8` as the fixed review baseline. No implementation ticket or acceptance group is complete yet.
+
+- T01: authenticated HTTP Markdown create/read and controlled structured-input conversion passed against a disposable local PostgreSQL 17 database. The Executor test confirms that Markdown takes precedence and display metadata/obsolete form guidance is excluded. Expert revision immutability and retention after definition deletion passed. A second custom Expert exposed an existing nullable `system_key` insertion defect; its regression is covered by the same HTTP test.
+- T02: the obsolete tag-generation claim and model invocation path has been removed. A PostgreSQL Worker test confirms that legacy queued tag work is not scheduled. The catalog component test confirms removal of tag/category controls. Public compatibility fields still await T21 contract closure.
+- T03–T05: authenticated Team writes reject ordinary Users before resolving content. Repository tests verify Administrator-only maintenance, Platform Team reading, independent copied member guidance after a source edit/deletion, and explicit lead selection. New selections are being moved to Team-owned member definitions. Editor and remaining authoring/package paths are still in progress.
+- T04: a fixture reconstructed from the unchanged migration chain through `000074` passes forward migration: ordinary-User Team definitions and mutable Session references are removed, Administrator Team definitions and historical response content remain, and original structured guidance text/spacing survives conversion. Repeat migration passes. Workflow/Run reference, accounting, concurrency and restoration evidence remains pending.
+
+Commands executed for these slices: focused `go test` selections in `internal/service/workspace`, `internal/data/workspace/gormrepo`, and `internal/data/workspace/runtimeexecutor`; `make generate`; focused editor/catalog Vitest files; `make web-typecheck`. PostgreSQL uses a task-owned local container and per-test disposable databases. This is local implementation evidence, not production migration, deployment, or Runtime image conformance.
+
+## Implementation evidence — 2026-10-10
+
+The implementation remains in progress; no ticket or acceptance group is declared complete.
+
+- T06–T09: authenticated Expert/Team ZIP import and export, idempotence, content conflict, revision upgrade, copied member identity, unsafe manifest rejection, and visibility tests passed. Direct directory discovery and concurrent default initialization tests passed for both kinds. All eight distributed Expert definitions now use `.plugin/plugin.json` and Markdown. Bundled Skills, profile assets, dependency export, upgrade UI, and remaining rejection/rollback evidence are still pending.
+- T12/T15/T16: Executor tests passed for lead delegation and official response separation, distinct invocation identities, three-member concurrency, independent writable Workspaces, explicit file-conflict resolution, one repair, required failure, invalid control actions, and invocation limits. Raw invocation events and lead coordination JSON are withheld from user activities. Workflow conversion and cross-entry execution evidence remain pending.
+- T17: authenticated settings and a component test verify an optional Team response admission budget in Credits, including the explanation that the last admitted call can overrun its reservation. New response snapshots freeze the setting; manual Session retry preserves it. PostgreSQL tests passed for parallel reservation, measured overrun, blocking subsequent admission, unused-call abort, and idempotent settlement. An Executor test using the real accounting Repository confirms that an over-budget lead settlement prevents a member model from starting and is not charged twice at failure. Additional Department, cancellation, failed usage and retry evidence remains pending.
+- T18/T19: a controlled-clock test verifies that active time pauses only when every executing invocation awaits approval, resumes without resetting, and cannot escape an exhausted budget. PostgreSQL parallel approval tests verify aggregate wait state, exclusion of queued tasks, and approval closure on cancellation. New-strategy Session/Workflow restart tests verify failure without replay while retaining completed evidence and consumption. Legacy restart tests still pass. Executor cancellation stops active and queued members and removes staged files; graceful Worker shutdown finalizes the new strategy. Real connector expiry and broader concurrent recovery evidence remain pending.
+- T20: authenticated HTTP and Task Panel component tests verify actual lead/member identities, repairs, queued state, resolved conflicts, and member results. The call counter excludes queued invocations. Coordination JSON and internal accounting values are filtered from public Task Panel records. Stream, browser, roster and limit-state coverage remains pending.
+
+Executed checks include the focused PostgreSQL tests above, the Runtime Executor target package, Credits/Workspace Domain and Application target packages, both Task Panel and Settings Vitest files (16 tests), `make generate`, and frontend typecheck. Final backend/frontend gates, full acceptance review, exact-image Runtime conformance and Linux sandbox checks have not yet been completed.
+
+
+## Final implementation evidence — 2026-10-10
+
+All 22 implementation slices are present on the same branch. [The local acceptance report](../evidence/agent-workspace/2026-10-10-expert-refactor-local-acceptance.md) maps every one of the 68 User Stories and all ten acceptance groups to the executed seams and records migration recovery, browser and gate evidence. Final review and generated verification remain in progress. No deployment, new exact-image Runtime conformance or Linux sandbox evidence is asserted; the parent Issue remains unchanged.

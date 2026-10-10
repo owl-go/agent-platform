@@ -147,7 +147,7 @@ The immutable, owner-scoped provenance link from one successful Session response
 _Avoid_: copied Session, shared conversation, Workflow version
 
 **Execution Stage Snapshot**:
-The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert and Team Member identities, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, structured Expert guidance, Skills, and Connectors. An execution without an Expert has one anonymous stage; an Expert Team has one ordered stage per member.
+The immutable execution identity for one model invocation within a Response Snapshot or Workflow Snapshot, including its optional Expert and Team Member identities, Provider Model, Model Provider Connection version, API Protocol, Runtime Engine, authoritative Markdown Expert Guidance, Skills, and Connectors. An execution without an Expert has one anonymous stage; a coordinated Expert Team freezes a member roster, then records independently identified actual lead/member invocations. Historical ordered snapshots preserve their original strategy.
 _Avoid_: Expert Stage result, mutable Expert, team Runtime Engine
 
 **Workflow API Credential**:

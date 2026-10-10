@@ -1,4 +1,4 @@
-import type { Artifact, Attachment, CreditConsumption, Evidence, ExecutionPlan, ExpertStage, ResourceCreationAction, SessionWorkflowLink } from "./api/client";
+import type { TeamExecutionContext, Artifact, Attachment, CreditConsumption, Evidence, ExecutionPlan, ExpertStage, ResourceCreationAction, SessionWorkflowLink } from "./api/client";
 
 export interface ConversationActivityItem {
   id: string | number;
@@ -20,6 +20,7 @@ export interface ConversationActivityGroup {
 }
 
 export interface ConversationMessage {
+ team?: TeamExecutionContext;
   id: string;
   role: "user" | "assistant";
   content: string;

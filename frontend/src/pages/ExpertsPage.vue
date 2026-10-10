@@ -9,32 +9,35 @@ import CatalogDetails from "../components/CatalogDetails.vue";
 import ProfileIcon from "../components/ProfileIcon.vue";
 import ResourceTrustMeta from "../components/ResourceTrustMeta.vue";
 import CatalogLoading from "../components/CatalogLoading.vue";
+import { authContextKey } from "../auth/session";
 
 const props = withDefaults(defineProps<{ embedded?: boolean; catalogQuery?: string; availableOnly?: boolean }>(), { embedded: false, catalogQuery: "", availableOnly: true });
 
 const api = inject(platformApiKey)!;
+const auth = inject(authContextKey, undefined);
+const administrator = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const experts = ref<Expert[]>([]);
 const teams = ref<ExpertTeam[]>([]);
 const query = ref("");
-const category = ref("");
 const error = ref("");
 const loading = ref(true);
+const packageFile = ref<HTMLInputElement>();
+const importing = ref(false);
+const copyName = ref("");
+const upgradeTarget = ref("");
+const upgradeCandidates=computed(()=>(activeTab.value === "experts" ? experts.value : teams.value).filter(item=>!item.immutable));
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
+function createTeamSession() { if (!administrator.value) return; void router.push({path:"/sessions",query:{new:crypto.randomUUID(),create_expert:"true",draft:"帮我创建一个专家团，请明确领队和各成员的独立指引。"}}); }
 function createExpertSession() { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), create_expert: "true", draft: "帮我创建一个 XXX 专家，擅长 XXXXX。我的经验是：[请补充你的行业背景、相关经验]" } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
 const mineOnly = computed(() => route.query.scope === "mine");
-const activeCategories = computed(() => Array.from(new Set((activeTab.value === "experts" ? experts.value : teams.value).map((item) => item.expertise_tags[0]).filter(Boolean))).sort());
-const visibleExperts = computed(() => filter(experts.value).filter((item) => !props.availableOnly || item.compatibility === "verified"));
-const visibleTeams = computed(() => filter(teams.value).filter((item) => {
-  if (!props.availableOnly) return true;
-  const members = item.members.length ? item.members.map((member) => member.expert) : item.experts;
-  return members.every((expert) => expert.compatibility === "verified");
-}));
+const visibleExperts = computed(() => filter(experts.value));
+const visibleTeams = computed(() => filter(teams.value));
 const expertSections = computed(() => (mineOnly.value
   ? [{ key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) }]
   : [
@@ -43,7 +46,7 @@ const expertSections = computed(() => (mineOnly.value
     ]).filter((section) => section.items.length));
 
 onMounted(refresh);
-watch(activeTab, () => { query.value = ""; category.value = ""; });
+watch(activeTab, () => { query.value = ""; });
 
 async function refresh() {
   loading.value = true;
@@ -57,9 +60,23 @@ async function refresh() {
   }
 }
 
-function filter<T extends { name: string; introduction?: string; capability_introduction?: string; expertise_tags: string[]; available: boolean }>(items: T[]): T[] {
+async function importPackage(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || importing.value) return;
+  importing.value = true; error.value = "";
+  try {
+    const target=upgradeCandidates.value.find(item=>item.id===upgradeTarget.value);
+ const options=target ? {target_resource_id:target.id,expected_version:target.version} : copyName.value.trim() ? {copy_name:copyName.value.trim()} : undefined;
+ const result = await api.importExpertPackage(file,options);
+    await refresh(); detailExpert.value = result.expert; detailTeam.value = result.expert_team; copyName.value = ""; upgradeTarget.value="";
+  } catch { error.value = t("experts.importFailed"); }
+  finally { importing.value = false; input.value = ""; }
+}
+
+function filter<T extends { name: string; introduction?: string; capability_introduction?: string; available: boolean }>(items: T[]): T[] {
   const needle = (props.embedded ? props.catalogQuery : query.value).trim().toLocaleLowerCase();
-  return items.filter((item) => (!props.availableOnly || item.available) && (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""} ${item.expertise_tags.join(" ")}`.toLocaleLowerCase().includes(needle)) && (!category.value || item.expertise_tags[0] === category.value));
+  return items.filter((item) => (!props.availableOnly || item.available) && (!needle || `${item.name} ${item.introduction || item.capability_introduction || ""}`.toLocaleLowerCase().includes(needle)));
 }
 
 function selectTab(tab: string | number) {
@@ -84,15 +101,11 @@ function toggleMine() {
         <el-tab-pane :label="t('experts.title')" name="experts" />
         <el-tab-pane :label="t('experts.teams')" name="teams" />
       </el-tabs>
-      <div class="catalog-head-actions"><el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button><RouterLink v-if="activeTab === 'experts'" class="el-button el-button--primary" to="/experts/new" @click.prevent="createExpertSession">＋ {{ t('experts.new') }}</RouterLink><RouterLink v-else class="el-button el-button--primary" to="/expert-teams/new">＋ {{ t('experts.createTeam') }}</RouterLink></div>
+      <div class="catalog-head-actions"><template v-if="activeTab === 'experts' || administrator"><input ref="packageFile" class="package-import-file" type="file" accept=".zip,application/zip" hidden @change="importPackage" /><el-select v-model="upgradeTarget" clearable placeholder="升级现有资源（可选）" aria-label="升级现有资源"><el-option v-for="item in upgradeCandidates" :key="item.id" :label="item.name" :value="item.id" /></el-select><el-input :disabled="Boolean(upgradeTarget)" v-model="copyName" :placeholder="t('experts.copyName')" :aria-label="t('experts.copyName')" class="package-copy-name" /><el-button :loading="importing" @click="packageFile?.click()">{{ t('experts.importPackage') }}</el-button></template><el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button><RouterLink v-if="activeTab === 'experts'" class="el-button el-button--primary" to="/experts/new" @click.prevent="createExpertSession">＋ {{ t('experts.new') }}</RouterLink><el-button v-if="activeTab === 'teams' && administrator" @click="createTeamSession">对话创建</el-button><RouterLink v-if="activeTab === 'teams' && administrator" class="el-button el-button--primary" to="/expert-teams/new">＋ {{ t('experts.createTeam') }}</RouterLink></div>
     </header>
 
     <div class="catalog-tools">
       <el-input v-if="!props.embedded" v-model="query" class="catalog-search" clearable :placeholder="activeTab === 'experts' ? t('experts.searchExperts') : t('experts.searchTeams')"><template #prefix><Search :size="17" /></template></el-input>
-      <div class="tag-filter" :aria-label="t('experts.categoryFilter')">
-        <el-check-tag :checked="!category" @change="category = ''">{{ t('experts.all') }}</el-check-tag>
-        <el-check-tag v-for="item in activeCategories" :key="item" :checked="category === item" @change="category = item">{{ item }}</el-check-tag>
-      </div>
     </div>
 
     <ToastMessage v-if="error" kind="error" :title="t('experts.operationFailed')" :message="error" :close-label="t('common.close')" @dismiss="error = ''" />
@@ -106,11 +119,10 @@ function toggleMine() {
         <el-card class="expert-card" shadow="hover"><el-button class="catalog-launch" type="primary" :disabled="!expert.available" @click.stop="summon('expert_id', expert.id)">{{ t('composer.summon') }}</el-button>
           <div class="expert-card-layout">
             <div class="expert-card-copy">
-              <div class="expert-card-heading"><ProfileIcon :icon="expert.icon" :background="expert.icon_background" /><div class="expert-card-heading-copy"><div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" size="small">{{ t('experts.incomplete') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'queued' || expert.tag_projection_status === 'running'" type="info" effect="light" size="small">{{ t('experts.tagGenerating') }}</el-tag><el-tag v-else-if="expert.tag_projection_status === 'failed'" type="warning" effect="light" size="small" :title="expert.tag_projection_error">{{ t('experts.tagFailed') }}</el-tag></div></div></div>
+              <div class="expert-card-heading"><ProfileIcon :icon="expert.icon" :background="expert.icon_background" /><div class="expert-card-heading-copy"><div class="card-title-line"><h2>{{ expert.name }}</h2><el-tag v-if="!expert.complete" type="warning" effect="light" size="small">{{ t('experts.incomplete') }}</el-tag></div></div></div>
               <p>{{ expert.introduction }}</p>
-              <ResourceTrustMeta :source="expert.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="expert.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="expert.available && expert.compatibility === 'verified' ? t('resources.verifiedAvailable') : expert.complete ? t('resources.unavailable') : t('experts.incomplete')" :status-tone="expert.available && expert.compatibility === 'verified' ? 'success' : 'warning'" :detail="expert.availability_reason || ''" />
-              <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length, connectors: expert.mcp_server_ids.length + (expert.cli_connector_definition_ids?.length ?? 0) }) }}</small>
-              <div v-if="expert.expertise_tags.length > 1" class="expert-tags" :aria-label="t('experts.expertise')"><span v-for="item in expert.expertise_tags.slice(1, 4)" :key="item" class="expert-tag">{{ item }}</span><span v-if="expert.expertise_tags.length > 4" class="expert-tag-more">+{{ expert.expertise_tags.length - 4 }}</span></div>
+              <ResourceTrustMeta :source="expert.platform ? t('resources.platformPublished') : t('resources.userPublished')" :permission="expert.platform ? t('resources.allAuthenticated') : t('resources.ownerOnly')" :status="expert.available ? t('resources.available') : expert.complete ? t('resources.unavailable') : t('experts.incomplete')" :status-tone="expert.available ? 'success' : 'warning'" :detail="expert.availability_reason || ''" />
+              <small class="expert-execution-profile">{{ t('experts.resourceCounts', { skills: expert.skill_ids.length + (expert.bundled_skills?.length ?? 0), connectors: expert.mcp_server_ids.length + (expert.cli_connector_definition_ids?.length ?? 0) + (expert.connector_dependencies?.length ?? 0) }) }}</small>
             </div>
           </div>
         </el-card>
@@ -128,9 +140,9 @@ function toggleMine() {
             <div class="expert-card-copy">
               <div class="expert-card-heading"><ProfileIcon :icon="team.icon" :background="team.icon_background" team /><div class="expert-card-heading-copy"><div class="card-title-line"><h2>{{ team.name }}</h2><el-tag v-if="!team.available" type="warning" effect="light" size="small">{{ t('experts.teamUnavailable') }}</el-tag></div></div></div>
               <p>{{ team.introduction }}</p>
-              <ResourceTrustMeta :source="t('resources.userPublished')" :permission="t('resources.ownerOnly')" :status="team.available ? t('resources.available') : t('resources.unavailable')" :status-tone="team.available ? 'success' : 'warning'" />
+              <ResourceTrustMeta :source="t('resources.platformPublished')" :permission="t('resources.allAuthenticated')" :status="team.available ? t('resources.available') : t('resources.unavailable')" :status-tone="team.available ? 'success' : 'warning'" />
               <ol class="member-preview"><li v-for="member in (team.members.length ? team.members : team.experts.map((expert) => ({ id: expert.id, name: expert.name, expert })))" :key="member.id"><span>{{ member.name }}</span><small>{{ member.expert.introduction }}</small></li></ol>
-              <div class="card-footer"><div v-if="team.expertise_tags.length > 1" class="expert-tags" :aria-label="t('experts.expertise')"><span v-for="item in team.expertise_tags.slice(1, 4)" :key="item" class="expert-tag">{{ item }}</span><span v-if="team.expertise_tags.length > 4" class="expert-tag-more">+{{ team.expertise_tags.length - 4 }}</span></div><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
+              <div class="card-footer"><strong>{{ t('experts.perRound', { count: team.members?.length ? team.members.length : team.experts.length }) }}</strong></div>
             </div>
           </div>
         </el-card>
@@ -138,5 +150,5 @@ function toggleMine() {
       <el-empty v-if="!visibleTeams.length" class="catalog-empty" :description="t('experts.noTeams')" />
     </div>
   </section>
-  <CatalogDetails :expert="detailExpert" :team="detailTeam" @close="detailExpert = undefined; detailTeam = undefined" />
+  <CatalogDetails @copied="refresh" :expert="detailExpert" :team="detailTeam" @close="detailExpert = undefined; detailTeam = undefined" />
 </template>

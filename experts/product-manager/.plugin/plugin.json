@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.product-manager",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "产品管理专家",
+    "introduction": "面向产品经理与业务团队，覆盖功能规格、需求规划、路线图、用户研究、竞品分析和指标追踪，帮助把产品判断转成可执行的迭代计划。",
+    "icon": "sparkles",
+    "icon_background": "sage",
+    "guidance_file": "agents/expert.md"
+  }
+}

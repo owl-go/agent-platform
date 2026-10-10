@@ -13,8 +13,8 @@ import (
 	"regexp"
 	"strings"
 
-	"agent-platform/backend/internal/biz/workspace/domain"
 	"agent-platform/backend/internal/connectorpackage"
+	"agent-platform/backend/internal/expertpackage"
 	"agent-platform/backend/internal/icon"
 	"agent-platform/backend/internal/skillstore"
 )
@@ -106,7 +106,7 @@ func LoadDirectory(ctx context.Context, directory string) (Catalog, error) {
 			case "connectors":
 				err = catalog.loadConnector(ctx, files, name)
 			case "experts":
-				err = catalog.loadExpert(files, name)
+				err = catalog.loadExpert(ctx, files, name)
 			}
 			if err != nil {
 				return Catalog{}, fmt.Errorf("load %s: %w", name, err)
@@ -227,20 +227,36 @@ func (catalog *Catalog) loadConnector(ctx context.Context, files fs.FS, director
 	return nil
 }
 
-func (catalog *Catalog) loadExpert(files fs.FS, directory string) error {
-	var definition Expert
-	if err := readDefinition(files, directory+"/expert.json", &definition); err != nil {
-		return err
+func (catalog *Catalog) loadExpert(ctx context.Context, files fs.FS, directory string) error {
+	if _, err := fs.Stat(files, directory+"/.plugin/plugin.json"); err == nil {
+		archive, err := archiveDirectory(ctx, files, directory, "")
+		if err != nil {
+			return err
+		}
+		pkg, err := expertpackage.Parse(ctx, archive)
+		if err != nil {
+			return err
+		}
+		frozen, err := pkg.Archive()
+		if err != nil {
+			return err
+		}
+		name := directory + ".zip"
+		catalog.archives[name] = frozen
+		if pkg.Manifest.Kind == "expert" {
+			input := pkg.Expert
+			catalog.Experts = append(catalog.Experts, Expert{ConnectorDependencies: input.ConnectorDependencies, StarterPrompts: input.StarterPrompts, Key: pkg.Manifest.ID, Version: pkg.Manifest.Version, Guidance: input.Guidance, Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, SkillKeys: pkg.Manifest.Expert.SkillKeys, Archive: name, SHA256: pkg.SHA256})
+		} else {
+			keys := map[string][]string{}
+			for _, member := range pkg.Manifest.Team.Members {
+				keys[member.ID] = member.Expert.SkillKeys
+			}
+			catalog.Teams = append(catalog.Teams, Team{Key: pkg.Manifest.ID, Version: pkg.Manifest.Version, SHA256: pkg.SHA256, Archive: name, Definition: pkg.Team, MemberSkillKeys: keys})
+		}
+		return nil
 	}
-	input := domain.ExpertInput{Name: definition.Name, Icon: definition.Icon, IconBackground: definition.IconBackground, Introduction: definition.Introduction, CoreCapability: definition.CoreCapability, OperatingProcedure: definition.OperatingProcedure, OutputStandard: definition.OutputStandard, Cautions: definition.Cautions}
-	if strings.TrimSpace(definition.Introduction) == "" || strings.TrimSpace(definition.CoreCapability) == "" || strings.TrimSpace(definition.OperatingProcedure) == "" || strings.TrimSpace(definition.OutputStandard) == "" {
-		return fmt.Errorf("Expert requires complete structured guidance")
-	}
-	if err := input.Validate(); err != nil {
-		return err
-	}
-	catalog.Experts = append(catalog.Experts, definition)
-	return nil
+
+	return fmt.Errorf("Expert directory requires .plugin/plugin.json")
 }
 
 func archiveDirectory(ctx context.Context, files fs.FS, directory, excluded string) ([]byte, error) {

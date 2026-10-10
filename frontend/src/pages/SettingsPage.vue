@@ -13,6 +13,10 @@ const auth = inject(authContextKey)!;
 const { t, locale } = useI18n();
 const canManageModels = computed(() => auth.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const settings = ref<PersonalSettings>();
+const teamCreditBudget = computed({
+  get: () => (settings.value?.team_credit_budget_hundredths ?? 0) / 100,
+  set: (value: number) => { if (settings.value) settings.value.team_credit_budget_hundredths = Math.round(value * 100); },
+});
 const connections = ref<ModelProviderConnection[]>([]);
 const presets = ref<ModelProviderPreset[]>([]);
 const runtimes = ref<RuntimeEngineStatus[]>([]);
@@ -145,6 +149,7 @@ function selectPersonality(personality: Personality) {
             <label class="full check-row enterprise-default-toggle"><input v-model="settings.execution_inherited" type="checkbox" :disabled="!settings.platform_execution_available && !settings.execution_inherited"><span><strong>{{ t("settings.usePlatformDefault") }}</strong><small>{{ settings.platform_execution_available ? t("settings.platformDefaultHint") : t("settings.platformDefaultUnavailable") }}</small></span></label>
             <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine" :disabled="settings.execution_inherited"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtimeEngineDisplayName(runtime.name) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
             <label>{{ t("settings.language") }}<select v-model="settings.language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label><label>{{ t("settings.timezone") }}<input v-model="settings.timezone"></label>
+            <label class="full">{{ t("settings.teamBudget") }}<input v-model.number="teamCreditBudget" type="number" min="0" max="10000000000" step="0.01" :aria-label="t('settings.teamBudget')"><small>{{ t("settings.teamBudgetHint") }}</small></label>
             <fieldset class="full runtime-defaults" :disabled="settings.execution_inherited"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtimeEngineDisplayName(runtime.name) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
           </div>
         </form>

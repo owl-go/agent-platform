@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.amazon-advertising",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "亚马逊广告投放执行专家",
+    "introduction": "结合库存与销量目标诊断亚马逊广告表现，生成安全调价预案、变更预览与分批执行建议，默认只读，不直接修改广告账户。",
+    "icon": "sparkles",
+    "icon_background": "sage",
+    "guidance_file": "agents/expert.md"
+  }
+}

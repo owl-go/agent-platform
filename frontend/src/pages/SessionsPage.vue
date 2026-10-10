@@ -95,7 +95,7 @@ const statusActivity = computed(() => {
   const summary = activitySummaries(message).at(-1);
   return summary ? activitySummaryLabel(summary) : activeStageLabel(message);
 });
-const statusModelCalls = computed(() => activeAssistant.value?.expert_stages?.length ?? activeAssistant.value?.credit_consumption?.stages.length ?? 0);
+const statusModelCalls = computed(() => activeAssistant.value?.expert_stages?.length ?? activeAssistant.value?.credit_consumption?.stages?.length ?? 0);
 const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
   const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
@@ -150,7 +150,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
       items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
     })),
     stages: message.role === "assistant" ? message.expert_stages?.map((stage) => ({ ...stage, error: authorizationMessage && authorizationUnavailable(stage.error) ? authorizationMessage : stage.error })) : undefined,
-    creditConsumption: message.credit_consumption,
+    team:message.response_snapshot?.team, creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
     evidence: message.evidence,
     executionPlan: message.execution_plan,
@@ -497,7 +497,8 @@ function resumeAssistantStream() {
 function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   const message = messages.value.find((item) => item.id === messageID);
   if (!message) return;
-  message.progress_stage = snapshot.progress_stage;
+  if (snapshot.team && message.response_snapshot) message.response_snapshot.team=snapshot.team;
+ message.progress_stage = snapshot.progress_stage;
   message.error = snapshot.error;
   message.elapsed_ms = snapshot.elapsed_ms;
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;

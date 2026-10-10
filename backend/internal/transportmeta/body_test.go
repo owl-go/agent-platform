@@ -61,3 +61,25 @@ func TestJSONBodyLimitOnlyAllowsArchiveMutationRoutes(t *testing.T) {
 		t.Fatal("ordinary JSON request limit changed")
 	}
 }
+
+func TestExpertMutationBodyLimitsCoverPortableArchivesAndValidatedProfiles(t *testing.T) {
+	for _, tc := range []struct {
+		method, path string
+		want         int
+	}{
+		{http.MethodPost, "/api/v1/expert-packages/import", MaxExpertPackageJSONBody},
+		{http.MethodPost, "/api/v1/experts", MaxExpertProfileJSONBody},
+		{http.MethodPatch, "/api/v1/experts/id", MaxExpertProfileJSONBody},
+		{http.MethodPost, "/api/v1/expert-teams", MaxExpertTeamJSONBody},
+		{http.MethodPatch, "/api/v1/expert-teams/id", MaxExpertTeamJSONBody},
+		{http.MethodPost, "/api/v1/resource-creation-actions/id/decision", MaxExpertProfileJSONBody},
+		{http.MethodGet, "/api/v1/expert-packages/import", MaxJSONBody},
+		{http.MethodPost, "/api/v1/expert-packages/import/", MaxJSONBody},
+		{http.MethodPatch, "/api/v1/experts/id/extra", MaxJSONBody},
+		{http.MethodPost, "/api/v1/resource-creation-actions/id/extra/decision", MaxJSONBody},
+	} {
+		if got := JSONBodyLimit(httptest.NewRequest(tc.method, tc.path, nil)); got != tc.want {
+			t.Errorf("%s %s=%d want=%d", tc.method, tc.path, got, tc.want)
+		}
+	}
+}

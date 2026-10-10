@@ -21,7 +21,7 @@ import (
 
 // Every invocation gets a disposable database; the supplied database is only
 // used to create/drop it. This also exercises the complete migration chain.
-func conversationTestDatabase(t *testing.T) *gorm.DB {
+func conversationTestDatabase(t *testing.T, baseline ...string) *gorm.DB {
 	t.Helper()
 	dsn := os.Getenv("WORKSPACE_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -60,6 +60,10 @@ func conversationTestDatabase(t *testing.T) *gorm.DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
+	if len(baseline) > 0 {
+		applyLegacyExpertSchema(t, db, baseline[0])
+		return db
+	}
 	if err = gormdb.Migrate(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}

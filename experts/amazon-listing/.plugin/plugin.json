@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.amazon-listing",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "亚马逊listing 文案优化大师",
+    "introduction": "诊断并优化亚马逊商品标题、五点、长描述、图文与后台搜索词，兼顾排名、相关性和转化表达，绝不编造产品事实。",
+    "icon": "sparkles",
+    "icon_background": "sage",
+    "guidance_file": "agents/expert.md"
+  }
+}

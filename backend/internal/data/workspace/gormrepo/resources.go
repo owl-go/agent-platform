@@ -25,6 +25,19 @@ func accessibleResourceOwnerIDs(tx *gorm.DB, ownerID string) *gorm.DB {
 	return tx.Table("users").Select("id").Where("id = ? OR administrator", ownerID)
 }
 
+func platformResourceOwnerIDs(tx *gorm.DB) *gorm.DB {
+	return tx.Table("users").Select("id").Where("administrator")
+}
+
+func requireTeamAdministrator(tx *gorm.DB, owner string) error {
+	var user struct{ ID string }
+	err := tx.Table("users").Select("id").Clauses(clause.Locking{Strength: "SHARE"}).Where("id = ? AND administrator AND disabled_at IS NULL", owner).Take(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return domain.ErrForbidden
+	}
+	return err
+}
+
 func expertCatalogQuery(tx *gorm.DB) *gorm.DB {
 	return tx.Model(&expertRecord{}).Select("experts.*, (experts.system_managed OR EXISTS (SELECT 1 FROM users WHERE users.id = experts.owner_user_id AND users.administrator)) AS platform")
 }
@@ -87,10 +100,18 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	if err := input.Validate(); err != nil {
 		return domain.Expert{}, err
 	}
+	input.Guidance = input.MarkdownGuidance()
+	input.ProviderModelID = ""
+	input.RuntimeEngine = ""
+	input.CapabilityIntroduction = ""
+	input.ExpertiseTags = nil
+	if strings.TrimSpace(input.Guidance) != "" {
+		input.CoreCapability, input.OperatingProcedure, input.OutputStandard, input.Cautions, input.ExecutionInstruction = "", "", "", "", ""
+	}
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
 	cliConnectors, _ := marshal(input.CLIConnectorDefinitionIDs)
-	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
+	tags := []byte("[]")
 	var providerModelID *string
 	if value := strings.TrimSpace(input.ProviderModelID); value != "" {
 		providerModelID = &value
@@ -107,14 +128,10 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 	if background == "" {
 		background = "sage"
 	}
-	now := time.Now().UTC()
-	projectionStatus := "idle"
-	var projectionRequestedAt *time.Time
-	if strings.TrimSpace(input.CoreCapability) != "" {
-		projectionStatus, projectionRequestedAt, tags = "queued", &now, []byte("[]")
-	}
 	name := strings.TrimSpace(input.Name)
-	row := expertRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: name, NameNormalized: normalizeResourceName(name), Icon: icon, IconBackground: background, Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), OperatingProcedure: strings.TrimSpace(input.OperatingProcedure), OutputStandard: strings.TrimSpace(input.OutputStandard), Cautions: strings.TrimSpace(input.Cautions), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: providerModelID, RuntimeEngine: runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, CLIConnectorDefinitionIDs: cliConnectors, TagProjectionStatus: projectionStatus, TagProjectionRequestedAt: projectionRequestedAt, Version: 1}
+	bundledSkills, _ := marshal(nonNilSkills(input.BundledSkills))
+	starters, _ := marshal(nonNilStrings(input.StarterPrompts))
+	row := expertRecord{ConnectorDependencies: jsonBytes(nonNilDependencies(input.ConnectorDependencies)), StarterPrompts: starters, BundledSkills: bundledSkills, ID: uuid.NewString(), OwnerID: ownerID, Name: name, NameNormalized: normalizeResourceName(name), Icon: icon, IconBackground: background, Introduction: strings.TrimSpace(input.Introduction), Guidance: input.MarkdownGuidance(), CoreCapability: strings.TrimSpace(input.CoreCapability), OperatingProcedure: strings.TrimSpace(input.OperatingProcedure), OutputStandard: strings.TrimSpace(input.OutputStandard), Cautions: strings.TrimSpace(input.Cautions), CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExecutionInstruction: strings.TrimSpace(input.ExecutionInstruction), ProviderModelID: providerModelID, RuntimeEngine: runtimeEngine, ExpertiseTags: tags, MCPServerIDs: mcp, SkillIDs: skills, CLIConnectorDefinitionIDs: cliConnectors, TagProjectionStatus: "idle", Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := rejectResourceNameConflict(tx, "experts", ownerID, row.Name, ""); err != nil {
 			return err
@@ -125,6 +142,12 @@ func (repository *Repository) CreateExpert(ctx context.Context, ownerID string, 
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
 		}
+		if err := portableConnectorBindings(tx, ownerID, &input); err != nil {
+			return err
+		}
+		row.ConnectorDependencies = jsonBytes(nonNilDependencies(input.ConnectorDependencies))
+		row.MCPServerIDs = jsonBytes(nonNilStrings(input.MCPServerIDs))
+		row.CLIConnectorDefinitionIDs = jsonBytes(nonNilStrings(input.CLIConnectorDefinitionIDs))
 		return tx.Create(&row).Error
 	}); err != nil {
 		return domain.Expert{}, fmt.Errorf("create Expert: %w", err)
@@ -136,10 +159,18 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 	if err := input.Validate(); err != nil {
 		return domain.Expert{}, err
 	}
+	input.Guidance = input.MarkdownGuidance()
+	input.ProviderModelID = ""
+	input.RuntimeEngine = ""
+	input.CapabilityIntroduction = ""
+	input.ExpertiseTags = nil
+	if strings.TrimSpace(input.Guidance) != "" {
+		input.CoreCapability, input.OperatingProcedure, input.OutputStandard, input.Cautions, input.ExecutionInstruction = "", "", "", "", ""
+	}
 	mcp, _ := marshal(input.MCPServerIDs)
 	skills, _ := marshal(input.SkillIDs)
 	cliConnectors, _ := marshal(input.CLIConnectorDefinitionIDs)
-	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
+	tags := []byte("[]")
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var current expertRecord
 		if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, expertID).Take(&current).Error; err != nil {
@@ -157,13 +188,19 @@ func (repository *Repository) UpdateExpert(ctx context.Context, ownerID, expertI
 		if err := validateExpertReferences(tx, ownerID, input); err != nil {
 			return err
 		}
-		name := strings.TrimSpace(input.Name)
-		updates := map[string]any{"name": name, "name_normalized": normalizeResourceName(name), "icon": defaultString(input.Icon, "sparkles"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "operating_procedure": strings.TrimSpace(input.OperatingProcedure), "output_standard": strings.TrimSpace(input.OutputStandard), "cautions": strings.TrimSpace(input.Cautions), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "cli_connector_definition_ids": cliConnectors, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
-		if strings.TrimSpace(input.CoreCapability) != "" {
-			updates["expertise_tags"] = current.ExpertiseTags
+		if err := portableConnectorBindings(tx, ownerID, &input); err != nil {
+			return err
 		}
-		if strings.TrimSpace(input.CoreCapability) != strings.TrimSpace(current.CoreCapability) {
-			updates["tag_projection_status"], updates["tag_projection_error"], updates["tag_projection_requested_at"], updates["expertise_tags"] = "queued", nil, gorm.Expr("now()"), current.ExpertiseTags
+		mcp = jsonBytes(nonNilStrings(input.MCPServerIDs))
+		cliConnectors = jsonBytes(nonNilStrings(input.CLIConnectorDefinitionIDs))
+		name := strings.TrimSpace(input.Name)
+		updates := map[string]any{"connector_dependencies": jsonBytes(nonNilDependencies(input.ConnectorDependencies)), "starter_prompts": jsonBytes(nonNilStrings(input.StarterPrompts)), "name": name, "name_normalized": normalizeResourceName(name), "icon": defaultString(input.Icon, "sparkles"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "guidance": input.MarkdownGuidance(), "core_capability": strings.TrimSpace(input.CoreCapability), "operating_procedure": strings.TrimSpace(input.OperatingProcedure), "output_standard": strings.TrimSpace(input.OutputStandard), "cautions": strings.TrimSpace(input.Cautions), "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "execution_instruction": strings.TrimSpace(input.ExecutionInstruction), "expertise_tags": tags, "mcp_server_ids": mcp, "skill_ids": skills, "cli_connector_definition_ids": cliConnectors, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
+		if input.BundledSkills != nil {
+			data, err := marshal(input.BundledSkills)
+			if err != nil {
+				return err
+			}
+			updates["bundled_skills"] = data
 		}
 		if strings.TrimSpace(input.ProviderModelID) == "" {
 			updates["provider_model_id"] = nil
@@ -292,7 +329,9 @@ func (repository *Repository) DeleteExpert(ctx context.Context, ownerID, expertI
 					return fmt.Errorf("decode Expert Team members: %w", err)
 				}
 				for _, member := range members {
-					ids = append(ids, member.ExpertID)
+					if member.Definition == nil {
+						ids = append(ids, member.ExpertID)
+					}
 				}
 			} else if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
 				return fmt.Errorf("decode Expert Team members: %w", err)
@@ -328,7 +367,7 @@ func (repository *Repository) getExpert(ctx context.Context, ownerID, expertID s
 }
 
 func expertDomain(row expertRecord) (domain.Expert, error) {
-	item := domain.Expert{ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, SystemKey: row.SystemKey, Immutable: row.SystemManaged, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, OperatingProcedure: row.OperatingProcedure, OutputStandard: row.OutputStandard, Cautions: row.Cautions, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, TagProjectionStatus: row.TagProjectionStatus}
+	item := domain.Expert{ConnectorDependencies: decodeExpertDependencies(row.ConnectorDependencies), StarterPrompts: decodeStrings(row.StarterPrompts), ID: row.ID, OwnerID: row.OwnerID, Platform: row.Platform, SystemKey: row.SystemKey, Immutable: row.SystemManaged, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, Guidance: row.Guidance, CoreCapability: row.CoreCapability, OperatingProcedure: row.OperatingProcedure, OutputStandard: row.OutputStandard, Cautions: row.Cautions, CapabilityIntroduction: row.CapabilityIntroduction, ExecutionInstruction: row.ExecutionInstruction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version, TagProjectionStatus: row.TagProjectionStatus}
 	if row.TagProjectionError != nil {
 		item.TagProjectionError = *row.TagProjectionError
 	}
@@ -349,6 +388,11 @@ func expertDomain(row expertRecord) (domain.Expert, error) {
 	}
 	if err := json.Unmarshal(row.CLIConnectorDefinitionIDs, &item.CLIConnectorDefinitionIDs); err != nil {
 		return domain.Expert{}, fmt.Errorf("decode Expert CLI Connectors: %w", err)
+	}
+	if len(row.BundledSkills) > 0 {
+		if err := json.Unmarshal(row.BundledSkills, &item.BundledSkills); err != nil {
+			return domain.Expert{}, err
+		}
 	}
 	return item, nil
 }
@@ -409,7 +453,7 @@ func rejectResourceNameConflict(tx *gorm.DB, table, ownerID, name, excludeID str
 
 func (repository *Repository) ListExpertTeams(ctx context.Context, ownerID string) ([]domain.ExpertTeam, error) {
 	var rows []expertTeamRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ?", ownerID).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id IN (?)", platformResourceOwnerIDs(repository.db.WithContext(ctx))).Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("list Expert Teams: %w", err)
 	}
 	items := make([]domain.ExpertTeam, 0, len(rows))
@@ -418,6 +462,7 @@ func (repository *Repository) ListExpertTeams(ctx context.Context, ownerID strin
 		if err != nil {
 			return nil, err
 		}
+		item.Mutable = row.OwnerID == ownerID && !row.SystemManaged
 		items = append(items, item)
 	}
 	return items, nil
@@ -425,23 +470,35 @@ func (repository *Repository) ListExpertTeams(ctx context.Context, ownerID strin
 
 func (repository *Repository) GetExpertTeam(ctx context.Context, ownerID, teamID string) (domain.ExpertTeam, error) {
 	var row expertTeamRecord
-	if err := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, teamID).Take(&row).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Where("owner_user_id IN (?) AND id = ?", platformResourceOwnerIDs(repository.db.WithContext(ctx)), teamID).Take(&row).Error; err != nil {
 		return domain.ExpertTeam{}, mapNotFound(err)
 	}
-	return repository.expertTeamDomain(ctx, row)
+	item, err := repository.expertTeamDomain(ctx, row)
+	item.Mutable = row.OwnerID == ownerID && !row.SystemManaged
+	return item, err
 }
 
 func (repository *Repository) CreateExpertTeam(ctx context.Context, ownerID string, input domain.ExpertTeamInput) (domain.ExpertTeam, error) {
+	if err := input.ValidateLead(); err != nil {
+		return domain.ExpertTeam{}, err
+	}
 	if err := input.Validate(); err != nil {
 		return domain.ExpertTeam{}, err
 	}
-	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
-	expertIDs := teamExpertIDs(input)
+	tags := []byte("[]")
 	legacyMembers, _ := marshal(input.ExpertIDs)
 	members, _ := marshal(input.Members)
-	row := expertTeamRecord{ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Icon: defaultString(input.Icon, "users"), IconBackground: defaultString(input.IconBackground, "sage"), Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), Members: members, CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExpertiseTags: tags, ExpertIDs: legacyMembers, Version: 1}
+	row := expertTeamRecord{StarterPrompts: jsonBytes(nonNilStrings(input.StarterPrompts)), LeadMemberID: input.LeadMemberID, ID: uuid.NewString(), OwnerID: ownerID, Name: strings.TrimSpace(input.Name), Icon: defaultString(input.Icon, "users"), IconBackground: defaultString(input.IconBackground, "sage"), Introduction: strings.TrimSpace(input.Introduction), CoreCapability: strings.TrimSpace(input.CoreCapability), Members: members, CapabilityIntroduction: strings.TrimSpace(input.CapabilityIntroduction), ExpertiseTags: tags, ExpertIDs: legacyMembers, Version: 1}
 	if err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := validateExpertTeamReferences(tx, ownerID, expertIDs); err != nil {
+		if err := requireTeamAdministrator(tx, ownerID); err != nil {
+			return err
+		}
+		owned, err := ownTeamMembers(tx, ownerID, input, nil)
+		if err != nil {
+			return err
+		}
+		row.Members, err = marshal(owned)
+		if err != nil {
 			return err
 		}
 		return tx.Create(&row).Error
@@ -452,18 +509,39 @@ func (repository *Repository) CreateExpertTeam(ctx context.Context, ownerID stri
 }
 
 func (repository *Repository) UpdateExpertTeam(ctx context.Context, ownerID, teamID string, input domain.ExpertTeamInput, expectedVersion int64) (domain.ExpertTeam, error) {
+	if err := input.ValidateLead(); err != nil {
+		return domain.ExpertTeam{}, err
+	}
 	if err := input.Validate(); err != nil {
 		return domain.ExpertTeam{}, err
 	}
-	tags, _ := marshal(normalizeTags(input.ExpertiseTags))
-	expertIDs := teamExpertIDs(input)
+	tags := []byte("[]")
 	legacyMembers, _ := marshal(input.ExpertIDs)
 	members, _ := marshal(input.Members)
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := validateExpertTeamReferences(tx, ownerID, expertIDs); err != nil {
+		if err := requireTeamAdministrator(tx, ownerID); err != nil {
 			return err
 		}
-		result := tx.Model(&expertTeamRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, teamID, expectedVersion).Updates(map[string]any{"name": strings.TrimSpace(input.Name), "icon": defaultString(input.Icon, "users"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "members": members, "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "expertise_tags": tags, "expert_ids": legacyMembers, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
+		var current expertTeamRecord
+		if err := tx.Where("id=? AND owner_user_id=?", teamID, ownerID).Take(&current).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if current.SystemManaged {
+			return fmt.Errorf("%w: system Expert Team is immutable", domain.ErrConflict)
+		}
+		previous, err := decodeTeamMembers(current)
+		if err != nil {
+			return err
+		}
+		owned, err := ownTeamMembers(tx, ownerID, input, previous)
+		if err != nil {
+			return err
+		}
+		members, err = marshal(owned)
+		if err != nil {
+			return err
+		}
+		result := tx.Model(&expertTeamRecord{}).Where("owner_user_id = ? AND id = ? AND version = ?", ownerID, teamID, expectedVersion).Updates(map[string]any{"starter_prompts": jsonBytes(nonNilStrings(input.StarterPrompts)), "lead_member_id": input.LeadMemberID, "name": strings.TrimSpace(input.Name), "icon": defaultString(input.Icon, "users"), "icon_background": defaultString(input.IconBackground, "sage"), "introduction": strings.TrimSpace(input.Introduction), "core_capability": strings.TrimSpace(input.CoreCapability), "members": members, "capability_introduction": strings.TrimSpace(input.CapabilityIntroduction), "expertise_tags": tags, "expert_ids": legacyMembers, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -479,14 +557,26 @@ func (repository *Repository) UpdateExpertTeam(ctx context.Context, ownerID, tea
 }
 
 func (repository *Repository) DeleteExpertTeam(ctx context.Context, ownerID, teamID string) error {
-	result := repository.db.WithContext(ctx).Where("owner_user_id = ? AND id = ?", ownerID, teamID).Delete(&expertTeamRecord{})
-	if result.Error != nil {
-		return fmt.Errorf("delete Expert Team: %w", result.Error)
-	}
-	if result.RowsAffected != 1 {
-		return domain.ErrNotFound
-	}
-	return nil
+	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := requireTeamAdministrator(tx, ownerID); err != nil {
+			return err
+		}
+		var current expertTeamRecord
+		if err := tx.Where("id=? AND owner_user_id=?", teamID, ownerID).Take(&current).Error; err != nil {
+			return mapNotFound(err)
+		}
+		if current.SystemManaged {
+			return fmt.Errorf("%w: system Expert Team is immutable", domain.ErrConflict)
+		}
+		result := tx.Where("owner_user_id = ? AND id = ?", ownerID, teamID).Delete(&expertTeamRecord{})
+		if result.Error != nil {
+			return fmt.Errorf("delete Expert Team: %w", result.Error)
+		}
+		if result.RowsAffected != 1 {
+			return domain.ErrNotFound
+		}
+		return nil
+	})
 }
 
 func validateExpertTeamReferences(tx *gorm.DB, ownerID string, expertIDs []string) error {
@@ -502,7 +592,7 @@ func validateExpertTeamReferences(tx *gorm.DB, ownerID string, expertIDs []strin
 		}
 	}
 	var count int64
-	if err := tx.Model(&expertRecord{}).Where("owner_user_id IN (?) AND id IN ? AND ((introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> '') OR (execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL))", accessibleResourceOwnerIDs(tx, ownerID), unique).Count(&count).Error; err != nil {
+	if err := tx.Model(&expertRecord{}).Where("owner_user_id IN (?) AND id IN ? AND (guidance <> '' OR (introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> '') OR (execution_instruction <> '' AND provider_model_id IS NOT NULL AND runtime_engine IS NOT NULL))", accessibleResourceOwnerIDs(tx, ownerID), unique).Count(&count).Error; err != nil {
 		return err
 	}
 	if count != int64(len(unique)) {
@@ -512,9 +602,24 @@ func validateExpertTeamReferences(tx *gorm.DB, ownerID string, expertIDs []strin
 }
 
 func (repository *Repository) expertTeamDomain(ctx context.Context, row expertTeamRecord) (domain.ExpertTeam, error) {
-	item := domain.ExpertTeam{ID: row.ID, OwnerID: row.OwnerID, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, CapabilityIntroduction: row.CapabilityIntroduction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
+	item := domain.ExpertTeam{StarterPrompts: decodeStrings(row.StarterPrompts), LeadMemberID: row.LeadMemberID, ID: row.ID, OwnerID: row.OwnerID, Platform: true, Immutable: row.SystemManaged, SystemKey: row.SystemKey, Name: row.Name, Icon: row.Icon, IconBackground: row.IconBackground, Introduction: row.Introduction, CoreCapability: row.CoreCapability, CapabilityIntroduction: row.CapabilityIntroduction, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Version: row.Version}
 	if err := json.Unmarshal(row.ExpertiseTags, &item.ExpertiseTags); err != nil {
 		return domain.ExpertTeam{}, fmt.Errorf("decode Expert Team tags: %w", err)
+	}
+	owned, err := decodeTeamMembers(row)
+	if err != nil {
+		return domain.ExpertTeam{}, err
+	}
+	if len(owned) > 0 && owned[0].Definition != nil {
+		for index, member := range owned {
+			if member.Definition == nil {
+				return domain.ExpertTeam{}, fmt.Errorf("%w: incomplete Team member definition", domain.ErrInvalid)
+			}
+			expert := ownedMemberExpert(row, member)
+			item.Experts = append(item.Experts, expert)
+			item.Members = append(item.Members, domain.ExpertTeamMember{ID: member.ID, Name: member.Name, Expert: expert, Labels: member.Labels, Position: index + 1})
+		}
+		return item, nil
 	}
 	var ids []string
 	var members []domain.ExpertTeamMemberInput
@@ -598,7 +703,7 @@ func (repository *Repository) GetSettings(ctx context.Context, ownerID string) (
 		}
 		runtimeDefaults[parsed] = modelID
 	}
-	return domain.Settings{Personality: row.Personality, PersonalityInstructions: row.PersonalityInstructions, RuntimeModelDefaults: runtimeDefaults, DefaultRuntimeEngine: runtime, Language: row.Language, Timezone: row.Timezone, Version: row.Version, ExecutionInherited: row.ExecutionInherited}, nil
+	return domain.Settings{TeamCreditBudgetHundredths: row.TeamCreditBudgetHundredths, Personality: row.Personality, PersonalityInstructions: row.PersonalityInstructions, RuntimeModelDefaults: runtimeDefaults, DefaultRuntimeEngine: runtime, Language: row.Language, Timezone: row.Timezone, Version: row.Version, ExecutionInherited: row.ExecutionInherited}, nil
 }
 
 func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string, settings domain.Settings, expectedVersion int64) (domain.Settings, error) {
@@ -642,7 +747,7 @@ func (repository *Repository) UpdateSettings(ctx context.Context, ownerID string
 			return err
 		}
 		result := tx.Model(&settingsRecord{}).Where("user_id = ? AND version = ?", ownerID, expectedVersion).Updates(map[string]any{
-			"personality": settings.Personality, "personality_instructions": strings.TrimSpace(settings.PersonalityInstructions),
+			"team_credit_budget_hundredths": settings.TeamCreditBudgetHundredths, "personality": settings.Personality, "personality_instructions": strings.TrimSpace(settings.PersonalityInstructions),
 			"runtime_model_defaults": encodedDefaults, "default_runtime_engine": string(settings.DefaultRuntimeEngine),
 			"language": settings.Language, "timezone": settings.Timezone, "execution_inherited": settings.ExecutionInherited, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1"),
 		})
@@ -1330,4 +1435,27 @@ func removeID(values []string, target string) []string {
 		}
 	}
 	return filtered
+}
+
+func nonNilSkills(skills []domain.SkillSnapshot) []domain.SkillSnapshot {
+	if skills == nil {
+		return []domain.SkillSnapshot{}
+	}
+	return skills
+}
+
+func nonNilStrings(v []string) []string {
+	if v == nil {
+		return []string{}
+	}
+	return v
+}
+func jsonBytes(v any) []byte          { data, _ := json.Marshal(v); return data }
+func decodeStrings(v []byte) []string { var out []string; _ = json.Unmarshal(v, &out); return out }
+
+func nonNilDependencies(v []domain.ExpertConnectorDependency) []domain.ExpertConnectorDependency {
+	if v == nil {
+		return []domain.ExpertConnectorDependency{}
+	}
+	return v
 }

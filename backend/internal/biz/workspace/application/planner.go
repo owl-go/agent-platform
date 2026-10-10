@@ -71,6 +71,10 @@ func PlanExecution(common domain.ExecutionSnapshot, selection ExecutionSelection
 
 	common.SchemaVersion = 2
 	common.Stages = stages
+	if common.TeamProfile != nil && common.TeamProfile.LeadMemberID != "" && selection.Team != nil {
+		common.SchemaVersion = 3
+		common.Coordination = &domain.TeamCoordinationSnapshot{LeadMemberID: common.TeamProfile.LeadMemberID}
+	}
 	if _, err := common.OrderedStages(); err != nil {
 		return domain.ExecutionSnapshot{}, err
 	}

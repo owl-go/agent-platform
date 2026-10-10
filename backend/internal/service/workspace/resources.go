@@ -159,10 +159,11 @@ func (service *Service) GetExpertTeam(ctx context.Context, request *workspacev1.
 }
 
 func (service *Service) CreateExpertTeam(ctx context.Context, request *workspacev1.CreateExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
-	owner, err := service.owner(ctx)
+	principal, err := service.administrator(ctx)
 	if err != nil {
 		return nil, err
 	}
+	owner := principal.UserID
 	input, err := expertTeamInput(request.ExpertTeam)
 	if err != nil {
 		return nil, publicError(err)
@@ -179,10 +180,11 @@ func (service *Service) CreateExpertTeam(ctx context.Context, request *workspace
 }
 
 func (service *Service) UpdateExpertTeam(ctx context.Context, request *workspacev1.UpdateExpertTeamRequest) (*workspacev1.ExpertTeam, error) {
-	owner, err := service.owner(ctx)
+	principal, err := service.administrator(ctx)
 	if err != nil {
 		return nil, err
 	}
+	owner := principal.UserID
 	input, err := expertTeamInput(request.ExpertTeam)
 	if err != nil {
 		return nil, publicError(err)
@@ -199,10 +201,11 @@ func (service *Service) UpdateExpertTeam(ctx context.Context, request *workspace
 }
 
 func (service *Service) DeleteExpertTeam(ctx context.Context, request *workspacev1.DeleteExpertTeamRequest) (*workspacev1.DeleteResponse, error) {
-	owner, err := service.owner(ctx)
+	principal, err := service.administrator(ctx)
 	if err != nil {
 		return nil, err
 	}
+	owner := principal.UserID
 	if err := service.workspace.Repository().DeleteExpertTeam(ctx, owner, request.ExpertTeamId); err != nil {
 		return nil, publicError(err)
 	}
@@ -286,7 +289,11 @@ func (service *Service) UpdateSettings(ctx context.Context, request *workspacev1
 	if request.InheritPlatformExecution != nil {
 		inherited = *request.InheritPlatformExecution
 	}
-	settings := workspacedomain.Settings{Personality: request.Personality, PersonalityInstructions: request.PersonalityInstructions, RuntimeModelDefaults: defaults, DefaultRuntimeEngine: runtime, Language: request.Language, Timezone: request.Timezone, ExecutionInherited: inherited}
+	budget := existing.TeamCreditBudgetHundredths
+	if request.TeamCreditBudgetHundredths != nil {
+		budget = *request.TeamCreditBudgetHundredths
+	}
+	settings := workspacedomain.Settings{TeamCreditBudgetHundredths: budget, Personality: request.Personality, PersonalityInstructions: request.PersonalityInstructions, RuntimeModelDefaults: defaults, DefaultRuntimeEngine: runtime, Language: request.Language, Timezone: request.Timezone, ExecutionInherited: inherited}
 	item, err := service.workspace.Repository().UpdateSettings(ctx, owner, settings, request.ExpectedVersion)
 	if err != nil {
 		return nil, publicError(err)
@@ -783,13 +790,22 @@ func expertInput(input *workspacev1.ExpertInput) (workspacedomain.ExpertInput, e
 	if input == nil {
 		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: Expert input is required", workspacedomain.ErrInvalid)
 	}
-	return workspacedomain.ExpertInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, Cautions: input.Cautions, MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...), CLIConnectorDefinitionIDs: append([]string(nil), input.CliConnectorDefinitionIds...)}, nil
+	if input.CoreCapability != "" || input.OperatingProcedure != "" || input.OutputStandard != "" || input.Cautions != "" {
+		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: structured guidance fields are retired", workspacedomain.ErrInvalid)
+	}
+	if strings.TrimSpace(input.Guidance) == "" {
+		return workspacedomain.ExpertInput{}, fmt.Errorf("%w: Markdown guidance is required", workspacedomain.ErrInvalid)
+	}
+	return workspacedomain.ExpertInput{ConnectorDependencies: dependenciesFromInput(input.ConnectorDependencies), StarterPrompts: input.StarterPrompts, Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, Guidance: input.Guidance, MCPServerIDs: append([]string(nil), input.McpServerIds...), SkillIDs: append([]string(nil), input.SkillIds...), CLIConnectorDefinitionIDs: append([]string(nil), input.CliConnectorDefinitionIds...)}, nil
 }
 
 func expertResponse(item workspacedomain.Expert, status expertAvailabilityStatus) *workspacev1.Expert {
-	response := &workspacev1.Expert{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, ExpertiseTags: item.ExpertiseTags, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, TagProjectionStatus: item.TagProjectionStatus, Platform: item.Platform, SystemKey: item.SystemKey, Immutable: item.Immutable}
-	if item.TagProjectionError != "" {
-		response.TagProjectionError = &item.TagProjectionError
+	response := &workspacev1.Expert{StarterPrompts: item.StarterPrompts, Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, Guidance: item.Guidance, CoreCapability: item.CoreCapability, OperatingProcedure: item.OperatingProcedure, OutputStandard: item.OutputStandard, Cautions: item.Cautions, McpServerIds: item.MCPServerIDs, SkillIds: item.SkillIDs, CliConnectorDefinitionIds: item.CLIConnectorDefinitionIDs, Complete: status.Complete, Available: status.Available, Compatibility: status.Compatibility, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform, SystemKey: item.SystemKey, Immutable: item.Immutable}
+	for _, dep := range item.ConnectorDependencies {
+		response.ConnectorDependencies = append(response.ConnectorDependencies, &workspacev1.ExpertConnectorDependency{Source: dep.Source, Kind: dep.Kind, Version: dep.Version})
+	}
+	for _, skill := range item.BundledSkills {
+		response.BundledSkills = append(response.BundledSkills, &workspacev1.BundledSkillSummary{Id: skill.ID, Name: skill.Name, Sha256: skill.SHA256})
 	}
 	if status.Reason != "" {
 		response.AvailabilityReason = &status.Reason
@@ -803,14 +819,22 @@ func expertTeamInput(input *workspacev1.ExpertTeamInput) (workspacedomain.Expert
 	}
 	members := make([]workspacedomain.ExpertTeamMemberInput, 0, len(input.Members))
 	for _, member := range input.Members {
-		members = append(members, workspacedomain.ExpertTeamMemberInput{ID: member.Id, Name: member.Name, ExpertID: member.ExpertId, Labels: append([]string(nil), member.Labels...)})
+		var definition *workspacedomain.ExpertInput
+		if member.Definition != nil {
+			parsed, err := expertInput(member.Definition)
+			if err != nil {
+				return workspacedomain.ExpertTeamInput{}, err
+			}
+			definition = &parsed
+		}
+		members = append(members, workspacedomain.ExpertTeamMemberInput{Definition: definition, ID: member.Id, Name: member.Name, ExpertID: member.ExpertId, Labels: append([]string(nil), member.Labels...)})
 	}
-	return workspacedomain.ExpertTeamInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, Members: members}, nil
+	return workspacedomain.ExpertTeamInput{StarterPrompts: input.StarterPrompts, LeadMemberID: input.LeadMemberId, Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, Members: members}, nil
 }
 
 func expertTeamResponse(item workspacedomain.ExpertTeam, availability map[string]expertAvailabilityStatus) *workspacev1.ExpertTeam {
 	experts := make([]*workspacev1.Expert, 0, len(item.Experts))
-	available := len(item.Experts) >= 2
+	available := item.LeadMemberID != "" && len(item.Experts) >= 2
 	for _, expert := range item.Experts {
 		status := availability[expert.ID]
 		available = available && status.Available
@@ -818,14 +842,14 @@ func expertTeamResponse(item workspacedomain.ExpertTeam, availability map[string
 	}
 	members := make([]*workspacev1.ExpertTeamMember, 0, len(item.Members))
 	if len(item.Members) > 0 {
-		available = len(item.Members) >= 2
+		available = item.LeadMemberID != "" && len(item.Members) >= 2
 	}
 	for _, member := range item.Members {
 		status := availability[member.Expert.ID]
 		available = available && status.Available
 		members = append(members, &workspacev1.ExpertTeamMember{Id: member.ID, Name: member.Name, Expert: expertResponse(member.Expert, status), Labels: member.Labels, Position: int32(member.Position)})
 	}
-	return &workspacev1.ExpertTeam{Id: item.ID, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, Members: members, CapabilityIntroduction: item.CapabilityIntroduction, ExpertiseTags: item.ExpertiseTags, Experts: experts, Available: available, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
+	return &workspacev1.ExpertTeam{StarterPrompts: item.StarterPrompts, LeadMemberId: item.LeadMemberID, Id: item.ID, Platform: item.Platform, Mutable: item.Mutable, Immutable: item.Immutable, SystemKey: item.SystemKey, Name: item.Name, Icon: item.Icon, IconBackground: item.IconBackground, Introduction: item.Introduction, CoreCapability: item.CoreCapability, Members: members, Experts: experts, Available: available, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version}
 }
 
 func (service *Service) teamExpertAvailability(ctx context.Context, teams []workspacedomain.ExpertTeam) (map[string]expertAvailabilityStatus, error) {
@@ -851,7 +875,7 @@ func (service *Service) expertAvailability(ctx context.Context, experts []worksp
 	models := make(map[string]workspacedomain.ProviderModel)
 	needsLegacyCatalog := false
 	for _, expert := range experts {
-		if strings.TrimSpace(expert.CoreCapability) == "" && expert.Available() {
+		if strings.TrimSpace(expert.Guidance) == "" && strings.TrimSpace(expert.CoreCapability) == "" && expert.Available() {
 			needsLegacyCatalog = true
 			break
 		}
@@ -875,9 +899,22 @@ func (service *Service) expertAvailability(ctx context.Context, experts []worksp
 			result[expert.ID] = status
 			continue
 		}
-		if strings.TrimSpace(expert.CoreCapability) != "" {
+		if strings.TrimSpace(expert.Guidance) != "" || strings.TrimSpace(expert.CoreCapability) != "" {
 			status.Available = true
-			status.Compatibility = "verified"
+			if len(expert.ConnectorDependencies) > 0 {
+				owner, err := service.owner(ctx)
+				if err != nil {
+					return nil, err
+				}
+				dependencyRepo, ok := service.workspace.Repository().(interface {
+					ExpertDependenciesAvailable(context.Context, string, workspacedomain.Expert) error
+				})
+				if !ok || dependencyRepo.ExpertDependenciesAvailable(ctx, owner, expert) != nil {
+					status.Available = false
+					status.Reason = "Install and authorize the required Connectors for your account"
+				}
+			}
+			status.Compatibility = "unverified"
 			result[expert.ID] = status
 			continue
 		}
@@ -899,7 +936,7 @@ func (service *Service) expertAvailability(ctx context.Context, experts []worksp
 }
 
 func settingsResponse(item workspacedomain.Settings) *workspacev1.PersonalSettings {
-	response := &workspacev1.PersonalSettings{Personality: item.Personality, PersonalityInstructions: item.PersonalityInstructions, DefaultRuntimeEngine: string(item.DefaultRuntimeEngine), Language: item.Language, Timezone: item.Timezone, Version: item.Version, ExecutionInherited: item.ExecutionInherited}
+	response := &workspacev1.PersonalSettings{TeamCreditBudgetHundredths: item.TeamCreditBudgetHundredths, Personality: item.Personality, PersonalityInstructions: item.PersonalityInstructions, DefaultRuntimeEngine: string(item.DefaultRuntimeEngine), Language: item.Language, Timezone: item.Timezone, Version: item.Version, ExecutionInherited: item.ExecutionInherited}
 	for _, runtime := range []workspacedomain.RuntimeEngine{workspacedomain.RuntimeClaude, workspacedomain.RuntimeCodex, workspacedomain.RuntimeHermes, workspacedomain.RuntimeOpenClaw, workspacedomain.RuntimePI} {
 		if modelID := item.RuntimeModelDefaults[runtime]; modelID != "" {
 			response.RuntimeModelDefaults = append(response.RuntimeModelDefaults, &workspacev1.RuntimeModelDefault{RuntimeEngine: string(runtime), ProviderModelId: modelID})
@@ -1006,4 +1043,14 @@ func mcpResponse(item workspacedomain.MCPServer) *workspacev1.MCPConnector {
 
 func skillResponse(item workspacedomain.Skill) *workspacev1.Skill {
 	return &workspacev1.Skill{Id: item.ID, Name: item.Name, Source: item.Source, GitUrl: item.GitURL, GitRef: item.GitRef, Sha256: item.SHA256, CreatedAt: timestamppb.New(item.CreatedAt), UpdatedAt: timestamppb.New(item.UpdatedAt), Version: item.Version, Platform: item.Platform, Icon: item.Icon, SystemKey: item.SystemKey, Immutable: item.Immutable}
+}
+
+func dependenciesFromInput(items []*workspacev1.ExpertConnectorDependency) []workspacedomain.ExpertConnectorDependency {
+	result := []workspacedomain.ExpertConnectorDependency{}
+	for _, item := range items {
+		if item != nil {
+			result = append(result, workspacedomain.ExpertConnectorDependency{Source: item.Source, Kind: item.Kind, Version: item.Version})
+		}
+	}
+	return result
 }

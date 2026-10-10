@@ -70,7 +70,8 @@ func (service *Service) RegisterHTTP(server *kratoshttp.Server) {
 	server.Handle(teambitionOAuthCallbackPath, http.HandlerFunc(service.teambitionOAuthCallback))
 	server.Handle(klingOAuthCallbackPath, http.HandlerFunc(service.klingOAuthCallback))
 	server.Handle("/api/v1/sessions/{session_id}/messages/{message_id}/events", http.HandlerFunc(service.streamSessionMessage))
-	server.Handle("/api/v1/resource-creation-actions/", http.HandlerFunc(service.decideResourceCreationAction))
+	server.Handle("/api/v1/resource-creation-actions/{action_id}", http.HandlerFunc(service.decideResourceCreationAction))
+	server.Handle("/api/v1/resource-creation-actions/{action_id}/decision", http.HandlerFunc(service.decideResourceCreationAction))
 	server.Handle("/api/v1/sessions/{session_id}/artifacts/{artifact_id}/download", http.HandlerFunc(service.downloadSessionArtifact))
 	server.Handle("/api/v1/workflows/{workflow_id}/runs/{run_id}/events", http.HandlerFunc(service.streamRunEvents))
 	server.Handle("/api/v1/workflows/{workflow_id}/artifacts/{artifact_id}/download", http.HandlerFunc(service.downloadWorkflowArtifact))
@@ -192,7 +193,7 @@ func (service *Service) validateExecutionRuntimes(ctx context.Context, owner str
 }
 
 func (service *Service) validateExpertInputAvailability(ctx context.Context, input workspacedomain.ExpertInput) error {
-	expert := workspacedomain.Expert{ID: "candidate", Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, ExecutionInstruction: input.ExecutionInstruction, ProviderModelID: input.ProviderModelID, RuntimeEngine: input.RuntimeEngine}
+	expert := workspacedomain.Expert{ID: "candidate", Introduction: input.Introduction, Guidance: input.Guidance, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, ExecutionInstruction: input.ExecutionInstruction, ProviderModelID: input.ProviderModelID, RuntimeEngine: input.RuntimeEngine}
 	availability, err := service.expertAvailability(ctx, []workspacedomain.Expert{expert})
 	if err != nil {
 		return err
@@ -221,7 +222,7 @@ func publicError(err error) error {
 	switch {
 	case errors.Is(err, accountdomain.ErrUnauthenticated):
 		return kratoserrors.New(http.StatusUnauthorized, "authentication_required", "authentication required")
-	case errors.Is(err, accountdomain.ErrForbidden):
+	case errors.Is(err, accountdomain.ErrForbidden), errors.Is(err, workspacedomain.ErrForbidden):
 		return kratoserrors.New(http.StatusForbidden, "access_denied", "access denied")
 	case errors.Is(err, accountdomain.ErrNotFound), errors.Is(err, workspacedomain.ErrNotFound):
 		return kratoserrors.New(http.StatusNotFound, "resource_not_found", "resource not found")

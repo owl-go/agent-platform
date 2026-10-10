@@ -21,7 +21,7 @@ const cliEnablements = ref<CLIConnectorEnablement[]>([]);
 const saving = ref(false);
 const confirmDelete = ref(false);
 const toast = ref<{ kind: "success" | "error"; message: string }>();
-const form = ref<ExpertInput>({ name: "", icon: "sparkles", icon_background: "sage", introduction: "", core_capability: "", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [] });
+const form = ref<ExpertInput>({ starter_prompts: [], name: "", icon: "sparkles", icon_background: "sage", introduction: "", guidance: "", core_capability: "", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [] });
 const isNew = route.name === "expert-new" || route.params.expertId === "new";
 
 onMounted(async () => {
@@ -33,7 +33,7 @@ onMounted(async () => {
     cliEnablements.value = enablementItems;
     if (!isNew) {
       expert.value = await api.getExpert(String(route.params.expertId));
-      form.value = { name: expert.value.name, icon: expert.value.icon || "sparkles", icon_background: expert.value.icon_background || "sage", introduction: expert.value.introduction, core_capability: expert.value.core_capability, operating_procedure: expert.value.operating_procedure, output_standard: expert.value.output_standard, cautions: expert.value.cautions || "", mcp_server_ids: [...expert.value.mcp_server_ids], skill_ids: [...expert.value.skill_ids], cli_connector_definition_ids: [...expert.value.cli_connector_definition_ids] };
+      form.value = { connector_dependencies:expert.value.connector_dependencies || [], starter_prompts: expert.value.starter_prompts || [], name: expert.value.name, icon: expert.value.icon || "sparkles", icon_background: expert.value.icon_background || "sage", introduction: expert.value.introduction, guidance: expert.value.guidance || "", core_capability: expert.value.core_capability, operating_procedure: expert.value.operating_procedure, output_standard: expert.value.output_standard, cautions: expert.value.cautions || "", mcp_server_ids: [...expert.value.mcp_server_ids], skill_ids: [...expert.value.skill_ids], cli_connector_definition_ids: [...expert.value.cli_connector_definition_ids] };
     }
   } catch {
     toast.value = { kind: "error", message: t("experts.loadExpertFailed") };
@@ -43,8 +43,9 @@ onMounted(async () => {
 async function save() {
   saving.value = true;
   try {
-    if (expert.value) await api.updateExpert(expert.value.id, form.value, expert.value.version);
-    else await api.createExpert(form.value);
+    const {core_capability: _core,operating_procedure: _procedure,output_standard: _output,cautions: _cautions,...input}=form.value;
+    if (expert.value) await api.updateExpert(expert.value.id, input, expert.value.version);
+    else await api.createExpert(input);
     toast.value = { kind: "success", message: t("experts.saved") };
     window.setTimeout(() => void router.push("/experts"), 350);
   } catch {
@@ -75,13 +76,11 @@ async function remove() {
     <form class="editor-form" @submit.prevent="save">
       <section class="editor-section"><div><h2>{{ t('experts.basic') }}</h2><p>{{ t('experts.basicHint') }}</p></div><div class="form-grid">
         <label>{{ t('experts.name') }}<el-input v-model="form.name" maxlength="100" show-word-limit /></label>
-        <div class="form-field"><span>{{ t('experts.icon') }}</span><IconPicker v-model="form.icon" fallback="sparkles" /></div>
+        <div class="form-field"><span>{{ t('experts.icon') }}</span><IconPicker @invalid="toast = {kind: 'error', message: '请选择不超过 2 MiB 的有效图像'}" v-model="form.icon" fallback="sparkles" /></div>
         <label>{{ t('experts.iconBackground') }}<el-select v-model="form.icon_background"><el-option value="sage" :label="t('experts.sage')" /><el-option value="sand" :label="t('experts.sand')" /><el-option value="sky" :label="t('experts.sky')" /><el-option value="coral" :label="t('experts.coral')" /></el-select></label>
+        <div class="form-field full"><span>开场提示（最多三条）</span><div v-for="(_, index) in form.starter_prompts" :key="index"><el-input v-model="form.starter_prompts![index]" maxlength="2000" :aria-label="`开场提示 ${index + 1}`" /><el-button text @click="form.starter_prompts!.splice(index, 1)">删除</el-button></div><el-button v-if="(form.starter_prompts?.length || 0) < 3" text @click="(form.starter_prompts ||= []).push('')">添加开场提示</el-button></div>
         <label class="full">{{ t('experts.introduction') }}<el-input v-model="form.introduction" type="textarea" :rows="3" maxlength="2000" show-word-limit /><small>{{ t('experts.descriptionHint') }}</small></label>
-        <label class="full">{{ t('experts.coreCapability') }}<el-input v-model="form.core_capability" type="textarea" :rows="4" maxlength="20000" show-word-limit /></label>
-        <label class="full">{{ t('experts.operatingProcedure') }}<el-input v-model="form.operating_procedure" type="textarea" :rows="6" maxlength="20000" show-word-limit /></label>
-        <label class="full">{{ t('experts.outputStandard') }}<el-input v-model="form.output_standard" type="textarea" :rows="4" maxlength="20000" show-word-limit /></label>
-        <label class="full">{{ t('experts.cautions') }}<el-input v-model="form.cautions" type="textarea" :rows="3" maxlength="20000" show-word-limit /></label>
+        <label class="full">{{ t('experts.guidance') }}<el-input v-model="form.guidance" type="textarea" :rows="14" maxlength="100000" show-word-limit /><small>{{ t('experts.guidanceHint') }}</small></label>
       </div></section>
       <section class="editor-section"><div><h2>{{ t('experts.extensions') }}</h2><p>{{ t('experts.extensionsHint') }}</p></div><ExpertResourceSelector :mcp-servers="mcp" :skills="skills" :cli-connectors="cliConnectors" :cli-enablements="cliEnablements" :mcp-server-ids="form.mcp_server_ids" :skill-ids="form.skill_ids" :cli-connector-definition-ids="form.cli_connector_definition_ids" @update:mcp-server-ids="form.mcp_server_ids = $event" @update:skill-ids="form.skill_ids = $event" @update:cli-connector-definition-ids="form.cli_connector_definition_ids = $event" /></section>
     </form>

@@ -2,13 +2,23 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMemoryHistory } from "vue-router";
-import { platformApiKey, type PlatformApi, type Skill } from "../api/client";
+import { platformApiKey, type PlatformApi, type Skill, type Expert } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import CatalogDetails from "./CatalogDetails.vue";
 
 afterEach(() => document.body.replaceChildren());
+it("renders the authoritative Expert Markdown instead of obsolete form guidance", async () => {
+ const expert = { id: "expert", name: "Reviewer", introduction: "Display", guidance: "# Authoritative\n\n**Rules**", core_capability: "STALE_FORM", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [], available: true } as unknown as Expert;
+ const api = { listSkills: vi.fn(async () => []), listMCPServers: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []) } as unknown as PlatformApi;
+ const router = createAppRouter(createMemoryHistory()); await router.push("/resources");
+ const wrapper = mount(CatalogDetails, { attachTo: document.body, props: { expert }, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
+ await flushPromises();
+ expect(document.body.querySelector(".catalog-member-detail h1")?.textContent).toBe("Authoritative");
+ expect(document.body.textContent).not.toContain("STALE_FORM");
+ wrapper.unmount();
+});
 it("renders installed Skill Markdown safely and launches a preselected new Session", async () => {
  const skill = { id: "pdf", name: "PDF 文档处理", source: "upload", version: 2 } as Skill;
  const api = { getSkillDocument: vi.fn(async () => ({ skill, content: '# Document\n\n<script>window.untrusted=true</script>\n\n[unsafe](javascript:alert(1))\n\n![remote](https://example.test/tracker.png)' })) } as unknown as PlatformApi;

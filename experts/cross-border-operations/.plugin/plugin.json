@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.cross-border-operations",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "跨境运营专家",
+    "introduction": "面向独立站与平台卖家，借助轻流贯通跨境选品、上架文案、短视频策划、\n  推广执行与数据复盘，形成可追踪、可协作、可复盘的增长闭环。",
+    "icon": "sparkles",
+    "icon_background": "sand",
+    "guidance_file": "agents/expert.md"
+  }
+}

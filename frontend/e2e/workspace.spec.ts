@@ -1,10 +1,11 @@
 import { test, expect, request, type BrowserContext, type Page, type APIRequestContext } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { randomUUID, createHash } from 'node:crypto';
 let admin: BrowserContext, user: BrowserContext, adminAPI: APIRequestContext, userAPI: APIRequestContext;
 const baseURL = process.env.E2E_BASE_URL!;
 const prefix = `e2e-${Date.now()}`;
-const expertInput = (name: string) => ({ name, icon: 'sparkles', icon_background: 'sage', introduction: 'E2E expert', core_capability: 'Analyze input', operating_procedure: 'Read, analyze, report', output_standard: 'Plain text report', cautions: '', mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [] });
+const expertInput = (name: string) => ({ name, icon: 'sparkles', icon_background: 'sage', introduction: 'E2E expert', guidance: '# Review\nRead, analyze, report', mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [] });
 const workflowInput = (name: string) => ({ name, goal: 'Validate current workspace', environment: [] });
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/');
@@ -118,11 +119,11 @@ test('E2E-008 | SEC | Session owner isolation includes Administrator', async () 
   expect((await adminAPI.get(`/api/v1/sessions/${item.id}/messages`)).status()).toBe(404);
   expect((await adminAPI.delete(`/api/v1/sessions/${item.id}`)).status()).toBe(404);
 });
-test('E2E-009 | EXP | Expert CRUD and structured fields persist', async () => {
+test('E2E-009 | EXP | Expert CRUD and Markdown guidance persist', async () => {
   let item = await newExpert(); expect(item.complete).toBe(true);
   const input = expertInput(`${prefix}-edited`);
   item = await ok(userAPI, 'PATCH', `/experts/${item.id}`, { expert: input, expected_version: item.version });
-  expect((await ok(userAPI, 'GET', `/experts/${item.id}`)).core_capability).toBe(input.core_capability);
+  expect((await ok(userAPI, 'GET', `/experts/${item.id}`)).guidance).toBe(input.guidance);
   await ok(userAPI, 'DELETE', `/experts/${item.id}`);
   expect((await userAPI.get(`/api/v1/experts/${item.id}`)).status()).toBe(404);
 });
@@ -134,12 +135,8 @@ test('E2E-010 | SEC | Expert private data cannot be read or changed by another o
 test('E2E-011 | EXP | Empty expert name is rejected', async () => {
   expect((await userAPI.post('/api/v1/experts', { data: { expert: expertInput('') } })).status()).toBe(422);
 });
-test('E2E-012 | TEAM | Ordered team members persist', async () => {
-  const one = await newExpert(), two = await newExpert();
-  const team = await ok(userAPI, 'POST', '/expert-teams', { expert_team: { name: `${prefix}-team`, icon: 'sparkles', icon_background: 'sage', introduction: 'Test team', core_capability: 'Review', members: [{ id: randomUUID(), name: 'Author', expert_id: one.id, labels: [] }, { id: randomUUID(), name: 'Reviewer', expert_id: two.id, labels: [] }] } });
-  const saved = await ok(userAPI, 'GET', `/expert-teams/${team.id}`);
-  expect(saved.members.map((m: any) => m.expert.id)).toEqual([one.id, two.id]);
-  await ok(userAPI, 'DELETE', `/expert-teams/${team.id}`);
+test('E2E-012 | TEAM | Only Administrator creates independent Platform Team members', async () => {
+ const one=await newExpert(adminAPI),two=await newExpert(adminAPI);const lead=randomUUID(),reviewer=randomUUID();const input={name:`${prefix}-team`,icon:'users',icon_background:'sage',introduction:'Test team',core_capability:'Review',lead_member_id:lead,members:[{id:lead,name:'Lead',expert_id:one.id,labels:[]},{id:reviewer,name:'Reviewer',expert_id:two.id,labels:[]}]};expect((await userAPI.post('/api/v1/expert-teams',{data:{expert_team:input}})).status()).toBe(403);const team=await ok(adminAPI,'POST','/expert-teams',{expert_team:input});const saved=await ok(userAPI,'GET',`/expert-teams/${team.id}`);expect(saved.members[0].expert.guidance).toBe(one.guidance);expect(saved.members[0].expert.id).not.toBe(one.id);expect(saved.lead_member_id).toBe(lead);await ok(adminAPI,'DELETE',`/expert-teams/${team.id}`);
 });
 test('E2E-013 | WF | Workflow create/update/delete persist', async () => {
   let item = await newWorkflow();
@@ -225,9 +222,9 @@ test('E2E-029 | EXP | Browser creates an expert and sees it after reload', async
   await expect(page.locator('.editor-form')).toBeVisible();
   await page.locator('.editor-form input').first().fill(`${prefix}-browser-expert`);
   const text = page.locator('.editor-form textarea');
-  for (const [i, value] of ['Browser introduction', 'Analyze requirements', 'Read and report', 'Markdown output'].entries()) await text.nth(i).fill(value);
-  await page.getByRole('button', { name: '保存', exact: true }).click(); await expect(page).toHaveURL(/\/experts$/);
-  await page.reload(); await expect(page.getByText(`${prefix}-browser-expert`, { exact: true })).toBeVisible(); await page.close();
+  for (const [i, value] of ['Browser introduction', '# Review\nAnalyze requirements'].entries()) await text.nth(i).fill(value);
+  await page.getByRole('button', { name: '保存', exact: true }).click(); await expect(page).toHaveURL(/\/resources\?tab=experts$/);
+  await page.reload(); await expect(page.getByRole('button',{name:`${prefix}-browser-expert`,exact:true})).toBeVisible(); await page.close();
 });
 test('E2E-030 | UI | Mobile navigation and no horizontal overflow', async () => {
   const page = await user.newPage(); await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/sessions');
@@ -345,12 +342,49 @@ test('E2E-043 | MCP | Browser creates MCP configuration', async () => {
   await expect(page.getByText(`${prefix}-browser-mcp`, { exact: true })).toBeVisible(); await page.close();
 });
 test('E2E-044 | TEAM | Browser reopens and saves an existing Expert Team', async () => {
-  const one = await newExpert(), two = await newExpert();
-  const team = await ok(userAPI, 'POST', '/expert-teams', { expert_team: { name: `${prefix}-browser-team`, icon: 'users', icon_background: 'sage', introduction: 'Browser team', core_capability: 'Review', members: [{ id: randomUUID(), name: 'Author', expert_id: one.id, labels: [] }, { id: randomUUID(), name: 'Reviewer', expert_id: two.id, labels: [] }] } });
-  const page = await user.newPage(); await page.goto(`/expert-teams/${team.id}`);
+  const one = await newExpert(adminAPI), two = await newExpert(adminAPI);
+  const team = await ok(adminAPI, 'POST', '/expert-teams', { expert_team: { name: `${prefix}-browser-team`, icon: 'users', icon_background: 'sage', introduction: 'Browser team', core_capability: 'Review', lead_member_id: 'lead', members: [{ id: 'lead', name: 'Author', expert_id: one.id, labels: [] }, { id: randomUUID(), name: 'Reviewer', expert_id: two.id, labels: [] }] } });
+  const page = await admin.newPage(); await page.goto(`/expert-teams/${team.id}`);
   await expect(page.locator('.ordered-members li')).toHaveCount(2);
   const response = page.waitForResponse(r => r.url().endsWith(`/api/v1/expert-teams/${team.id}`) && r.request().method() === 'PATCH');
   await page.getByRole('button', { name: '保存', exact: true }).click();
   expect((await response).status()).toBe(200);
-  await expect(page).toHaveURL(/\/experts\?tab=teams/); await page.close();
+  await expect(page).toHaveURL(/\/resources\?tab=teams/); await page.close();
+});
+
+test('E2E-EXPERT | Profile, portable copy and Administrator boundary at desktop and mobile', async () => {
+ const page=await user.newPage();await page.setViewportSize({width:1440,height:1000});const name=`${prefix}-portable-profile`;const before=await ok(userAPI,'GET','/sessions');await page.goto('/experts/new');await expect(page.locator('.editor-form')).toBeVisible();await page.locator('.editor-form input').first().fill(name);await page.locator('.editor-form textarea').nth(0).fill('Review evidence');await page.locator('.editor-form textarea').nth(1).fill('# Review\nUse the supplied evidence.');for(let index=1;index<=3;index++){await page.getByRole('button',{name:'添加开场提示',exact:true}).click();await page.getByRole('textbox',{name:`开场提示 ${index}`,exact:true}).fill(`Review example ${index}`);}await expect(page.getByRole('button',{name:'添加开场提示',exact:true})).toHaveCount(0);await page.getByRole('button',{name:'保存',exact:true}).click();await expect(page).toHaveURL(/\/resources\?tab=experts$/);await page.reload();const card=page.getByRole('button',{name,exact:true});await card.focus();await page.keyboard.press('Enter');await expect(page.getByText('Review example 3',{exact:true})).toBeVisible();await page.screenshot({path:'../output/playwright/experts-desktop.png',animations:'disabled'});const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'导出 ZIP',exact:true}).click();const download=await downloadPromise;const file=await download.path();expect(file).toBeTruthy();await page.locator('.catalog-details .el-drawer__close-btn').click();await page.locator('.package-copy-name input').fill(`${name}-copy`);await page.locator('.package-import-file').setInputFiles(file!);await expect(page.getByText(`${name}-copy`,{exact:true}).first()).toBeVisible();const after=await ok(userAPI,'GET','/sessions');expect(after.items?.length||0).toBe(before.items?.length||0);const profiles=await ok(userAPI,'GET','/experts');const copied=profiles.items.find((item:any)=>item.name===`${name}-copy`);expect(copied.starter_prompts).toHaveLength(3);expect(copied.guidance).toContain('# Review');await page.setViewportSize({width:390,height:844});await expect(page.getByText('Review example 3',{exact:true})).toBeVisible();await page.screenshot({path:'../output/playwright/experts-mobile.png',animations:'disabled'});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.keyboard.press('Escape');await page.goto('/expert-teams/new');await expect(page.locator('.editor-form')).toHaveCount(0);await expect(page.getByText('专家团由管理员维护，请从目录选择平台专家团。',{exact:false})).toBeVisible().catch(async()=>{await expect(page.locator('.el-alert')).toBeVisible();});await page.close();
+});
+
+
+test('E2E-TASK | Persisted Team facts reload with keyboard and mobile access', async () => {
+  const session = await ok(userAPI, 'POST', '/sessions', {});
+  const stages = [
+    { invocation_id: randomUUID(), role: 'lead', team_member_id: 'lead', team_member_name: 'Lead', position: 1, state: 'succeeded', model_invoked: true, final_text: '{"action":"complete","response":"Official"}' },
+    { invocation_id: randomUUID(), role: 'member', team_member_id: 'review', team_member_name: 'Reviewer', task_id: 'repair-review', repair_of: 'review', required: true, position: 2, state: 'succeeded', model_invoked: true, final_text: 'Persisted reviewed evidence', workspace_conflicts: [{path:'report.md',task_ids:['review','repair-review'],state:'resolved',resolution_source_task_id:'repair-review'}] },
+  ];
+  const snapshot = {schema_version:3,coordination:{lead_member_id:'lead'},team_profile:{id:randomUUID(),name:'Review Team'},stages:[{team_member_id:'lead',team_member_name:'Lead'},{team_member_id:'review',team_member_name:'Reviewer'}]};
+  const quoted = (value: unknown) => "'"+JSON.stringify(value).replaceAll("'","''")+"'::jsonb";
+  const container = process.env.E2E_POSTGRES_CONTAINER;
+  if (!container) throw new Error('The task fixture requires the isolated PostgreSQL container');
+  execFileSync('docker', ['exec',container,'psql','-U','e2e','-d','e2e','-v','ON_ERROR_STOP=1','-c',`INSERT INTO session_messages(session_id,role,content,state,expert_stages,response_snapshot,credit_consumption) VALUES('${session.id}','assistant','Official reviewed answer','completed',${quoted(stages)},${quoted(snapshot)},${quoted({total_hundredths:17,stages:[]})})`], {stdio:'pipe'});
+  const persisted=await ok(userAPI,'GET',`/sessions/${session.id}/messages`);expect(persisted.items).toHaveLength(1);
+  const page = await user.newPage();const pageErrors:string[]=[];page.on('pageerror',error=>pageErrors.push(error.message));
+  for (const [name,width,height] of [['desktop',1440,1000],['mobile',390,844]] as const) {
+    await page.setViewportSize({width,height});
+    await page.goto(`/sessions?open=${session.id}`); await page.reload();await page.waitForTimeout(250);expect(pageErrors).toEqual([]);
+    const open=page.getByRole('button',{name:'查看任务详情'});await open.focus();await open.press('Enter');
+    const panel=page.locator('.task-workspace-panel');await expect(panel).toBeVisible();
+    await expect(panel).toContainText('Review Team');await expect(panel).toContainText('修复 review');await expect(panel).toContainText('report.md');
+    await expect(panel.locator('.task-workspace-model-calls dd')).toHaveText('2');
+    const result=panel.locator('summary').filter({hasText:'成员结果'});await result.focus();await result.press('Enter');
+    await expect(panel.getByText('Persisted reviewed evidence')).toBeVisible();
+    await expect(page.locator('.conversation-thread')).toContainText('Official reviewed answer');
+    expect(await page.locator('body').innerText()).not.toContain('"action":"complete"');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.screenshot({path:`../output/playwright/team-task-${name}.png`,fullPage:true});
+    await panel.getByRole('button',{name:'关闭任务面板'}).click();
+  }
+  expect((await adminAPI.get(`/api/v1/sessions/${session.id}/messages`)).status()).toBe(404);
+  await page.close();
 });

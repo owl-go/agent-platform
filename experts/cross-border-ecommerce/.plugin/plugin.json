@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "default.expert.cross-border-ecommerce",
+  "version": "1.1.0",
+  "kind": "expert",
+  "expert": {
+    "name": "跨境电商专家",
+    "introduction": "精通 Amazon、Shopify、TikTok Shop 等跨境电商平台，帮助独立站与平台卖家完成选品、内容、推广和执行闭环。",
+    "icon": "sparkles",
+    "icon_background": "sage",
+    "guidance_file": "agents/expert.md"
+  }
+}

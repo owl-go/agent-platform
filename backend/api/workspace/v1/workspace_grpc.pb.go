@@ -120,6 +120,8 @@ const (
 	AgentWorkspaceService_CreateKnowledgeCategory_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/CreateKnowledgeCategory"
 	AgentWorkspaceService_DeleteKnowledgeCategory_FullMethodName                   = "/workspace.v1.AgentWorkspaceService/DeleteKnowledgeCategory"
 	AgentWorkspaceService_ListKnowledgeDocuments_FullMethodName                    = "/workspace.v1.AgentWorkspaceService/ListKnowledgeDocuments"
+	AgentWorkspaceService_ImportExpertPackage_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ImportExpertPackage"
+	AgentWorkspaceService_ExportExpertPackage_FullMethodName                       = "/workspace.v1.AgentWorkspaceService/ExportExpertPackage"
 	AgentWorkspaceService_ListExperts_FullMethodName                               = "/workspace.v1.AgentWorkspaceService/ListExperts"
 	AgentWorkspaceService_GetExpert_FullMethodName                                 = "/workspace.v1.AgentWorkspaceService/GetExpert"
 	AgentWorkspaceService_CreateExpert_FullMethodName                              = "/workspace.v1.AgentWorkspaceService/CreateExpert"
@@ -300,6 +302,8 @@ type AgentWorkspaceServiceClient interface {
 	CreateKnowledgeCategory(ctx context.Context, in *CreateKnowledgeCategoryRequest, opts ...grpc.CallOption) (*KnowledgeCategory, error)
 	DeleteKnowledgeCategory(ctx context.Context, in *DeleteKnowledgeCategoryRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	ListKnowledgeDocuments(ctx context.Context, in *ListKnowledgeDocumentsRequest, opts ...grpc.CallOption) (*ListKnowledgeDocumentsResponse, error)
+	ImportExpertPackage(ctx context.Context, in *ImportExpertPackageRequest, opts ...grpc.CallOption) (*ExpertPackageImport, error)
+	ExportExpertPackage(ctx context.Context, in *ExportExpertPackageRequest, opts ...grpc.CallOption) (*ExportedExpertPackage, error)
 	ListExperts(ctx context.Context, in *ListExpertsRequest, opts ...grpc.CallOption) (*ListExpertsResponse, error)
 	GetExpert(ctx context.Context, in *GetExpertRequest, opts ...grpc.CallOption) (*Expert, error)
 	CreateExpert(ctx context.Context, in *CreateExpertRequest, opts ...grpc.CallOption) (*Expert, error)
@@ -1393,6 +1397,26 @@ func (c *agentWorkspaceServiceClient) ListKnowledgeDocuments(ctx context.Context
 	return out, nil
 }
 
+func (c *agentWorkspaceServiceClient) ImportExpertPackage(ctx context.Context, in *ImportExpertPackageRequest, opts ...grpc.CallOption) (*ExpertPackageImport, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExpertPackageImport)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ImportExpertPackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentWorkspaceServiceClient) ExportExpertPackage(ctx context.Context, in *ExportExpertPackageRequest, opts ...grpc.CallOption) (*ExportedExpertPackage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportedExpertPackage)
+	err := c.cc.Invoke(ctx, AgentWorkspaceService_ExportExpertPackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentWorkspaceServiceClient) ListExperts(ctx context.Context, in *ListExpertsRequest, opts ...grpc.CallOption) (*ListExpertsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListExpertsResponse)
@@ -2228,6 +2252,8 @@ type AgentWorkspaceServiceServer interface {
 	CreateKnowledgeCategory(context.Context, *CreateKnowledgeCategoryRequest) (*KnowledgeCategory, error)
 	DeleteKnowledgeCategory(context.Context, *DeleteKnowledgeCategoryRequest) (*DeleteResponse, error)
 	ListKnowledgeDocuments(context.Context, *ListKnowledgeDocumentsRequest) (*ListKnowledgeDocumentsResponse, error)
+	ImportExpertPackage(context.Context, *ImportExpertPackageRequest) (*ExpertPackageImport, error)
+	ExportExpertPackage(context.Context, *ExportExpertPackageRequest) (*ExportedExpertPackage, error)
 	ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error)
 	GetExpert(context.Context, *GetExpertRequest) (*Expert, error)
 	CreateExpert(context.Context, *CreateExpertRequest) (*Expert, error)
@@ -2613,6 +2639,12 @@ func (UnimplementedAgentWorkspaceServiceServer) DeleteKnowledgeCategory(context.
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListKnowledgeDocuments(context.Context, *ListKnowledgeDocumentsRequest) (*ListKnowledgeDocumentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListKnowledgeDocuments not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ImportExpertPackage(context.Context, *ImportExpertPackageRequest) (*ExpertPackageImport, error) {
+	return nil, status.Error(codes.Unimplemented, "method ImportExpertPackage not implemented")
+}
+func (UnimplementedAgentWorkspaceServiceServer) ExportExpertPackage(context.Context, *ExportExpertPackageRequest) (*ExportedExpertPackage, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportExpertPackage not implemented")
 }
 func (UnimplementedAgentWorkspaceServiceServer) ListExperts(context.Context, *ListExpertsRequest) (*ListExpertsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListExperts not implemented")
@@ -4672,6 +4704,42 @@ func _AgentWorkspaceService_ListKnowledgeDocuments_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentWorkspaceService_ImportExpertPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportExpertPackageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ImportExpertPackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ImportExpertPackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ImportExpertPackage(ctx, req.(*ImportExpertPackageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentWorkspaceService_ExportExpertPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportExpertPackageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentWorkspaceServiceServer).ExportExpertPackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentWorkspaceService_ExportExpertPackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentWorkspaceServiceServer).ExportExpertPackage(ctx, req.(*ExportExpertPackageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentWorkspaceService_ListExperts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListExpertsRequest)
 	if err := dec(in); err != nil {
@@ -6396,6 +6464,14 @@ var AgentWorkspaceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListKnowledgeDocuments",
 			Handler:    _AgentWorkspaceService_ListKnowledgeDocuments_Handler,
+		},
+		{
+			MethodName: "ImportExpertPackage",
+			Handler:    _AgentWorkspaceService_ImportExpertPackage_Handler,
+		},
+		{
+			MethodName: "ExportExpertPackage",
+			Handler:    _AgentWorkspaceService_ExportExpertPackage_Handler,
 		},
 		{
 			MethodName: "ListExperts",

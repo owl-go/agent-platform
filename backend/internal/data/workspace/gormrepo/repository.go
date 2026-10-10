@@ -194,30 +194,32 @@ type sessionArtifactRecord struct {
 func (sessionArtifactRecord) TableName() string { return "session_artifacts" }
 
 type workflowRecord struct {
-	ID                  string     `gorm:"column:id"`
-	OwnerID             string     `gorm:"column:owner_user_id"`
-	Name                string     `gorm:"column:name"`
-	Goal                string     `gorm:"column:goal"`
-	ExpertID            *string    `gorm:"column:expert_id"`
-	ExpertTeamID        *string    `gorm:"column:expert_team_id"`
-	ProviderModelID     *string    `gorm:"column:provider_model_id"`
-	RuntimeEngine       *string    `gorm:"column:runtime_engine"`
-	Environment         []byte     `gorm:"column:environment;type:jsonb"`
-	EnvironmentSecret   []byte     `gorm:"column:environment_secret_ciphertext"`
-	Schedule            []byte     `gorm:"column:schedule;type:jsonb"`
-	KnowledgeBaseIDs    []byte     `gorm:"column:knowledge_base_ids;type:jsonb"`
-	ExecutionTemplate   []byte     `gorm:"column:execution_template;type:jsonb"`
-	NextScheduledAt     *time.Time `gorm:"column:next_scheduled_at"`
-	GitSource           []byte     `gorm:"column:git_source;type:jsonb"`
-	GitSecret           []byte     `gorm:"column:git_secret_ciphertext"`
-	APIKey              *string    `gorm:"column:api_key"`
-	APISecretHash       *string    `gorm:"column:api_secret_hash"`
-	APISecretCiphertext []byte     `gorm:"column:api_secret_ciphertext"`
-	WorkspacePath       string     `gorm:"column:workspace_path"`
-	DeletedAt           *time.Time `gorm:"column:deleted_at"`
-	CreatedAt           time.Time  `gorm:"column:created_at"`
-	UpdatedAt           time.Time  `gorm:"column:updated_at"`
-	Version             int64      `gorm:"column:version"`
+	ID                    string     `gorm:"column:id"`
+	OwnerID               string     `gorm:"column:owner_user_id"`
+	Name                  string     `gorm:"column:name"`
+	Goal                  string     `gorm:"column:goal"`
+	ExpertID              *string    `gorm:"column:expert_id"`
+	ExpertTeamID          *string    `gorm:"column:expert_team_id"`
+	ProviderModelID       *string    `gorm:"column:provider_model_id"`
+	RuntimeEngine         *string    `gorm:"column:runtime_engine"`
+	Environment           []byte     `gorm:"column:environment;type:jsonb"`
+	EnvironmentSecret     []byte     `gorm:"column:environment_secret_ciphertext"`
+	Schedule              []byte     `gorm:"column:schedule;type:jsonb"`
+	KnowledgeBaseIDs      []byte     `gorm:"column:knowledge_base_ids;type:jsonb"`
+	ExecutionCoordination []byte     `gorm:"column:execution_coordination;type:jsonb"`
+	ExecutionTeamProfile  []byte     `gorm:"column:execution_team_profile;type:jsonb"`
+	ExecutionTemplate     []byte     `gorm:"column:execution_template;type:jsonb"`
+	NextScheduledAt       *time.Time `gorm:"column:next_scheduled_at"`
+	GitSource             []byte     `gorm:"column:git_source;type:jsonb"`
+	GitSecret             []byte     `gorm:"column:git_secret_ciphertext"`
+	APIKey                *string    `gorm:"column:api_key"`
+	APISecretHash         *string    `gorm:"column:api_secret_hash"`
+	APISecretCiphertext   []byte     `gorm:"column:api_secret_ciphertext"`
+	WorkspacePath         string     `gorm:"column:workspace_path"`
+	DeletedAt             *time.Time `gorm:"column:deleted_at"`
+	CreatedAt             time.Time  `gorm:"column:created_at"`
+	UpdatedAt             time.Time  `gorm:"column:updated_at"`
+	Version               int64      `gorm:"column:version"`
 }
 
 func (workflowRecord) TableName() string { return "workflows" }
@@ -300,16 +302,20 @@ type knowledgeRevisionRecord struct {
 func (knowledgeRevisionRecord) TableName() string { return "knowledge_document_revisions" }
 
 type expertRecord struct {
+	ConnectorDependencies     []byte     `gorm:"column:connector_dependencies;type:jsonb;default:'[]'"`
+	StarterPrompts            []byte     `gorm:"column:starter_prompts;type:jsonb;default:'[]'"`
+	BundledSkills             []byte     `gorm:"column:bundled_skills;type:jsonb;default:'[]'"`
 	ID                        string     `gorm:"column:id"`
 	OwnerID                   string     `gorm:"column:owner_user_id"`
 	Platform                  bool       `gorm:"->;column:platform"`
-	SystemKey                 string     `gorm:"column:system_key"`
+	SystemKey                 string     `gorm:"column:system_key;default:null"`
 	SystemManaged             bool       `gorm:"column:system_managed"`
 	Name                      string     `gorm:"column:name"`
 	NameNormalized            string     `gorm:"column:name_normalized"`
 	Icon                      string     `gorm:"column:icon"`
 	IconBackground            string     `gorm:"column:icon_background"`
 	Introduction              string     `gorm:"column:introduction"`
+	Guidance                  string     `gorm:"column:guidance"`
 	CoreCapability            string     `gorm:"column:core_capability"`
 	OperatingProcedure        string     `gorm:"column:operating_procedure"`
 	OutputStandard            string     `gorm:"column:output_standard"`
@@ -333,8 +339,12 @@ type expertRecord struct {
 func (expertRecord) TableName() string { return "experts" }
 
 type expertTeamRecord struct {
+	StarterPrompts         []byte    `gorm:"column:starter_prompts;type:jsonb;default:'[]'"`
+	LeadMemberID           string    `gorm:"column:lead_member_id"`
 	ID                     string    `gorm:"column:id"`
 	OwnerID                string    `gorm:"column:owner_user_id"`
+	SystemKey              string    `gorm:"column:system_key;default:null"`
+	SystemManaged          bool      `gorm:"column:system_managed"`
 	Name                   string    `gorm:"column:name"`
 	Icon                   string    `gorm:"column:icon"`
 	IconBackground         string    `gorm:"column:icon_background"`
@@ -472,15 +482,16 @@ type cliCommandApprovalRecord struct {
 func (cliCommandApprovalRecord) TableName() string { return "cli_command_approvals" }
 
 type settingsRecord struct {
-	UserID                  string `gorm:"column:user_id"`
-	Personality             string `gorm:"column:personality"`
-	PersonalityInstructions string `gorm:"column:personality_instructions"`
-	RuntimeModelDefaults    []byte `gorm:"column:runtime_model_defaults;type:jsonb"`
-	DefaultRuntimeEngine    string `gorm:"column:default_runtime_engine"`
-	Language                string `gorm:"column:language"`
-	Timezone                string `gorm:"column:timezone"`
-	Version                 int64  `gorm:"column:version"`
-	ExecutionInherited      bool   `gorm:"column:execution_inherited"`
+	TeamCreditBudgetHundredths int64  `gorm:"column:team_credit_budget_hundredths"`
+	UserID                     string `gorm:"column:user_id"`
+	Personality                string `gorm:"column:personality"`
+	PersonalityInstructions    string `gorm:"column:personality_instructions"`
+	RuntimeModelDefaults       []byte `gorm:"column:runtime_model_defaults;type:jsonb"`
+	DefaultRuntimeEngine       string `gorm:"column:default_runtime_engine"`
+	Language                   string `gorm:"column:language"`
+	Timezone                   string `gorm:"column:timezone"`
+	Version                    int64  `gorm:"column:version"`
+	ExecutionInherited         bool   `gorm:"column:execution_inherited"`
 }
 
 func (settingsRecord) TableName() string { return "personal_settings" }

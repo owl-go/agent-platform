@@ -14,11 +14,10 @@ import (
 type JobKind string
 
 const (
-	JobWorkflow            JobKind = "workflow"
-	JobSession             JobKind = "session"
-	JobMCPTest             JobKind = "mcp_test"
-	JobExpertTagProjection JobKind = "expert_tag_projection"
-	JobCLIConnectorBuild   JobKind = "cli_connector_build"
+	JobWorkflow          JobKind = "workflow"
+	JobSession           JobKind = "session"
+	JobMCPTest           JobKind = "mcp_test"
+	JobCLIConnectorBuild JobKind = "cli_connector_build"
 )
 
 type ExecutionJob struct {
@@ -101,7 +100,6 @@ type WorkerRepository interface {
 	FinishFailed(context.Context, ExecutionJob, ExecutionResult, string) error
 	FinishCancelled(context.Context, ExecutionJob, ExecutionResult) error
 	FinishMCPTest(context.Context, ExecutionJob, string) error
-	FinishExpertTagProjection(context.Context, ExecutionJob, ExecutionResult, string) error
 	FinishCLIConnectorBuild(context.Context, ExecutionJob, cliconnector.BuildResult, string) error
 	RecordProgress(context.Context, ExecutionJob, ExecutionEvent) error
 	CancellationRequested(context.Context, ExecutionJob) (bool, error)
@@ -159,14 +157,6 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 		}
 		return true, worker.repository.FinishMCPTest(context.WithoutCancel(ctx), *job, message)
 	}
-	if job.Kind == JobExpertTagProjection {
-		result, executeErr := worker.executor.Execute(ctx, *job, worker.repository)
-		message := ""
-		if executeErr != nil {
-			message = executeErr.Error()
-		}
-		return true, worker.repository.FinishExpertTagProjection(context.WithoutCancel(ctx), *job, result, message)
-	}
 	if job.Kind == JobCLIConnectorBuild {
 		if worker.connectorBuilder == nil {
 			return true, worker.repository.FinishCLIConnectorBuild(context.WithoutCancel(ctx), *job, cliconnector.BuildResult{}, "isolated CLI Connector Builder is not configured")
@@ -198,6 +188,9 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 	if executeErr != nil {
 		discardSuccessCommit(result)
 		if ctx.Err() != nil {
+			if job.Snapshot.SchemaVersion == 3 {
+				return true, worker.repository.FinishFailed(context.WithoutCancel(ctx), *job, result, "Worker interrupted this response; external operations may already have occurred. Review the recorded facts before retrying")
+			}
 			// A Worker shutdown is not a User cancellation or a failed response.
 			// Leave the claimed job nonterminal for startup reconciliation, which
 			// can safely requeue it or fail it if a Connector approval was consumed.
@@ -212,6 +205,10 @@ func (worker *Worker) ProcessNext(ctx context.Context) (bool, error) {
 		}
 		worker.observeTerminal(context.WithoutCancel(ctx), *job, result, "failed", executeErr)
 		return true, nil
+	}
+	if ctx.Err() != nil && job.Snapshot.SchemaVersion == 3 {
+		discardSuccessCommit(result)
+		return true, worker.repository.FinishFailed(context.WithoutCancel(ctx), *job, result, "Worker interrupted this response; external operations may already have occurred. Review the recorded facts before retrying")
 	}
 	if cancelled, checkErr := worker.repository.CancellationRequested(context.WithoutCancel(ctx), *job); checkErr != nil {
 		discardSuccessCommit(result)

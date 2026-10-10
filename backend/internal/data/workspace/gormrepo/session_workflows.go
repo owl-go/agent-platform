@@ -42,7 +42,11 @@ func (repository *Repository) CreateWorkflowFromSession(ctx context.Context, own
 		if len(message.ResponseSnapshot) == 0 || string(message.ResponseSnapshot) == "null" || json.Unmarshal(message.ResponseSnapshot, &response) != nil || len(response.Stages) == 0 {
 			return fmt.Errorf("%w: successful response has no reusable execution snapshot", domain.ErrInvalid)
 		}
-		plan := domain.ExecutionSnapshot{SchemaVersion: 2, Stages: append([]domain.ExecutionStageSnapshot(nil), response.Stages...)}
+		schemaVersion := response.SchemaVersion
+		if schemaVersion == 0 {
+			schemaVersion = 2
+		}
+		plan := domain.ExecutionSnapshot{SchemaVersion: schemaVersion, Stages: append([]domain.ExecutionStageSnapshot(nil), response.Stages...), Coordination: response.Coordination, TeamProfile: response.TeamProfile}
 		if _, err := plan.OrderedStages(); err != nil {
 			return fmt.Errorf("%w: response execution snapshot cannot be reused", domain.ErrInvalid)
 		}
@@ -52,6 +56,14 @@ func (repository *Repository) CreateWorkflowFromSession(ctx context.Context, own
 			return err
 		}
 		row.ExecutionTemplate, err = marshal(response.Stages)
+		if err != nil {
+			return err
+		}
+		row.ExecutionCoordination, err = marshal(response.Coordination)
+		if err != nil {
+			return err
+		}
+		row.ExecutionTeamProfile, err = marshal(response.TeamProfile)
 		if err != nil {
 			return err
 		}

@@ -389,11 +389,19 @@ func TestLocalResourceDirectoryDiscoveryAndPriorScriptPublication(t *testing.T) 
 	}
 	extract("skills/travel-planning", archive)
 	write("skills/travel-planning/resource.json", []byte(`{"key":"default.skill.travel-planning","version":"1.0.0","icon":"compass"}`))
-	expert, err := json.Marshal(catalog.Experts[0])
-	if err != nil {
-		t.Fatal(err)
+	writeExpert := func(directory string, definition defaultresources.Expert) {
+		t.Helper()
+		metadata, err := json.Marshal(map[string]any{
+			"schema_version": 1, "id": definition.Key, "version": definition.Version, "kind": "expert",
+			"expert": map[string]any{"name": definition.Name, "introduction": definition.Introduction, "icon": definition.Icon, "icon_background": definition.IconBackground, "guidance_file": "agents/expert.md", "skill_keys": definition.SkillKeys},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		write(directory+"/.plugin/plugin.json", metadata)
+		write(directory+"/agents/expert.md", []byte(definition.Guidance))
 	}
-	write("experts/travel-planning/expert.json", expert)
+	writeExpert("experts/travel-planning", catalog.Experts[0])
 	pkg, err := catalog.ParseConnector(catalog.Connectors[0])
 	if err != nil {
 		t.Fatal(err)
@@ -428,11 +436,7 @@ func TestLocalResourceDirectoryDiscoveryAndPriorScriptPublication(t *testing.T) 
 	added.Key = "local.expert.directory-only"
 	added.Name = "Directory Only Expert"
 	added.SkillKeys = []string{"local.skill.directory-only"}
-	addedData, err := json.Marshal(added)
-	if err != nil {
-		t.Fatal(err)
-	}
-	write("experts/directory-only/expert.json", addedData)
+	writeExpert("experts/directory-only", added)
 	// Script source files are outside discovery, even with the same source.
 	write("scripts/connectors/ai-hive/connector-meta.json", []byte(`{"source":"ai-hive","version":"different"}`))
 	for i := 0; i < 2; i++ {

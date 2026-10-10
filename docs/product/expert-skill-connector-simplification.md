@@ -1,6 +1,6 @@
 # Expert, Skill, and Connector Simplification
 
-Status: accepted for implementation
+Status: historical simplification decision; Expert instruction fields, tags and Team ownership/execution have been superseded by [the portable Expert and lead-coordinated Team contract](expert-package-team-refactor.md). Skill and Connector rules retain their documented scope. Current implementation is described in [portable-experts](../technical/portable-experts.md).
 
 For direct composer Skill/Connector selection, mid-conversation specialist changes, and catalog details/launch actions, see `docs/product/conversation-resource-selection.md` and ADR-0027. Their confirmed decisions supersede this document's Expert-only resource selection and conversation-wide specialist/resource freezing assumptions within that scope.
 

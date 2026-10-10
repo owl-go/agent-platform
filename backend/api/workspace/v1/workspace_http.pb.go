@@ -74,6 +74,7 @@ const OperationAgentWorkspaceServiceDisconnectConnectorAuthorization = "/workspa
 const OperationAgentWorkspaceServiceDisconnectPublishedConnectorAuthorization = "/workspace.v1.AgentWorkspaceService/DisconnectPublishedConnectorAuthorization"
 const OperationAgentWorkspaceServiceEnableCLIConnector = "/workspace.v1.AgentWorkspaceService/EnableCLIConnector"
 const OperationAgentWorkspaceServiceExchangeWorkflowCredential = "/workspace.v1.AgentWorkspaceService/ExchangeWorkflowCredential"
+const OperationAgentWorkspaceServiceExportExpertPackage = "/workspace.v1.AgentWorkspaceService/ExportExpertPackage"
 const OperationAgentWorkspaceServiceGenerateWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GenerateWorkflowCredential"
 const OperationAgentWorkspaceServiceGetConversationSelection = "/workspace.v1.AgentWorkspaceService/GetConversationSelection"
 const OperationAgentWorkspaceServiceGetCreditBalance = "/workspace.v1.AgentWorkspaceService/GetCreditBalance"
@@ -95,6 +96,7 @@ const OperationAgentWorkspaceServiceGetSkillDocument = "/workspace.v1.AgentWorks
 const OperationAgentWorkspaceServiceGetWorkflow = "/workspace.v1.AgentWorkspaceService/GetWorkflow"
 const OperationAgentWorkspaceServiceGetWorkflowCredential = "/workspace.v1.AgentWorkspaceService/GetWorkflowCredential"
 const OperationAgentWorkspaceServiceGetWorkspaceFile = "/workspace.v1.AgentWorkspaceService/GetWorkspaceFile"
+const OperationAgentWorkspaceServiceImportExpertPackage = "/workspace.v1.AgentWorkspaceService/ImportExpertPackage"
 const OperationAgentWorkspaceServiceInstallPublishedConnector = "/workspace.v1.AgentWorkspaceService/InstallPublishedConnector"
 const OperationAgentWorkspaceServiceListArtifacts = "/workspace.v1.AgentWorkspaceService/ListArtifacts"
 const OperationAgentWorkspaceServiceListCLIConnectorAuthorizations = "/workspace.v1.AgentWorkspaceService/ListCLIConnectorAuthorizations"
@@ -250,6 +252,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	DisconnectPublishedConnectorAuthorization(context.Context, *DisconnectPublishedConnectorAuthorizationRequest) (*ConnectorAuthorization, error)
 	EnableCLIConnector(context.Context, *EnableCLIConnectorRequest) (*CLIConnectorEnablement, error)
 	ExchangeWorkflowCredential(context.Context, *ExchangeWorkflowCredentialRequest) (*WorkflowAccessToken, error)
+	ExportExpertPackage(context.Context, *ExportExpertPackageRequest) (*ExportedExpertPackage, error)
 	GenerateWorkflowCredential(context.Context, *GenerateWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetConversationSelection(context.Context, *GetConversationSelectionRequest) (*ConversationSelection, error)
 	GetCreditBalance(context.Context, *GetCreditBalanceRequest) (*CreditBalance, error)
@@ -271,6 +274,7 @@ type AgentWorkspaceServiceHTTPServer interface {
 	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
 	GetWorkflowCredential(context.Context, *GetWorkflowCredentialRequest) (*WorkflowCredential, error)
 	GetWorkspaceFile(context.Context, *GetWorkspaceFileRequest) (*WorkspaceFile, error)
+	ImportExpertPackage(context.Context, *ImportExpertPackageRequest) (*ExpertPackageImport, error)
 	InstallPublishedConnector(context.Context, *InstallPublishedConnectorRequest) (*ConnectorInstallation, error)
 	ListArtifacts(context.Context, *ListArtifactsRequest) (*ListArtifactsResponse, error)
 	ListCLIConnectorAuthorizations(context.Context, *ListCLIConnectorAuthorizationsRequest) (*ListCLIConnectorAuthorizationsResponse, error)
@@ -472,6 +476,8 @@ func RegisterAgentWorkspaceServiceHTTPServer(s *http.Server, srv AgentWorkspaceS
 	r.Handle("POST", "/api/v1/knowledge-bases/{knowledge_base_id}/categories", _AgentWorkspaceService_CreateKnowledgeCategory0_HTTP_Handler(srv))
 	r.Handle("DELETE", "/api/v1/knowledge-bases/{knowledge_base_id}/categories/{category_id}", _AgentWorkspaceService_DeleteKnowledgeCategory0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/knowledge-bases/{knowledge_base_id}/documents", _AgentWorkspaceService_ListKnowledgeDocuments0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/expert-packages/import", _AgentWorkspaceService_ImportExpertPackage0_HTTP_Handler(srv))
+	r.Handle("GET", "/api/v1/expert-packages/{resource_kind}/{resource_id}/export", _AgentWorkspaceService_ExportExpertPackage0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts", _AgentWorkspaceService_ListExperts0_HTTP_Handler(srv))
 	r.Handle("GET", "/api/v1/experts/{expert_id}", _AgentWorkspaceService_GetExpert0_HTTP_Handler(srv))
 	r.Handle("POST", "/api/v1/experts", _AgentWorkspaceService_CreateExpert0_HTTP_Handler(srv))
@@ -2664,6 +2670,47 @@ func _AgentWorkspaceService_ListKnowledgeDocuments0_HTTP_Handler(srv AgentWorksp
 	}
 }
 
+func _AgentWorkspaceService_ImportExpertPackage0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ImportExpertPackageRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceImportExpertPackage)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ImportExpertPackage(ctx, req.(*ImportExpertPackageRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ExpertPackageImport)
+		return ctx.Result(200, reply)
+	}
+}
+
+func _AgentWorkspaceService_ExportExpertPackage0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in ExportExpertPackageRequest
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationAgentWorkspaceServiceExportExpertPackage)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.ExportExpertPackage(ctx, req.(*ExportExpertPackageRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*ExportedExpertPackage)
+		return ctx.Result(200, reply)
+	}
+}
+
 func _AgentWorkspaceService_ListExperts0_HTTP_Handler(srv AgentWorkspaceServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ListExpertsRequest
@@ -4244,6 +4291,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	DisconnectPublishedConnectorAuthorization(ctx context.Context, req *DisconnectPublishedConnectorAuthorizationRequest, opts ...http.CallOption) (rsp *ConnectorAuthorization, err error)
 	EnableCLIConnector(ctx context.Context, req *EnableCLIConnectorRequest, opts ...http.CallOption) (rsp *CLIConnectorEnablement, err error)
 	ExchangeWorkflowCredential(ctx context.Context, req *ExchangeWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowAccessToken, err error)
+	ExportExpertPackage(ctx context.Context, req *ExportExpertPackageRequest, opts ...http.CallOption) (rsp *ExportedExpertPackage, err error)
 	GenerateWorkflowCredential(ctx context.Context, req *GenerateWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetConversationSelection(ctx context.Context, req *GetConversationSelectionRequest, opts ...http.CallOption) (rsp *ConversationSelection, err error)
 	GetCreditBalance(ctx context.Context, req *GetCreditBalanceRequest, opts ...http.CallOption) (rsp *CreditBalance, err error)
@@ -4265,6 +4313,7 @@ type AgentWorkspaceServiceHTTPClient interface {
 	GetWorkflow(ctx context.Context, req *GetWorkflowRequest, opts ...http.CallOption) (rsp *Workflow, err error)
 	GetWorkflowCredential(ctx context.Context, req *GetWorkflowCredentialRequest, opts ...http.CallOption) (rsp *WorkflowCredential, err error)
 	GetWorkspaceFile(ctx context.Context, req *GetWorkspaceFileRequest, opts ...http.CallOption) (rsp *WorkspaceFile, err error)
+	ImportExpertPackage(ctx context.Context, req *ImportExpertPackageRequest, opts ...http.CallOption) (rsp *ExpertPackageImport, err error)
 	InstallPublishedConnector(ctx context.Context, req *InstallPublishedConnectorRequest, opts ...http.CallOption) (rsp *ConnectorInstallation, err error)
 	ListArtifacts(ctx context.Context, req *ListArtifactsRequest, opts ...http.CallOption) (rsp *ListArtifactsResponse, err error)
 	ListCLIConnectorAuthorizations(ctx context.Context, req *ListCLIConnectorAuthorizationsRequest, opts ...http.CallOption) (rsp *ListCLIConnectorAuthorizationsResponse, err error)
@@ -5327,6 +5376,22 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) ExchangeWorkflowCredential(ctx con
 	return &out, nil
 }
 
+func (c *AgentWorkspaceServiceHTTPClientImpl) ExportExpertPackage(ctx context.Context, in *ExportExpertPackageRequest, opts ...http.CallOption) (*ExportedExpertPackage, error) {
+	var out ExportedExpertPackage
+	pattern := "/api/v1/expert-packages/{resource_kind}/{resource_id}/export"
+	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceExportExpertPackage),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *AgentWorkspaceServiceHTTPClientImpl) GenerateWorkflowCredential(ctx context.Context, in *GenerateWorkflowCredentialRequest, opts ...http.CallOption) (*WorkflowCredential, error) {
 	var out WorkflowCredential
 	pattern := "/api/v1/workflows/{workflow_id}/api-credential"
@@ -5658,6 +5723,23 @@ func (c *AgentWorkspaceServiceHTTPClientImpl) GetWorkspaceFile(ctx context.Conte
 		http.PathTemplate(pattern),
 	}, opts...)
 	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *AgentWorkspaceServiceHTTPClientImpl) ImportExpertPackage(ctx context.Context, in *ImportExpertPackageRequest, opts ...http.CallOption) (*ExpertPackageImport, error) {
+	var out ExpertPackageImport
+	pattern := "/api/v1/expert-packages/import"
+	path := http.BuildPath(pattern, in)
+	opts = append([]http.CallOption{
+		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
+		http.Operation(OperationAgentWorkspaceServiceImportExpertPackage),
+		http.PathTemplate(pattern),
+	}, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,12 @@ import { createAppI18n } from "../i18n";
 import CreditConsumption from "./CreditConsumption.vue";
 
 describe("CreditConsumption", () => {
+  it("renders coordinated public consumption when protobuf omits empty stages", () => {
+    const wrapper = mount(CreditConsumption, { props: {value: {total_hundredths:17},state:"failed"}, global: {plugins:[createAppI18n({getItem:()=>"zh-CN"},"zh-CN")]} });
+    expect(wrapper.text()).toContain("0.17");
+    expect(wrapper.text()).toContain("停止前已产生");
+    expect(wrapper.find("details").exists()).toBe(false);
+  });
   it("shows a privacy-safe stage summary without Tokens, rates, or model identifiers", async () => {
     const wrapper = mount(CreditConsumption, {
       props: { value: { total_hundredths: 273, stages: [{ stage_position: 1, provider_model: "gpt-5", runtime_engine: "codex", input_tokens: 12_345, output_tokens: 5_000, usage_reported: true, input_multiplier_micros: 1_000_000, output_multiplier_micros: 1_000_000, fallback_hundredths: 1_000, amount_hundredths: 173, estimated: false, rate_revision_id: "default-v1" }, { stage_position: 2, provider_model: "secret-model", runtime_engine: "claude", input_tokens: 0, output_tokens: 0, usage_reported: false, input_multiplier_micros: 2_000_000, output_multiplier_micros: 2_000_000, fallback_hundredths: 100, amount_hundredths: 100, estimated: true, rate_revision_id: "private-rate" }] } },

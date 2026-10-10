@@ -945,6 +945,29 @@ func TestExecuteAnonymousStageProducesTerminalAuditRecord(t *testing.T) {
 	}
 }
 
+func TestExecuteUsesAuthoritativeMarkdownWithoutDisplayOrLegacyGuidance(t *testing.T) {
+	executor, job, _ := newTeamTestExecutor(t)
+	job.Snapshot.ExpertTeam = nil
+	var expert domain.ExpertSnapshot
+	if err := json.Unmarshal([]byte(`{"id":"expert","name":"Reviewer","guidance":"# Rules\n\nPreserve **Markdown**.\n","introduction":"DISPLAY_ONLY","core_capability":"STALE_FORM"}`), &expert); err != nil {
+		t.Fatal(err)
+	}
+	job.Snapshot.Expert = &expert
+	executor.checkout = func(context.Context, string) (runtimeLease, error) { return &recordingLease{}, nil }
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, events agentruntime.EventSink) (agentruntime.Result, error) {
+			if !strings.Contains(request.Instruction, "# Rules\n\nPreserve **Markdown**.\n") || strings.Contains(request.Instruction, "DISPLAY_ONLY") || strings.Contains(request.Instruction, "STALE_FORM") {
+				t.Fatalf("instruction=%q", request.Instruction)
+			}
+			publishSuccessfulRuntime(t, events, request.RunID, "done")
+			return agentruntime.Result{FinalMessage: "done"}, nil
+		}}, nil
+	}
+	if _, err := executor.Execute(context.Background(), job, &recordingProgress{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestExecuteTreatsInvalidRuntimeUsageAsFrozenFallback(t *testing.T) {
 	executor, job, _ := newTeamTestExecutor(t)
 	job.Timezone = "UTC"

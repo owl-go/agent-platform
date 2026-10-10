@@ -62,6 +62,18 @@ async function openConnectionEditor(api: PlatformApi) {
 }
 
 describe("SettingsPage model provider feedback", () => {
+  it("saves the optional team admission budget in Credits and explains the final charge", async () => {
+    const api = apiStub();
+    api.updateSettings = vi.fn(async (settings) => ({ ...settings, version: 2 }));
+    const wrapper = mount(SettingsPage, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(false) } } });
+    await flushPromises();
+    await wrapper.get('input[aria-label="专家团响应准入预算（Credits）"]').setValue("1.50");
+    expect(wrapper.text()).toContain("最后一次调用的实际费用可能超出剩余预算");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(api.updateSettings).toHaveBeenCalledWith(expect.objectContaining({ team_credit_budget_hundredths: 150 }));
+    wrapper.unmount();
+  });
   it.each(["verified", "unverified"] as const)("offers models from a %s provider and excludes incompatible models from the enterprise default", async (verificationStatus) => {
     const providerConnection: ModelProviderConnection = { ...connection, verification_status: verificationStatus, models: [
       { id: "model-verified", connection_id: connection.id, model_id: "verified", display_name: "Verified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },

@@ -3,12 +3,18 @@ import { computed } from "vue";
 import { FileText, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
-import type { Artifact, Attachment, Evidence } from "../api/client";
+import type { Artifact, Attachment, Evidence, TeamWorkspaceConflict } from "../api/client";
 import type { ConversationMessage } from "../conversationThread";
 
 const props = defineProps<{ message: ConversationMessage; loadAttachment: (id: string) => Promise<Blob> }>();
 const emit = defineEmits<{ close: []; downloadArtifact: [artifact: Artifact]; openEvidence: [evidence: Evidence]; attachmentError: []; saveWorkflow: [messageID: string]; planDecision: [messageID: string, decision: "start" | "direct" | "cancel"]; editPlan: [messageID: string] }>();
 const { t, locale } = useI18n();
+const invocations = computed(() => (props.message.stages ?? []).filter((stage) => stage.invocation_id).sort((a, b) => a.position - b.position));
+const conflicts = computed(() => {
+  const values = new Map<string, TeamWorkspaceConflict>();
+  for (const stage of invocations.value) for (const conflict of stage.workspace_conflicts ?? []) values.set(conflict.path, conflict);
+  return [...values.values()];
+});
 const consumedCredits = computed(() => {
   const raw: unknown = props.message.creditConsumption?.total_hundredths;
   if (raw === null || raw === undefined || raw === "") return undefined;
@@ -39,7 +45,10 @@ function evidenceAction(evidence: Evidence) {
 }
 function canOpenEvidence(evidence: Evidence) { return evidence.kind === "knowledge" && evidence.state === "succeeded" && Boolean(evidence.container_id && evidence.citation?.revision_id); }
 function planStepState(state: string) { return t(`sessions.executionPlan.stepStates.${state}`); }
-function modelCallCount(message: ConversationMessage) { return message.stages?.length ?? message.creditConsumption?.stages.length ?? 0; }
+function modelCallCount(message: ConversationMessage) {
+  if (invocations.value.length) return invocations.value.filter((stage) => stage.model_invoked).length;
+  return message.stages?.length ?? message.creditConsumption?.stages?.length ?? 0;
+}
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
@@ -62,10 +71,29 @@ async function downloadAttachment(item: Attachment) {
           <el-button text @click="emit('planDecision', message.id, 'cancel')">{{ t('common.cancel') }}</el-button>
         </div>
       </section>
+      <section v-if="message.team" class="task-workspace-section"><h3>{{ message.team.name }}</h3><p v-for="member in message.team.members" :key="member.id">{{ member.name }}<span v-if="member.id === message.team.lead_member_id"> · {{ t('taskWorkspace.lead') }}</span></p><p>最多 {{ message.team.max_model_calls }} 次模型调用 · 最多 {{ message.team.max_parallel }} 位成员并行 · 主动执行 {{ message.team.active_timeout_seconds / 60 }} 分钟</p><p v-if="message.team.credit_budget_hundredths">响应准入预算 {{ (message.team.credit_budget_hundredths / 100).toFixed(2) }} Credits</p></section>
+      <section v-if="invocations.length" class="task-workspace-section">
+        <h3>{{ t('taskWorkspace.teamCalls') }}</h3>
+        <div class="task-workspace-invocations task-workspace-sources">
+          <article v-for="stage in invocations" :key="stage.invocation_id">
+            <div><strong>{{ stage.role === 'lead' ? t('taskWorkspace.lead') : stage.team_member_name || stage.expert_name }}<template v-if="stage.task_id"> · {{ stage.task_id }}</template></strong><small>{{ stateLabel(stage.state) }}</small></div>
+            <p v-if="stage.role === 'member'">{{ stage.required ? '必须完成' : '可选任务' }}</p>
+            <p v-if="stage.repair_of">{{ t('taskWorkspace.repair', { task: stage.repair_of }) }}</p>
+            <p v-if="stage.elapsed_ms">{{ formatDuration(stage.elapsed_ms, locale as SupportedLocale) }}</p>
+            <p v-if="stage.credit_consumption">{{ t('taskWorkspace.credits') }} · {{ (stage.credit_consumption.amount_hundredths / 100).toFixed(2) }}</p>
+            <p v-if="stage.error">{{ stage.error }}</p>
+            <details v-if="stage.role === 'member' && stage.final_text"><summary>{{ t('taskWorkspace.memberResult') }}</summary><p>{{ stage.final_text }}</p></details>
+          </article>
+        </div>
+        <div v-if="conflicts.length" class="task-workspace-conflicts task-workspace-sources">
+          <h3>{{ t('taskWorkspace.fileConflicts') }}</h3>
+          <article v-for="conflict in conflicts" :key="conflict.path"><div><strong>{{ conflict.path }}</strong><small>{{ t(`taskWorkspace.conflictStates.${conflict.state}`) }}</small></div><p>{{ conflict.task_ids.join(' · ') }}</p><p v-if="conflict.resolution_source_task_id">{{ t('taskWorkspace.resolutionSource') }} · {{ conflict.resolution_source_task_id }}</p></article>
+        </div>
+      </section>
       <section v-if="message.evidence?.length || message.activities?.length || message.stages?.length" class="task-workspace-section">
         <h3>{{ t('taskWorkspace.evidence') }}</h3>
         <div class="task-workspace-sources"><article v-for="item in message.evidence" :key="item.id"><div><strong>{{ item.source_name }}</strong><small>{{ evidenceState(item) }}</small></div><p>{{ evidenceAction(item) }}<template v-if="item.citation?.source_location"> · {{ item.citation.source_location }}</template></p><button v-if="canOpenEvidence(item)" type="button" @click="emit('openEvidence', item)">{{ t('sessions.executionEvidence.openSource') }}</button></article></div>
-        <dl class="task-workspace-counts"><div v-if="message.activities?.length"><dt>{{ t('taskWorkspace.activities') }}</dt><dd>{{ message.activities.length }}</dd></div><div v-if="modelCallCount(message)"><dt>{{ t('taskWorkspace.modelCalls') }}</dt><dd>{{ modelCallCount(message) }}</dd></div></dl>
+        <dl class="task-workspace-counts"><div v-if="message.activities?.length"><dt>{{ t('taskWorkspace.activities') }}</dt><dd>{{ message.activities.length }}</dd></div><div v-if="message.stages?.length || modelCallCount(message)" class="task-workspace-model-calls"><dt>{{ t('taskWorkspace.modelCalls') }}</dt><dd>{{ modelCallCount(message) }}</dd></div></dl>
       </section>
       <section v-if="message.taskAttachments?.length || message.attachments?.length || message.artifacts?.length" class="task-workspace-section">
         <h3>{{ t('taskWorkspace.files') }}</h3>

@@ -11,7 +11,7 @@ export interface MessageChannelInput { channel_id?: string; version: number; pro
 export interface CreditBalance { total_hundredths: number; reserved_hundredths: number; available_hundredths: number; daily_remaining_hundredths: number; persistent_hundredths: number; today_consumed_hundredths: number; daily_allocation_hundredths: number; credit_day: string; timezone: string; next_allocation_at: string; pending_daily_allocation_hundredths?: number; pending_effective_day?: string; version: number; warning_threshold_percent?: number; redemption_codes_enabled?: boolean; group_budget?: { group_id: string; group_name: string; limit_hundredths: number; consumed_hundredths: number; reserved_hundredths: number; available_hundredths: number } }
 export interface CreditPolicy { default_daily_allocation_hundredths: number; warning_threshold_percent: number; redemption_codes_enabled: boolean; version: number; updated_at: string; updated_by_user_id?: string }
 export interface CreditStageConsumption { stage_position: number; provider_model: string; runtime_engine: string; input_tokens: number; output_tokens: number; usage_reported: boolean; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; amount_hundredths: number; estimated: boolean; rate_revision_id: string }
-export interface CreditConsumption { total_hundredths: number; stages: CreditStageConsumption[] }
+export interface CreditConsumption { total_hundredths: number; stages?: CreditStageConsumption[] }
 export interface CreditLedgerEntry { id: string; type: string; amount_hundredths: number; resulting_balance_hundredths: number; credit_day: string; reason?: string; created_at: string }
 export interface ModelCreditRate { revision_id: string; provider_type?: string; api_protocol?: string; provider_model_id?: string; input_multiplier_micros: number; output_multiplier_micros: number; fallback_hundredths: number; created_at: string; superseded_at?: string }
 export interface RedemptionCodeBatch { id: string; count: number; value_hundredths: number; expires_at?: string; created_at: string; codes: Array<{ id: string; identifier: string; plaintext: string; state: string }> }
@@ -29,7 +29,8 @@ export interface GovernanceAuditEvent { id: number; actor_user_id: string; actio
 export interface CurrentUser { id: string; username: string; email: string; display_name: string; administrator: boolean; bootstrap_administrator?: boolean; resource_publisher?: boolean; groups?: IdentityGroup[]; settings_ready: boolean; credit_balance?: CreditBalance }
 export interface Session { id: string; title: string; expert_id?: string; expert_team_id?: string; assistant_welcome?: string; archived: boolean; created_at: string; updated_at: string; version: number }
 export interface ExecutionStageSnapshot { position: number; expert?: { id: string; name: string; execution_instruction: string; version: number }; runtime_engine: RuntimeEngine; provider_model: { id: string; connection_id: string; connection_version: number; connection_name: string; provider_type: string; model_id: string; name: string; endpoint: string; protocols: string[]; compatibility: CompatibilityStatus }; skills?: Array<{ id: string; name: string; object_key: string; sha256: string }>; mcp_servers?: Array<{ id: string; name: string; transport: string; icon?: string }>; cli_connectors?: Array<{ id: string; name: string; icon?: string; executable: string; authentication_driver: string; bundle_sha256: string; runtime_digests: string[]; version: number }> }
-export interface ResponseSnapshot { provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
+export interface TeamExecutionContext { id: string; name: string; lead_member_id: string; members: {id:string;name:string}[]; max_model_calls:number;max_parallel:number;active_timeout_seconds:number;credit_budget_hundredths:number }
+export interface ResponseSnapshot { team?: TeamExecutionContext; provider_model_id: string; connection_id: string; connection_name: string; provider_type: string; model_id: string; model_name: string; endpoint: string; protocols: string[]; runtime_engine: RuntimeEngine; compatibility: CompatibilityStatus; connection_version: number; schema_version?: number; stages?: ExecutionStageSnapshot[] }
 export interface Attachment { id: string; name: string; content_type: string; size: number; sha256: string; image: boolean }
 export interface ConversationScope { session_id?: string; workflow_id?: string; run_id?: string }
 export interface SelectedResource { id: string; name: string; revision: string; icon?: string }
@@ -42,13 +43,14 @@ export interface ConversationInput { selection_id?: string; file_references?: Fi
 export interface ExecutionPlanStep { id: string; kind: string; label: string; position: number; state: "pending" | "running" | "completed" | "skipped" | "failed" }
 export interface ExecutionPlanResource { kind: string; id: string; name: string }
 export interface ExecutionPlan { id: string; state: "pending" | "approved" | "executing" | "completed" | "failed" | "cancelled" | "skipped"; objective: string; steps: ExecutionPlanStep[]; resources: ExecutionPlanResource[]; side_effects: string[]; reasons: string[]; estimated_model_calls: number; estimated_credit_hundredths: number; generation_credit_hundredths: number; generator: string; created_at: string; decided_at?: string; version: number }
-export interface ExpertStage { expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "running" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
+export interface TeamWorkspaceConflict { path: string; task_ids: string[]; state: "unresolved" | "resolved"; resolution_source_task_id?: string }
+export interface ExpertStage { invocation_id?: string; task_id?: string; team_member_id?: string; team_member_name?: string; role?: "lead" | "member"; required?: boolean; repair_of?: string; model_invoked?: boolean; workspace_conflicts?: TeamWorkspaceConflict[]; started_at?: string; ended_at?: string; expert_id: string; expert_name: string; provider_model_id?: string; provider_model_name?: string; runtime_engine?: RuntimeEngine; position: number; total: number; state: "queued" | "running" | "waiting_for_user" | "succeeded" | "failed" | "cancelled"; elapsed_ms: number; final_text?: string; error?: string; credit_consumption?: CreditStageConsumption }
 export interface ExecutionActivity { type: string; detail: string }
 export interface EvidenceCitation { revision_id: string; category_name?: string; source_location?: string; relevance?: number }
 export interface Evidence { id: string; kind: "file" | "knowledge" | "connector" | "artifact"; source_id: string; source_name: string; container_id?: string; state: "requested" | "succeeded" | "failed" | "not_used"; action: string; stage_position: number; citation?: EvidenceCitation }
-export interface ResourceCreationAction { id: string; kind: "skill" | "expert" | "connector"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
+export interface ResourceCreationAction { id: string; kind: "skill" | "expert" | "expert_team" | "connector"; state: "pending" | "processing" | "confirmed" | "cancelled" | "expired" | "failed"; name: string; description: string; resource_id?: string; error?: string; expires_at: string; version: number }
 export interface SessionMessage { id: number; role: "user" | "assistant"; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; created_at: string; response_snapshot?: ResponseSnapshot; attachments?: Attachment[]; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; artifacts?: Artifact[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
-export interface SessionMessageSnapshot { state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
+export interface SessionMessageSnapshot { team?: TeamExecutionContext; state: string; content: string; error?: string; progress_stage?: string; elapsed_ms: number; expert_stages?: ExpertStage[]; credit_consumption?: CreditConsumption; activities?: ExecutionActivity[]; evidence?: Evidence[]; resource_action?: ResourceCreationAction; execution_plan?: ExecutionPlan }
 export interface EnvironmentVariable { name: string; value?: string; secret: boolean; configured: boolean }
 export interface Schedule { enabled: boolean; frequency: "hourly" | "daily" | "weekly"; hour: number; minute: number; weekday: number; timezone: string }
 export interface GitConfigEntry { key: string; value: string }
@@ -73,14 +75,17 @@ export interface RunEvent { sequence: number; type: string; payload: Record<stri
 export interface Artifact { id: string; run_id?: string; message_id?: number; kind: "result" | "file"; name: string; path: string; size: number; sha256?: string; text_preview?: string; expired: boolean; created_at: string; expires_at?: string }
 export interface WorkspaceEntry { path: string; name: string; directory: boolean; size: number; modified_at: string }
 export interface WorkspaceFile { path: string; content: string; content_type: string; size: number; modified_at: string }
-export interface ExpertInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; operating_procedure: string; output_standard: string; cautions: string; mcp_server_ids: string[]; skill_ids: string[]; cli_connector_definition_ids: string[] }
-export interface Expert extends ExpertInput { id: string; platform?: boolean; system_key?: string; immutable?: boolean; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
-export interface ExpertTeamMemberInput { id: string; name: string; expert_id: string; labels: string[] }
+export interface ResourceExpertProposal { name: string; introduction: string; guidance: string; icon?: string; icon_background?: string; starter_prompts?: string[]; skill_ids?: string[]; mcp_server_ids?: string[]; cli_connector_definition_ids?: string[]; connector_dependencies?: ExpertConnectorDependency[] }
+export interface ResourceExpertProposalEnvelope { kind: "expert" | "expert_team"; user_message?: string; expert?: ResourceExpertProposal; expert_team?: { name: string; introduction: string; core_capability: string; icon?: string; icon_background?: string; starter_prompts?: string[]; lead_member_id: string; members: {id:string;name:string;labels?:string[];expert:ResourceExpertProposal}[] } }
+export interface ExpertConnectorDependency { source: string; kind: "mcp" | "cli"; version: string }
+export interface ExpertInput { connector_dependencies?: ExpertConnectorDependency[]; starter_prompts?: string[]; guidance?: string; name: string; icon: string; icon_background: string; introduction: string; core_capability?: string; operating_procedure?: string; output_standard?: string; cautions?: string; mcp_server_ids: string[]; skill_ids: string[]; cli_connector_definition_ids: string[] }
+export interface Expert extends ExpertInput { bundled_skills?: { id: string; name: string; sha256: string }[]; id: string; platform?: boolean; system_key?: string; immutable?: boolean; expertise_tags: string[]; tag_projection_status?: "idle" | "queued" | "running" | "succeeded" | "failed"; tag_projection_error?: string; complete: boolean; available: boolean; availability_reason?: string; compatibility: "verified" | "unverified" | "incompatible" | "unavailable"; created_at: string; updated_at: string; version: number }
+export interface ExpertTeamMemberInput { definition?: ExpertInput; id: string; name: string; expert_id: string; labels: string[] }
 export interface ExpertTeamMember extends ExpertTeamMemberInput { expert: Expert; position: number }
-export interface ExpertTeamInput { name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
-export interface ExpertTeam extends ExpertTeamInput { id: string; experts: Expert[]; expertise_tags: string[]; capability_introduction?: string; available: boolean; created_at: string; updated_at: string; version: number; members: ExpertTeamMember[] }
+export interface ExpertTeamInput { starter_prompts?: string[]; lead_member_id?: string; name: string; icon: string; icon_background: string; introduction: string; core_capability: string; members: ExpertTeamMemberInput[] }
+export interface ExpertTeam extends ExpertTeamInput { platform?: boolean; mutable?: boolean; immutable?: boolean; system_key?: string; id: string; experts: Expert[]; expertise_tags: string[]; capability_introduction?: string; available: boolean; created_at: string; updated_at: string; version: number; members: ExpertTeamMember[] }
 export interface RuntimeModelDefault { runtime_engine: RuntimeEngine; provider_model_id: string }
-export interface PersonalSettings { personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number; execution_inherited?: boolean; platform_execution_available?: boolean }
+export interface PersonalSettings { team_credit_budget_hundredths?: number; personality: Personality; personality_instructions: string; runtime_model_defaults: RuntimeModelDefault[]; default_runtime_engine: RuntimeEngine; language: "zh-CN" | "en-US"; timezone: string; version: number; execution_inherited?: boolean; platform_execution_available?: boolean }
 export interface PlatformExecutionDefault { runtime_engine: RuntimeEngine; provider_model_id: string; validation_run_id?: string; updated_by_user_id: string; version: number; updated_at: string }
 export interface HomeOverview { recent_tasks: HomeTask[]; common_workflows: HomeWorkflow[]; action_items: HomeAction[] }
 export interface HomeTask { kind: "session" | "run"; id: string; parent_id: string; title: string; state: string; updated_at: string }
@@ -205,6 +210,8 @@ export interface PlatformApi {
   previewSessionWorkflowDraft(sessionID: string, messageID: number, signal?: AbortSignal): Promise<SessionWorkflowDraft>;
   createWorkflowFromSession(sessionID: string, messageID: number, input: { name: string; goal: string; files: SessionWorkflowFileDecision[] }, signal?: AbortSignal): Promise<SessionWorkflowCreation>;
   listSessionWorkflowLinks(sessionID: string, signal?: AbortSignal): Promise<SessionWorkflowLink[]>;
+  getResourceCreationAction(actionID:string): Promise<ResourceCreationAction & {proposal: ResourceExpertProposalEnvelope}>;
+  reviseResourceCreationAction(actionID:string,proposal:ResourceExpertProposalEnvelope,expectedVersion:number):Promise<ResourceCreationAction>;
   decideResourceCreationAction(actionID: string, decision: "confirm" | "cancel", signal?: AbortSignal): Promise<ResourceCreationAction>;
   getSessionArtifactDownload(sessionID: string, artifactID: string, signal?: AbortSignal): Promise<Blob>;
   listWorkflows(deleted?: boolean, signal?: AbortSignal): Promise<Workflow[]>;
@@ -259,6 +266,8 @@ export interface PlatformApi {
   regenerateKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   deleteKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
   restoreKnowledgeDocument(baseID: string, documentID: string, signal?: AbortSignal): Promise<void>;
+  importExpertPackage(archive: File, options?: { copy_name?: string; expected_version?: number; target_resource_id?:string }, signal?: AbortSignal): Promise<{ expert?: Expert; expert_team?: ExpertTeam; package_id: string; package_version: string; replayed: boolean }>;
+  exportExpertPackage(kind: "expert" | "expert_team", id: string, signal?: AbortSignal): Promise<Blob>;
   listExperts(signal?: AbortSignal): Promise<Expert[]>;
   getExpert(id: string, signal?: AbortSignal): Promise<Expert>;
   createExpert(input: ExpertInput, signal?: AbortSignal): Promise<Expert>;
@@ -536,6 +545,8 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
       return { ...result, validation_run: normalizeRun(result.validation_run) };
     },
     async listSessionWorkflowLinks(sessionID, signal) { return (await call<{ items?: SessionWorkflowLink[] }>(`/api/v1/sessions/${encodeURIComponent(sessionID)}/workflow-links`, { signal })).items ?? []; },
+    getResourceCreationAction(actionID) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}`); },
+    reviseResourceCreationAction(actionID,proposal,expectedVersion) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}/decision`,json("POST",{decision:"revise",proposal,expected_version:expectedVersion})); },
     decideResourceCreationAction(actionID, decision, signal) { return call(`/api/v1/resource-creation-actions/${encodeURIComponent(actionID)}/decision`, json("POST", { decision }, signal)); },
     getSessionArtifactDownload(sessionID, artifactID, signal) { return download(`/api/v1/sessions/${encodeURIComponent(sessionID)}/artifacts/${encodeURIComponent(artifactID)}/download`, signal); },
     async listWorkflows(deleted = false, signal) { return (await call<{ items: Workflow[] }>(`/api/v1/workflows?deleted=${deleted}`, { signal })).items ?? []; },
@@ -636,6 +647,18 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async regenerateKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/regenerate`, json("POST", {}, signal)); },
     deleteKnowledgeDocument(baseID, documentID, signal) { return remove(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}`, signal); },
     async restoreKnowledgeDocument(baseID, documentID, signal) { await call(`/api/v1/knowledge-bases/${encodeURIComponent(baseID)}/documents/${encodeURIComponent(documentID)}/restore`, json("POST", {}, signal)); },
+    async importExpertPackage(archive, options, signal) {
+      const bytes = new Uint8Array(await archive.arrayBuffer());
+      if (bytes.length > 100 * 1024 * 1024) throw new ApiError("validation", 422, "package_too_large");
+      let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+      const result = await call<{ expert?: Expert; expert_team?: ExpertTeam; package_id: string; package_version: string; replayed: boolean }>("/api/v1/expert-packages/import", json("POST", { archive: btoa(binary), ...options }, signal));
+      return { ...result, replayed: Boolean(result.replayed), expert: result.expert ? normalizeExpert(result.expert) : undefined, expert_team: result.expert_team ? normalizeExpertTeam(result.expert_team) : undefined };
+    },
+    async exportExpertPackage(kind, id, signal) {
+      const result = await call<{ archive: string }>(`/api/v1/expert-packages/${kind}/${encodeURIComponent(id)}/export`, { signal });
+      return new Blob([Uint8Array.from(atob(result.archive), (value) => value.charCodeAt(0))], { type: "application/zip" });
+    },
     async listExperts(signal) {
       const items = (await call<{ items: Expert[] }>("/api/v1/experts", { signal })).items ?? [];
       return items.map(normalizeExpert);

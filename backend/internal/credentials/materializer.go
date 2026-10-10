@@ -12,6 +12,7 @@ type Request struct {
 	Ref          string
 	Variables    map[string]string
 	Files        map[string][]byte
+	FileModes    map[string]os.FileMode
 	RedactValues [][]byte
 }
 
@@ -112,6 +113,16 @@ func (m Materializer) materialize(request Request, directory string) (*Environme
 		if err := writeCredentialFile(directory, name, contents); err != nil {
 			_ = environment.Cleanup()
 			return nil, err
+		}
+		if mode := request.FileModes[name] & 0111; mode != 0 {
+			if !strings.HasPrefix(filepath.ToSlash(name), "skills/") && !strings.HasPrefix(filepath.ToSlash(name), "connector-skills/") {
+				_ = environment.Cleanup()
+				return nil, fmt.Errorf("executable resource must be a Skill")
+			}
+			if err := os.Chmod(filepath.Join(directory, name), 0600|mode); err != nil {
+				_ = environment.Cleanup()
+				return nil, err
+			}
 		}
 		environment.secrets = append(environment.secrets, append([]byte(nil), contents...))
 	}

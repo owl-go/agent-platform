@@ -7,10 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -18,10 +14,10 @@ import (
 	"strings"
 
 	aiapplicationdomain "agent-platform/backend/internal/biz/aiapplication/domain"
+	"agent-platform/backend/internal/icon"
 	"agent-platform/backend/internal/objectstore"
 
 	"github.com/google/uuid"
-	_ "golang.org/x/image/webp"
 )
 
 const (
@@ -177,24 +173,7 @@ func (service *Service) downloadAssistantImage(writer http.ResponseWriter, reque
 	_, _ = io.Copy(writer, io.LimitReader(reader, object.Size))
 }
 
-func validateAssistantIcon(content []byte) (string, error) {
-	if len(content) == 0 || len(content) > assistantIconMaxBytes {
-		return "", fmt.Errorf("assistant icon size is invalid")
-	}
-	config, format, err := image.DecodeConfig(bytes.NewReader(content))
-	if err != nil {
-		return "", fmt.Errorf("decode assistant icon: %w", err)
-	}
-	if config.Width <= 0 || config.Height <= 0 || config.Width > 4096 || config.Height > 4096 || int64(config.Width)*int64(config.Height) > assistantIconMaxPixels {
-		return "", fmt.Errorf("assistant icon dimensions are invalid")
-	}
-	switch format {
-	case "png", "jpeg", "gif", "webp":
-		return "image/" + format, nil
-	default:
-		return "", fmt.Errorf("unsupported assistant icon format %q", format)
-	}
-}
+func validateAssistantIcon(content []byte) (string, error) { return icon.ValidateImage(content) }
 
 func assistantIconObjectKey(owner, id string) string {
 	return "ai-applications/assistant-icons/" + owner + "/" + id

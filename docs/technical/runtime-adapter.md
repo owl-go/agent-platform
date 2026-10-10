@@ -1,6 +1,6 @@
 # Runtime Adapter
 
-状态：当前 Runtime 契约；Expert/Expert Team 结构化指导、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI broker、User Action Wait 与 Worker 重启恢复已实现；CLI 等待期间普通执行 deadline 暂停和 Linux + gVisor 端到端证据尚未完成
+状态：当前 Runtime 契约；Expert Markdown 指引与领队协调、Personal Settings 执行配置、Skill/MCP/CLI Connector 快照、CLI broker、User Action Wait 与 Worker 重启恢复已实现；新专家团全体等待审批时暂停主动计时；Linux + gVisor 端到端证据仍单列环境门禁
 
 Worker 只依赖 `agentruntime.Adapter` 的 `Describe` 和 `Execute`。Claude Code、Codex、Hermes、OpenClaw 与 PI Agent 的命令参数、版本探测和输出解析保留在各自 Driver，共享的进程、容器和事件行为位于 `cliadapter`、`processharness` 与 `containerprocess`。
 
@@ -20,7 +20,7 @@ Runtime JSONL 的单个结构化事件允许增长到本次执行的总输出上
 
 Workflow Message Channel 的公开执行预览位于 `backend/internal/data/workspace/runtimeexecutor/channel_response_sink.go`，复用既有 Runtime Event，不新增 Adapter 方法或 Capability。先提交下游 Event Sink，再根据真实事件生成固定活动标签和工具完成计数；仅最终 Team Member 的 `reasoning.summary` 与答案事件可产生公开摘要和暂定答案，其他成员只提供固定活动状态。预览经过同一组凭证与回复能力精确值脱敏，并处理跨 delta 的 Secret；原始推理、工具参数/结果和未经提交的事件不进入 IM。`ChannelResponseProgress` 将预览交给 Application 的有界刷新循环，供应商网络调用不会阻塞 Runtime 的事件持久化；更新粒度取决于实际 CLI 事件。最终结果仍经成功提交及 Delivery 发送，暂定输出不作为已成功结果。渠道句柄、回调恢复和发送不确定性的完整边界见 [消息渠道接入设计](workflow-message-channels.md)。
 
-Session 连续性优先使用平台保存的最近消息与有界 Rolling Summary。只有某 Runtime 配置 `native_resume: true` 且该镜像通过验证时，才把原生 Checkpoint 作为优化；切换 Runtime 时自动放弃原生 Checkpoint。Expert Team 为每个冻结成员维护独立的临时 Checkpoint 状态，只有整轮成功才共同晋升，任一成员失败或取消都丢弃本轮全部临时状态。
+Session 连续性优先使用平台保存的最近消息与有界 Rolling Summary。只有某 Runtime 配置 `native_resume: true` 且该镜像通过验证时，才把原生 Checkpoint 作为优化；切换 Runtime 时自动放弃原生 Checkpoint。历史顺序 Expert Team 保留原成员 Checkpoint 语义。新 schema 3 每次领队/成员调用都使用独立临时上下文和原生状态，不晋升或复用原生 Checkpoint；只有整次协作成功可提交 Workflow Workspace。详细协议见[资源包与领队协作契约](portable-experts.md)。
 
 Workflow 的持续对话由 Run Conversation 提供。每次追问创建新的 Run，Worker 将同一 Conversation 的既有 User/Assistant 轮次和当前输入通过公共 Instruction seam 交给 Runtime；原生 Resume 只作为优化。Codex 的匿名 Workflow Conversation 与 Expert Conversation 都按 Conversation 隔离并持久化脱敏后的 `sessions/`；如果 Worker 或容器重建后只有数据库 Checkpoint 而本地原生状态缺失，Worker 在执行前放弃该 Checkpoint，并依靠完整公共 Instruction 启动新原生会话。该恢复不会重开或改写已经终态的 Run。
 

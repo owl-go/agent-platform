@@ -81,7 +81,7 @@ const activeConversationRun = computed(() => conversationRuns.value.find((item) 
 const statusConversationRun = computed(() => activeConversationRun.value ?? latestConversationRun.value);
 const statusConversationModel = computed(() => statusConversationRun.value?.expert_stages?.at(-1)?.provider_model_name);
 const statusConversationActivity = computed(() => summarizeRuntimeActivities(runEvents.value).at(-1)?.label ?? (activeConversationRun.value?.state === "queued" ? t("common.queued") : t("sessions.progress.thinking")));
-const statusConversationModelCalls = computed(() => activeConversationRun.value?.expert_stages?.length ?? activeConversationRun.value?.credit_consumption?.stages.length ?? 0);
+const statusConversationModelCalls = computed(() => activeConversationRun.value?.expert_stages?.length ?? activeConversationRun.value?.credit_consumption?.stages?.length ?? 0);
 const conversationElapsed = computed(() => conversationRuns.value.reduce((total, item) => {
   const stored = Number.isFinite(item.elapsed_ms) ? Math.max(0, item.elapsed_ms) : 0;
   if (item.state !== "queued" && item.state !== "running") return total + stored;
@@ -131,7 +131,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => conversationR
       activities: turnActivities.map((item) => ({ id: item.sequence, label: item.historyLabel, detail: item.detail, kind: item.kind, toolCallCount: item.toolCallCount, fileChangeCount: item.fileChangeCount, state: item.state, items: [{ id: item.sequence, label: item.historyLabel, detail: item.detail }] })),
       executionEvidenceCounts: runtimeEvidenceCounts(turnEvents),
       stages: turn.expert_stages,
-      creditConsumption: turn.credit_consumption,
+      team:turn.workflow_snapshot?.team as import("../api/client").TeamExecutionContext | undefined, creditConsumption: turn.credit_consumption,
       artifacts: runArtifacts(turn),
       taskAttachments: turn.attachments,
       evidence: turn.evidence,
