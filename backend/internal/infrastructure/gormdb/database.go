@@ -2,6 +2,7 @@ package gormdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -43,7 +44,7 @@ func open(ctx context.Context, config Config, migrate bool) (*Database, error) {
 	if config.ConnectionMaxIdle <= 0 || config.ConnectionMaxLife <= 0 {
 		return nil, fmt.Errorf("database connection lifetimes must be positive")
 	}
-	db, err := gorm.Open(postgres.Open(config.DSN), &gorm.Config{
+	db, err := gorm.Open(newPostgresDialector(config.DSN), &gorm.Config{
 		Logger:         logger.Default.LogMode(logger.Silent),
 		TranslateError: true,
 	})
@@ -89,4 +90,21 @@ func (database *Database) Close() error {
 		return err
 	}
 	return sqlDB.Close()
+}
+
+// GORM's built-in translation replaces PostgreSQL errors with sentinels. Keep
+// both so repositories can classify a specific constraint without losing the
+// shared GORM category or the original storage cause.
+type causePreservingDialector struct{ *postgres.Dialector }
+
+func newPostgresDialector(dsn string) gorm.Dialector {
+	return causePreservingDialector{Dialector: &postgres.Dialector{Config: &postgres.Config{DSN: dsn}}}
+}
+
+func (dialector causePreservingDialector) Translate(err error) error {
+	translated := dialector.Dialector.Translate(err)
+	if errors.Is(err, translated) {
+		return err
+	}
+	return errors.Join(translated, err)
 }

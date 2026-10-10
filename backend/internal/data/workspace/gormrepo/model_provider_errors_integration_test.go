@@ -3,14 +3,37 @@ package gormrepo
 import (
 	"context"
 	"errors"
+	"net/url"
+	"os"
 	"testing"
+	"time"
 
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/infrastructure/gormdb"
 	"github.com/google/uuid"
 )
 
 func TestProviderDuplicateNameReturnsBusinessError(t *testing.T) {
 	db := conversationTestDatabase(t)
+	// Use the real API/Worker database factory, including its error translation.
+	var databaseName string
+	if err := db.Raw("SELECT current_database()").Scan(&databaseName).Error; err != nil {
+		t.Fatal(err)
+	}
+	dsn, err := url.Parse(os.Getenv("WORKSPACE_TEST_POSTGRES_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dsn.Path = "/" + databaseName
+	production, err := gormdb.OpenWithoutMigrations(context.Background(), gormdb.Config{
+		DSN: dsn.String(), MaxOpenConnections: 2, MaxIdleConnections: 1,
+		ConnectionMaxIdle: time.Minute, ConnectionMaxLife: time.Minute,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = production.Close() })
+	db = production.ORM()
 	owner := uuid.NewString()
 	if err := db.Exec("INSERT INTO users(id,oidc_subject,username,email,display_name) VALUES(?,?,?,?,?)", owner, owner, owner, owner+"@example.test", owner).Error; err != nil {
 		t.Fatal(err)
