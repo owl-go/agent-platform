@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"agent-platform/backend/internal/biz/workspace/application"
 	"agent-platform/backend/internal/biz/workspace/domain"
+	"agent-platform/backend/internal/credentials"
 	"agent-platform/backend/internal/workspacefs"
 )
 
@@ -157,7 +159,12 @@ func copyTeamFile(ctx context.Context, source, target string) error {
 		return err
 	}
 	if existing, err := os.Lstat(target); err == nil && !existing.Mode().IsRegular() {
-		return fmt.Errorf("Team Workspace path conflicts with a directory")
+		if !existing.IsDir() {
+			return fmt.Errorf("Team Workspace target is not a regular file or directory")
+		}
+		if err := removeEmptyTeamDirectory(ctx, target); err != nil {
+			return err
+		}
 	}
 	input, err := os.Open(source)
 	if err != nil {
@@ -183,6 +190,92 @@ func copyTeamFile(ctx context.Context, source, target string) error {
 		return err
 	}
 	return os.Rename(temporary, target)
+}
+
+// A validated replacement may leave empty ancestor directories after deleting
+// its old files. Never remove a directory that still contains another proposal.
+func removeEmptyTeamDirectory(ctx context.Context, root string) error {
+	var directories []string
+	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			return fmt.Errorf("Team Workspace replacement conflicts with retained files")
+		}
+		directories = append(directories, path)
+		return nil
+	}); err != nil {
+		return err
+	}
+	for index := len(directories) - 1; index >= 0; index-- {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := os.Remove(directories[index]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type teamFileChange struct {
+	Path   string `json:"path"`
+	Change string `json:"change"`
+}
+type teamFileChangeSummary struct {
+	Changes   []teamFileChange `json:"changes"`
+	Truncated bool             `json:"truncated,omitempty"`
+}
+
+func summarizeTeamFileChanges(ctx context.Context, root string, baseline map[string]string, redactor *credentials.Redactor) (teamFileChangeSummary, error) {
+	result := teamFileChangeSummary{Changes: []teamFileChange{}}
+	current, err := teamWorkspaceManifest(root)
+	if err != nil {
+		return result, err
+	}
+	changes := map[string]string{}
+	for path, digest := range current {
+		if baseline[path] != digest {
+			change := "modified"
+			if _, exists := baseline[path]; !exists {
+				change = "added"
+			}
+			changes[path] = change
+		}
+	}
+	for path := range baseline {
+		if _, exists := current[path]; !exists {
+			changes[path] = "deleted"
+		}
+	}
+	paths := make([]string, 0, len(changes))
+	for path := range changes {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	result.Truncated = len(paths) > 20
+	if len(paths) > 20 {
+		paths = paths[:20]
+	}
+	for _, path := range paths {
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
+		safe := strings.ToValidUTF8(string(redactor.Bytes([]byte(path))), "�")
+		if len(safe) > 200 {
+			safe = safe[:197]
+			for !utf8.ValidString(safe) {
+				safe = safe[:len(safe)-1]
+			}
+			safe += "…"
+		}
+		result.Changes = append(result.Changes, teamFileChange{Path: safe, Change: changes[path]})
+	}
+	return result, nil
 }
 
 func teamConflictFacts(pending map[string][]teamWorkspaceCandidate, resolved map[string]domain.TeamWorkspaceConflict) []domain.TeamWorkspaceConflict {

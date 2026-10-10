@@ -68,7 +68,7 @@ Start with the neutral package validation boundary and authoritative guidance mo
 
 Historical migrations remain immutable. Database deletion and conversion require a new migration and documented forward-repair/data-restoration behavior. No production migration, release, or Runtime conformance is claimed. Exact-image and Linux sandbox evidence remains a separate environment gate. Keep progress, failures, recovery steps, and actual commands in this ticket as implementation proceeds.
 
-## Implementation evidence — 2026-10-09
+## Historical implementation progress — 2026-10-09
 
 Implementation is in progress on `codex/expert-team-refactor`; the User selected `5269ea8` as the fixed review baseline. No implementation ticket or acceptance group is complete yet.
 
@@ -79,7 +79,7 @@ Implementation is in progress on `codex/expert-team-refactor`; the User selected
 
 Commands executed for these slices: focused `go test` selections in `internal/service/workspace`, `internal/data/workspace/gormrepo`, and `internal/data/workspace/runtimeexecutor`; `make generate`; focused editor/catalog Vitest files; `make web-typecheck`. PostgreSQL uses a task-owned local container and per-test disposable databases. This is local implementation evidence, not production migration, deployment, or Runtime image conformance.
 
-## Implementation evidence — 2026-10-10
+## Historical implementation progress — 2026-10-10
 
 The implementation remains in progress; no ticket or acceptance group is declared complete.
 
@@ -94,4 +94,4 @@ Executed checks include the focused PostgreSQL tests above, the Runtime Executor
 
 ## Final implementation evidence — 2026-10-10
 
-All 22 implementation slices are present on the same branch. [The local acceptance report](../evidence/agent-workspace/2026-10-10-expert-refactor-local-acceptance.md) maps every one of the 68 User Stories and all ten acceptance groups to the executed seams and records migration recovery, browser and gate evidence. Final review and generated verification remain in progress. No deployment, new exact-image Runtime conformance or Linux sandbox evidence is asserted; the parent Issue remains unchanged.
+All 22 implementation slices are complete on the same branch. [The local acceptance report](../evidence/agent-workspace/2026-10-10-expert-refactor-local-acceptance.md) maps every one of the 68 User Stories and all ten acceptance groups to the executed seams and records migration recovery, browser and gate evidence. Generated verification passed. Review against `5269ea8` resolved all three Standards and two Spec findings, with regression tests and read-only follow-up review. No deployment, new exact-image Runtime conformance or Linux sandbox evidence is asserted; the parent Issue remains unchanged.

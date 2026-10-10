@@ -4,10 +4,76 @@ import (
 	"agent-platform/backend/internal/biz/workspace/domain"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"strings"
 	"testing"
 )
+
+func TestExpertDependenciesPreserveCanceledAndStorageErrors(t *testing.T) {
+	fixture := newWorkerRecoveryFixture(t)
+	dependencies := []domain.ExpertConnectorDependency{{Source: "tools", Kind: "mcp", Version: "1.0.0"}}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, _, err := resolveExpertDependencies(fixture.db.WithContext(ctx), fixture.ownerID, dependencies)
+	if !errors.Is(err, context.Canceled) || errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("cancellation was replaced: %v", err)
+	}
+	_, _, err = resolveExpertDependencies(fixture.db, fixture.ownerID, dependencies)
+	if !errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("missing installation was not a domain error: %v", err)
+	}
+	storageFailure := errors.New("dependency storage unavailable")
+	if err := fixture.db.Callback().Query().Before("gorm:query").Register("expert_dependency_storage_failure", func(tx *gorm.DB) { tx.AddError(storageFailure) }); err != nil {
+		t.Fatal(err)
+	}
+	defer fixture.db.Callback().Query().Remove("expert_dependency_storage_failure")
+	_, _, err = resolveExpertDependencies(fixture.db, fixture.ownerID, dependencies)
+	if !errors.Is(err, storageFailure) || errors.Is(err, domain.ErrInvalid) {
+		t.Fatalf("storage cause was replaced: %v", err)
+	}
+}
+
+func TestExpertConnectorAuthorizationLookupPreservesStorageCause(t *testing.T) {
+	for _, kind := range []domain.ConnectorMode{domain.ConnectorModeMCP, domain.ConnectorModeCLI} {
+		t.Run(string(kind), func(t *testing.T) {
+			fixture := newWorkerRecoveryFixture(t)
+			policy := []byte(`{"auth_mode":"oauth","mcp":{"transport":"streamable_http","url":"https://example.test/mcp","timeout_seconds":30,"egress_hosts":["example.test"]}}`)
+			if kind == domain.ConnectorModeCLI {
+				policy = []byte(`{"auth_mode":"oauth","cli":{"executable":"tool"}}`)
+			}
+			revision, err := fixture.repository.CreateConnectorRevision(t.Context(), domain.ConnectorRevision{PackageSource: "tools", Version: "1.0.0", Mode: kind, PackageSHA256: strings.Repeat("a", 64), ObjectKey: "connectors/tools/package.zip", RuntimePolicy: policy})
+			if err != nil {
+				t.Fatal(err)
+			}
+			installation, err := fixture.repository.InstallConnector(t.Context(), domain.ConnectorInstallation{OwnerID: fixture.ownerID, PackageSource: "tools", ActiveRevisionID: revision.ID, State: domain.ConnectorInstallationActive})
+			if err != nil {
+				t.Fatal(err)
+			}
+			authorizationID := uuid.NewString()
+			if err := fixture.db.Exec("INSERT INTO connector_authorizations(id,installation_id,owner_user_id,identity_ref,credential_ciphertext,state) VALUES(?,?,?,'identity',?,'active')", authorizationID, installation.ID, fixture.ownerID, []byte("protected")).Error; err != nil {
+				t.Fatal(err)
+			}
+			if err := fixture.db.Exec("UPDATE connector_installations SET authorization_id=? WHERE id=?", authorizationID, installation.ID).Error; err != nil {
+				t.Fatal(err)
+			}
+			storageFailure := errors.New("authorization storage unavailable")
+			if err := fixture.db.Callback().Query().Before("gorm:query").Register("expert_authorization_storage_failure", func(tx *gorm.DB) {
+				if tx.Statement.Table == "connector_authorizations" {
+					tx.AddError(storageFailure)
+				}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			defer fixture.db.Callback().Query().Remove("expert_authorization_storage_failure")
+			_, _, err = resolveExpertDependencies(fixture.db, fixture.ownerID, []domain.ExpertConnectorDependency{{Source: "tools", Kind: string(kind), Version: "1.0.0"}})
+			if !errors.Is(err, storageFailure) || errors.Is(err, domain.ErrInvalid) {
+				t.Fatalf("authorization storage cause was replaced: %v", err)
+			}
+		})
+	}
+}
 
 func TestPlatformTeamConnectorDeclarationResolvesOnlyExecutingUsersAuthorization(t *testing.T) {
 	fixture := newWorkerRecoveryFixture(t)

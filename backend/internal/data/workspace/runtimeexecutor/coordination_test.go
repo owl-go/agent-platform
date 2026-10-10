@@ -109,6 +109,54 @@ func TestExecuteCoordinatedTeamDelegatesAndPublishesOnlyLeadResponse(t *testing.
 	}
 }
 
+func TestCoordinatedLeadReceivesRedactedMemberFileChangeFacts(t *testing.T) {
+	executor, job, persistent := coordinatedFixture(t)
+	for _, name := range []string{"modified.txt", "deleted.txt"} {
+		if err := os.WriteFile(filepath.Join(persistent, name), []byte("original"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	job.AdditionalRedactionValues = [][]byte{[]byte("private-path-token")}
+	leadCalls := 0
+	executor.newAdapter = func(_ domain.RuntimeEngine, _ cliadapter.Config) (agentruntime.Adapter, error) {
+		return &recordingAdapter{execute: func(_ context.Context, request agentruntime.ExecuteRequest, sink agentruntime.EventSink) (agentruntime.Result, error) {
+			text := "Done"
+			if strings.Contains(request.Instruction, "# Lead Guidance") {
+				leadCalls++
+				if leadCalls == 1 {
+					text = `{"action":"delegate","tasks":[{"id":"edit","member_id":"reviewer","instruction":"Update files","required":true}]}`
+				} else {
+					for _, fact := range []string{`"file_changes":`, `"path":"modified.txt","change":"modified"`, `"path":"deleted.txt","change":"deleted"`, `"path":"token-[REDACTED].txt","change":"added"`} {
+						if !strings.Contains(request.Instruction, fact) {
+							t.Fatalf("lead missing file fact %s: %s", fact, request.Instruction)
+						}
+					}
+					if strings.Contains(request.Instruction, "private-path-token") {
+						t.Fatal("file name leaked a secret into lead context")
+					}
+					text = `{"action":"complete","response":"Files reviewed"}`
+				}
+			} else {
+				if err := os.WriteFile(filepath.Join(request.WorkspacePath, "modified.txt"), []byte("changed"), 0600); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Remove(filepath.Join(request.WorkspacePath, "deleted.txt")); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(request.WorkspacePath, "token-private-path-token.txt"), []byte("new"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			return coordinationRuntimeResult(t, sink, request.RunID, text), nil
+		}}, nil
+	}
+	result, err := executor.Execute(t.Context(), job, &recordingProgress{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	commitSuccessfulResult(t, result)
+}
+
 func TestCoordinatedCancellationStopsQueuedMembersAndDiscardsAllFiles(t *testing.T) {
 	executor, job, persistent := coordinatedFixture(t)
 	started := make(chan struct{}, 4)

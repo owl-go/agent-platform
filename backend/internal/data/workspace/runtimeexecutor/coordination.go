@@ -24,15 +24,16 @@ var errTeamInvocationLimit = errors.New("Team invocation limit exhausted")
 type coordinationPublicationError struct{ error }
 
 type invocationOptions struct {
-	id             string
-	position       int
-	total          int
-	role           string
-	task           domain.TeamDelegation
-	workspaceSeed  string
-	creditBudget   int64
-	workspaceAfter *string
-	onModelStart   func() error
+	id               string
+	position         int
+	total            int
+	role             string
+	task             domain.TeamDelegation
+	workspaceSeed    string
+	creditBudget     int64
+	workspaceAfter   *string
+	workspaceChanges *teamFileChangeSummary
+	onModelStart     func() error
 }
 
 type coordinatedProgress struct {
@@ -69,11 +70,12 @@ func (progress *coordinatedProgress) RecordStageSettlement(ctx context.Context, 
 }
 
 type delegatedResult struct {
-	Task       domain.TeamDelegation `json:"task"`
-	State      string                `json:"state"`
-	Result     string                `json:"result,omitempty"`
-	Error      string                `json:"error,omitempty"`
-	RepairUsed bool                  `json:"-"`
+	Task        domain.TeamDelegation  `json:"task"`
+	State       string                 `json:"state"`
+	Result      string                 `json:"result,omitempty"`
+	Error       string                 `json:"error,omitempty"`
+	FileChanges *teamFileChangeSummary `json:"file_changes,omitempty"`
+	RepairUsed  bool                   `json:"-"`
 }
 
 const leadProtocol = `
@@ -188,7 +190,7 @@ func (executor *Executor) executeCoordinated(ctx context.Context, job applicatio
 	position := 0
 	nextInvocation := func(role string, task domain.TeamDelegation) invocationOptions {
 		position++
-		return invocationOptions{id: uuid.NewString(), position: position, total: limits.MaxInvocations, role: role, task: task, workspaceSeed: workspace, creditBudget: limits.CreditBudgetHundredths, onModelStart: func() error {
+		options := invocationOptions{id: uuid.NewString(), position: position, total: limits.MaxInvocations, role: role, task: task, workspaceSeed: workspace, creditBudget: limits.CreditBudgetHundredths, onModelStart: func() error {
 			stateMu.Lock()
 			defer stateMu.Unlock()
 			if actualCalls >= limits.MaxInvocations {
@@ -197,6 +199,10 @@ func (executor *Executor) executeCoordinated(ctx context.Context, job applicatio
 			actualCalls++
 			return nil
 		}}
+		if role == "member" {
+			options.workspaceChanges = &teamFileChangeSummary{}
+		}
+		return options
 	}
 	invoke := func(callCtx context.Context, stage domain.ExecutionStageSnapshot, instruction string, options invocationOptions) (application.ExecutionResult, string, error) {
 		clock.change(options.id, "begin")
@@ -391,6 +397,7 @@ func (executor *Executor) executeCoordinated(ctx context.Context, job applicatio
 				continue
 			}
 			value.State = "succeeded"
+			value.FileChanges = item.options.workspaceChanges
 			value.Result = outcome.result.FinalMessage
 			if len(value.Result) > 20_000 {
 				value.Result = value.Result[:20_000]

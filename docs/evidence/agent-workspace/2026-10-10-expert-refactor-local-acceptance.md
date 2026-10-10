@@ -128,12 +128,12 @@
 ## 已执行门禁
 
 - `WORKSPACE_TEST_POSTGRES_DSN=<local disposable DSN> make test`：完整 Go 测试通过，包含架构契约及真实 PostgreSQL 集成测试。
-- 受影响 Executor、Workspace Repository/Service、Credits Repository、Domain、resourceaction 和 expertpackage 的完整 `go test -race`：七个包通过。新目录 Discovery/Rejects/Discovers 合同的 race 检查通过。额外执行的 defaultresources 全量 race 检查在重复解压既有 Connector CLI bundle 时达到 10 分钟测试超时，不能记为通过；该包常规完整 Go 测试已通过。
+- 受影响 Executor、Workspace Repository/Service、Credits Repository、Domain、resourceaction 和 expertpackage 的完整 `go test -race`：七个包通过。审查修复后的三个包定向 race 回归通过；新目录 Discovery/Rejects/Discovers 合同和单独的 `TestDirectory` race 检查通过。额外执行的 defaultresources 全量 race 检查在重复解压既有 Connector CLI bundle 时达到 10 分钟测试超时，不能记为通过；该包常规完整 Go 测试已通过。
 - `make build`、`go -C backend vet ./...`、`make generate`、`make breaking`、`make resources-check`：通过。目录结果为 20 Connector Packages、9 Skills、8 Experts、0 随仓分发 Team；纯目录 fixture 已证明任意合法 Team 可自动发现。
-- `pnpm -C frontend test`：最终完整 56 文件/635 测试通过；新增预览修订与省略计费明细的回归包含在内。
+- `pnpm -C frontend test`：完整 56 文件/635 测试通过。审查修复后，`pnpm -C frontend exec vitest run --maxWorkers=2` 的完整 56 文件/637 测试通过，包含两个新的预览异步竞态回归。并行执行构建时的一轮完整测试遇到两个既有界面测试超时，同时包含尚未修复的确认竞态测试；修复后降低测试并发重跑通过，未延长断言超时或改动无关界面。
 - `make web-typecheck`、`make web-build`、`pnpm -C frontend typecheck:e2e`：通过。
 - `git diff --check`、`cmp -s AGENTS.md CLAUDE.md`、新增/修改文档和清单的中性用词及相对链接检查：通过。
-- `make verify-generated`：提交生成文件后执行并记录。
+- `make verify-generated`：通过，重新生成与已提交文件无差异；首次因远端生成服务不可用失败，重试成功。
 
 浏览器执行命令为 `E2E_MINIO_BINARY=<task-owned source-built binary> node scripts/e2e/run-local.mjs --grep 'E2E-009|E2E-010|E2E-011|E2E-012|E2E-029|E2E-030|E2E-044|E2E-EXPERT|E2E-TASK'`。使用隔离的 PostgreSQL、真实 Keycloak、当前 API/Web 和 MinIO。上游容器镜像拉取失败后改用官方固定发布源码构建的临时 MinIO，不修改生产存储配置。九个不同流程已通过：基础七项及最终专家 Profile/包复制、Task Panel 两项。Task Panel 使用真实数据库写入的终态 fixture，未运行实际 Worker/模型；真实运行行为由 Executor 与 PostgreSQL 测试另行证明。截图已人工查看，移动端无横向溢出。
 
@@ -145,4 +145,25 @@
 
 ## 审查及提交
 
-使用 `5269ea8...HEAD` 分别审查工程规范和规格，记录发现及修复结果后提交推送本分支。继续遵守 `main_temp` 集成与发布边界，不自动部署或改动保护分支。
+固定比较命令为 `git diff 5269ea8...HEAD`；初审实现提交为 `7e21949`。工程规范与规格由两个只读审查分别执行，修复后再次复核。
+
+### Standards
+
+累计三项发现，最高 P1，均已解决：
+
+- 预览保存等待期间继续编辑被错误标记为已保存。请求前冻结提交内容，后续编辑保持未保存；延迟响应回归先失败后通过。
+- 确认请求返回前切换预览，旧响应可能触发新预览的确认。保存与确认均绑定原动作 ID 和对象身份，忽略陈旧响应；延迟确认后切换的回归先失败后通过。
+- Connector 依赖将数据库故障和取消误报为配置错误。只将明确缺失、版本或授权错误转为不可用提示；保留系统 cause 并传播。真实 PostgreSQL 故障注入、取消、MCP/CLI 授权查询和 Service 回归通过。
+
+依据为工程基线 UI-002 与 COD-002；复核没有未解决问题。
+
+### Spec
+
+累计两项发现，最高 P2，均已解决：
+
+- 完整目录替换为文件时遗留空目录阻止合并。仅移除已验证的空目录树；文件与目录互换、竞争后代路径保留测试通过，满足非冲突合并合同。
+- 领队上下文缺少成员文件增改删摘要。平台从独立 Workspace 基线生成有界、完整凭据脱敏的文件事实；实际 Adapter 下一次领队请求验证三种变化及秘密路径脱敏，截断和 UTF-8 路径边界测试通过，满足 US-39。
+
+复核没有未解决问题或已证实的范围扩张。Standards：3 项已解决、0 项未解决；Spec：2 项已解决、0 项未解决。
+
+实现与修复提交并推送连续开发分支；继续遵守 `main_temp` 集成与发布边界，不自动部署或改动保护分支。

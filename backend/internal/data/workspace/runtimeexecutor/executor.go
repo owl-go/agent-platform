@@ -261,6 +261,13 @@ func (executor *Executor) executeStages(ctx context.Context, job application.Exe
 	if err != nil {
 		return result, err
 	}
+	var changeBaseline map[string]string
+	if options.workspaceChanges != nil {
+		changeBaseline, err = teamWorkspaceManifest(workspace)
+		if err != nil {
+			return result, err
+		}
+	}
 	if err := prepareRuntimeAttachmentMountpoint(workspace, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {
 		return result, err
 	}
@@ -724,6 +731,13 @@ func (executor *Executor) executeStages(ctx context.Context, job application.Exe
 		if err != nil {
 			return result, err
 		}
+	}
+	if options.workspaceChanges != nil {
+		summary, err := summarizeTeamFileChanges(executionCtx, workspace, changeBaseline, redactor)
+		if err != nil {
+			return result, err
+		}
+		*options.workspaceChanges = summary
 	}
 	if persistent != "" {
 		if err := preparePersistentWorkspaceTree(workspace, executor.config.Worker.SandboxUID, executor.config.Worker.SandboxGID); err != nil {

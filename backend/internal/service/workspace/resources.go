@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -909,7 +910,13 @@ func (service *Service) expertAvailability(ctx context.Context, experts []worksp
 				dependencyRepo, ok := service.workspace.Repository().(interface {
 					ExpertDependenciesAvailable(context.Context, string, workspacedomain.Expert) error
 				})
-				if !ok || dependencyRepo.ExpertDependenciesAvailable(ctx, owner, expert) != nil {
+				if !ok {
+					return nil, fmt.Errorf("Expert dependency availability is unavailable")
+				}
+				if err := dependencyRepo.ExpertDependenciesAvailable(ctx, owner, expert); err != nil {
+					if !errors.Is(err, workspacedomain.ErrInvalid) && !errors.Is(err, workspacedomain.ErrNotFound) && !errors.Is(err, workspacedomain.ErrConflict) && !errors.Is(err, workspacedomain.ErrForbidden) {
+						return nil, err
+					}
 					status.Available = false
 					status.Reason = "Install and authorize the required Connectors for your account"
 				}

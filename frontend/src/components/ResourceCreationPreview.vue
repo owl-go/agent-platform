@@ -54,30 +54,38 @@ watch(() => props.actionId, async (id, _, onCleanup) => {
 }, { immediate: true });
 
 async function save() {
-  if (!props.actionId || !proposal.value || !action.value || !editable.value) return;
+  if (!props.actionId || !proposal.value || !action.value || !editable.value || busy.value) return;
+  const id = props.actionId;
+  const previous = action.value;
+  const submitted = JSON.stringify(proposal.value);
   busy.value = true;
   error.value = "";
   try {
-    action.value = await api.reviseResourceCreationAction(props.actionId, proposal.value, action.value.version);
-    original.value = JSON.stringify(proposal.value);
+    const saved = await api.reviseResourceCreationAction(id, JSON.parse(submitted) as ResourceExpertProposalEnvelope, previous.version);
+    if (props.actionId !== id || action.value !== previous) return;
+    action.value = saved;
+    original.value = submitted;
   } catch {
-    error.value = "修订失败，请检查指引、成员、资源或版本冲突。";
+    if (props.actionId === id) error.value = "修订失败，请检查指引、成员、资源或版本冲突。";
   } finally {
-    busy.value = false;
+    if (props.actionId === id) busy.value = false;
   }
 }
 async function confirm() {
-  if (!props.actionId || changed.value || !editable.value) return;
+  if (!props.actionId || !action.value || changed.value || !editable.value || busy.value) return;
+  const id = props.actionId;
+  const previous = action.value;
   busy.value = true;
   error.value = "";
   try {
-    await api.decideResourceCreationAction(props.actionId, "confirm");
+    await api.decideResourceCreationAction(id, "confirm");
+    if (props.actionId !== id || action.value !== previous) return;
     emit("confirmed");
     emit("close");
   } catch {
-    error.value = "创建失败，请修改预览或检查资源是否可用。";
+    if (props.actionId === id && action.value === previous) error.value = "创建失败，请修改预览或检查资源是否可用。";
   } finally {
-    busy.value = false;
+    if (props.actionId === id && action.value === previous) busy.value = false;
   }
 }
 </script>
