@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { channelSetups } from "../components/messageChannelSetup";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ArrowUp, Copy, Eye, EyeOff, FileText, Folder, PanelRightOpen } from "@lucide/vue";
@@ -280,13 +281,13 @@ async function saveGitSource() {
   } catch (cause) {
     const codes = ["git_source_invalid", "git_credentials_required", "git_workspace_not_empty", "git_server_unavailable", "git_ssh_host_untrusted", "git_ssh_key_invalid", "git_authentication_failed", "git_branch_not_found", "git_repository_unavailable", "git_connection_failed", "git_repository_too_large", "git_clone_failed"];
     const code = cause instanceof ApiError && codes.includes(cause.code) ? cause.code : "git_clone_failed";
-    gitError.value = t(`workflows.gitErrors.${code}`);
+    gitError.value = saveErrorMessage(cause, t, `workflows.gitErrors.${code}`);
   } finally {
     savingGit.value = false;
     await nextTick(); gitFeedback.value?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   }
 }
-async function saveSettings() { if (!workflow.value) return; try { workflow.value = await api.updateWorkflow(workflowID.value, settingsForm.value, workflow.value.version); await refresh(); } catch { error.value = t("errors.conflict"); } }
+async function saveSettings() { if (!workflow.value) return; try { workflow.value = await api.updateWorkflow(workflowID.value, settingsForm.value, workflow.value.version); await refresh(); } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); } }
 async function generateCredential() {
   try {
     credential.value = await api.generateWorkflowCredential(workflowID.value);

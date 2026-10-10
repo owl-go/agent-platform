@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, onMounted, ref } from "vue";
+import { saveErrorMessage } from "../api/saveErrors";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type Expert, type ExpertInput, type ExpertTeam, type ExpertTeamInput } from "../api/client";
 import { authContextKey } from "../auth/session";
@@ -74,7 +75,7 @@ async function save() {
   try {
     const saved = props.team ? await api.updateExpertTeam(props.team.id, input, props.team.version) : await api.createExpertTeam(input);
     if (!disposed) emit("saved", saved);
-  } catch { if (!disposed) error.value = t("experts.teamSettingsSaveFailed"); }
+  } catch (cause) { if (!disposed) error.value = saveErrorMessage(cause, t, "experts.teamSettingsSaveFailed"); }
   finally { if (!disposed) saving.value = false; }
 }
 </script>

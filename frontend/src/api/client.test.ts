@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
+  it("preserves the public validation cause of a failed save", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({reason: "invalid_input", message: "resource is invalid: API Key is required"}), {status: 422})));
+    await expect(createPlatformApi(() => "token").createModelProviderConnection({ name: "Provider", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_chat"], api_key: "" })).rejects.toMatchObject({code: "invalid_input", detail: "API Key is required"});
+  });
+
   it("saves an enterprise execution default without a validation Run", async () => {
     const fetcher = vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => new Response(init?.body, {status:200,headers:{"Content-Type":"application/json"}}));
     vi.stubGlobal("fetch",fetcher);
@@ -466,5 +471,19 @@ describe("Agent Workspace API client", () => {
       "/api/v1/admin/redemption-codes?limit=50&cursor=cursor-1",
       "/api/v1/admin/redemption-codes/code-1/void",
     ]);
+  });
+});
+
+describe("save error privacy", () => {
+  it("distinguishes a rejected fetch from an internal exception", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("private network diagnostic"); }));
+    await expect(createPlatformApi(() => "token").updateSettings({} as Parameters<ReturnType<typeof createPlatformApi>["updateSettings"]>[0])).rejects.toMatchObject({kind: "network", code: "network_error", detail: ""});
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  it.each([
+    [500, "request_failed"], [422, "feishu_credentials_rejected"],
+  ])("discards raw diagnostics at status %s", async (status, reason) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({reason, message: "private SQL or provider secret"}), {status})));
+    await expect(createPlatformApi(() => "token").updateSettings({} as Parameters<ReturnType<typeof createPlatformApi>["updateSettings"]>[0])).rejects.toMatchObject({detail: ""});
   });
 });

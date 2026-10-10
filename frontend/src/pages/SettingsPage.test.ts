@@ -191,6 +191,17 @@ describe("SettingsPage model provider feedback", () => {
     wrapper.unmount();
   });
 
+  it("shows the specific duplicate name error and keeps the form open", async () => {
+    const api = apiStub();
+    api.updateModelProviderConnection = vi.fn(async () => { throw new ApiError("conflict", 409, "model_provider_name_conflict"); });
+    const wrapper = await openConnectionEditor(api);
+    await wrapper.get(".modal-card").trigger("submit");
+    await flushPromises();
+    expect(wrapper.get('.app-toast.error[role="alert"]').text()).toContain("供应商名称已存在");
+    expect(wrapper.find(".modal-layer").exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it("adds a model with one model field", async () => {
     const api = apiStub();
     api.createProviderModel = vi.fn(async (_connectionID, input) => ({ id: "model-1", connection_id: connection.id, model_id: input.model_id, display_name: input.model_id, available: true, manually_added: true, compatibility: [] }));

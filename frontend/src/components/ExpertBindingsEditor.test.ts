@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, expect, it, vi } from "vitest";
-import { platformApiKey, type Expert, type ExpertTeam, type PlatformApi, type Skill, type MCPServer, type CLIConnectorDefinition } from "../api/client";
+import { ApiError, platformApiKey, type Expert, type ExpertTeam, type PlatformApi, type Skill, type MCPServer, type CLIConnectorDefinition } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExpertBindingsEditor from "./ExpertBindingsEditor.vue";
@@ -47,8 +47,9 @@ it("blocks duplicate saves, preserves a failed draft and ignores completion afte
   await wrapper.get("form").trigger("submit"); await wrapper.get("form").trigger("submit");
   expect(api.updateExpert).toHaveBeenCalledTimes(1);
   expect(wrapper.getComponent(ExpertResourceSelector).props("disabled")).toBe(true);
-  reject(new Error("conflict")); await flushPromises();
-  expect(wrapper.text()).toContain("保存失败");
+  reject(new ApiError("conflict", 412, "version_conflict", "save-conflict-request")); await flushPromises();
+  expect(wrapper.text()).toContain("数据已被更新");
+  expect(wrapper.text()).toContain("save-conflict-request");
   expect(wrapper.getComponent(ExpertResourceSelector).props("skillIds")).toEqual(["new"]);
   await wrapper.get("form").trigger("submit"); wrapper.unmount();
   resolve(expert); await flushPromises(); expect(wrapper.emitted("saved")).toBeUndefined();

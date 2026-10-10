@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { ArrowUp, Check, ChevronLeft, ChevronRight, FilePlus2, FileText, Folder, Link, Plus, Search, Sparkles, Square, UserRound, Users, X } from "@lucide/vue";
 import { useI18n } from "vue-i18n";
@@ -353,7 +354,7 @@ async function setManagedActivation(definition: CLIConnectorDefinition, active: 
       scheduleManagedActivationPoll();
     } else if (setup.state === "completed") await beginManagedAuthorization();
     else pendingManagedActivation.value.failed = true;
-  } catch { closeBlankCLIWindow(popup); pendingManagedActivation.value = undefined; error.value = t("composer.selectionFailed"); }
+  } catch (cause) { closeBlankCLIWindow(popup); pendingManagedActivation.value = undefined; error.value = saveErrorMessage(cause, t, "composer.selectionFailed"); }
   finally { cliActivationBusy.value = cliActivationBusy.value.filter((id) => id !== definition.id); }
 }
 function cliUserScopes(definition: CLIConnectorDefinition) {
@@ -443,7 +444,7 @@ async function setCLIActivation(definition: CLIConnectorDefinition, active: bool
       if (connectorEnabled(`cli:${definition.id}`)) await toggleConnector("cli", definition.id);
       if (cliAuthorizationPrompt.value?.definition.id === definition.id) cliAuthorizationPrompt.value = undefined;
     }
-  } catch { closeBlankCLIWindow(popup); error.value = t("composer.selectionFailed"); }
+  } catch (cause) { closeBlankCLIWindow(popup); error.value = saveErrorMessage(cause, t, "composer.selectionFailed"); }
   finally { cliActivationBusy.value = cliActivationBusy.value.filter((id) => id !== definition.id); }
 }
 async function chooseConnector(item: (typeof connectorRows.value)[number]) {
@@ -638,7 +639,7 @@ async function send() {
     // The accepted selection is immutable. Resolve an empty explicit Skill set
     // for the next draft without modifying the historical message.
     await changeSelection({ skill_ids: [] }); persist();
-  } catch { error.value = t("composer.sendFailed"); persist(); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "composer.sendFailed"); persist(); }
   finally { sending.value = false; }
 }
 function outside(event: PointerEvent) { if (!root.value?.contains(event.target as Node)) { menu.value = ""; trigger = undefined; } }

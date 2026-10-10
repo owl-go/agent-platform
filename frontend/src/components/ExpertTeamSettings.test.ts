@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, expect, it, vi } from "vitest";
-import { platformApiKey, type Expert, type ExpertTeam, type PlatformApi } from "../api/client";
+import { ApiError, platformApiKey, type Expert, type ExpertTeam, type PlatformApi } from "../api/client";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { createAppI18n } from "../i18n";
 import ExpertTeamSettings from "./ExpertTeamSettings.vue";
@@ -53,7 +53,7 @@ it("keeps failed drafts and blocks duplicate saves and late completion after clo
  const api = {listExperts: vi.fn(async () => experts), updateExpertTeam: vi.fn().mockImplementationOnce(() => new Promise((_, fail) => {reject = fail;})).mockImplementationOnce(() => new Promise(done => {resolve = done;}))};
  const wrapper = mount(ExpertTeamSettings, {props: {team}, ...options(api)}); await flushPromises();
  await wrapper.get('input[aria-label="专家团名称"]').setValue("Draft"); await wrapper.get("form").trigger("submit"); await wrapper.get("form").trigger("submit"); expect(api.updateExpertTeam).toHaveBeenCalledTimes(1); expect(wrapper.getComponent({name: "ElSelect"}).props("disabled")).toBe(true);
- reject(new Error("conflict")); await flushPromises(); expect(wrapper.text()).toContain("版本冲突"); expect(wrapper.get('input[aria-label="专家团名称"]').element).toHaveProperty("value", "Draft");
+ reject(new ApiError("conflict", 412, "version_conflict", "save-conflict-request")); await flushPromises(); expect(wrapper.text()).toContain("数据已被更新"); expect(wrapper.text()).toContain("save-conflict-request"); expect(wrapper.get('input[aria-label="专家团名称"]').element).toHaveProperty("value", "Draft");
  await wrapper.get("form").trigger("submit"); wrapper.unmount(); resolve(team); await flushPromises(); expect(wrapper.emitted("saved")).toBeUndefined();
 });
 it("supports retry after catalog load failure and cannot save before the catalog loads", async () => {
