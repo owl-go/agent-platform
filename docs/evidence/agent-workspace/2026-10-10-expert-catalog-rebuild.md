@@ -31,3 +31,11 @@
 
 - 完整 `make test`、`make build` 已通过（本地未配置真实供应商及 PostgreSQL 集成 DSN，环境 Skip 不记作通过）。资源检查确认 20 个连接器包、9 个目录技能、8 个专家、0 个专家团及 3 个内置创建技能。
 - 重建后 API、Worker 均 healthy，发布标记与应用镜像匹配，活动任务为零；公共健康、Readiness、OIDC 检查通过。已发布创建技能内容摘要 `833184a114196cab05102773617e7e4c576402a661f5901b2dbbf3663da050f5` 与真实 Skill 记录一致。后续资料入口补充会产生新摘要。
+
+## 最终发布
+
+内置创建技能补充通过 `main_temp` 发布为 `app-20261010T095940Z-f1ecb39b`，源码 `f63ef1c015b45decd1cd21bba797fdcc06383506`。再次执行发布门禁和服务器核对后，API、Worker 均 healthy，当前源码摘要与应用镜像匹配，健康、Readiness、OIDC 及公共静态文件检查通过。近十分钟 ERROR/FATAL/PANIC 日志计数两服务均为 0（仅输出计数，未保存私有日志）。Migration 账本仍为 102 条，本次无 Migration 变更。
+
+创建技能最终 SHA-256 `8223aad095bb37dafb3b95479f56b70dc2754206358664c4655e2fe7578b390b` 与线上 Skill 内容记录一致。八个重建专家均保持新 UUID、资源版本 1 和目录包版本 1.2.0；最终核对全部简介、Guidance、常用任务、技能绑定数量及目录内容摘要成功。个人技能最后修改后再次通过 `quick_validate.py`，内容记录改为从已校验 ZIP 快照读取；实测版本降级和软链接拒绝，版本升级和重新打包通过。
+
+八个独立专家 ZIP 已使用个人技能的真实解析器校验、记录并打包，交付到 `/Users/frank/.codex/artifacts/expert-packages/2026-10-10/`，附下载索引。线上重建使用已授权的目录加载机制；没有重复通过导入 API 创建同名定义，上传 helper 的 transport 测试仍为模拟测试。
