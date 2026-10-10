@@ -1,13 +1,18 @@
 {
   "schema_version": 1,
   "id": "default.expert.cross-border-operations",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "跨境运营专家",
-    "introduction": "面向独立站与平台卖家，借助轻流贯通跨境选品、上架文案、短视频策划、\n  推广执行与数据复盘，形成可追踪、可协作、可复盘的增长闭环。",
+    "introduction": "把跨境选品、商品内容、推广和复盘整理成可执行的运营计划，明确负责人、依赖、进度与验证指标。",
     "icon": "sparkles",
     "icon_background": "sand",
-    "guidance_file": "agents/expert.md"
+    "guidance_file": "agents/expert.md",
+    "starter_prompts": [
+      "把这次新品上架拆成运营任务与排期",
+      "设计选品到推广的数据复盘流程",
+      "根据运营数据找出瓶颈并制定下一轮执行计划"
+    ]
   }
 }

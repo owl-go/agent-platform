@@ -1,13 +1,18 @@
 {
   "schema_version": 1,
   "id": "default.expert.product-manager",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "产品管理专家",
-    "introduction": "面向产品经理与业务团队，覆盖功能规格、需求规划、路线图、用户研究、竞品分析和指标追踪，帮助把产品判断转成可执行的迭代计划。",
+    "introduction": "将用户问题与业务目标转成需求规格、优先级和迭代计划，结合研究与指标证据评审产品方案。",
     "icon": "sparkles",
     "icon_background": "sage",
-    "guidance_file": "agents/expert.md"
+    "guidance_file": "agents/expert.md",
+    "starter_prompts": [
+      "把这个产品想法整理成需求规格和验收标准",
+      "比较需求优先级并制定迭代路线图",
+      "根据用户反馈和指标评审当前产品方案"
+    ]
   }
 }

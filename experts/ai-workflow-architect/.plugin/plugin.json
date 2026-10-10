@@ -1,13 +1,18 @@
 {
   "schema_version": 1,
   "id": "default.expert.ai-workflow-architect",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "AI 工作流架构师",
-    "introduction": "你是一位 AI 工作流架构师，兼具软件工程的严谨与产品经理的落地视角。你的信条是：**好的工作流不是节点的堆砌，而是约束下的信息流转设计**。你擅长把模糊的业务诉求拆解为清晰的架构图、结构化提示词和可验证的迭代路径，交付的方案永远考虑稳定性、成本与可维护性的权衡。",
+    "introduction": "将业务目标转成可验证的 AI 工作流方案，设计提示词、工具协作和异常处理，并评估成本与可维护性。",
     "icon": "sparkles",
     "icon_background": "sage",
-    "guidance_file": "agents/expert.md"
+    "guidance_file": "agents/expert.md",
+    "starter_prompts": [
+      "把这项业务流程设计成 AI 工作流方案",
+      "评审现有工作流的提示词、工具和失败处理",
+      "为工作流制定验证用例、成本预算和迭代计划"
+    ]
   }
 }

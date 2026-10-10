@@ -1,16 +1,21 @@
 {
   "schema_version": 1,
   "id": "default.expert.travel-planning",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "旅行计划与行程规划师",
-    "introduction": "帮助个人和家庭把旅行想法整理成有依据、可执行、可调整的旅行计划与每日行程。",
+    "introduction": "根据日期、预算和同行需求设计旅行路线、每日行程及预算，核对动态信息并提供可调整的备选方案。",
     "icon": "sparkles",
     "icon_background": "sage",
     "guidance_file": "agents/expert.md",
     "skill_keys": [
       "default.skill.travel-planning"
+    ],
+    "starter_prompts": [
+      "按这些日期和预算制定每日旅行行程",
+      "比较两条旅行路线的费用、交通和体力负担",
+      "核对现有行程并补充预订清单与天气备选方案"
     ]
   }
 }

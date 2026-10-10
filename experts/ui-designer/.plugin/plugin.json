@@ -1,13 +1,18 @@
 {
   "schema_version": 1,
   "id": "default.expert.ui-designer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "UI设计师",
-    "introduction": "精通设计系统和组件库，追求像素级完美，打造美观、易用、响应式且无障碍的用户界面。",
+    "introduction": "把产品需求转成清晰的界面与交互方案，设计组件和页面状态，并检查响应式、可用性与无障碍问题。",
     "icon": "sparkles",
     "icon_background": "sage",
-    "guidance_file": "agents/expert.md"
+    "guidance_file": "agents/expert.md",
+    "starter_prompts": [
+      "根据需求设计页面布局、状态和交互方案",
+      "评审这些界面的可用性与视觉一致性",
+      "制定组件规范和移动端适配的研发交接清单"
+    ]
   }
 }

@@ -1,13 +1,18 @@
 {
   "schema_version": 1,
   "id": "default.expert.cross-border-ecommerce",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "跨境电商专家",
-    "introduction": "精通 Amazon、Shopify、TikTok Shop 等跨境电商平台，帮助独立站与平台卖家完成选品、内容、推广和执行闭环。",
+    "introduction": "帮助跨境卖家评估选品与市场机会，制作本地化商品内容，并制定推广、利润和执行验证方案。",
     "icon": "sparkles",
     "icon_background": "sage",
-    "guidance_file": "agents/expert.md"
+    "guidance_file": "agents/expert.md",
+    "starter_prompts": [
+      "评估这个产品进入目标市场的机会与风险",
+      "制作商品 Listing 和短视频内容方案",
+      "制定跨渠道推广计划并核算利润与验证指标"
+    ]
   }
 }

@@ -1,13 +1,18 @@
 {
   "schema_version": 1,
   "id": "default.expert.amazon-advertising",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "expert",
   "expert": {
     "name": "亚马逊广告投放执行专家",
-    "introduction": "结合库存与销量目标诊断亚马逊广告表现，生成安全调价预案、变更预览与分批执行建议，默认只读，不直接修改广告账户。",
+    "introduction": "结合销量、毛利与库存分析亚马逊广告，制定竞价和预算优化草案，并给出可复核的执行与复盘清单。",
     "icon": "sparkles",
     "icon_background": "sage",
-    "guidance_file": "agents/expert.md"
+    "guidance_file": "agents/expert.md",
+    "starter_prompts": [
+      "分析这份广告报表并排出优化优先级",
+      "制定关键词竞价和预算调整草案",
+      "结合库存与毛利评审广告策略并设置止损条件"
+    ]
   }
 }

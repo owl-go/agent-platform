@@ -2,8 +2,11 @@ package defaultresources
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
+	"agent-platform/backend/internal/expertpackage"
+	"agent-platform/backend/internal/resourceaction"
 	"agent-platform/backend/internal/skillstore"
 )
 
@@ -39,6 +42,40 @@ func TestShippedCatalogPackagesAndBindings(t *testing.T) {
 	}
 	if cli < 11 {
 		t.Fatalf("CLI package count=%d", cli)
+	}
+}
+
+func TestShippedExpertsRoundTripIntoCurrentCreationProposals(t *testing.T) {
+	catalog, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, definition := range catalog.Experts {
+		t.Run(definition.Key, func(t *testing.T) {
+			archive, err := catalog.Archive(definition.Archive)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pkg, err := expertpackage.Parse(context.Background(), archive)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if pkg.Manifest.Version != "1.2.0" || len(pkg.Expert.StarterPrompts) != 3 || pkg.Expert.Guidance != definition.Guidance {
+				t.Fatal("shipped profile did not retain its version, common tasks and Markdown guidance")
+			}
+			body, err := json.Marshal(map[string]any{"kind": "expert", "expert": map[string]any{
+				"name": pkg.Expert.Name, "introduction": pkg.Expert.Introduction,
+				"guidance": pkg.Expert.Guidance, "starter_prompts": pkg.Expert.StarterPrompts,
+				"skill_ids": []string{}, "mcp_server_ids": []string{}, "cli_connector_definition_ids": []string{},
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			proposal, _, marked, err := resourceaction.Parse("<platform-action>" + string(body) + "</platform-action>")
+			if err != nil || !marked || proposal.Kind != resourceaction.ExpertKind {
+				t.Fatalf("catalog Expert cannot be proposed through the current creation contract: %v", err)
+			}
+		})
 	}
 }
 
