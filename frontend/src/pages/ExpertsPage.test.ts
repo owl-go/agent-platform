@@ -138,3 +138,22 @@ it("rejects invalid ZIP files before upload and preserves the catalog on server 
  Object.defineProperty(input.element, "files", {value: [new File(["invalid"], "expert.zip")], configurable: true}); await input.trigger("change"); await flushPromises();
  expect(testApi.importExpertPackage).toHaveBeenCalledTimes(1); expect(wrapper.text()).toContain("导入失败"); expect(wrapper.get(".expert-card h2").text()).toBe("架构专家"); expect(input.element.value).toBe(""); wrapper.unmount();
 });
+
+it("opens Administrator Team creation in a settings modal and refreshes after save", async () => {
+ const {authContextKey} = await import("../auth/session");
+ const auth = {session: {state: {value: {kind: "authenticated", currentUser: {administrator: true}}}}};
+ const router = createAppRouter(createMemoryHistory()); await router.push("/experts?tab=teams");
+ const testApi = api(); const wrapper = mount(ExpertsPage, {global: {plugins: [router, createAppI18n({getItem: () => "zh-CN"}, "zh-CN")], provide: {[platformApiKey as symbol]: testApi, [authContextKey as symbol]: auth}}}); await flushPromises();
+ expect(wrapper.get(".catalog-head-actions").text()).toContain("我的专家团"); expect(wrapper.get(".catalog-head-actions").text()).toContain("添加专家团");
+ wrapper.getComponent({name: "ElDropdown"}).vm.$emit("command", "create"); await flushPromises();
+ const details = wrapper.getComponent({name: "CatalogDetails"}); expect(details.props("createTeam")).toBe(true); expect(details.findComponent({name: "ExpertTeamSettings"}).exists()).toBe(true); expect(router.currentRoute.value.path).toBe("/resources");
+ details.getComponent({name: "ExpertTeamSettings"}).vm.$emit("saved", team); await flushPromises();
+ expect(testApi.listExpertTeams).toHaveBeenCalledTimes(2); expect(details.props("createTeam")).toBe(false); wrapper.unmount();
+});
+it("limits My Expert Teams to the current Administrator's mutable teams", async () => {
+ const {authContextKey} = await import("../auth/session"); const auth = {session: {state: {value: {kind: "authenticated", currentUser: {administrator: true}}}}};
+ const router = createAppRouter(createMemoryHistory()); await router.push("/experts?tab=teams");
+ const testApi = api(); testApi.listExpertTeams = vi.fn(async () => [{...team, mutable: true}, {...team, id: "other", name: "Other team", mutable: false}]);
+ const wrapper = mount(ExpertsPage, {global: {plugins: [router, createAppI18n({getItem: () => "zh-CN"}, "zh-CN")], provide: {[platformApiKey as symbol]: testApi, [authContextKey as symbol]: auth}}}); await flushPromises();
+ await wrapper.get(".my-resource-toggle").trigger("click"); await flushPromises(); expect(wrapper.findAll(".expert-team-card")).toHaveLength(1); expect(wrapper.text()).not.toContain("Other team"); wrapper.unmount();
+});

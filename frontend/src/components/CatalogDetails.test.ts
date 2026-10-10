@@ -48,3 +48,15 @@ it("does not offer editing for a platform Skill to an ordinary User", async () =
  expect(document.body.textContent).toContain("去使用");
  wrapper.unmount();
 });
+
+it("edits a Team in its modal using the four Team settings", async () => {
+ const {default: ExpertTeamSettings} = await import("./ExpertTeamSettings.vue");
+ const team = {id: "team", name: "Team", introduction: "Review", core_capability: "Review", members: [], mutable: true, available: true, version: 2} as unknown as import("../api/client").ExpertTeam;
+ const api = {listExperts: vi.fn(async () => [])} as unknown as PlatformApi;
+ const auth = {session: {state: {value: {kind: "authenticated", currentUser: {administrator: true}}}}} as unknown as AuthContext;
+ const router = createAppRouter(createMemoryHistory()); await router.push("/resources");
+ const wrapper = mount(CatalogDetails, {attachTo: document.body, props: {team}, global: {plugins: [router, createAppI18n({getItem: () => "zh-CN"}, "zh-CN")], provide: {[platformApiKey as symbol]: api, [authContextKey as symbol]: auth}}}); await flushPromises();
+ [...document.body.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent?.trim() === "编辑")!.click(); await flushPromises();
+ const settings = wrapper.getComponent(ExpertTeamSettings); expect(settings.props("team")).toEqual(team); expect(document.body.querySelector('input[aria-label="专家团名称"]')).not.toBeNull(); expect(document.body.querySelector('textarea[aria-label="团队描述"]')).not.toBeNull(); expect(wrapper.findComponent({name: "ExpertBindingsEditor"}).exists()).toBe(false);
+ settings.vm.$emit("saved", team); await flushPromises(); expect(wrapper.emitted("saved")).toHaveLength(1); expect(wrapper.emitted("close")).toHaveLength(1); wrapper.unmount();
+});

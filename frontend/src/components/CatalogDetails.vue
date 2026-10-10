@@ -6,8 +6,9 @@ import { platformApiKey, type Expert, type ExpertTeam, type Skill } from "../api
 import { authContextKey } from "../auth/session";
 import { renderMarkdown } from "../markdown";
 import ExpertBindingsEditor from "./ExpertBindingsEditor.vue";
+import ExpertTeamSettings from "./ExpertTeamSettings.vue";
 
-const props = defineProps<{ skill?: Skill; expert?: Expert; team?: ExpertTeam }>();
+const props = defineProps<{ skill?: Skill; expert?: Expert; team?: ExpertTeam; createTeam?: boolean }>();
 const emit = defineEmits<{ close: []; editSkill: [skill: Skill]; saved: [] }>();
 const api = inject(platformApiKey)!;
 const auth = inject(authContextKey, undefined);
@@ -17,7 +18,7 @@ const content = ref("");
 const loading = ref(false), error = ref("");
 const editing = ref(false);
 const item = computed(() => props.skill ?? props.expert ?? props.team);
-const open = computed(() => Boolean(item.value));
+const open = computed(() => Boolean(item.value || props.createTeam));
 const administrator = computed(() => auth?.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const canEdit = computed(() => {
   if (props.team) return administrator.value && props.team.mutable === true && !props.team.immutable;
@@ -64,13 +65,14 @@ function edit() {
     <div class="markdown-body skill-document" v-html="renderMarkdown(content)"></div>
     <template #footer><el-button v-if="canEdit" @click="edit">{{ t('common.edit') }}</el-button><el-button type="primary" @click="launch">{{ t('composer.useSkill') }}</el-button></template>
   </el-drawer>
-  <el-dialog v-else :model-value="open" class="catalog-details expert-details-dialog" :title="item?.name" width="min(560px, calc(100vw - 32px))" destroy-on-close @close="emit('close')">
+  <el-dialog v-else :model-value="open" class="catalog-details expert-details-dialog" :title="createTeam ? t('experts.createTeam') : item?.name" width="min(560px, calc(100vw - 32px))" destroy-on-close @close="emit('close')">
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
-    <ExpertBindingsEditor v-if="editing" :key="item?.id" :expert="expert" :team="team" @cancel="editing = false" @saved="emit('saved'); emit('close')" />
+    <ExpertTeamSettings v-if="createTeam || editing && team" :key="team?.id || 'new-team'" :team="team" @cancel="createTeam ? emit('close') : editing = false" @saved="emit('saved'); emit('close')" />
+    <ExpertBindingsEditor v-else-if="editing" :key="item?.id" :expert="expert" @cancel="editing = false" @saved="emit('saved'); emit('close')" />
     <template v-else>
       <p class="expert-capability-description">{{ expert?.introduction || team?.introduction }}</p>
       <section v-if="(expert?.starter_prompts || team?.starter_prompts)?.length" class="expert-common-tasks"><h3>{{ t('experts.commonTasks') }}</h3><ul><li v-for="prompt in (expert?.starter_prompts || team?.starter_prompts)" :key="prompt">{{ prompt }}</li></ul></section>
     </template>
-    <template v-if="!editing" #footer><el-button @click="exportPackage">{{ t('experts.exportPackage') }}</el-button><el-button v-if="canEdit" @click="edit">{{ t('common.edit') }}</el-button><el-button type="primary" :disabled="Boolean(expert && !expert.available || team && !team.available)" @click="launch">{{ t('composer.summon') }}</el-button></template>
+    <template v-if="!editing && !createTeam" #footer><el-button @click="exportPackage">{{ t('experts.exportPackage') }}</el-button><el-button v-if="canEdit" @click="edit">{{ t('common.edit') }}</el-button><el-button type="primary" :disabled="Boolean(expert && !expert.available || team && !team.available)" @click="launch">{{ t('composer.summon') }}</el-button></template>
   </el-dialog>
 </template>

@@ -29,12 +29,13 @@ const importing = ref(false);
 const detailExpert = ref<Expert>();
 const detailTeam = ref<ExpertTeam>();
 function summon(kind: "expert_id" | "expert_team_id", id: string) { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), [kind]: id } }); }
-function createTeamSession() { if (!administrator.value) return; void router.push({path:"/sessions",query:{new:crypto.randomUUID(),create_expert:"true",draft:"帮我创建一个专家团，请明确领队和各成员的独立指引。"}}); }
+const createTeamOpen = ref(false);
+function createTeam() { if (administrator.value) createTeamOpen.value = true; }
 function createExpertSession() { void router.push({ path: "/sessions", query: { new: crypto.randomUUID(), create_expert: "true", draft: "帮我创建一个 XXX 专家，擅长 XXXXX。我的经验是：[请补充你的行业背景、相关经验]" } }); }
 const activeTab = computed<"experts" | "teams">(() => route.query.tab === "teams" ? "teams" : "experts");
 const mineOnly = computed(() => route.query.scope === "mine");
 const visibleExperts = computed(() => filter(experts.value));
-const visibleTeams = computed(() => filter(teams.value));
+const visibleTeams = computed(() => filter(teams.value).filter(team => !mineOnly.value || !administrator.value || team.mutable === true && !team.immutable));
 const expertSections = computed(() => (mineOnly.value
   ? [{ key: "mine", title: t("experts.myExperts"), items: visibleExperts.value.filter((item) => !item.platform) }]
   : [
@@ -59,7 +60,7 @@ async function refresh() {
 
 function addResource(command: string) {
   if (command === "import") packageFile.value?.click();
-  else if (activeTab.value === "teams") createTeamSession();
+  else if (activeTab.value === "teams") createTeam();
   else createExpertSession();
 }
 
@@ -108,6 +109,7 @@ function toggleMine() {
       <div class="catalog-head-actions">
         <input v-if="activeTab === 'experts' || administrator" ref="packageFile" class="package-import-file" type="file" accept=".zip,application/zip" hidden @change="importPackage" />
         <el-button v-if="activeTab === 'experts'" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myExperts') }}</el-button>
+        <el-button v-if="activeTab === 'teams' && administrator" class="my-resource-toggle" :type="mineOnly ? 'primary' : 'default'" @click="toggleMine">{{ t('experts.myTeams') }}</el-button>
         <el-dropdown v-if="activeTab === 'experts' || administrator" trigger="click" @command="addResource">
           <el-button type="primary" :loading="importing" :disabled="importing" :icon="Plus">{{ t(activeTab === 'experts' ? 'experts.addExpert' : 'experts.addTeam') }}<ChevronDown :size="16" /></el-button>
           <template #dropdown><el-dropdown-menu>
@@ -164,5 +166,5 @@ function toggleMine() {
       <el-empty v-if="!visibleTeams.length" class="catalog-empty" :description="t('experts.noTeams')" />
     </div>
   </section>
-  <CatalogDetails @saved="refresh" :expert="detailExpert" :team="detailTeam" @close="detailExpert = undefined; detailTeam = undefined" />
+  <CatalogDetails @saved="refresh" :expert="detailExpert" :team="detailTeam" :create-team="createTeamOpen" @close="detailExpert = undefined; detailTeam = undefined; createTeamOpen = false" />
 </template>

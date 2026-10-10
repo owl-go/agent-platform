@@ -1312,3 +1312,8 @@ label:not(.el-form-item__label):not(.el-checkbox):not(.el-radio):not(.icon-picke
 .expert-common-tasks { margin-top: 24px; }
 .expert-common-tasks h3 { font-size: 14px; margin: 0 0 12px; }
 .expert-common-tasks ul { margin: 0; padding-left: 20px; display: grid; gap: 10px; line-height: 1.6; }
+
+.expert-team-settings { display: grid; gap: 16px; }
+.expert-team-settings fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 16px; }
+.expert-team-settings label { min-width: 0; display: grid; gap: 8px; }
+.expert-team-settings .el-select { width: 100%; }
