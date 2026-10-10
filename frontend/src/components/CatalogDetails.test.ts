@@ -9,14 +9,20 @@ import { createAppRouter } from "../router";
 import CatalogDetails from "./CatalogDetails.vue";
 
 afterEach(() => document.body.replaceChildren());
-it("renders the authoritative Expert Markdown instead of obsolete form guidance", async () => {
- const expert = { id: "expert", name: "Reviewer", introduction: "Display", guidance: "# Authoritative\n\n**Rules**", core_capability: "STALE_FORM", operating_procedure: "", output_standard: "", cautions: "", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [], available: true } as unknown as Expert;
- const api = { listSkills: vi.fn(async () => []), listMCPServers: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []) } as unknown as PlatformApi;
+it("opens an Expert modal with only capability and common tasks, without copy or instruction details", async () => {
+ const expert = { id: "expert", name: "Reviewer", introduction: "Review supplied evidence", starter_prompts: ["Review this proposal", "Check the evidence"], guidance: "HIDDEN_GUIDANCE", core_capability: "STALE_FORM", mcp_server_ids: [], skill_ids: [], cli_connector_definition_ids: [], available: true } as unknown as Expert;
+ const api = { listSkills: vi.fn() } as unknown as PlatformApi;
  const router = createAppRouter(createMemoryHistory()); await router.push("/resources");
  const wrapper = mount(CatalogDetails, { attachTo: document.body, props: { expert }, global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api } } });
  await flushPromises();
- expect(document.body.querySelector(".catalog-member-detail h1")?.textContent).toBe("Authoritative");
+ expect(document.body.querySelector(".el-dialog")?.textContent).toContain("Reviewer");
+ expect(document.body.querySelector(".el-drawer")).toBeNull();
+ expect(document.body.textContent).toContain("Review supplied evidence");
+ expect(document.body.textContent).toContain("Review this proposal");
+ expect(document.body.textContent).not.toContain("HIDDEN_GUIDANCE");
  expect(document.body.textContent).not.toContain("STALE_FORM");
+ expect(document.body.textContent).not.toContain("另存");
+ expect(api.listSkills).not.toHaveBeenCalled();
  wrapper.unmount();
 });
 it("renders installed Skill Markdown safely and launches a preselected new Session", async () => {
@@ -41,4 +47,16 @@ it("does not offer editing for a platform Skill to an ordinary User", async () =
  expect([...document.body.querySelectorAll("button")].some((button) => button.textContent?.trim() === "编辑")).toBe(false);
  expect(document.body.textContent).toContain("去使用");
  wrapper.unmount();
+});
+
+it("edits a Team in its modal using the four Team settings", async () => {
+ const {default: ExpertTeamSettings} = await import("./ExpertTeamSettings.vue");
+ const team = {id: "team", name: "Team", introduction: "Review", core_capability: "Review", members: [], mutable: true, available: true, version: 2} as unknown as import("../api/client").ExpertTeam;
+ const api = {listExperts: vi.fn(async () => [])} as unknown as PlatformApi;
+ const auth = {session: {state: {value: {kind: "authenticated", currentUser: {administrator: true}}}}} as unknown as AuthContext;
+ const router = createAppRouter(createMemoryHistory()); await router.push("/resources");
+ const wrapper = mount(CatalogDetails, {attachTo: document.body, props: {team}, global: {plugins: [router, createAppI18n({getItem: () => "zh-CN"}, "zh-CN")], provide: {[platformApiKey as symbol]: api, [authContextKey as symbol]: auth}}}); await flushPromises();
+ [...document.body.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent?.trim() === "编辑")!.click(); await flushPromises();
+ const settings = wrapper.getComponent(ExpertTeamSettings); expect(settings.props("team")).toEqual(team); expect(document.body.querySelector('input[aria-label="专家团名称"]')).not.toBeNull(); expect(document.body.querySelector('textarea[aria-label="团队描述"]')).not.toBeNull(); expect(wrapper.findComponent({name: "ExpertBindingsEditor"}).exists()).toBe(false);
+ settings.vm.$emit("saved", team); await flushPromises(); expect(wrapper.emitted("saved")).toHaveLength(1); expect(wrapper.emitted("close")).toHaveLength(1); wrapper.unmount();
 });

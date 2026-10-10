@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { authContextKey, type AuthContext } from "../auth/session";
 import { describe, expect, it, vi } from "vitest";
-import { platformApiKey, type Expert, type ExpertInput, type ExpertTeamInput, type PlatformApi } from "../api/client";
+import { platformApiKey, type Expert, type PlatformApi } from "../api/client";
 import { createAppI18n } from "../i18n";
 import { createAppRouter } from "../router";
 import ExpertEditorPage from "./ExpertEditorPage.vue";
@@ -22,58 +22,27 @@ function mountOptions(api: PlatformApi, router: ReturnType<typeof createAppRoute
 }
 
 describe("Expert editors", () => {
-  it("saves one authoritative Markdown document without execution settings", async () => {
-    const createExpert = vi.fn(async (input: ExpertInput) => ({ ...experts[0], ...input }));
-    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), createExpert } as unknown as PlatformApi;
+  it("routes direct Expert creation through the Create Expert Skill", async () => {
+    const api = { createExpert: vi.fn() } as unknown as PlatformApi;
     const router = createAppRouter(createMemoryHistory());
     await router.push("/experts/new");
     const wrapper = mount(ExpertEditorPage, mountOptions(api, router));
     await flushPromises();
-    expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
-    expect(wrapper.find(".extension-manager").exists()).toBe(false);
-    expect(wrapper.find(".expert-resource-selector").exists()).toBe(true);
-    expect(wrapper.find(".form-grid > label .icon-picker-upload").exists()).toBe(false);
-    const inputs = wrapper.findAll('input[type="text"]');
-    const textareas = wrapper.findAll("textarea");
-    await inputs[0]!.setValue("架构专家");
-    await wrapper.get('button[aria-label="code"]').trigger("click");
-    await textareas[0]!.setValue("展示用简介");
-    expect(textareas).toHaveLength(2);
-    await textareas[1]!.setValue("# 架构设计\n\n先分析约束，再提出方案。");
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-    expect(createExpert).toHaveBeenCalledWith(expect.objectContaining({ icon: "code", introduction: "展示用简介", guidance: "# 架构设计\n\n先分析约束，再提出方案。" }));
-    expect(wrapper.text()).not.toContain("运行引擎");
+    expect(router.currentRoute.value.path).toBe("/sessions");
+    expect(router.currentRoute.value.query.create_expert).toBe("true");
+    expect(api.createExpert).not.toHaveBeenCalled();
+    expect(wrapper.find("textarea").exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it("keeps Expert Team member order when using accessible reorder controls", async () => {
-    const createExpertTeam = vi.fn(async (input: ExpertTeamInput) => ({ id: "team-1", ...input, experts, available: true, created_at: "", updated_at: "", version: 1 }));
-    const api = { listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => []), listExperts: vi.fn(async () => experts), listModelProviderConnections: vi.fn(async () => []), createExpertTeam } as unknown as PlatformApi;
-    const router = createAppRouter(createMemoryHistory());
-    await router.push("/expert-teams/new");
-    const wrapper = mount(ExpertTeamEditorPage, mountOptions(api, router, true));
-    await flushPromises();
-    expect(wrapper.find(".editor-section > div:first-child > span").exists()).toBe(false);
-    await wrapper.get('button[aria-label="compass"]').trigger("click");
-    const select = wrapper.get(".member-picker select");
-    for (const expert of experts) {
-      await select.setValue(expert.id);
-      await wrapper.get(".member-picker button").trigger("click");
-    }
-    const lead = wrapper.get<HTMLSelectElement>(".lead-selector");
-    await lead.setValue(lead.findAll<HTMLOptionElement>("option")[3]!.element.value);
-    await wrapper.get('[aria-label="上移 测试工程师"]').trigger("click");
-    expect(wrapper.findAll<HTMLInputElement>('.member-fields input[aria-label="成员名称"]').map((item) => item.element.value)).toEqual(["架构师", "测试工程师", "开发工程师"]);
-    await wrapper.get(".member-guidance textarea").setValue("# 团队独立指引");
-    await wrapper.get("form").trigger("submit");
-    await flushPromises();
-    expect(createExpertTeam).toHaveBeenCalledWith(expect.objectContaining({ icon: "compass" }));
-    const sent = createExpertTeam.mock.calls[0]![0];
-    expect(sent.members[0]!.definition?.guidance).toBe("# 团队独立指引");
-    expect(experts[0]!.guidance).toBe("# 架构师\n\n独立指引");
-    expect(sent.lead_member_id).toBe(sent.members[1]!.id);
-    wrapper.unmount();
+  it("opens the same compact Team settings on the direct creation route", async () => {
+    const api = { listExperts: vi.fn(async () => experts) } as unknown as PlatformApi;
+    const router = createAppRouter(createMemoryHistory()); await router.push("/expert-teams/new");
+    const wrapper = mount(ExpertTeamEditorPage, mountOptions(api, router, true)); await flushPromises();
+    expect(wrapper.findComponent({name: "ExpertTeamSettings"}).exists()).toBe(true);
+    expect(wrapper.find('input[aria-label="专家团名称"]').exists()).toBe(true);
+    expect(wrapper.find('textarea[aria-label="团队描述"]').exists()).toBe(true);
+    expect(wrapper.find(".member-guidance").exists()).toBe(false); wrapper.unmount();
   });
 
   it("does not expose Team creation controls to an ordinary User opening the route", async () => {
@@ -87,4 +56,13 @@ describe("Expert editors", () => {
     expect(listExperts).not.toHaveBeenCalled();
     wrapper.unmount();
   });
+});
+
+it("opens existing Team editing with name, description, members and lead", async () => {
+ const team = {id: "team", name: "Review team", mutable: true, version: 1, lead_member_id: "lead", introduction: "Review together", core_capability: "Review", starter_prompts: ["Review a plan"], members: [{id: "lead", name: "Lead", labels: ["Coordination"], expert: experts[0]}, {id: "reviewer", name: "Reviewer", labels: ["Review"], expert: experts[1]}]};
+ const api = {listExperts: vi.fn(async () => experts), getExpertTeam: vi.fn(async () => team), listMCPServers: vi.fn(async () => []), listSkills: vi.fn(async () => []), listCLIConnectorDefinitions: vi.fn(async () => []), listCLIConnectorEnablements: vi.fn(async () => [])} as unknown as PlatformApi;
+ const router = createAppRouter(createMemoryHistory()); await router.push("/expert-teams/team");
+ const wrapper = mount(ExpertTeamEditorPage, mountOptions(api, router, true)); await flushPromises();
+ expect(api.getExpertTeam).toHaveBeenCalledWith("team"); expect(api.listExperts).toHaveBeenCalledTimes(1); expect(api.listSkills).not.toHaveBeenCalled();
+ expect(wrapper.get('input[aria-label="专家团名称"]').element).toHaveProperty("value", "Review team"); expect(wrapper.get('textarea[aria-label="团队描述"]').element).toHaveProperty("value", "Review together"); expect(wrapper.findAllComponents({name: "ElSelect"})).toHaveLength(2); wrapper.unmount();
 });
