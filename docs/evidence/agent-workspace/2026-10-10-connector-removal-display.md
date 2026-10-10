@@ -19,4 +19,10 @@
 - Chromium + Playwright CLI 使用真实 Composer 和合成 API：1440×900 中文 Session 移除后图标消失，从列表重新添加后出现，再次移除并 reload 后保持隐藏；390×844 英文 Run 移除并 reload 后保持隐藏。截图 `output/playwright/connector-removed-desktop.png`、`connector-removed-mobile-english.png` 已检查，保留专家选择且输入区可用。首次点击 Element Plus 的隐藏 switch input 超时，改为可见 switch 外层后完成实际操作；两个 scope 各自草稿保留，分别移除后验收。
 - 临时 Fixture、专用浏览器和 Vite 进程已清理，合成数据没有写入生产。
 
-未执行认证 API E2E、真实供应商授权或模型执行验收；本次投影修复不声称后端、数据库或镜像 Conformance 通过。生产发布及公共资源检查待记录。
+未执行认证 API E2E、真实供应商授权或模型执行验收；本次投影修复不声称后端、数据库或镜像 Conformance 通过。生产发布及公共资源检查见下节。
+
+## 发布
+
+功能提交 `0e333b62ad8caef2186fba31587f8e32fa1655f1` 已推送并经 `main_temp` 集成。`make deploy` 成功发布 `app-20261010T121813Z-de0a8ce3`，只更新前端，健康、Readiness 和 OIDC 检查通过。
+
+只读脚本 `output/playwright/verify-connector-removal-release.py` 检查来源 Commit 与前端发布指针一致，部署的 Composer 代码实际包含 `disabled_connectors` 排除过滤。从公网回读 `index-Dh6dg4cF.js` 并与服务器发布文件逐字节一致，SHA-256 为 `a69f9dbbb6e9c825c28f45b6014f69895d22b8005e974515d85fa25fb8198a59`。API 和 Worker 均为 healthy，既有后端镜像与来源核验通过。公共文件验证不替代真实账号会话和 Runtime 验收。
