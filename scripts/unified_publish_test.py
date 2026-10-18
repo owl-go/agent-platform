@@ -22,7 +22,7 @@ class UnifiedPublicationTests(unittest.TestCase):
 from pathlib import Path
 name=Path(sys.argv[0]).name
 with open(os.environ['TEST_CALLS'],'a') as output:
-    output.write(json.dumps({'name':name,'args':sys.argv[1:],'tag':os.environ.get('TAG')})+'\\n')
+    output.write(json.dumps({'name':name,'args':sys.argv[1:],'tag':os.environ.get('TAG'),'runtime_tag':os.environ.get('RUNTIME_TAG')})+'\\n')
 args=sys.argv[1:]
 if name=='git':
     if args[:1]==['status'] and os.environ.get('TEST_DIRTY'): print(' M source.go')
@@ -38,7 +38,8 @@ elif 'bake' in args and os.environ.get('TAG','').endswith('-amd64') and os.envir
                 executable.chmod(0o700)
             calls = root / 'calls.jsonl'
             environment = {key: value for key, value in os.environ.items()
-                           if key not in ('IMAGE_REPOSITORY', 'RELEASE_TAG', 'TEST_DIRTY', 'TEST_MISMATCH', 'TEST_AMD_FAIL')}
+                           if key not in ('IMAGE_REPOSITORY', 'RUNTIME_IMAGE_REPOSITORY', 'RELEASE_TAG',
+                                          'TAG', 'RUNTIME_TAG', 'TEST_DIRTY', 'TEST_MISMATCH', 'TEST_AMD_FAIL')}
             environment.update(PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'], TEST_CALLS=str(calls), **overrides)
             result = subprocess.run(['bash', str(root / 'scripts/publish-unified-images.sh')],
                                     env=environment, capture_output=True, text=True, timeout=15)
@@ -60,23 +61,33 @@ elif 'bake' in args and os.environ.get('TAG','').endswith('-amd64') and os.envir
     def test_failed_second_architecture_does_not_update_release_aliases(self):
         result, calls = self.run_publisher(TEST_AMD_FAIL='1')
         self.assertEqual(result.returncode, 9)
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
         self.assertTrue(all('bake' in call['args'] for call in calls))
 
     def test_both_architectures_precede_multiarchitecture_and_explicit_aliases(self):
         result, calls = self.run_publisher()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(calls), 6)
-        for call, architecture in zip(calls[:2], ('arm64', 'amd64')):
-            self.assertIn('*.platform=linux/' + architecture, call['args'])
-            self.assertIn('--push', call['args'])
-            self.assertTrue(call['tag'].endswith('-' + architecture))
-        manifest = calls[2]['args']
-        self.assertIn('haozhi152/agent-platform:latest', manifest)
-        self.assertEqual(manifest[-2:], ['haozhi152/agent-platform:2026-10-18-aaaaaaaaaaaa-arm64',
-                                        'haozhi152/agent-platform:2026-10-18-aaaaaaaaaaaa-amd64'])
-        self.assertIn('haozhi152/agent-platform:arm64', calls[3]['args'])
-        self.assertIn('haozhi152/agent-platform:amd64', calls[4]['args'])
+        self.assertEqual(len(calls), 12)
+        for offset, architecture in ((0, 'arm64'), (2, 'amd64')):
+            app, runtime = calls[offset:offset + 2]
+            self.assertIn('*.platform=linux/' + architecture, app['args'])
+            self.assertIn('*.platform=linux/' + architecture, runtime['args'])
+            self.assertIn('--push', app['args'])
+            self.assertIn('--push', runtime['args'])
+            self.assertTrue(app['tag'].endswith('-' + architecture))
+            self.assertTrue(runtime['runtime_tag'].endswith('-' + architecture))
+        app_manifest = calls[4]['args']
+        runtime_manifest = calls[5]['args']
+        self.assertIn('haozhi152/agent-platform:latest', app_manifest)
+        self.assertEqual(app_manifest[-2:], ['haozhi152/agent-platform:2026-10-18-aaaaaaaaaaaa-arm64',
+                                            'haozhi152/agent-platform:2026-10-18-aaaaaaaaaaaa-amd64'])
+        self.assertIn('haozhi152/agent-platform-runtime:latest', runtime_manifest)
+        self.assertEqual(runtime_manifest[-2:], ['haozhi152/agent-platform-runtime:2026-10-18-aaaaaaaaaaaa-arm64',
+                                                'haozhi152/agent-platform-runtime:2026-10-18-aaaaaaaaaaaa-amd64'])
+        self.assertIn('haozhi152/agent-platform:arm64', calls[6]['args'])
+        self.assertIn('haozhi152/agent-platform-runtime:arm64', calls[7]['args'])
+        self.assertIn('haozhi152/agent-platform:amd64', calls[8]['args'])
+        self.assertIn('haozhi152/agent-platform-runtime:amd64', calls[9]['args'])
 
 
 class RuntimeSmokeShellTests(unittest.TestCase):

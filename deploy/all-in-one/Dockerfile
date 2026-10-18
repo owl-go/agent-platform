@@ -23,13 +23,14 @@ FROM public.ecr.aws/docker/library/postgres:17-bookworm@sha256:3645570cccdfa4475
 FROM quay.io/keycloak/keycloak@sha256:f1f1f01e472c8a78df40d8f2a49a925274eda4d3d80d5f6edbb5c880ee3c01c6 AS identity
 FROM public.ecr.aws/docker/library/docker:29-cli@sha256:6fae2214c3121a28d5aa639d09032f61310b7c9c75ffbad1025f261a1b621800 AS docker
 
-# This named context is the existing unified Runtime Dockerfile, not another
-# deployed service. buildx bake resolves and reuses the same pinned CLI layers.
-FROM runtime
-USER 0:0
+# The control image intentionally excludes Runtime CLIs. Docker Compose makes
+# the separately published Runtime image available to the host daemon before
+# this container starts.
+FROM public.ecr.aws/docker/library/python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0
 RUN apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
-       nginx-light libicu72 libxml2 libxslt1.1 liblz4-1 libzstd1 libreadline8 \
+       ca-certificates curl git jq nginx-light openssh-client ripgrep \
+       libicu72 libxml2 libxslt1.1 liblz4-1 libzstd1 libreadline8 \
        libssl3 libldap-2.5-0 libpam0g libkrb5-3 libnuma1 liburing2 libnss3 libstdc++6 zlib1g \
     && groupadd --gid 65531 postgres && useradd --uid 65531 --gid 65531 --no-create-home postgres \
     && install -d -m 0700 /data /run/agent-platform \
@@ -73,7 +74,7 @@ ENV AGENT_WORKSPACE_RESOURCE_ROOT=/opt/agent-platform/resources \
     JAVA_HOME=/opt/java \
     PATH=/usr/lib/postgresql/17/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ARG SOURCE_REVISION
-LABEL org.opencontainers.image.title="Agent Workspace all-in-one" \
+LABEL org.opencontainers.image.title="Agent Workspace control plane" \
       org.opencontainers.image.source="https://github.com/owl-go/agent-platform" \
       org.opencontainers.image.revision=$SOURCE_REVISION
 EXPOSE 8080

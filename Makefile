@@ -33,7 +33,7 @@ resources-check:
 .PHONY: image-build image-publish
 
 image-build:
-	docker buildx bake -f deploy/all-in-one/docker-bake.hcl --load app
+	docker buildx bake -f deploy/all-in-one/docker-bake.hcl --load app runtime
 
 image-publish:
 	bash scripts/publish-unified-images.sh

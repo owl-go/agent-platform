@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Isolated, model-free acceptance for a real unified image."""
+"""Isolated, model-free acceptance for control and Runtime images."""
 import argparse
 import json
 import socket
@@ -17,6 +17,7 @@ def docker(*arguments):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('image')
+    parser.add_argument('--runtime-image', default='haozhi152/agent-platform-runtime:latest')
     parser.add_argument('--platform', choices=['linux/arm64', 'linux/amd64'])
     parser.add_argument('--keep', action='store_true', help='keep the named test data and service for browser acceptance')
     args = parser.parse_args()
@@ -26,12 +27,16 @@ def main():
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
     origin = 'http://localhost:' + str(port)
+    docker('image', 'inspect', args.runtime_image)
+    subprocess.run(['docker', 'run', '--rm', '--entrypoint', 'sh', args.image, '-ceu',
+                    'for command in codex claude hermes openclaw pi; do ! command -v "$command"; done'], check=True)
     docker('volume', 'create', '--label', 'com.agent-workspace.test=true', volume)
     try:
         flags = ['--platform', args.platform] if args.platform else []
         docker('run', '-d', '--name', identity, '--label', 'com.agent-workspace.test=true', *flags,
                '--security-opt', 'no-new-privileges', '--memory', '4g', '--pids-limit', '2048',
                '-p', '127.0.0.1:' + str(port) + ':8080', '-e', 'PUBLIC_URL=' + origin,
+               '-e', 'RUNTIME_IMAGE=' + args.runtime_image,
                '-v', volume + ':/data', '-v', '/var/run/docker.sock:/var/run/docker.sock', args.image)
         deadline = time.monotonic() + 900
         while time.monotonic() < deadline:
@@ -42,7 +47,7 @@ def main():
                 break
             time.sleep(1)
         else:
-            raise RuntimeError('unified image health timed out; inspect docker logs ' + identity)
+            raise RuntimeError('control image health timed out; inspect docker logs ' + identity)
         with urlopen(origin, timeout=5) as response:
             assert response.status == 200
             assert b'runtime-config.js' in response.read()
@@ -72,6 +77,7 @@ os.chmod(root,0o750)
 configuration=json.loads(Path('/data/config/platform.yaml').read_text())
 metadata=json.loads(subprocess.check_output(['/usr/bin/docker','inspect',os.uname().nodename]))[0]
 environment=dict(os.environ,AGENT_PLATFORM_DOCKER_MOUNTS=json.dumps([m for m in metadata['Mounts'] if m['Destination']=='/data']))
+assert configuration['worker']['runtimes']['codex']['image_digest'] != metadata['Image']
 name='agent-platform-isolation-probe-'+os.urandom(6).hex()
 subprocess.check_output(['/opt/agent-platform/docker-bin/docker','create','--name',name,'--runtime','runc','--user','65532:65532','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--network','none','--pids-limit','64','--memory','256m','--mount','type=bind,src='+str(root)+',dst=/workspace','--entrypoint','/usr/bin/id',configuration['worker']['runtimes']['codex']['image_digest'],'-u'],env=environment,text=True)
 try:
@@ -98,7 +104,8 @@ print('runtime uid='+result)
         else:
             raise RuntimeError('retained-data restart readiness timed out')
         assert docker('exec', identity, 'sha256sum', '/data/state.json') == before
-        print(json.dumps({'container': identity, 'volume': volume, 'url': origin, 'status': 'passed', 'image': args.image}))
+        print(json.dumps({'container': identity, 'volume': volume, 'url': origin, 'status': 'passed',
+                          'image': args.image, 'runtime_image': args.runtime_image}))
     finally:
         if not args.keep:
             # Exact, uniquely created test targets only. Existing volumes and

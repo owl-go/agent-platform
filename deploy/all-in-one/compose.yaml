@@ -1,5 +1,18 @@
-name: agent-platform-unified
+name: agent-platform
 services:
+  runtime-image:
+    image: ${RUNTIME_IMAGE:-haozhi152/agent-platform-runtime:latest}
+    command: ["/bin/true"]
+    restart: "no"
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   app:
     image: haozhi152/agent-platform:${IMAGE_TAG:-latest}
     container_name: agent-platform
@@ -11,10 +24,14 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
-      SANDBOX_PROFILE: local
+      SANDBOX_PROFILE: ${SANDBOX_PROFILE:-local}
+      RUNTIME_IMAGE: ${RUNTIME_IMAGE:-haozhi152/agent-platform-runtime:latest}
     volumes:
       - data:/data
       - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      runtime-image:
+        condition: service_completed_successfully
     security_opt:
       - no-new-privileges:true
     pids_limit: 2048

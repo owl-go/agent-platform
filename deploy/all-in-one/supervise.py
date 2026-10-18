@@ -21,6 +21,7 @@ from config import browser_config, initialize_state, nginx_config, platform_conf
 DATA = Path('/data')
 RUN = Path('/run/agent-platform')
 APPLICATION = Path('/opt/agent-platform')
+DEFAULT_RUNTIME_IMAGE = 'haozhi152/agent-platform-runtime:latest'
 children = []
 stopping = False
 instance_lock = None
@@ -99,12 +100,20 @@ def docker_identity(profile):
     runtime = {'local': 'runc', 'production': 'runsc'}.get(profile)
     if not runtime or runtime not in runtimes:
         raise ValueError('the explicitly selected Sandbox Runtime is not installed on the Docker host')
-    image = metadata['Image']
+    runtime_reference = os.environ.get('RUNTIME_IMAGE', DEFAULT_RUNTIME_IMAGE)
+    if not runtime_reference or re.search(r'\s', runtime_reference):
+        raise ValueError('RUNTIME_IMAGE must be a valid Docker image reference')
+    if profile == 'production' and not re.fullmatch(r'[^\s@]+@sha256:[a-f0-9]{64}', runtime_reference):
+        raise ValueError('production RUNTIME_IMAGE must use an immutable repository@sha256 digest')
+    runtime_metadata = json.loads(docker('image', 'inspect', runtime_reference))[0]
+    runtime_id = runtime_metadata.get('Id', '')
+    if not re.fullmatch(r'sha256:[a-f0-9]{64}', runtime_id):
+        raise ValueError('RUNTIME_IMAGE did not resolve to an immutable local image ID')
+    image = runtime_id
     if profile == 'production':
-        image = os.environ.get('RUNTIME_IMAGE', '')
-        pinned = json.loads(docker('image', 'inspect', image))[0] if '@sha256:' in image else {}
-        if pinned.get('Id') != metadata['Image']:
-            raise ValueError('production RUNTIME_IMAGE must be this exact unified image repository@sha256 digest')
+        if runtime_reference not in (runtime_metadata.get('RepoDigests') or []):
+            raise ValueError('production RUNTIME_IMAGE RepoDigest is not present on the Docker host')
+        image = runtime_reference
         if not Path('/run/agent-platform-egress/egress-controller.sock').is_socket() or not (DATA / 'config/sandbox-resolv.conf').is_file():
             raise ValueError('production requires the existing host Egress Controller socket and resolver policy')
         network = os.environ.get('EGRESS_NETWORK', 'agent-public-egress')

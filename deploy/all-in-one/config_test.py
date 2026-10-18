@@ -16,6 +16,60 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_compose_prepares_a_separate_runtime_image(self):
+        compose = (ROOT / 'deploy/all-in-one/compose.yaml').read_text()
+        dockerfile = (ROOT / 'deploy/all-in-one/Dockerfile').read_text()
+        self.assertIn('haozhi152/agent-platform-runtime:latest', compose)
+        self.assertIn('condition: service_completed_successfully', compose)
+        self.assertNotIn('FROM runtime', dockerfile)
+
+    def test_local_control_uses_the_separate_runtime_image_id(self):
+        control = [{'Image': 'sha256:' + 'c' * 64,
+                    'Mounts': [{'Destination': '/data', 'Source': '/var/lib/docker/volumes/test/_data', 'RW': True}]}]
+        runtime = [{'Id': 'sha256:' + 'a' * 64, 'RepoDigests': []}]
+        runtimes = {'runc': {'path': 'runc'}}
+
+        def fake_docker(*arguments):
+            if arguments == ('inspect', 'control'):
+                return json.dumps(control)
+            if arguments == ('info', '--format', '{{json .Runtimes}}'):
+                return json.dumps(runtimes)
+            if arguments == ('image', 'inspect', 'example/runtime:latest'):
+                return json.dumps(runtime)
+            if arguments[:2] == ('network', 'inspect'):
+                raise subprocess.SubprocessError('missing')
+            if arguments[:2] == ('network', 'create'):
+                return 'runtime-network'
+            raise AssertionError(arguments)
+
+        with patch.object(supervise.Path, 'is_socket', return_value=True), \
+                patch.object(supervise.os, 'uname', return_value=unittest.mock.Mock(nodename='control')), \
+                patch.dict(os.environ, {'RUNTIME_IMAGE': 'example/runtime:latest'}), \
+                patch.object(supervise, 'docker', side_effect=fake_docker):
+            image, mounts, source, network = supervise.docker_identity('local')
+        self.assertEqual(image, 'sha256:' + 'a' * 64)
+        self.assertEqual(source, '/var/lib/docker/volumes/test/_data')
+        self.assertEqual(mounts, control[0]['Mounts'])
+        self.assertTrue(network.startswith('agent-platform-runtime-'))
+
+    def test_production_runtime_requires_an_exact_available_repo_digest(self):
+        control = [{'Image': 'sha256:' + 'c' * 64,
+                    'Mounts': [{'Destination': '/data', 'Source': '/var/lib/docker/volumes/test/_data', 'RW': True}]}]
+
+        def fake_docker(*arguments):
+            if arguments == ('inspect', 'control'):
+                return json.dumps(control)
+            if arguments == ('info', '--format', '{{json .Runtimes}}'):
+                return json.dumps({'runsc': {'path': 'runsc'}})
+            raise AssertionError(arguments)
+
+        with patch.object(supervise.Path, 'is_socket', return_value=True), \
+                patch.object(supervise.os, 'uname', return_value=unittest.mock.Mock(nodename='control')), \
+                patch.dict(os.environ, {'RUNTIME_IMAGE': 'example/runtime:latest'}), \
+                patch.object(supervise, 'docker', side_effect=fake_docker):
+            with self.assertRaisesRegex(ValueError, 'immutable repository'):
+                supervise.docker_identity('production')
+
     def test_only_runtime_creation_disables_the_control_plane_healthcheck(self):
         mounts = json.dumps([{'Destination': '/data', 'Source': '/var/lib/docker/volumes/test/_data'}])
         for command in ('create', 'run'):

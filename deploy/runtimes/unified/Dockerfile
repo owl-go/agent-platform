@@ -16,6 +16,10 @@ COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 10000 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-timeout 300000 \
     && apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install -y --no-install-recommends ca-certificates curl git jq openssh-client ripgrep \
     && python -m pip install --no-cache-dir "hermes-agent[mcp,anthropic]==${HERMES_VERSION}" "uv==${UV_VERSION}" \

@@ -1,8 +1,10 @@
 ---
-status: accepted
+status: superseded by ADR-0048
 ---
 
 # 单镜像整合部署
+
+> 本决策中控制服务与 Runtime 共用镜像的部分已由 [ADR-0048](0048-separate-control-and-runtime-images.md) 取代；以下保留原始决策记录。
 
 2026-10-18 用户要求前后端及基础服务合并为一个镜像，并在首次启动创建 `admin / admin123`，发布 ARM64/AMD64。新增可选整合部署，在一个受信任控制容器内按依赖顺序运行 Web 反向代理、API、Worker、Keycloak、PostgreSQL 和 MinIO；任一关键进程退出则终止整套进程，由 Docker 重启。一个 `/data` 卷保存数据库、对象、Workspace 与随机系统密钥；已有账号密码绝不被重启覆盖。弱默认密码只用于环回地址的首次本地安装，公开 HTTPS 部署必须明确覆盖初始密码。
 

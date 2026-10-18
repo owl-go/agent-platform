@@ -14,6 +14,8 @@
 
 五个 Runtime Engine 统一安装在 `deploy/runtimes/unified/Dockerfile` 构建的一个镜像中。镜像以固定 Python 3.13 基础镜像提供 Hermes，复制固定 Node 24 镜像的 Node/npm 工具链，提供 Git、`npx`、`uvx` 与 MCP 运行依赖；进程固定以 UID/GID 65532 运行。`scripts/build-runtime-images.sh` 只构建一个 Runtime 镜像及独立 CLI Builder。平台的五个 Runtime Engine 配置引用同一个 `RUNTIME_IMAGE` RepoDigest，但各自保持 CLI 版本、Capability 和可用状态。冷启动与 Warm Container 均由平台明确传入引擎命令，不依赖镜像默认 Entrypoint 选择引擎。生产配置只能引用 Registry `repository@sha256:<digest>`，不能使用 Tag 或本地 Image ID。
 
+公开 Docker Compose 部署将该镜像发布为 `haozhi152/agent-platform-runtime`；`haozhi152/agent-platform` 只包含产品 Web 入口和后端控制服务，不继承 Runtime 镜像，也不能作为 Runtime Digest。Compose 用一次性无网络容器确保 Runtime 镜像已存在于宿主 Docker，再启动控制服务；本地模式把解析后的 Image ID 冻结进本次配置，生产仍要求精确 RepoDigest。
+
 PI Agent `0.84.4` 固定依赖的 OpenAI Node SDK 会把无 `data` 的合法 SSE 元事件交给 `JSON.parse`，或把代理截断的 SSE JSON 直接暴露为 `Unexpected end of JSON input`；后者不会进入 PI 已有的流中断重试。PI 的实际 CLI 路径使用自身 bundle 内的 SDK 副本，而不是只使用 `node_modules/openai`。统一镜像构建时通过 `patch-openai-empty-sse.mjs` 同时修补依赖源码和实际 bundle：加入空数据跳过保护，并把且仅把截断 JSON 的 EOF 语法错误归一为 PI 可重试的流中断错误。补丁要求每个预期源码片段只出现一次，否则构建失败；补丁位于独立镜像层，修改保护逻辑不会使五个固定 CLI 的安装层失效。`runtime-image-smoke` 先分别检查两个 SDK 副本，再用本地一次截断、一次成功的 SSE 服务执行真实 PI CLI，要求 PI 只重试一次并返回 `OK`；该检查不访问外部模型端点或读取真实凭证。
 
 公共 Entrypoint 创建 tmpfs HOME，从只读 Credential Mount 导入模型与 Connector 环境变量，并复制 Runtime 配置到 HOME。公共 `agent-cli` 客户端使用 CommonJS，可由镜像内 Node 24 直接执行无扩展名的 `/usr/local/bin/agent-cli`。SSH Git 仅在同时存在私钥与管理员预置 `known_hosts` 时启用，固定 `StrictHostKeyChecking=yes`。
