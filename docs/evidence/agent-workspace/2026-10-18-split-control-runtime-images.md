@@ -4,7 +4,7 @@
 
 用户要求 `haozhi152/agent-platform` 只承载前端入口和后端控制服务，五个 Runtime 由独立的 `haozhi152/agent-platform-runtime` 承载，并以 Docker Compose 作为安装入口。实现提交为 `477b258fb0aaec5eaf35529637758d6068040cea`，已快进到 `origin/main_temp`。
 
-原 `haozhi152/agent-platform` 仓库已按用户要求删除并重新创建，避免继续保留职责错误的整合镜像。先前误建的 `haozhi152/agent-platform-runtimeatest` 也已删除。两个正式仓库的 Docker Hub Overview 已分别更新为产品控制服务和五 Runtime 镜像的功能、Compose 使用方式与注意事项。
+原 `haozhi152/agent-platform` 仓库已按用户要求删除并重新创建，避免继续保留职责错误的整合镜像。先前误建的 `haozhi152/agent-platform-runtimeatest` 也已删除；Runtime 仓库中三个指向旧整合镜像的 `2026-10-18-1eaca52efd84*` 标签在新版本发布后删除。两个正式仓库的 Docker Hub Overview 已分别更新为产品控制服务和五 Runtime 镜像的功能、Compose 使用方式与注意事项。
 
 本次发布标签为 `2026-10-18-477b258fb0aa`：
 
