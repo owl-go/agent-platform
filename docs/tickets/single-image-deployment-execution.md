@@ -1,15 +1,15 @@
 # 单镜像部署执行记录
 
-日期：2026-10-18。会话分支：`codex/local-deployment`。基线先合并 `origin/main_temp`，Merge Commit 为 `c6f857e`；未操作欠费云服务器，也未迁移或覆盖已有本机数据。
+日期：2026-10-18。会话分支：`codex/local-deployment`。基线先合并 `origin/main_temp`，Merge Commit 为 `c6f857e`；未操作欠费云服务器，也未把旧安装业务数据迁入新整合实例或覆盖其数据。
 
 ## 验收范围与状态
 
 | AC | 规则 / 门禁 | 当前证据 |
 |---|---|---|
-| AC-IMAGE-1：Web、API、Worker、认证、数据库、对象存储共用一个镜像与常驻容器 | ARC-003、COD-003 / G-DEPLOY、G-SEC | ARM64 真实首次启动、公开健康路由、OIDC、认证拒绝边界和保留数据重启通过。 |
-| AC-IMAGE-2：首次创建 admin / admin123，保留数据不重置密码 | COD-003、TST-001 / G-DEPLOY、G-E2E | 默认管理员浏览器登录通过；完整 ARM64 镜像保留数据重启和 state.json SHA-256 不变通过。密码变更后恢复演练未做。 |
-| AC-IMAGE-3：同镜像隔离 Runtime，本地 runc、生产 runsc | ARC-002、COD-003/004 / G-RUNTIME | ARM64 五个固定 CLI、PI SSE 防护、非 root 只读 Runtime 和 CLI Builder 冒烟通过；生产默认关闭未声明验证的引擎。Linux + runsc Conformance 未运行。 |
-| AC-IMAGE-4：ARM64 / AMD64 Docker Hub 标签 | TST-005 / G-DEPLOY | AMD64 构建未完成；尚未推送，不宣称远端镜像可用。 |
+| AC-IMAGE-1：Web、API、Worker、认证、数据库、对象存储共用一个镜像与常驻容器 | ARC-003、COD-003 / G-DEPLOY、G-SEC | 最终 ARM64 / AMD64 镜像均通过真实首次启动、公开健康路由、OIDC、认证拒绝边界和保留数据重启；AMD64 为模拟运行。 |
+| AC-IMAGE-2：首次创建 admin / admin123，保留数据不重置密码 | COD-003、TST-001 / G-DEPLOY、G-E2E | 开发验收实例默认管理员浏览器登录通过；最终两架构重启及本机最终版升级后 state.json SHA-256 不变。密码变更后的恢复演练未做。 |
+| AC-IMAGE-3：同镜像隔离 Runtime，本地 runc、生产 runsc | ARC-002、COD-003/004 / G-RUNTIME | 两架构固定 CLI、PI SSE 防护与非 root / 只读 Runtime 冒烟通过；最终镜像实测任务健康探针为 NONE，控制容器健康检查保留。生产默认关闭未声明验证的引擎，Linux + runsc Conformance 未运行。 |
+| AC-IMAGE-4：ARM64 / AMD64 Docker Hub 标签 | TST-005 / G-DEPLOY | 两架构版本标签、多架构版本、latest、arm64、amd64 已推送；匿名远端清单、平台 Digest 和两平台拉取已核对。 |
 | AC-IMAGE-5：Docker 与源码部署文档 | REQ-005 / G-DOC | README、整合安装手册、ADR-0047、维护者发布脚本已添加；发布仅接受干净且精确匹配 origin/main_temp 的提交。 |
 
 ## 已执行门禁
@@ -52,3 +52,26 @@
 - 14:49 ARM64 版本 `2026-10-18-f9ad05ce00b4-arm64` 推送成功，远端拉取和匿名 Registry 清单查询均确认 Digest `sha256:1c66f1a89eed4f8ed58ef72e18a7c9495caf225b13323d9f4e4f7b46b720e8f7`；该版为后续边界补齐前的中间版本，不提前切换 latest。
 - AMD64 五引擎、PI SSE、非 root / 只读 / 文件 Broker 和 Builder 冒烟通过，属于 ARM Mac 上模拟运行，不能替代原生 AMD64 或 Linux + runsc 验收。版本标签上传遇到一次本地代理 broken pipe，构建工具自动重试；不输出带签名上传状态参数的错误 URL，不把上传中计为成功。
 - 真实临时 Runtime 的健康状态暴露控制探针继承问题；在无控制进程的非 root Runtime 中执行控制探针确实退出 1。先新增失败回归，再由 Worker 专用 Docker shim 为 create/run 添加 `--no-healthcheck`；主服务健康检查不变。新增真实 Smoke 检查 Docker Config.Healthcheck.Test 必须为 NONE，同时执行 UID 65532 探测，后续以补齐边界后的发布版本为准。
+
+## 最终发布与交接
+
+发布代码提交为 `1eaca52efd849bd75f63b80c12536fa6f6bfd98b`，已推送功能分支并以 Fast-forward 集成到 `main_temp`。构建与发布时工作区干净，HEAD 精确匹配 `origin/main_temp`；未修改保护分支 `main`。后续执行记录更新只记录证据，不改变镜像代码 Revision。
+
+- ARM64 最终版本 `2026-10-18-1eaca52efd84-arm64`：独立卷 `agent-platform-smoke-e0fa10d9d8-data`，完整 Smoke 通过。
+- AMD64 最终版本 `2026-10-18-1eaca52efd84-amd64`：独立卷 `agent-platform-smoke-e0c0a92e09-data`，完整 Smoke 通过。首次运行的镜像展开和模拟执行较慢，没有把 ARM Mac 结果算作 AMD64 原生生产验证。
+- 两个 Smoke 均验证首页、动态公开配置、公开健康/就绪路由、OIDC issuer、匿名业务 API 401、同镜像 runc UID 65532、只读/无网络/无特权、数据卷映射、任务健康探针 NONE、保留数据重启，以及 state.json 摘要不变。
+- 两个架构版本均上传成功后才更新 `2026-10-18-1eaca52efd84`、`latest`、`arm64`、`amd64`。匿名 Registry 请求三个别名均为 200；latest 恰好包含 linux/arm64 与 linux/amd64，架构别名分别只有对应平台。显式按两个平台拉取 latest 均成功。
+
+| 类型 | Registry Digest |
+|---|---|
+| latest / 版本化多架构 Index | `sha256:0bb4cbb6669272ada79ebb706e9bf62174e6d1211cb20bd8d42a8e025518872e` |
+| ARM64 平台 Manifest | `sha256:d6968fb3d2deb19e0b8a4cee58f4f753a1b056f838bfa1115cfbbfc181667557` |
+| AMD64 平台 Manifest | `sha256:d8264f383b699edadab576b240c1b4e94c428a97825201bb895caf3afecc708f` |
+
+架构别名本身是单平台 Index，分别指向上表平台 Manifest；其 Index Digest 为 ARM64 `sha256:9d8a7cc62c8c5a88dcb4794158e204bb0f615641e07dd0025f51ec59cc7122bd`、AMD64 `sha256:f749792fbc180d6c7ace208aa7cae872253c701784d3bc2dcbadb02c2214f3a9`，不与平台 Manifest Digest 混用。
+
+本机 `agent-platform` 在 `http://localhost:8080` 运行最终 ARM64 版本，状态 healthy，`/api/readyz` 返回 ready；首次默认账号 admin / admin123。升级沿用 `agent-platform-data`，升级前后状态文件摘要一致，上一版容器保留为停止状态的 `agent-platform-backup-f9ad05c`。当前只是新整合安装，旧源码开发安装的业务数据没有自动迁入，原服务和数据仍保留；镜像不携带供应商 Key。唯一命名的镜像测试容器已停止，测试卷保留用于证据复查。
+
+Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/DockerDesktop/Docker.raw`。最终仍有外置盘约 537GiB、内置盘约 44GiB 可用；未格式化或操作外置盘原有文件。使用 Docker 时必须连接此盘，安全弹出前先停止 Docker。
+
+本轮没有原生 AMD64 硬件验收、Linux + runsc Sandbox / Production Conformance、独立 PostgreSQL 集成环境或密码变更后的备份恢复演练。生产保持 runsc 与 Registry RepoDigest 的拒绝降级边界，不把本地 runc 或模拟测试描述成生产验证。
