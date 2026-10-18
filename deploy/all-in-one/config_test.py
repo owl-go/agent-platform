@@ -16,6 +16,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_only_runtime_creation_disables_the_control_plane_healthcheck(self):
+        mounts = json.dumps([{'Destination': '/data', 'Source': '/var/lib/docker/volumes/test/_data'}])
+        for command in ('create', 'run'):
+            arguments = rewrite([command, '--read-only', 'image'], mounts)
+            self.assertEqual(arguments[:2], [command, '--no-healthcheck'])
+        self.assertEqual(rewrite(['inspect', 'runtime'], mounts), ['inspect', 'runtime'])
+
     def test_bucket_setup_retries_only_the_minio_initialization_race(self):
         initializing = HTTPError('http://127.0.0.1:9000/agent-workspace', 503, 'starting', {},
                                  io.BytesIO(b'<Error><Code>XMinioServerNotInitialized</Code></Error>'))

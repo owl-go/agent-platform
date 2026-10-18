@@ -18,7 +18,7 @@
 - `make web-typecheck`、`make web-build`：通过；Vite 原有大 Chunk 提示仍存在。
 - 前端完整 Vitest：59 个文件、696 个测试通过；OIDC 定向 9 个测试通过。
 - platformconfig、tokenverifier、runtimeexecutor 目标包及其 `-race`：通过。
-- `make deploy-test`：整合配置与启动边界 8 项、发布保护和双模式 Shell 兼容 5 项、部署脚本 23 项、安装脚本 13 项、本地脚本 4 项通过，包含启动重试、受控命令错误脱敏和第二架构失败时不切换 latest。
+- `make deploy-test`：整合配置与启动边界 9 项、发布保护和双模式 Shell 兼容 5 项、部署脚本 23 项、安装脚本 13 项、本地脚本 4 项通过，包含启动重试、受控命令错误脱敏和第二架构失败时不切换 latest。
 - ARM64 Runtime 镜像冒烟：`UNIFIED_CONTROL_IMAGE=true RUNTIME_IMAGE_REF=haozhi152/agent-platform:dev-arm64 make runtime-image-smoke` 通过。
 - Shell 语法、Compose 配置、Bake 配置、`git diff --check`、`cmp -s AGENTS.md CLAUDE.md` 已通过；最终变更后需补跑。
 
@@ -49,3 +49,6 @@
 - 浏览器已用默认 `admin / admin123` 登录开发验收实例，显示 Administrator、API 在线和四个产品可选 Runtime 可用。Mac 锁屏暂时阻断后续点击验收，不将受阻操作记为通过；不通过修改前端绕过锁屏。
 - 镜像保留 MinIO 对应的 AGPL License 文件和固定版本源码地址；未把任何测试卷、供应商 Key 或宿主凭证放进镜像。
 - 14:34 ARM64 `smoke-unified-image.py ...:dev-arm64-fixed --keep` 通过：独立测试卷首次 healthy、首页与公开配置、健康/就绪路由、OIDC issuer、匿名 API 401、同镜像 Runtime UID 65532 + 只读/无网络/无特权 + 数据卷映射，以及容器重启后再次 healthy、state.json 摘要不变。测试实例 `agent-platform-smoke-d85dfd444a`，未导入旧安装数据。
+- 14:49 ARM64 版本 `2026-10-18-f9ad05ce00b4-arm64` 推送成功，远端拉取和匿名 Registry 清单查询均确认 Digest `sha256:1c66f1a89eed4f8ed58ef72e18a7c9495caf225b13323d9f4e4f7b46b720e8f7`；该版为后续边界补齐前的中间版本，不提前切换 latest。
+- AMD64 五引擎、PI SSE、非 root / 只读 / 文件 Broker 和 Builder 冒烟通过，属于 ARM Mac 上模拟运行，不能替代原生 AMD64 或 Linux + runsc 验收。版本标签上传遇到一次本地代理 broken pipe，构建工具自动重试；不输出带签名上传状态参数的错误 URL，不把上传中计为成功。
+- 真实临时 Runtime 的健康状态暴露控制探针继承问题；在无控制进程的非 root Runtime 中执行控制探针确实退出 1。先新增失败回归，再由 Worker 专用 Docker shim 为 create/run 添加 `--no-healthcheck`；主服务健康检查不变。新增真实 Smoke 检查 Docker Config.Healthcheck.Test 必须为 NONE，同时执行 UID 65532 探测，后续以补齐边界后的发布版本为准。

@@ -72,8 +72,15 @@ os.chmod(root,0o750)
 configuration=json.loads(Path('/data/config/platform.yaml').read_text())
 metadata=json.loads(subprocess.check_output(['/usr/bin/docker','inspect',os.uname().nodename]))[0]
 environment=dict(os.environ,AGENT_PLATFORM_DOCKER_MOUNTS=json.dumps([m for m in metadata['Mounts'] if m['Destination']=='/data']))
-result=subprocess.check_output(['/opt/agent-platform/docker-bin/docker','run','--rm','--runtime','runc','--user','65532:65532','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--network','none','--pids-limit','64','--memory','256m','--mount','type=bind,src='+str(root)+',dst=/workspace','--entrypoint','/usr/bin/id',configuration['worker']['runtimes']['codex']['image_digest'],'-u'],env=environment,text=True).strip()
-assert result=='65532',result
+name='agent-platform-isolation-probe-'+os.urandom(6).hex()
+subprocess.check_output(['/opt/agent-platform/docker-bin/docker','create','--name',name,'--runtime','runc','--user','65532:65532','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--network','none','--pids-limit','64','--memory','256m','--mount','type=bind,src='+str(root)+',dst=/workspace','--entrypoint','/usr/bin/id',configuration['worker']['runtimes']['codex']['image_digest'],'-u'],env=environment,text=True)
+try:
+    task=json.loads(subprocess.check_output(['/usr/bin/docker','inspect',name]))[0]
+    assert task['Config']['Healthcheck']['Test']==['NONE']
+    result=subprocess.check_output(['/usr/bin/docker','start','--attach',name],text=True).strip()
+    assert result=='65532',result
+finally:
+    subprocess.run(['/usr/bin/docker','rm','--force',name],check=True,stdout=subprocess.DEVNULL)
 root.rmdir()
 print('runtime uid='+result)
 '''

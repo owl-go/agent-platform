@@ -10,6 +10,10 @@ def rewrite(arguments, encoded_mounts):
         raise ValueError('invalid mount inventory')
     mappings = sorted(mounts, key=lambda item: len(item['Destination']), reverse=True)
     result = list(arguments)
+    # Only the Worker uses this shim. Its task containers share the image,
+    # but must not inherit health probes for the separate control processes.
+    if result and result[0] in ('create', 'run'):
+        result.insert(1, '--no-healthcheck')
     for index, argument in enumerate(result):
         if index == 0 or result[index - 1] != '--mount':
             continue

@@ -71,7 +71,7 @@ docker buildx bake -f deploy/all-in-one/docker-bake.hcl \
 
 更新前先停止任务并做一致性备份，再停止旧容器、拉取版本、用相同数据卷和 `PUBLIC_URL` 创建新容器。不要运行 `docker compose down -v` 或删除数据卷。已有 Keycloak Realm 只同步公开客户端回调地址，不覆盖 User 密码。结构迁移仍由 API 的不可变 Migration 启动路径执行；不能把镜像回退视为 Schema 或数据回退。
 
-查看状态：`docker inspect agent-platform --format '{{.State.Health.Status}}'`。容器内关键进程退出会使整套服务退出，使用上述 restart 策略重启；SIGTERM 会先停止 Worker，再依次关闭 API、代理、认证、对象存储与数据库。
+查看状态：`docker inspect agent-platform --format '{{.State.Health.Status}}'`。容器内关键进程退出会使整套服务退出，使用上述 restart 策略重启；SIGTERM 会先停止 Worker，再依次关闭 API、代理、认证、对象存储与数据库。临时 Runtime 不继承控制服务的 HTTP 健康探针，其执行状态仍由现有 Runner 管理。
 
 ## 5. 生产 runsc
 
