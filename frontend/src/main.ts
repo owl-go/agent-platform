@@ -16,7 +16,7 @@ const app = createApp(publicRegistrationPage ?? App);
 if (!publicRegistrationPage) {
   let authContext: AuthContext;
   try {
-    const browserOIDC = createBrowserOIDC(import.meta.env);
+    const browserOIDC = createBrowserOIDC(window.__AGENT_WORKSPACE_CONFIG__ ?? import.meta.env);
     authContext = {
       session: createAuthSession(browserOIDC.client, getCurrentUser, browserOIDC.replaceCallbackURL),
       isCallback: browserOIDC.isCallback,

@@ -30,6 +30,15 @@ test('local realm uses loopback redirects and materialized credentials', () => {
   assert.equal(realm.users[1].serviceAccountClientId, 'agent-workspace-admin');
 });
 
+test('fresh source installations use the configured admin without renaming retained legacy data', () => {
+  const template = { clients: [{ attributes: {} }, {}], users: [{ credentials: [{}] }] };
+  const fresh = buildRealm(template, { ...state, adminUsername: 'admin', adminPassword: 'admin123' });
+  assert.equal(fresh.users[0].username, 'admin');
+  assert.equal(fresh.users[0].credentials[0].value, 'admin123');
+  assert.equal(buildRealm(template, state).users[0].username, 'platform-admin');
+  assert.match(buildConfig({ ...state, adminUsername: 'admin' }), /bootstrap_username: admin\n/);
+});
+
 test('local configuration binds to loopback and disables engines without an image', () => {
   const config = buildConfig(state);
 

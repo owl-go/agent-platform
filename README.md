@@ -2,7 +2,38 @@
 
 个人 AI 工作台：在私有对话中提问，把重复任务保存为工作流，复用 Expert、Skill 和 Connector。管理员集中配置账号、模型与 Credits。
 
-## 本地运行
+## Docker 安装部署（单镜像）
+
+前端、API、Worker、认证、PostgreSQL 与 MinIO 在同一个常驻容器中启动；执行任务时复用同一镜像创建隔离容器。
+
+```bash
+docker pull haozhi152/agent-platform:latest
+docker run -d --name agent-platform --restart unless-stopped --stop-timeout 60 \
+  --security-opt no-new-privileges --pids-limit 2048 --memory 4g \
+  -p 127.0.0.1:8080:8080 -e PUBLIC_URL=http://localhost:8080 \
+  -v agent-platform-data:/data \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  haozhi152/agent-platform:latest
+```
+
+等待容器 healthy 后打开 `http://localhost:8080`，首次自动创建管理员 **`admin / admin123`**。重启不重置账号、数据或密码；首次安装可用 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 覆盖默认值。弱默认密码只用于环回地址，公开 HTTPS 部署必须设置强密码。Docker socket 只交给受信任控制容器，Runtime 不会挂载它。
+
+`latest` 自动选择 ARM64/AMD64；也可明确使用 `:arm64` 或 `:amd64`。完整 Docker 安装、Compose、端口/域名、持久化、源码构建与生产 runsc 要求见[单镜像部署](deploy/all-in-one/README.md)。
+
+## 源码部署
+
+只安装 Git 和 Docker，就可以从源码构建同一个整合镜像：
+
+```bash
+git clone https://github.com/owl-go/agent-platform.git
+cd agent-platform
+git checkout main_temp
+make image-build
+```
+
+用上面的启动命令，把镜像标签换成 `haozhi152/agent-platform:local`。默认构建本机架构；显式 AMD64 构建及发布命令见[部署文档](deploy/all-in-one/README.md#3-从源码构建并部署同一个镜像)。
+
+### 源码开发运行
 
 本地开发实例需要 Docker Desktop、Node.js 24+、pnpm 11、Go 1.25+（较旧 Go 可通过 `GOTOOLCHAIN=auto` 自动取得项目工具链）、Python 3.9+ 和 Make。启动 Docker Desktop 后运行：
 
@@ -11,7 +42,7 @@ make local-up
 make local-credentials
 ```
 
-浏览器打开 `http://127.0.0.1:14173`，使用第二条命令显示的本地管理员账号登录。PostgreSQL 和 Keycloak 数据会保留在本机 Docker volumes 中；固定版本构建的开源 MinIO、随机凭证、配置、日志、对象数据和 Workspace 保存在 `~/.local/share/agent-workspace`，不会写入仓库。常用管理命令：
+浏览器打开 `http://127.0.0.1:14173`，使用第二条命令显示的本地管理员账号登录。新开发实例默认 `admin / admin123`；已有实例保留旧管理员和密码，不自动重置。PostgreSQL 和 Keycloak 数据会保留在本机 Docker volumes 中；固定版本构建的开源 MinIO、系统随机密钥、配置、日志、对象数据和 Workspace 保存在 `~/.local/share/agent-workspace`，不会写入仓库。常用管理命令：
 
 ```bash
 make local-status

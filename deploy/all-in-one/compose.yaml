@@ -1,0 +1,24 @@
+name: agent-platform-unified
+services:
+  app:
+    image: haozhi152/agent-platform:${IMAGE_TAG:-latest}
+    container_name: agent-platform
+    restart: unless-stopped
+    stop_grace_period: 60s
+    ports:
+      - "127.0.0.1:${PORT:-8080}:8080"
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      SANDBOX_PROFILE: local
+    volumes:
+      - data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 2048
+    mem_limit: 4g
+    cpus: 4
+volumes:
+  data:

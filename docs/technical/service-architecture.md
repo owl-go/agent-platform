@@ -8,6 +8,8 @@ AI Creation 的详细接口、状态、数据与验证设计见 `docs/technical/
 
 后端是两个 Go Kratos 进程：`cmd/api` 提供认证后的控制面，`cmd/worker` 领取会话回复、工作流 Run、定时触发和 MCP 测试。AI Creation 实现后，Worker 还会领取持久化的 Image Generation Record；图片供应商调用不在 API 请求生命周期内运行。Wire 只负责显式装配；所有运行配置来自严格校验的 YAML。
 
+可选[单镜像整合部署](../../deploy/all-in-one/README.md)按 [ADR-0047](../adr/0047-single-image-control-plane.md)将上述进程与 Web、Keycloak、PostgreSQL、MinIO 放在同一受信任控制容器，不合并领域或数据库所有权。`authentication.internal_base_url` 只接受显式 HTTP loopback Origin，仅将当前公开 Issuer 的 discovery/JWKS 运输转到同容器服务；公开 Issuer 与 Token 校验不变。`worker.runtime_namespace` 为不同数据卷隔离 Warm Container 名称，省略时保持原命名；整合部署从宿主卷路径派生稳定值。公开前端 OIDC 配置启动时生成，不含服务密钥。
+
 当前实现包含以下限界上下文：
 
 - Account：OIDC 身份、Administrator 管理的 Registration Method、短期 Registration Attempt、本地 User 投影、Bootstrap Administrator 与可委派 Administrator、Resource Publisher、只读 Identity Group/成员关系同步、账号治理和隐私受限的 Governance Audit Event。

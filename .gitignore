@@ -12,6 +12,7 @@ output/playwright/
 
 bin/
 build/
+/.scratch/
 *.test
 
 .idea/

@@ -84,6 +84,7 @@ type SecurityConfig struct {
 type AuthenticationConfig struct {
 	Mode              string   `yaml:"mode"`
 	Issuer            string   `yaml:"issuer"`
+	InternalBaseURL   string   `yaml:"internal_base_url"`
 	Audience          string   `yaml:"audience"`
 	ClientID          string   `yaml:"client_id"`
 	RedirectURI       string   `yaml:"redirect_uri"`
@@ -101,6 +102,7 @@ type APIConfig struct {
 }
 
 type WorkerConfig struct {
+	RuntimeNamespace   string                         `yaml:"runtime_namespace"`
 	ManagementAddress  string                         `yaml:"management_address"`
 	ShutdownTimeout    Duration                       `yaml:"shutdown_timeout"`
 	PollInterval       Duration                       `yaml:"poll_interval"`
@@ -322,6 +324,13 @@ func (config AccountsConfig) Validate() error {
 }
 
 func (config AuthenticationConfig) Validate() error {
+	if config.InternalBaseURL != "" {
+		internal, err := url.Parse(config.InternalBaseURL)
+		address, parseErr := netip.ParseAddr(internalHostname(internal))
+		if err != nil || parseErr != nil || !address.IsLoopback() || internal.Scheme != "http" || internal.User != nil || internal.Path != "" || internal.RawQuery != "" || internal.Fragment != "" {
+			return fmt.Errorf("authentication.internal_base_url must be an HTTP loopback origin")
+		}
+	}
 	switch config.Mode {
 	case "deny_all":
 		return nil
@@ -364,6 +373,13 @@ func (config AuthenticationConfig) Validate() error {
 		seen[algorithm] = struct{}{}
 	}
 	return nil
+}
+
+func internalHostname(value *url.URL) string {
+	if value == nil {
+		return ""
+	}
+	return value.Hostname()
 }
 
 func validateHTTPSURL(field, value string, allowLoopbackHTTP bool) error {

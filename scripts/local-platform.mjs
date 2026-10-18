@@ -74,6 +74,8 @@ export function buildRealm(template, state) {
   realm.clients[0].attributes['post.logout.redirect.uris'] = `${webOrigin}/*`;
   realm.clients[1].secret = state.serviceSecret;
   realm.users[0].credentials[0].value = state.adminPassword;
+  realm.users[0].username = state.adminUsername || 'platform-admin';
+  realm.users[0].email = `${state.adminUsername || 'platform-admin'}@agent-workspace.local`;
   realm.users.push({
     username: 'service-account-agent-workspace-admin',
     enabled: true,
@@ -113,8 +115,8 @@ accounts:
   admin_client_id: agent-workspace-admin
   admin_client_secret: ${state.serviceSecret}
   bootstrap_subject: 11111111-1111-4111-8111-111111111111
-  bootstrap_username: platform-admin
-  bootstrap_email: platform-admin@agent-workspace.local
+  bootstrap_username: ${state.adminUsername || 'platform-admin'}
+  bootstrap_email: ${state.adminUsername || 'platform-admin'}@agent-workspace.local
   bootstrap_display_name: Platform Administrator
 workspace:
   root: ${yamlString(workspace)}
@@ -166,14 +168,15 @@ function prepareState() {
   }
   if (!existsSync(stateFile)) {
     saveJSON(stateFile, {
-      version: 1,
-      adminPassword: `Local!${randomBytes(16).toString('hex')}`,
+      version: 2,
+      adminUsername: process.env.AGENT_WORKSPACE_ADMIN_USERNAME || 'admin',
+      adminPassword: process.env.AGENT_WORKSPACE_ADMIN_PASSWORD || 'admin123',
       serviceSecret: randomBytes(32).toString('hex'),
       dataEncryptionKey: randomBytes(32).toString('base64'),
     });
   }
   const state = readJSON(stateFile);
-  if (state.version !== 1 || !state.adminPassword || !state.serviceSecret || !state.dataEncryptionKey) {
+  if (![1, 2].includes(state.version) || !state.adminPassword || !state.serviceSecret || !state.dataEncryptionKey || (state.adminUsername && !/^[A-Za-z0-9_.-]{1,64}$/.test(state.adminUsername))) {
     fail(`Local state is invalid: ${stateFile}`);
   }
   const template = readJSON(join(root, 'deploy', 'platform', 'config', 'keycloak-realm.json'));
@@ -464,7 +467,7 @@ function credentials() {
   if (!existsSync(stateFile)) fail('Local state does not exist; run make local-up first');
   const state = readJSON(stateFile);
   console.log(`URL: ${webOrigin}`);
-  console.log('Username: platform-admin');
+  console.log(`Username: ${state.adminUsername || 'platform-admin'}`);
   console.log(`Password: ${state.adminPassword}`);
 }
 

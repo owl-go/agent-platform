@@ -34,6 +34,8 @@ UI 变化按 [UI 规格与验收](../specs/frontend-ui-acceptance.md)的状态�
 go -C backend test -race ./internal/service/workspace ./internal/server/... ./internal/architecture ./internal/biz/workspace/... ./internal/data/workspace/...
 ```
 
+`make deploy-test` 也包含 `deploy/all-in-one/*_test.py` 的配置、初始化与 Docker 路径边界检查。单镜像构建用 `make image-build`；实际模型无关容器检查用 `python3 scripts/smoke-unified-image.py <image>`，验证真实启动、OIDC 公开配置、匿名认证拒绝、隔离任务挂载及保留数据重启。发布用 `make image-publish`，只允许干净且精确匹配 `origin/main_temp` 的提交，先完成双架构版本标签再更新多架构 `latest`；命令成功和生产 runsc 验收仍分别判断。
+
 CI 目前在 Pull Request 和 `main` push 触发；功能分支单独 push 不证明 CI 已运行。CI 的后端 Job 直接执行 `go test` / `go build`，不调用根 make 的资源前置检查；资源目录变化还需 `make resources-check`。前端 CI 配置类型/构建，未配置 Vitest/E2E Job，按任务选定的相关测试仍需执行。
 
 `make verify-generated` 会调用 generate 并重写生成物，再检查差异；需 Go 工具下载与前端依赖，不是只读命令。`make breaking` 默认对照 `origin/main`，实际基线与回退到 lint 的情形须记入结果。数据库测试应使用隔离测试 DSN；生产数据不作为默认测试输入。覆盖率没有产物时报告未验证，不估算百分比。

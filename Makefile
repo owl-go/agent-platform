@@ -19,6 +19,8 @@ deploy-check:
 	scripts/deploy-platform.sh --check
 
 deploy-test:
+	python3 -m unittest discover -s deploy/all-in-one -p '*_test.py'
+	python3 -m unittest discover -s scripts -p 'unified_publish_test.py'
 	python3 -m unittest discover -s scripts -p 'deployment_test.py'
 	python3 -m unittest discover -s scripts -p 'installation_test.py'
 	node --test scripts/local-platform.test.mjs
@@ -28,6 +30,13 @@ resources-check:
 	go -C backend run ./cmd/resourcecheck --root ..
 
 .PHONY: install deploy-setup deploy-check deploy-test resources-check
+.PHONY: image-build image-publish
+
+image-build:
+	docker buildx bake -f deploy/all-in-one/docker-bake.hcl --load app
+
+image-publish:
+	bash scripts/publish-unified-images.sh
 
 web-build:
 	pnpm --dir frontend build

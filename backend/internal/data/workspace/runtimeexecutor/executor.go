@@ -1253,6 +1253,9 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 	if executor.config.Sandbox.Profile == sandbox.LocalProfile {
 		scope = sandbox.LocalProfile + ":" + scope
 	}
+	if executor.config.Worker.RuntimeNamespace != "" {
+		scope = executor.config.Worker.RuntimeNamespace + ":" + scope
+	}
 	name, err := containerprocess.WarmContainerName(scope, string(job.Snapshot.RuntimeEngine), runtime.ImageDigest)
 	if err != nil {
 		return "", warmSlot{}, err

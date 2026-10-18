@@ -1,0 +1,11 @@
+#!/usr/local/bin/python3
+import os
+import sys
+sys.path.insert(0, '/opt/agent-platform')
+from docker_paths import rewrite
+try:
+    arguments = rewrite(sys.argv[1:], os.environ['AGENT_PLATFORM_DOCKER_MOUNTS'])
+except (KeyError, ValueError) as error:
+    print('Docker bind mapping rejected: ' + str(error), file=sys.stderr)
+    sys.exit(2)
+os.execv('/usr/bin/docker', ['/usr/bin/docker', *arguments])

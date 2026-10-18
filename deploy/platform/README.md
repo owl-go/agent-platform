@@ -1,5 +1,7 @@
 # 一键部署
 
+需要前后端及基础设施合为一个镜像时，使用[单镜像 Docker 安装与源码部署](../all-in-one/README.md)。下面保留原有分离式服务器发布流程，不是单容器入口。
+
 用于已有的单服务器安装。发布工作站需要 Git、Go、pnpm、Make、Python 3.9+、SSH 和 rsync；服务器已有 Docker Compose v2 和可用服务。
 
 ## 第一次
