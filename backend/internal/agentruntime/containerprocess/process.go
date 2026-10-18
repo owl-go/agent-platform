@@ -21,7 +21,6 @@ import (
 )
 
 var (
-	imageDigestPattern  = regexp.MustCompile(`^[^\s@]+@sha256:[a-f0-9]{64}$`)
 	identifierPattern   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	runIDPattern        = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 	workflowPlanPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -34,6 +33,7 @@ type ScratchPreparer func(string, int, int) error
 type ControlContainer func(context.Context, string, bool) error
 
 type Config struct {
+	Profile              string
 	DockerCommand        string
 	Image                string
 	RuntimeCommand       string
@@ -179,7 +179,10 @@ func runDockerControl(ctx context.Context, command string, arguments ...string) 
 }
 
 func validateConfig(config Config) error {
-	if !imageDigestPattern.MatchString(config.Image) {
+	if config.Profile == sandbox.LocalProfile && (config.CLIBrokerSocket != "" || config.ConnectorDirectory != "" || config.PublicEgressNetwork == "host") {
+		return fmt.Errorf("local sandbox does not support CLI Connector mounts or host networking")
+	}
+	if !sandbox.ValidExecutionImage(config.Profile, config.Image) {
 		return fmt.Errorf("runtime image must use an immutable sha256 digest")
 	}
 	if config.RuntimeCommand == "" || strings.ContainsAny(config.RuntimeCommand, "/\\\x00") {
@@ -188,8 +191,8 @@ func validateConfig(config Config) error {
 	if !runIDPattern.MatchString(config.RunID) {
 		return fmt.Errorf("run ID is invalid")
 	}
-	if config.Runtime != "runsc" {
-		return fmt.Errorf("sandbox runtime must be runsc")
+	if err := sandbox.ValidateExecutionProfile(config.Profile, config.Runtime); err != nil {
+		return err
 	}
 	if config.UID <= 0 || config.GID <= 0 {
 		return fmt.Errorf("sandbox UID and GID must be non-root")
@@ -330,7 +333,7 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		args = append(args, "--mount", "type=bind,src="+brokerDirectory+",dst="+filepath.Dir(RuntimeCLIBrokerSocket())+",readonly=true")
 		args = append(args, "--env", "AGENT_PLATFORM_CLI_SOCKET="+RuntimeCLIBrokerSocket())
 	}
-	if config.Egress == sandbox.EgressPublic {
+	if config.Egress == sandbox.EgressPublic && config.Profile != sandbox.LocalProfile {
 		args = append(args, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
 	for _, directory := range scratchDirectories {

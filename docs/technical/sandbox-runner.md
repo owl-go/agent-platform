@@ -1,5 +1,15 @@
 # Sandbox Runner
 
+## 本地开发模式
+
+按 [ADR-0046](../adr/0046-explicit-local-runc-profile.md)，只有显式 `sandbox.profile: local` 与 `sandbox.runtime: runc` 才开启个人本地兼容模式。省略 profile 等价于 `production`，继续拒绝 runc；本地模式允许完整本地 Image ID，仍拒绝 Tag。冷启动和 Warm Container 均校验该配置，配置指纹包括 profile，保留非 root、只读 Rootfs、资源限制、挂载和单次 Secret 生命周期。
+
+Docker Desktop 停止容器后可能短暂保留嵌套只读挂载的权限状态。本地模式仅对附件挂载点删除的 `EACCES` / `EPERM` / `EBUSY` 最多重试 1 秒，并响应取消；不更改目录权限、不忽略永久错误，生产删除逻辑不重试。对应真实本机验收见 [2026-10-18 本地 runc 记录](../evidence/agent-workspace/2026-10-18-local-runc-execution.md)。
+
+`make local-up` 构建固定版本 Runtime 与本地 Linux Worker 镜像。Worker 挂载 Docker socket，仅控制进程拥有文件归属调整权限；模型容器不挂载 Docker socket。Workspace 和凭证目录在 Worker 与 Docker 宿主使用相同绝对路径。本地 Runtime 使用带所有权标签的专用 bridge 和 Docker DNS，不挂载生产 Resolver、不声明生产公网/私网过滤保证；CLI Connector Egress Gate、CLI Builder 和消息渠道关闭。API/Web/Worker 管理端口只发布到 127.0.0.1。固定镜像版本检查后提供本地引擎选择，真实模型调用按组合单独验证，不等于 Production Conformance。
+
+## 生产隔离
+
 状态：Linux + gVisor 生产边界；CLI Connector bundle 的二次校验与物化、公共 broker 协议、Runtime 客户端、专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定、窄协议宿主 Egress Controller，以及存活 Worker 内持久化 User Action Wait 与一次性命令绑定已实现；模型 Runtime 不挂载 CLI bundle，Worker 重启恢复、普通执行 deadline 暂停和 Linux + gVisor 端到端证据尚未完成
 
 Runtime 执行使用 Docker CLI 参数数组创建 `runsc` Container。启动前必须验证：镜像是 RepoDigest、Runtime 为 `runsc`、UID/GID 非 root、Rootfs 只读、Capabilities 全部移除、`no-new-privileges`、CPU/内存/PID/tmpfs 限制有效、Credential Mount 与 CLI Connector bundle Mount 只读、Workspace 是唯一可写业务挂载、附件在 Workspace 文件访问边界内使用独立只读挂载、Egress 使用明确网络。Connector bundle 的 SHA-256 与该 Runtime RepoDigest 的可用性组合必须匹配冻结快照。

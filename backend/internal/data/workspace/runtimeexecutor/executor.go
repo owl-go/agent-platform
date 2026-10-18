@@ -620,7 +620,9 @@ func (executor *Executor) Execute(ctx context.Context, job application.Execution
 			return result, err
 		}
 	}
-	if err := os.Remove(filepath.Join(workspace, filepath.Base(containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory)))); err != nil {
+	if err := removeReleasedMountpoint(ctx, executor.config.Sandbox.Profile, func() error {
+		return os.Remove(filepath.Join(workspace, filepath.Base(containerprocess.RuntimeAttachmentDirectory(runtimeWorkspaceDirectory))))
+	}); err != nil {
 		return result, fmt.Errorf("remove Runtime attachment mountpoint: %w", err)
 	}
 	redactor := credentials.NewRedactor(allRedactValues...)
@@ -734,7 +736,8 @@ func (executor *Executor) memberEnvironment(ctx context.Context, job application
 
 func (executor *Executor) containerConfig(job application.ExecutionJob, runtime platformconfig.RuntimeEngineConfig, containerName string, slot warmSlot, workspace, nativeState, credentialDirectory, brokerSocket string) containerprocess.Config {
 	return containerprocess.Config{
-		Image: runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
+		Profile: executor.config.Sandbox.Profile,
+		Image:   runtime.ImageDigest, RuntimeCommand: string(job.Snapshot.RuntimeEngine), RunID: strings.TrimPrefix(containerName, "agent-runtime-warm-"),
 		Runtime: executor.config.Sandbox.Runtime, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
 		CredentialDirectory: credentialDirectory, NativeStateDirectory: nativeState, ScratchDirectory: slot.scratch, AttachmentDirectory: filepath.Join(slot.scratch, "attachments"), CLIBrokerSocket: brokerSocket, PublicEgressNetwork: executor.config.Sandbox.EgressNetwork,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, Egress: sandbox.EgressPublic,
@@ -1154,6 +1157,9 @@ func (executor *Executor) warmSlot(job application.ExecutionJob, runtime platfor
 	}
 	if job.Snapshot.SelectionKey != "" {
 		scope += ":selection:" + job.Snapshot.SelectionKey
+	}
+	if executor.config.Sandbox.Profile == sandbox.LocalProfile {
+		scope = sandbox.LocalProfile + ":" + scope
 	}
 	name, err := containerprocess.WarmContainerName(scope, string(job.Snapshot.RuntimeEngine), runtime.ImageDigest)
 	if err != nil {

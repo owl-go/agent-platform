@@ -26,6 +26,7 @@ import (
 	"agent-platform/backend/internal/knowledgebase/retrieval"
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
+	"agent-platform/backend/internal/sandbox"
 	"agent-platform/backend/internal/secretcrypto"
 	workerserver "agent-platform/backend/internal/server/worker"
 	aicreationwiring "agent-platform/backend/internal/wiring/aicreation"
@@ -105,15 +106,17 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	if err != nil {
 		return nil, err
 	}
-	egress, err := cliconnector.NewUnixEgressGate(cliconnector.UnixEgressConfig{
-		SocketPath: config.Sandbox.EgressControllerSocket, EgressNetwork: config.Sandbox.EgressNetwork,
-		NetworkCIDR: config.Sandbox.EgressSubnet, ResolverAddresses: config.Sandbox.ResolverAddresses,
-	}, nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := executor.EnableCLIConnectors(egress); err != nil {
-		return nil, err
+	if config.Sandbox.Profile != sandbox.LocalProfile {
+		egress, err := cliconnector.NewUnixEgressGate(cliconnector.UnixEgressConfig{
+			SocketPath: config.Sandbox.EgressControllerSocket, EgressNetwork: config.Sandbox.EgressNetwork,
+			NetworkCIDR: config.Sandbox.EgressSubnet, ResolverAddresses: config.Sandbox.ResolverAddresses,
+		}, nil)
+		if err != nil {
+			return nil, err
+		}
+		if err := executor.EnableCLIConnectors(egress); err != nil {
+			return nil, err
+		}
 	}
 	if err := executor.EnableCLIApprovals(repository); err != nil {
 		return nil, err

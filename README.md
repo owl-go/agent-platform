@@ -18,7 +18,9 @@ make local-status
 make local-down
 ```
 
-`local-down` 只停止服务，保留本地数据。macOS Docker Desktop 默认没有生产要求的 `runsc` Runtime，因此本地入口会关闭全部 Runtime Engine：账号、资源和管理界面可在本地使用，但 Session / Workflow 的模型执行不可用。不要把这套本地开发实例当成 Production Conformance 或线上部署证据。
+`local-down` 只停止服务，保留本地数据。启动入口构建固定版本的 Runtime 与 Linux Worker 镜像，检查五个 CLI 版本后启用显式本地 `runc` 模式；首次构建可能需要较长时间。管理员配置模型供应商并设置企业默认后，Session / Workflow 使用该组合执行。生产默认仍只允许 `runsc` 与 Registry RepoDigest，不自动降级。
+
+本地模式面向单用户可信本机：保留非 root 执行、只读 Rootfs、资源限制和单次凭证脱敏清理，Runtime 使用专用 Docker bridge；受管 CLI Connector、CLI Builder 和消息渠道暂不支持。它不提供生产公网网络隔离，也不作为 Production Conformance 或线上部署证据。详见[本地模式边界](docs/adr/0046-explicit-local-runc-profile.md)。
 
 ## 服务器部署
 

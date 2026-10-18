@@ -12,6 +12,7 @@ const stateRoot = resolve(process.env.AGENT_WORKSPACE_LOCAL_ROOT || join(homedir
 const stateFile = join(stateRoot, 'state.json');
 const processFile = join(stateRoot, 'processes.json');
 const configFile = join(stateRoot, 'config', 'platform.yaml');
+const workerConfigFile = join(stateRoot, 'config', 'worker.yaml');
 const identityImportRoot = join(stateRoot, 'config', 'identity-import');
 const ports = { api: 19080, worker: 19082, identity: 19081, web: 14173, database: 15439, minio: 19090 };
 const webOrigin = `http://127.0.0.1:${ports.web}`;
@@ -24,7 +25,12 @@ const images = {
 const containers = {
   database: 'agent-workspace-local-database',
   identity: 'agent-workspace-local-identity',
+  worker: 'agent-workspace-local-worker',
 };
+const runtimeImageTag = 'agent-workspace-runtime:local';
+const workerImageTag = 'agent-workspace-worker:local';
+const runtimeNetwork = 'agent-workspace-local-runtime';
+const runtimeVersions = { claude: '2.1.233', codex: '0.147.0', hermes: '0.19.0', openclaw: '2026.7.1-2', pi: '0.84.4' };
 const legacyMinioContainer = 'agent-workspace-local-minio';
 const minioRelease = 'RELEASE.2025-10-15T17-29-55Z';
 const ownerLabel = 'com.agent-workspace.local=true';
@@ -77,11 +83,15 @@ export function buildRealm(template, state) {
   return realm;
 }
 
-export function buildConfig(state) {
+export function buildConfig(state, { container = false, runtimeImage = '', engines = [] } = {}) {
   const workspace = join(stateRoot, 'workspaces');
   const knownHosts = join(stateRoot, 'config', 'known_hosts');
   const credentials = join(stateRoot, 'run-credentials');
   const yamlString = value => JSON.stringify(value);
+  const serviceHost = container ? 'host.docker.internal' : '127.0.0.1';
+  const runtimeLines = Object.entries(runtimeVersions).map(([name, version]) => engines.includes(name)
+    ? `    ${name}: {available: true, native_resume: false, image_digest: ${yamlString(runtimeImage)}, cli_version: ${yamlString(version)}}`
+    : `    ${name}: {available: false}`).join('\n');
   return `api:
   address: 127.0.0.1:${ports.api}
   read_header_timeout: 5s
@@ -112,7 +122,7 @@ workspace:
 security:
   data_encryption_key: ${state.dataEncryptionKey}
 worker:
-  management_address: 127.0.0.1:${ports.worker}
+  management_address: ${container ? '0.0.0.0' : '127.0.0.1'}:${ports.worker}
   shutdown_timeout: 10s
   poll_interval: 1s
   runtime_idle_timeout: 30m
@@ -122,13 +132,9 @@ worker:
   cli_builder:
     enabled: false
   runtimes:
-    claude: {available: false}
-    codex: {available: false}
-    hermes: {available: false}
-    openclaw: {available: false}
-    pi: {available: false}
+${runtimeLines}
 database:
-  dsn: postgres://local:${state.serviceSecret}@127.0.0.1:${ports.database}/agent_workspace?sslmode=disable
+  dsn: postgres://local:${state.serviceSecret}@${serviceHost}:${ports.database}/agent_workspace?sslmode=disable
   max_open_connections: 20
   max_idle_connections: 10
   connection_max_idle: 5m
@@ -136,14 +142,15 @@ database:
 object_store:
   provider: minio
   minio:
-    endpoint: 127.0.0.1:${ports.minio}
+    endpoint: ${serviceHost}:${ports.minio}
     access_key: local
     secret_key: ${state.serviceSecret}
     bucket: agent-workspace-local
     secure: false
 sandbox:
-  runtime: runsc
-  egress_network: agent-public-egress
+  profile: local
+  runtime: runc
+  egress_network: ${runtimeNetwork}
   egress_subnet: 172.30.0.0/24
   egress_controller_socket: ${yamlString(join(stateRoot, 'egress-controller.sock'))}
   resolver_config: ${yamlString(join(stateRoot, 'config', 'sandbox-resolv.conf'))}
@@ -183,7 +190,8 @@ function preflight() {
   for (const command of ['docker', 'go', 'node', 'pnpm', 'python3']) {
     if (!commandExists(command)) fail(`${command} is required for local development`);
   }
-  run('docker', ['info', '--format', '{{.ServerVersion}}']);
+  const info = JSON.parse(run('docker', ['info', '--format', '{{json .}}']));
+  if (!info.Runtimes?.runc) fail('The explicit local profile requires the Docker runc runtime');
   const goVersion = run('go', ['-C', 'backend', 'env', 'GOVERSION']);
   if (!/^go1\.(?:2[5-9]|[3-9][0-9])(?:\.|$)/.test(goVersion)) {
     fail(`Go 1.25+ is required; resolved toolchain is ${goVersion}`);
@@ -344,14 +352,57 @@ function buildApplications() {
     writePrivate(minioMarker, `${minioRelease}\n`);
   }
   run('go', ['-C', 'backend', 'build', '-o', join(stateRoot, 'bin', 'api'), './cmd/api'], { stdio: 'inherit' });
-  run('go', ['-C', 'backend', 'build', '-o', join(stateRoot, 'bin', 'worker'), './cmd/worker'], { stdio: 'inherit' });
+  console.log('Building local Runtime and Worker images (first build can take several minutes)...');
+  run('docker', ['build', '--progress=plain', '-t', runtimeImageTag, '-f', 'deploy/runtimes/unified/Dockerfile', '.'], { stdio: 'inherit' });
+  run('docker', ['build', '--progress=plain', '-t', workerImageTag, '-f', 'deploy/platform/Dockerfile.worker-local', '.'], { stdio: 'inherit' });
+}
+
+function prepareExecution(state) {
+  const runtimeImage = run('docker', ['image', 'inspect', '--format', '{{.Id}}', runtimeImageTag]);
+  const workerImage = run('docker', ['image', 'inspect', '--format', '{{.Id}}', workerImageTag]);
+  const engines = [];
+  for (const [name, version] of Object.entries(runtimeVersions)) {
+    const output = run('docker', ['run', '--rm', '--runtime', 'runc', '--network', 'none', '--read-only',
+      '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '512', '--memory', '1g',
+      '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=128m', runtimeImage, name, '--version']);
+    if (!output.includes(version)) fail(`${name} CLI version differs from ${version}`);
+    engines.push(name);
+  }
+  writePrivate(configFile, buildConfig(state, { runtimeImage, engines }));
+  writePrivate(workerConfigFile, buildConfig(state, { container: true, runtimeImage, engines }));
+  const network = spawnSync('docker', ['network', 'inspect', runtimeNetwork], { encoding: 'utf8' });
+  if (network.status !== 0) {
+    run('docker', ['network', 'create', '--label', ownerLabel, runtimeNetwork]);
+  } else {
+    const [existing] = JSON.parse(network.stdout);
+    if (existing.Driver !== 'bridge' || existing.Internal || existing.Labels?.['com.agent-workspace.local'] !== 'true') {
+      fail(`Local Runtime network ${runtimeNetwork} is not an owned bridge`);
+    }
+  }
+  return workerImage;
+}
+
+function startWorker(workerImage) {
+  removeOwnedContainer(containers.worker);
+  ensureContainer(containers.worker, ['--user', '0:0', '--read-only', '--cap-drop', 'ALL',
+    '--cap-add', 'CHOWN', '--cap-add', 'DAC_OVERRIDE', '--cap-add', 'FOWNER',
+    '--security-opt', 'no-new-privileges', '--pids-limit', '512', '--memory', '2g',
+    '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=128m',
+    '-p', `127.0.0.1:${ports.worker}:${ports.worker}`,
+    '-v', '/var/run/docker.sock:/var/run/docker.sock',
+    '-v', `${workerConfigFile}:/etc/agent-workspace/local.yaml:ro`,
+    '-v', `${join(stateRoot, 'workspaces')}:${join(stateRoot, 'workspaces')}`,
+    '-v', `${join(stateRoot, 'run-credentials')}:${join(stateRoot, 'run-credentials')}`,
+    workerImage, '-config', '/etc/agent-workspace/local.yaml']);
 }
 
 async function start() {
   preflight();
   const state = prepareState();
   stopProcesses();
+  removeOwnedContainer(containers.worker);
   buildApplications();
+  const workerImage = prepareExecution(state);
   startInfrastructure();
   const processes = {};
   processes.minio = spawnService('minio', join(stateRoot, 'bin', 'minio'), [
@@ -366,8 +417,7 @@ async function start() {
   processes.api = spawnService('api', join(stateRoot, 'bin', 'api'), ['-config', configFile], sharedEnvironment);
   saveJSON(processFile, processes);
   await ready(`http://127.0.0.1:${ports.api}/readyz`, 60000);
-  processes.worker = spawnService('worker', join(stateRoot, 'bin', 'worker'), ['-config', configFile], sharedEnvironment);
-  saveJSON(processFile, processes);
+  startWorker(workerImage);
   await ready(`http://127.0.0.1:${ports.worker}/readyz`, 60000);
   processes.web = spawnService('web', 'pnpm', ['--dir', 'frontend', 'exec', 'vite', '--host', '127.0.0.1', '--port', String(ports.web), '--strictPort'], {
     VITE_OIDC_AUTHORITY: `${identityOrigin}/realms/${realmName}`,
@@ -380,10 +430,15 @@ async function start() {
   await ready(webOrigin, 60000);
   console.log(`Agent Workspace is running at ${webOrigin}`);
   console.log(`Run "make local-credentials" to show the local login. State: ${stateRoot}`);
-  console.log('Runtime Engines remain unavailable because this Docker daemon has no runsc runtime.');
+  console.log('Local Runtime Engines use the explicit runc development profile; production remains runsc-only.');
 }
 
 function stop() {
+  if (inspectContainer(containers.worker, '{{.State.Running}}') === 'true') {
+    run('docker', ['stop', '--time', '15', containers.worker]);
+  }
+  const active = run('docker', ['ps', '--filter', `network=${runtimeNetwork}`, '--filter', 'label=agent-platform.managed=true', '--format', '{{.ID}}']);
+  if (active) run('docker', ['stop', '--time', '0', ...active.split('\n')]);
   stopProcesses();
   for (const name of Object.values(containers)) {
     if (inspectContainer(name, '{{.Name}}')) run('docker', ['stop', name]);
@@ -393,7 +448,7 @@ function stop() {
 
 function status() {
   const processState = existsSync(processFile) ? readJSON(processFile) : {};
-  for (const name of ['minio', 'api', 'worker', 'web']) {
+  for (const name of ['minio', 'api', 'web']) {
     const pid = processState[name];
     console.log(`${name}: ${live(pid) && ownedProcess(name, pid) ? `running (pid ${pid})` : 'stopped'}`);
   }

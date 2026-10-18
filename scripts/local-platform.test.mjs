@@ -30,7 +30,7 @@ test('local realm uses loopback redirects and materialized credentials', () => {
   assert.equal(realm.users[1].serviceAccountClientId, 'agent-workspace-admin');
 });
 
-test('local configuration binds to loopback and disables every Runtime Engine', () => {
+test('local configuration binds to loopback and disables engines without an image', () => {
   const config = buildConfig(state);
 
   assert.match(config, /address: 127\.0\.0\.1:19080/);
@@ -39,5 +39,14 @@ test('local configuration binds to loopback and disables every Runtime Engine', 
   assert.match(config, /root: "\/tmp\/agent workspace local test\/workspaces"/);
   assert.equal((config.match(/available: false/g) || []).length, 5);
   assert.doesNotMatch(config, /available: true/);
-  assert.match(config, /runtime: runsc/);
+  assert.match(config, /profile: local\n  runtime: runc/);
+});
+
+test('local Worker uses Docker host services and enables pinned engines only', () => {
+  const image = `sha256:${'a'.repeat(64)}`;
+  const config = buildConfig(state, { container: true, runtimeImage: image, engines: ['codex'] });
+  assert.match(config, /management_address: 0\.0\.0\.0:19082/);
+  assert.match(config, /endpoint: host\.docker\.internal:19090/);
+  assert.match(config, /codex: \{available: true, native_resume: false, image_digest: "sha256:a{64}"/);
+  assert.equal((config.match(/available: false/g) || []).length, 4);
 });

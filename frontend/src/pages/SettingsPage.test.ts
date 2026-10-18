@@ -62,6 +62,23 @@ async function openConnectionEditor(api: PlatformApi) {
 }
 
 describe("SettingsPage model provider feedback", () => {
+  it("blocks default submission when the selected Runtime is unavailable", async () => {
+    const api = apiStub();
+    api.listRuntimeEngines = vi.fn(async () => [{ name: "codex" as const, available: false, native_resume: false, cli_version: "0.147.0" }]);
+    api.getPlatformExecutionDefault = vi.fn(async () => ({ runtime_engine: "codex" as const, provider_model_id: "model", updated_by_user_id: "user-1", version: 1, updated_at: "2026-10-18T00:00:00Z" }));
+    api.setPlatformExecutionDefault = vi.fn();
+    const wrapper = mount(SettingsPage, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(true) } } });
+    await flushPromises();
+    await wrapper.findAll(".settings-nav button")[1]!.trigger("click");
+    const card = wrapper.get(".platform-default-card");
+    expect(card.get('option[value="codex"]').text()).toContain("不可用");
+    expect(card.get('button[type="submit"]').attributes("disabled")).toBeDefined();
+    expect(card.text()).toContain("无需验证 Run");
+    await card.trigger("submit");
+    expect(api.setPlatformExecutionDefault).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it.each(["verified", "unverified"] as const)("offers models from a %s provider and excludes incompatible models from the enterprise default", async (verificationStatus) => {
     const providerConnection: ModelProviderConnection = { ...connection, verification_status: verificationStatus, models: [
       { id: "model-verified", connection_id: connection.id, model_id: "verified", display_name: "Verified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },

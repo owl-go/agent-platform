@@ -72,7 +72,7 @@
 - 业务上下文按 Domain → Application 依赖；GORM Model、HTTP DTO 和 YAML Config 不能进入 Domain。聚合状态与其 Event 必须在一个 Repository 事务中提交。
 - Runtime Adapter 不直接管理 Docker；Sandbox Runner 负责容器生命周期和隔离。Production Conformance 的 `containerprocess` 只是把公共进程 seam 接入容器。
 - 外部命令以可执行文件和参数数组调用。用户输入通过受控 stdin、参数值或临时文件传递，不能拼接成 Shell 命令。
-- Sandbox 必须 fail closed：只接受 Registry RepoDigest、`runsc`、非 root、只读 Rootfs、资源限制、受控挂载和明确的 Egress 策略；发现配置漂移就拒绝启动。
+- 生产 Sandbox 必须 fail closed：只接受 Registry RepoDigest、`runsc`、非 root、只读 Rootfs、资源限制、受控挂载和明确的 Egress 策略；发现配置漂移就拒绝启动。显式本地 `runc` 模式的边界与验证要求见 `docs/adr/0046-explicit-local-runc-profile.md`，不得自动降级生产配置。
 - Secret 只属于单个 Run 的临时环境。stdout、stderr、事件、Diff、Snapshot 和最终结果在持久化前必须经过同一组精确 Secret 值脱敏。
 - `Event` 的 Run ID 必须匹配、Sequence 必须从 1 单调递增，并且恰有一个终态事件；取消或终态之后不得再发布事件。发布失败时停止执行。
 - 对象存储上层只保存逻辑 Object Key，不保存 Provider URL 或签名参数。写入前必须验证 Size 和小写 SHA-256；Bucket 保持私有。

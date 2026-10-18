@@ -3,6 +3,7 @@ package platformconfig
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/netip"
 	"net/url"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"agent-platform/backend/internal/sandbox"
 
 	"gopkg.in/yaml.v3"
 )
@@ -150,6 +153,7 @@ type ObjectStoreConfig struct {
 }
 
 type SandboxConfig struct {
+	Profile                string   `yaml:"profile"`
 	Runtime                string   `yaml:"runtime"`
 	EgressNetwork          string   `yaml:"egress_network"`
 	EgressSubnet           string   `yaml:"egress_subnet"`
@@ -260,6 +264,16 @@ func expandEnvironment(config *Config) error {
 }
 
 func (config Config) ValidateAPI() error {
+	if config.Sandbox.Profile == sandbox.LocalProfile {
+		if err := sandbox.ValidateExecutionProfile(config.Sandbox.Profile, config.Sandbox.Runtime); err != nil {
+			return err
+		}
+		host, _, err := net.SplitHostPort(config.API.Address)
+		address, parseErr := netip.ParseAddr(host)
+		if err != nil || parseErr != nil || !address.IsLoopback() {
+			return fmt.Errorf("local API must bind to a loopback address")
+		}
+	}
 	if err := config.validateShared(); err != nil {
 		return err
 	}
@@ -371,8 +385,11 @@ func (config Config) ValidateWorker() error {
 	if err := config.validateShared(); err != nil {
 		return err
 	}
-	if config.Sandbox.Runtime != "runsc" {
-		return fmt.Errorf("sandbox.runtime must be runsc")
+	if err := sandbox.ValidateExecutionProfile(config.Sandbox.Profile, config.Sandbox.Runtime); err != nil {
+		return err
+	}
+	if config.Sandbox.Profile == sandbox.LocalProfile && (config.Worker.CLIBuilder.Enabled || config.MessageChannels.Enabled) {
+		return fmt.Errorf("local sandbox does not support CLI Builder or Message Channels")
 	}
 	if config.Sandbox.EgressNetwork == "" {
 		return fmt.Errorf("sandbox.egress_network is required")
@@ -418,7 +435,7 @@ func (config Config) ValidateWorker() error {
 		if name != "claude" && name != "codex" && name != "hermes" && name != "openclaw" && name != "pi" {
 			return fmt.Errorf("worker.runtimes contains unsupported Runtime %q", name)
 		}
-		if runtime.Available && (!immutableImageDigest.MatchString(runtime.ImageDigest) || strings.TrimSpace(runtime.CLIVersion) == "") {
+		if runtime.Available && (!sandbox.ValidExecutionImage(config.Sandbox.Profile, runtime.ImageDigest) || strings.TrimSpace(runtime.CLIVersion) == "") {
 			return fmt.Errorf("available Runtime %q requires an immutable image digest and CLI version", name)
 		}
 	}

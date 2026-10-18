@@ -1,5 +1,7 @@
 # Runtime Images
 
+个人本地模式按 [ADR-0046](../adr/0046-explicit-local-runc-profile.md)使用相同固定 CLI 源码构建 Runtime，并固定本地 `sha256:<Image ID>`；生产配置继续只接受 Registry RepoDigest。版本探测通过才加载本地引擎，默认关闭 Native Resume；本地真实会话证据不晋升生产 Capability 或 CLI Connector Conformance。
+
 状态：Runtime、隔离 CLI Builder、User Run 的已校验 bundle 物化，以及公共 broker 协议与 Runtime 客户端已实现；模型 Runtime 不挂载 CLI bundle，专用短生命周期 Connector Container、只读 broker socket、Runtime/broker 绑定、窄协议宿主 Egress Controller、存活 Worker 内持久化 User Action Wait 与一次性命令绑定，以及飞书 CLI Application 设备流注册和加密绑定已实现；飞书 User 设备授权、加密 Token、断开即时阻断、能力 Scope 复验和单次 Connector Container 环境注入已实现；Token 刷新、Bot 权限恢复、Worker 重启恢复和 Linux + gVisor 端到端证据尚未完成；部署前必须重新构建并记录 RepoDigest
 
 | Runtime Engine | CLI | 固定版本 |

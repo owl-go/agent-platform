@@ -97,7 +97,8 @@ func (executor *Executor) testMCP(ctx context.Context, job application.Execution
 		limits.PIDs = int64(configuration.ResourceLimits.ChildProcesses)
 	}
 	runProcess, err := containerprocess.New(containerprocess.Config{
-		Image: runtimeConfig.ImageDigest, RuntimeCommand: command[0], DirectCommand: true,
+		Profile: executor.config.Sandbox.Profile,
+		Image:   runtimeConfig.ImageDigest, RuntimeCommand: command[0], DirectCommand: true,
 		RunID: job.ID, Runtime: executor.config.Sandbox.Runtime,
 		WorkspaceDirectory: workspace, ContainerWorkspace: "/workspace", CredentialDirectory: environment.Directory(),
 		PublicEgressNetwork: executor.config.Sandbox.EgressNetwork, ResolverConfigFile: executor.config.Sandbox.ResolverConfig,

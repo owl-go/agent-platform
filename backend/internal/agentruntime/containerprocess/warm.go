@@ -59,7 +59,7 @@ func WarmContainerName(scopeKey, runtimeCommand, image string) (string, error) {
 	if strings.TrimSpace(scopeKey) == "" || strings.ContainsRune(scopeKey, '\x00') {
 		return "", fmt.Errorf("warm Runtime scope key is invalid")
 	}
-	if strings.TrimSpace(runtimeCommand) == "" || !imageDigestPattern.MatchString(image) {
+	if strings.TrimSpace(runtimeCommand) == "" || !sandbox.ValidExecutionImage(sandbox.LocalProfile, image) {
 		return "", fmt.Errorf("warm Runtime identity is invalid")
 	}
 	digest := sha256.Sum256([]byte(scopeKey + "\x00" + runtimeCommand + "\x00" + image))
@@ -232,7 +232,7 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 		arguments = append(arguments, "--mount", "type=bind,src="+brokerDirectory+",dst="+brokerDirectory+",readonly=true")
 		arguments = append(arguments, "--mount", "type=bind,src="+brokerDirectory+",dst="+filepath.Dir(RuntimeCLIBrokerSocket())+",readonly=true")
 	}
-	if config.Egress == sandbox.EgressPublic {
+	if config.Egress == sandbox.EgressPublic && config.Profile != sandbox.LocalProfile {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
 	arguments = append(arguments,
@@ -250,6 +250,9 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 }
 
 func warmFingerprint(name string, config Config) string {
+	if config.Profile == sandbox.LocalProfile {
+		name += "\x00" + sandbox.LocalProfile
+	}
 	value := strings.Join([]string{
 		name, config.Image, config.RuntimeCommand, config.Runtime,
 		config.WorkspaceDirectory, config.ContainerWorkspace, config.CredentialDirectory,
