@@ -33,11 +33,12 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=replace-with-a-strong-password
 IMAGE_TAG=latest
 RUNTIME_IMAGE=haozhi152/agent-platform-runtime:latest
+DATA_VOLUME=agent-platform-data
 ```
 
 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 只在空数据卷首次初始化时生效。已有数据不能通过环境变量改名或重置密码。公开部署必须使用精确 HTTPS Origin、强管理员密码和生产 Sandbox 配置；非环回 HTTP 或公开环境的默认弱密码会拒绝启动。
 
-Compose 使用 `agent-platform_data` 卷保存 PostgreSQL、私有对象、Workspace、状态密钥和配置。不要运行 `docker compose down -v`，也不要只备份数据库而遗漏对象和 `state.json`。
+Compose 默认使用 `agent-platform-data` 卷保存 PostgreSQL、私有对象、Workspace、状态密钥和配置，与旧版单容器部署保持兼容；需要隔离多套安装时可用 `DATA_VOLUME` 指定其他卷名。不要运行 `docker compose down -v`，也不要只备份数据库而遗漏对象和 `state.json`。
 
 Docker Socket 只挂载给受信任的控制服务，用于创建受限 Runtime 容器，权限等同于控制 Docker 主机。不要把 Socket 继续挂入 Runtime，不要改成 `--privileged`。
 

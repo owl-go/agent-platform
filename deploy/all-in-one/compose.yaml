@@ -39,3 +39,4 @@ services:
     cpus: 4
 volumes:
   data:
+    name: ${DATA_VOLUME:-agent-platform-data}

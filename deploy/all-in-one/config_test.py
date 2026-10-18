@@ -21,6 +21,7 @@ class ConfigurationTests(unittest.TestCase):
         dockerfile = (ROOT / 'deploy/all-in-one/Dockerfile').read_text()
         self.assertIn('haozhi152/agent-platform-runtime:latest', compose)
         self.assertIn('condition: service_completed_successfully', compose)
+        self.assertIn('name: ${DATA_VOLUME:-agent-platform-data}', compose)
         self.assertNotIn('FROM runtime', dockerfile)
 
     def test_local_control_uses_the_separate_runtime_image_id(self):
