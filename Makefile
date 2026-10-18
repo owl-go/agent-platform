@@ -1,4 +1,4 @@
-.PHONY: build test deploy web-build web-typecheck web-deploy oidc-browser-acceptance runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance
+.PHONY: build test deploy web-build web-typecheck web-deploy oidc-browser-acceptance runtime-images runtime-image-smoke sandbox-conformance minio-conformance production-conformance-preflight production-conformance local-up local-down local-status local-credentials local-test
 
 build: resources-check
 	cd backend && go build ./...
@@ -21,6 +21,7 @@ deploy-check:
 deploy-test:
 	python3 -m unittest discover -s scripts -p 'deployment_test.py'
 	python3 -m unittest discover -s scripts -p 'installation_test.py'
+	node --test scripts/local-platform.test.mjs
 	bash -n scripts/deploy-platform.sh scripts/deploy-platform-infrastructure.sh scripts/install-platform.sh
 
 resources-check:
@@ -68,3 +69,18 @@ production-conformance-preflight:
 
 production-conformance:
 	scripts/conformance/production.sh
+
+local-up:
+	node scripts/local-platform.mjs start
+
+local-down:
+	node scripts/local-platform.mjs stop
+
+local-status:
+	node scripts/local-platform.mjs status
+
+local-credentials:
+	node scripts/local-platform.mjs credentials
+
+local-test:
+	node --test scripts/local-platform.test.mjs

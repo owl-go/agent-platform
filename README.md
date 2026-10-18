@@ -2,7 +2,25 @@
 
 个人 AI 工作台：在私有对话中提问，把重复任务保存为工作流，复用 Expert、Skill 和 Connector。管理员集中配置账号、模型与 Credits。
 
-## 部署
+## 本地运行
+
+本地开发实例需要 Docker Desktop、Node.js 24+、pnpm 11、Go 1.25+（较旧 Go 可通过 `GOTOOLCHAIN=auto` 自动取得项目工具链）、Python 3.9+ 和 Make。启动 Docker Desktop 后运行：
+
+```bash
+make local-up
+make local-credentials
+```
+
+浏览器打开 `http://127.0.0.1:14173`，使用第二条命令显示的本地管理员账号登录。PostgreSQL 和 Keycloak 数据会保留在本机 Docker volumes 中；固定版本构建的开源 MinIO、随机凭证、配置、日志、对象数据和 Workspace 保存在 `~/.local/share/agent-workspace`，不会写入仓库。常用管理命令：
+
+```bash
+make local-status
+make local-down
+```
+
+`local-down` 只停止服务，保留本地数据。macOS Docker Desktop 默认没有生产要求的 `runsc` Runtime，因此本地入口会关闭全部 Runtime Engine：账号、资源和管理界面可在本地使用，但 Session / Workflow 的模型执行不可用。不要把这套本地开发实例当成 Production Conformance 或线上部署证据。
+
+## 服务器部署
 
 首次安装，在项目目录运行：
 
