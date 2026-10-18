@@ -1,12 +1,14 @@
 package workspace
 
 import (
+	"agent-platform/backend/internal/strictjson"
 	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,6 +36,35 @@ func (service *Service) resourceCreationActions() (resourceCreationActionReposit
 
 func (service *Service) decideResourceCreationAction(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(strings.Trim(request.URL.Path, "/"), "/")
+	if request.Method == http.MethodGet && len(parts) == 4 && parts[2] == "resource-creation-actions" {
+		owner, err := service.owner(request.Context())
+		if err != nil {
+			writeAuthError(writer, http.StatusUnauthorized, "authentication_required")
+			return
+		}
+		repository, err := service.resourceCreationActions()
+		if err != nil {
+			writeResourceActionError(writer, err)
+			return
+		}
+		action, proposal, err := repository.GetResourceCreationAction(request.Context(), owner, parts[3])
+		if err != nil {
+			writeResourceActionError(writer, err)
+			return
+		}
+		if proposal.Kind == resourceaction.TeamKind {
+			if _, err := service.administrator(request.Context()); err != nil {
+				writeAuthError(writer, http.StatusForbidden, "administrator_required")
+				return
+			}
+		}
+		result := resourceCreationActionJSON(action)
+		result["proposal"] = proposal
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(writer).Encode(result)
+		return
+	}
 	if len(parts) != 5 || parts[2] != "resource-creation-actions" || parts[4] != "decision" {
 		http.NotFound(writer, request)
 		return
@@ -49,9 +80,12 @@ func (service *Service) decideResourceCreationAction(writer http.ResponseWriter,
 		return
 	}
 	var input struct {
-		Decision string `json:"decision"`
+		Decision        string                   `json:"decision"`
+		Proposal        *resourceaction.Proposal `json:"proposal,omitempty"`
+		ExpectedVersion int64                    `json:"expected_version,omitempty"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 4096)).Decode(&input); err != nil {
+	body, readErr := io.ReadAll(http.MaxBytesReader(writer, request.Body, 4*1024*1024))
+	if readErr != nil || strictjson.Decode(body, &input) != nil {
 		writeAuthError(writer, http.StatusBadRequest, "invalid_request_body")
 		return
 	}
@@ -61,6 +95,58 @@ func (service *Service) decideResourceCreationAction(writer http.ResponseWriter,
 		return
 	}
 	actionID := parts[3]
+	current, preview, err := repository.GetResourceCreationAction(request.Context(), owner, actionID)
+	if err != nil {
+		writeResourceActionError(writer, err)
+		return
+	}
+	if preview.Kind == resourceaction.TeamKind {
+		if _, err := service.administrator(request.Context()); err != nil {
+			writeAuthError(writer, http.StatusForbidden, "administrator_required")
+			return
+		}
+	}
+	if input.Decision == "revise" {
+		revisionRepo, ok := service.workspace.Repository().(interface {
+			ReviseExpertCreationAction(context.Context, string, string, resourceaction.Proposal, int64) (workspacedomain.ResourceCreationAction, error)
+		})
+		if !ok || input.Proposal == nil {
+			writeAuthError(writer, http.StatusUnprocessableEntity, "invalid_resource_preview")
+			return
+		}
+		action, err := revisionRepo.ReviseExpertCreationAction(request.Context(), owner, actionID, *input.Proposal, input.ExpectedVersion)
+		if err != nil {
+			writeResourceActionError(writer, err)
+			return
+		}
+		writeResourceAction(writer, action)
+		return
+	}
+	if input.Decision == "confirm" && (preview.Kind == resourceaction.ExpertKind || preview.Kind == resourceaction.TeamKind) {
+		if current.State != "confirmed" {
+			if preview.Expert != nil {
+				if err := service.validateExpertInputAvailability(request.Context(), preview.Expert.Input()); err != nil {
+					writeResourceActionError(writer, err)
+					return
+				}
+			}
+		}
+		atomicRepo, ok := service.workspace.Repository().(interface {
+			ConfirmExpertCreationAction(context.Context, string, string) (workspacedomain.ResourceCreationAction, error)
+		})
+		if !ok {
+			writeAuthError(writer, http.StatusServiceUnavailable, "resource_action_unavailable")
+			return
+		}
+		action, err := atomicRepo.ConfirmExpertCreationAction(request.Context(), owner, actionID)
+		if err != nil {
+			writeResourceActionError(writer, err)
+			return
+		}
+		writeResourceAction(writer, action)
+		return
+	}
+
 	if input.Decision == "cancel" {
 		action, cancelErr := repository.CancelResourceCreationAction(request.Context(), owner, actionID)
 		if cancelErr != nil {
@@ -113,12 +199,17 @@ func (service *Service) executeResourceCreationAction(ctx context.Context, owner
 	case resourceaction.SkillKind:
 		return service.executeSkillCreationAction(ctx, owner, *proposal.Skill)
 	case resourceaction.ExpertKind:
-		input := proposal.Expert
-		expertInput := workspacedomain.ExpertInput{Name: input.Name, Icon: input.Icon, IconBackground: input.IconBackground, Introduction: input.Introduction, CoreCapability: input.CoreCapability, OperatingProcedure: input.OperatingProcedure, OutputStandard: input.OutputStandard, Cautions: input.Cautions, SkillIDs: append([]string(nil), input.SkillIDs...), MCPServerIDs: append([]string(nil), input.MCPServerIDs...), CLIConnectorDefinitionIDs: append([]string(nil), input.CLIConnectorDefinitionIDs...)}
+		expertInput := proposal.Expert.Input()
 		if err := service.validateExpertInputAvailability(ctx, expertInput); err != nil {
 			return "", err
 		}
 		item, err := service.workspace.Repository().CreateExpert(ctx, owner, expertInput)
+		return item.ID, err
+	case resourceaction.TeamKind:
+		if _, err := service.administrator(ctx); err != nil {
+			return "", err
+		}
+		item, err := service.workspace.Repository().CreateExpertTeam(ctx, owner, proposal.Team.Input())
 		return item.ID, err
 	case resourceaction.ConnectorKind:
 		input := proposal.Connector
@@ -215,6 +306,8 @@ func writeResourceActionError(writer http.ResponseWriter, err error) {
 	status, code := http.StatusInternalServerError, "resource_action_failed"
 	if errors.Is(err, workspacedomain.ErrNotFound) {
 		status, code = http.StatusNotFound, "resource_action_not_found"
+	} else if errors.Is(err, workspacedomain.ErrInvalid) {
+		status, code = http.StatusUnprocessableEntity, "invalid_resource_preview"
 	} else if errors.Is(err, workspacedomain.ErrConflict) {
 		status, code = http.StatusConflict, "resource_action_conflict"
 	}

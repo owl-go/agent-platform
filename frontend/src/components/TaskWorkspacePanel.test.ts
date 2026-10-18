@@ -23,6 +23,25 @@ const taskMessage: ConversationMessage = {
 };
 
 describe("TaskWorkspacePanel", () => {
+  it("shows actual lead and repeated member calls, queued tasks, repairs and resolved conflicts", () => {
+    const wrapper = mount(TaskWorkspacePanel, {
+      props: { message: { ...taskMessage, stages: [
+        { invocation_id: "lead-1", expert_id: "lead", expert_name: "Lead", team_member_name: "Coordinator", role: "lead", model_invoked: true, position: 1, total: 20, state: "succeeded", elapsed_ms: 20 },
+        { invocation_id: "review-1", expert_id: "reviewer", expert_name: "Reviewer", team_member_name: "Reviewer", role: "member", task_id: "check", model_invoked: true, position: 2, total: 20, state: "failed", elapsed_ms: 40 },
+        { invocation_id: "review-2", expert_id: "reviewer", expert_name: "Reviewer", team_member_name: "Reviewer", role: "member", task_id: "repair-check", repair_of: "check", model_invoked: true, position: 3, total: 20, state: "succeeded", elapsed_ms: 50, final_text: "Reviewed evidence", workspace_conflicts: [{ path: "report.md", task_ids: ["check","repair-check"], state: "resolved", resolution_source_task_id: "repair-check" }] },
+        { invocation_id: "queued-1", expert_id: "reviewer", expert_name: "Reviewer", team_member_name: "Reviewer", role: "member", task_id: "later", model_invoked: false, position: 4, total: 20, state: "queued", elapsed_ms: 0 },
+      ] }, loadAttachment: vi.fn(async () => new Blob()) },
+      global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")] },
+    });
+    expect(wrapper.get(".task-workspace-invocations").text()).toContain("领队");
+    expect(wrapper.get(".task-workspace-invocations").text()).toContain("修复 check");
+    expect(wrapper.get(".task-workspace-invocations").text()).toContain("成员结果");
+    expect(wrapper.get(".task-workspace-invocations").text()).toContain("排队中");
+    expect(wrapper.get(".task-workspace-conflicts").text()).toContain("report.md");
+    expect(wrapper.get(".task-workspace-conflicts").text()).toContain("已解决");
+    expect(wrapper.get(".task-workspace-model-calls dd").text()).toBe("3");
+    wrapper.unmount();
+  });
   it("shows failed Connector calls even when the response completed", () => {
     const wrapper = mount(TaskWorkspacePanel, {
       props: { message: { ...taskMessage, state: "completed", evidence: [{ id: "notion-call", kind: "connector", source_id: "notion", source_name: "Notion", state: "failed", action: "identity", stage_position: 1 }] }, loadAttachment: vi.fn(async () => new Blob()) },

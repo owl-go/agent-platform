@@ -79,6 +79,18 @@ describe("SettingsPage model provider feedback", () => {
     wrapper.unmount();
   });
 
+  it("saves the optional team admission budget in Credits and explains the final charge", async () => {
+    const api = apiStub();
+    api.updateSettings = vi.fn(async (settings) => ({ ...settings, version: 2 }));
+    const wrapper = mount(SettingsPage, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: api, [authContextKey as symbol]: authContext(false) } } });
+    await flushPromises();
+    await wrapper.get('input[aria-label="专家团响应准入预算（Credits）"]').setValue("1.50");
+    expect(wrapper.text()).toContain("最后一次调用的实际费用可能超出剩余预算");
+    await wrapper.get("form").trigger("submit");
+    await flushPromises();
+    expect(api.updateSettings).toHaveBeenCalledWith(expect.objectContaining({ team_credit_budget_hundredths: 150 }));
+    wrapper.unmount();
+  });
   it.each(["verified", "unverified"] as const)("offers models from a %s provider and excludes incompatible models from the enterprise default", async (verificationStatus) => {
     const providerConnection: ModelProviderConnection = { ...connection, verification_status: verificationStatus, models: [
       { id: "model-verified", connection_id: connection.id, model_id: "verified", display_name: "Verified", available: true, manually_added: false, compatibility: [{ runtime_engine: "codex", status: "verified" }] },
@@ -193,6 +205,17 @@ describe("SettingsPage model provider feedback", () => {
 
     expect(wrapper.get('.app-toast.error[role="alert"]').text()).toContain("请求参数无效");
     expect(wrapper.get('.app-toast.error[role="alert"]').text()).not.toContain("API Key");
+    wrapper.unmount();
+  });
+
+  it("shows the specific duplicate name error and keeps the form open", async () => {
+    const api = apiStub();
+    api.updateModelProviderConnection = vi.fn(async () => { throw new ApiError("conflict", 409, "model_provider_name_conflict"); });
+    const wrapper = await openConnectionEditor(api);
+    await wrapper.get(".modal-card").trigger("submit");
+    await flushPromises();
+    expect(wrapper.get('.app-toast.error[role="alert"]').text()).toContain("供应商名称已存在");
+    expect(wrapper.find(".modal-layer").exists()).toBe(true);
     wrapper.unmount();
   });
 

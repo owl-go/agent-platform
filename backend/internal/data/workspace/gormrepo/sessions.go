@@ -40,22 +40,13 @@ func (repository *Repository) CreateSession(ctx context.Context, ownerID string,
 	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if expertID != nil {
 			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, *expertID).Count(&count).Error; err != nil || count != 1 {
+			if err := tx.Model(&expertRecord{}).Where("owner_user_id IN (?) AND id = ? AND (guidance <> '' OR (introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''))", accessibleResourceOwnerIDs(tx, ownerID), *expertID).Count(&count).Error; err != nil || count != 1 {
 				return domain.ErrInvalid
 			}
 		}
 		if expertTeamID != nil {
-			var team expertTeamRecord
-			if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, *expertTeamID).Take(&team).Error; err != nil {
-				return domain.ErrInvalid
-			}
-			var ids []string
-			if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil || len(ids) < 2 {
-				return domain.ErrInvalid
-			}
-			var count int64
-			if err := tx.Model(&expertRecord{}).Where("owner_user_id = ? AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", ownerID, ids).Count(&count).Error; err != nil || count != int64(len(uniqueStrings(ids))) {
-				return domain.ErrInvalid
+			if _, _, err := loadTeamSelection(tx, ownerID, *expertTeamID); err != nil {
+				return err
 			}
 		}
 		return tx.Create(&row).Error
@@ -367,8 +358,23 @@ func (repository *Repository) createMessagePair(ctx context.Context, ownerID, se
 				if len(snapshot.Stages) == 0 {
 					return fmt.Errorf("%w: missing frozen execution configuration", domain.ErrInvalid)
 				}
+				if retired, err := retiredPrivateTeam(tx, ownerID, resolved.ExpertTeamID); err != nil {
+					return err
+				} else if retired {
+					return domain.ErrConflict
+				}
 				snapshot.Stages = resolved.Apply(snapshot.Stages[0])
+				snapshot.Coordination = nil
+				snapshot.TeamProfile = resolved.TeamProfile
+				snapshot.SchemaVersion = 2
+				if resolved.TeamProfile != nil && resolved.TeamProfile.LeadMemberID != "" {
+					snapshot.SchemaVersion = 3
+					snapshot.Coordination = &domain.TeamCoordinationSnapshot{LeadMemberID: resolved.TeamProfile.LeadMemberID}
+				}
 				selection = &resolved
+			}
+			if err := freezeTeamCreditBudget(tx, ownerID, &snapshot.Coordination); err != nil {
+				return err
 			}
 		}
 		if len(session.ExpertSnapshot) == 0 {
@@ -605,7 +611,7 @@ func responseSnapshotOnTx(tx *gorm.DB, session sessionRecord) (domain.ResponseSn
 		if err != nil {
 			return domain.ResponseSnapshot{}, err
 		}
-		return domain.ResponseSnapshot{SchemaVersion: 2, Stages: withCurrentExecutionConfiguration(stages, configuration)}, nil
+		return domain.ResponseSnapshot{SchemaVersion: frozen.SchemaVersion, Stages: withCurrentExecutionConfiguration(stages, configuration), Coordination: frozen.Coordination, TeamProfile: frozen.TeamProfile}, nil
 	}
 	fake := workflowRecord{OwnerID: session.OwnerID, Name: session.Title, ExpertID: session.ExpertID, ExpertTeamID: session.ExpertTeamID, WorkspacePath: "sessions/" + session.OwnerID + "/" + session.ID}
 	plan, err := loadExecutionSnapshot(tx, fake)
@@ -620,7 +626,7 @@ func responseSnapshotFromExecution(plan domain.ExecutionSnapshot) (domain.Respon
 	if err != nil {
 		return domain.ResponseSnapshot{}, err
 	}
-	return domain.ResponseSnapshot{SchemaVersion: 2, Stages: stages}, nil
+	return domain.ResponseSnapshot{SchemaVersion: plan.SchemaVersion, Stages: stages, Coordination: plan.Coordination, TeamProfile: plan.TeamProfile}, nil
 }
 
 var _ = time.Second

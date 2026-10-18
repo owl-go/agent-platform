@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"regexp"
 	"testing"
 
 	"agent-platform/backend/internal/resourceaction"
@@ -52,5 +53,25 @@ func TestCreateConnectorExampleIsAValidAction(t *testing.T) {
 	proposal, _, marked, err := resourceaction.Parse(definition.Document)
 	if err != nil || !marked || proposal.Kind != resourceaction.ConnectorKind {
 		t.Fatalf("example proposal is invalid: marked=%v proposal=%+v err=%v", marked, proposal, err)
+	}
+}
+
+func TestCreateExpertExamplesUseCurrentProfileContract(t *testing.T) {
+	definition, ok := DefinitionByKey(CreateExpertKey)
+	if !ok {
+		t.Fatal("Create Expert Skill is missing")
+	}
+	markers := regexp.MustCompile(`(?s)<platform-action>(\{.*?\})</platform-action>`).FindAllString(definition.Document, -1)
+	if len(markers) != 2 {
+		t.Fatalf("want Expert and Team examples, got %d", len(markers))
+	}
+	for index, marker := range markers {
+		proposal, _, marked, err := resourceaction.Parse(marker)
+		if err != nil || !marked {
+			t.Fatalf("example %d invalid: %v", index, err)
+		}
+		if index == 0 && proposal.Kind != resourceaction.ExpertKind || index == 1 && proposal.Kind != resourceaction.TeamKind {
+			t.Fatalf("unexpected kind %q", proposal.Kind)
+		}
 	}
 }

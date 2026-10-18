@@ -232,8 +232,12 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	if item.ResponseSnapshot != nil {
 		snapshot := item.ResponseSnapshot
 		response.ResponseSnapshot = &workspacev1.ResponseSnapshot{ProviderModelId: snapshot.ProviderModelID, ConnectionId: snapshot.ConnectionID, ConnectionName: snapshot.ConnectionName, ProviderType: snapshot.ProviderType, ModelId: snapshot.ModelID, ModelName: snapshot.ModelName, Endpoint: snapshot.Endpoint, Protocols: snapshot.Protocols, RuntimeEngine: string(snapshot.RuntimeEngine), Compatibility: snapshot.Compatibility, ConnectionVersion: snapshot.ConnectionVersion, SchemaVersion: int32(snapshot.SchemaVersion)}
-		for _, stage := range snapshot.Stages {
-			response.ResponseSnapshot.Stages = append(response.ResponseSnapshot.Stages, executionStageSnapshotResponse(stage))
+		if snapshot.SchemaVersion == 3 && snapshot.Coordination != nil {
+			response.ResponseSnapshot = &workspacev1.ResponseSnapshot{SchemaVersion: 3, Team: teamContextResponse(workspacedomain.PublicTeamContext(snapshot.Coordination, snapshot.TeamProfile, snapshot.Stages))}
+		} else {
+			for _, stage := range snapshot.Stages {
+				response.ResponseSnapshot.Stages = append(response.ResponseSnapshot.Stages, executionStageSnapshotResponse(stage))
+			}
 		}
 	}
 	for _, attachment := range item.Attachments {
@@ -242,7 +246,7 @@ func messageResponse(item workspacedomain.Message) *workspacev1.SessionMessage {
 	for _, stage := range item.ExpertStages {
 		response.ExpertStages = append(response.ExpertStages, expertStageResponse(stage))
 	}
-	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption)
+	response.CreditConsumption = creditConsumptionResponse(item.CreditConsumption, coordinatedStages(item.ExpertStages))
 	for _, activity := range item.Activities {
 		response.Activities = append(response.Activities, &workspacev1.ExecutionActivity{Type: activity.Type, Detail: activity.Detail})
 	}
@@ -296,7 +300,7 @@ func executionStageSnapshotResponse(item workspacedomain.ExecutionStageSnapshot)
 		response.TeamMemberName = &item.TeamMemberName
 	}
 	if item.Expert != nil {
-		response.Expert = &workspacev1.ExpertSnapshot{Id: item.Expert.ID, Name: item.Expert.Name, ExecutionInstruction: item.Expert.ExecutionInstruction, Version: item.Expert.Version}
+		response.Expert = &workspacev1.ExpertSnapshot{Id: item.Expert.ID, Name: item.Expert.Name, ExecutionInstruction: item.Expert.ExecutionInstruction, Guidance: item.Expert.Guidance, Version: item.Expert.Version}
 	}
 	for _, server := range item.MCPServers {
 		response.McpServers = append(response.McpServers, &workspacev1.MCPServerSnapshot{Id: server.ID, Name: server.Name, Icon: server.Icon, Transport: server.Transport})
@@ -311,7 +315,17 @@ func executionStageSnapshotResponse(item workspacedomain.ExecutionStageSnapshot)
 }
 
 func expertStageResponse(item workspacedomain.ExpertStage) *workspacev1.ExpertStage {
-	response := &workspacev1.ExpertStage{ExpertId: item.ExpertID, ExpertName: item.ExpertName, ProviderModelId: item.ProviderModelID, ProviderModelName: item.ProviderModelName, RuntimeEngine: string(item.RuntimeEngine), Position: int32(item.Position), Total: int32(item.Total), State: item.State, ElapsedMs: item.ElapsedMS}
+	item = item.TaskPanelView()
+	response := &workspacev1.ExpertStage{InvocationId: item.InvocationID, TaskId: item.TaskID, TeamMemberId: item.TeamMemberID, TeamMemberName: item.TeamMemberName, Role: item.Role, Required: item.Required, RepairOf: item.RepairOf, ModelInvoked: item.ModelInvoked, ExpertId: item.ExpertID, ExpertName: item.ExpertName, ProviderModelId: item.ProviderModelID, ProviderModelName: item.ProviderModelName, RuntimeEngine: string(item.RuntimeEngine), Position: int32(item.Position), Total: int32(item.Total), State: item.State, ElapsedMs: item.ElapsedMS}
+	if !item.StartedAt.IsZero() {
+		response.StartedAt = timestamppb.New(item.StartedAt)
+	}
+	if !item.EndedAt.IsZero() {
+		response.EndedAt = timestamppb.New(item.EndedAt)
+	}
+	for _, conflict := range item.WorkspaceConflicts {
+		response.WorkspaceConflicts = append(response.WorkspaceConflicts, &workspacev1.TeamWorkspaceConflict{Path: conflict.Path, TaskIds: conflict.TaskIDs, State: conflict.State, ResolutionSourceTaskId: conflict.ResolutionSourceTaskID})
+	}
 	if item.FinalText != "" {
 		response.FinalText = &item.FinalText
 	}
@@ -324,15 +338,27 @@ func expertStageResponse(item workspacedomain.ExpertStage) *workspacev1.ExpertSt
 	return response
 }
 
-func creditConsumptionResponse(item *workspacedomain.CreditConsumption) *workspacev1.CreditConsumption {
+func creditConsumptionResponse(item *workspacedomain.CreditConsumption, coordinated ...bool) *workspacev1.CreditConsumption {
 	if item == nil {
 		return nil
 	}
 	response := &workspacev1.CreditConsumption{TotalHundredths: item.TotalHundredths}
 	for _, stage := range item.Stages {
+		if len(coordinated) > 0 && coordinated[0] {
+			stage = stage.TaskPanelView()
+		}
 		response.Stages = append(response.Stages, creditStageConsumptionResponse(stage))
 	}
 	return response
+}
+
+func coordinatedStages(stages []workspacedomain.ExpertStage) bool {
+	for _, stage := range stages {
+		if stage.InvocationID != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func creditStageConsumptionResponse(item workspacedomain.CreditStageConsumption) *workspacev1.CreditStageConsumption {
@@ -341,4 +367,15 @@ func creditStageConsumptionResponse(item workspacedomain.CreditStageConsumption)
 
 func attachmentResponse(item workspacedomain.Attachment) *workspacev1.Attachment {
 	return &workspacev1.Attachment{Id: item.ID, Name: item.Name, ContentType: item.ContentType, Size: item.Size, Sha256: item.SHA256, Image: item.Image}
+}
+
+func teamContextResponse(item *workspacedomain.TeamExecutionContext) *workspacev1.TeamExecutionContext {
+	if item == nil {
+		return nil
+	}
+	result := &workspacev1.TeamExecutionContext{Id: item.ID, Name: item.Name, LeadMemberId: item.LeadMemberID, MaxModelCalls: int32(item.MaxModelCalls), MaxParallel: int32(item.MaxParallel), ActiveTimeoutSeconds: int64(item.ActiveTimeoutSeconds), CreditBudgetHundredths: item.CreditBudgetHundredths}
+	for _, member := range item.Members {
+		result.Members = append(result.Members, &workspacev1.TeamRosterMember{Id: member.ID, Name: member.Name})
+	}
+	return result
 }

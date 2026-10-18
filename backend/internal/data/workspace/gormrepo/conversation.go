@@ -73,6 +73,18 @@ func currentConversationSelection(tx *gorm.DB, owner string, scope domain.Conver
 		if err := json.Unmarshal(encoded, &plan); err != nil {
 			return selection, err
 		}
+		if retired, err := retiredSnapshotTeam(tx, owner, plan); err != nil {
+			return selection, err
+		} else if retired {
+			selection = domain.ConversationSelection{}
+			if err := loadConversationSpecialist(tx, owner, &selection); err != nil {
+				return selection, err
+			}
+			if err := saveConversationSelection(tx, owner, scope, &selection, true); err != nil {
+				return selection, err
+			}
+			return selection, nil
+		}
 		stages, err := plan.OrderedStages()
 		if err != nil {
 			return selection, err
@@ -90,11 +102,21 @@ func currentConversationSelection(tx *gorm.DB, owner string, scope domain.Conver
 			if plan.TeamProfile != nil {
 				selection.ExpertTeamID = plan.TeamProfile.ID
 				selection.Name, selection.Icon, selection.IconBackground = plan.TeamProfile.Name, plan.TeamProfile.Icon, plan.TeamProfile.IconBackground
+				selection.TeamProfile = plan.TeamProfile
 			}
 		}
 	} else if err := loadConversationSpecialist(tx, owner, &selection); err != nil {
 		return selection, err
 	}
+	if retired, err := retiredPrivateTeam(tx, owner, selection.ExpertTeamID); err != nil {
+		return selection, err
+	} else if retired {
+		selection = domain.ConversationSelection{}
+		if err := loadConversationSpecialist(tx, owner, &selection); err != nil {
+			return selection, err
+		}
+	}
+
 	if err := saveConversationSelection(tx, owner, scope, &selection, true); err != nil {
 		return selection, err
 	}
@@ -170,6 +192,11 @@ func (repository *Repository) ResolveConversationSelection(ctx context.Context, 
 			if err := loadConversationSpecialist(tx, owner, &selected); err != nil {
 				return err
 			}
+		}
+		if retired, err := retiredPrivateTeam(tx, owner, selected.ExpertTeamID); err != nil {
+			return err
+		} else if retired {
+			return fmt.Errorf("%w: select an available Platform Expert Team", domain.ErrConflict)
 		}
 		// Reuse frozen resources still explicitly selected; only new/reselected IDs
 		// resolve current catalog revisions.
@@ -261,6 +288,7 @@ func loadConversationResources(tx *gorm.DB, owner string, skills, mcp, cli []str
 
 func loadConversationSpecialist(tx *gorm.DB, owner string, selection *domain.ConversationSelection) error {
 	selection.Defaults = nil
+	selection.TeamProfile = nil
 	selection.Name = ""
 	selection.Icon = ""
 	selection.IconBackground = ""
@@ -269,23 +297,19 @@ func loadConversationSpecialist(tx *gorm.DB, owner string, selection *domain.Con
 	}
 	var members []domain.ExpertTeamMemberInput
 	if selection.ExpertTeamID != "" {
-		var team expertTeamRecord
-		if err := tx.Where("owner_user_id = ? AND id = ?", owner, selection.ExpertTeamID).Take(&team).Error; err != nil {
-			return mapNotFound(err)
-		}
-		if err := json.Unmarshal(team.Members, &members); err != nil {
+		team, defaults, err := loadTeamSelection(tx, owner, selection.ExpertTeamID)
+		if err != nil {
 			return err
 		}
-		if len(members) < 2 || len(members) > 10 {
-			return fmt.Errorf("%w: Expert Team requires 2-10 members", domain.ErrInvalid)
-		}
 		selection.Name, selection.Icon, selection.IconBackground = team.Name, team.Icon, team.IconBackground
-	} else {
-		members = []domain.ExpertTeamMemberInput{{ExpertID: selection.ExpertID}}
+		selection.Defaults = defaults
+		selection.TeamProfile = &domain.ExpertTeamProfileSnapshot{StarterPrompts: decodeStrings(team.StarterPrompts), ID: team.ID, Name: team.Name, Icon: team.Icon, IconBackground: team.IconBackground, LeadMemberID: team.LeadMemberID, Version: team.Version}
+		return nil
 	}
+	members = []domain.ExpertTeamMemberInput{{ExpertID: selection.ExpertID}}
 	for index, member := range members {
 		var expert expertRecord
-		if err := tx.Where("owner_user_id IN (?) AND id = ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", accessibleResourceOwnerIDs(tx, owner), member.ExpertID).Take(&expert).Error; err != nil {
+		if err := tx.Where("owner_user_id IN (?) AND id = ? AND (guidance <> '' OR (introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''))", accessibleResourceOwnerIDs(tx, owner), member.ExpertID).Take(&expert).Error; err != nil {
 			return fmt.Errorf("%w: Expert is incomplete or unavailable", domain.ErrInvalid)
 		}
 		resources, err := loadExpertMemberSnapshot(tx, owner, expert, index+1)

@@ -1236,6 +1236,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/expert-packages/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AgentWorkspaceService_ImportExpertPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expert-packages/{resource_kind}/{resource_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgentWorkspaceService_ExportExpertPackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/expert-teams": {
         parameters: {
             query?: never;
@@ -2532,6 +2564,11 @@ export interface components {
             sha256?: string;
             image?: boolean;
         };
+        v1BundledSkillSummary: {
+            id?: string;
+            name?: string;
+            sha256?: string;
+        };
         v1CLICapability: {
             id?: string;
             argv_prefix?: string[];
@@ -3111,6 +3148,8 @@ export interface components {
             /** Format: int64 */
             version?: number;
             expertise_tags?: string[];
+            tag_projection_status?: string;
+            tag_projection_error?: string;
             available?: boolean;
             complete?: boolean;
             availability_reason?: string;
@@ -3122,12 +3161,19 @@ export interface components {
             operating_procedure?: string;
             output_standard?: string;
             cautions?: string;
-            tag_projection_status?: string;
-            tag_projection_error?: string;
             cli_connector_definition_ids?: string[];
             platform?: boolean;
             system_key?: string;
             immutable?: boolean;
+            guidance?: string;
+            starter_prompts?: string[];
+            bundled_skills?: components["schemas"]["v1BundledSkillSummary"][];
+            connector_dependencies?: components["schemas"]["v1ExpertConnectorDependency"][];
+        };
+        v1ExpertConnectorDependency: {
+            source?: string;
+            kind?: string;
+            version?: string;
         };
         v1ExpertInput: {
             name?: string;
@@ -3141,6 +3187,16 @@ export interface components {
             output_standard?: string;
             cautions?: string;
             cli_connector_definition_ids?: string[];
+            guidance?: string;
+            starter_prompts?: string[];
+            connector_dependencies?: components["schemas"]["v1ExpertConnectorDependency"][];
+        };
+        v1ExpertPackageImport: {
+            expert?: components["schemas"]["v1Expert"];
+            expert_team?: components["schemas"]["v1ExpertTeam"];
+            package_id?: string;
+            package_version?: string;
+            replayed?: boolean;
         };
         v1ExpertSnapshot: {
             id?: string;
@@ -3155,6 +3211,7 @@ export interface components {
             operating_procedure?: string;
             output_standard?: string;
             cautions?: string;
+            guidance?: string;
         };
         v1ExpertStage: {
             expert_id?: string;
@@ -3172,12 +3229,25 @@ export interface components {
             provider_model_id?: string;
             provider_model_name?: string;
             runtime_engine?: string;
+            invocation_id?: string;
+            task_id?: string;
+            team_member_id?: string;
+            team_member_name?: string;
+            role?: string;
+            required?: boolean;
+            repair_of?: string;
+            model_invoked?: boolean;
+            workspace_conflicts?: components["schemas"]["v1TeamWorkspaceConflict"][];
+            /** Format: date-time */
+            started_at?: string;
+            /** Format: date-time */
+            ended_at?: string;
         };
         v1ExpertTeam: {
-            id?: string;
-            name?: string;
             capability_introduction?: string;
             expertise_tags?: string[];
+            id?: string;
+            name?: string;
             experts?: components["schemas"]["v1Expert"][];
             available?: boolean;
             /** Format: date-time */
@@ -3191,6 +3261,12 @@ export interface components {
             introduction?: string;
             core_capability?: string;
             members?: components["schemas"]["v1ExpertTeamMember"][];
+            platform?: boolean;
+            mutable?: boolean;
+            immutable?: boolean;
+            system_key?: string;
+            lead_member_id?: string;
+            starter_prompts?: string[];
         };
         v1ExpertTeamInput: {
             name?: string;
@@ -3199,6 +3275,8 @@ export interface components {
             introduction?: string;
             core_capability?: string;
             members?: components["schemas"]["v1ExpertTeamMemberInput"][];
+            lead_member_id?: string;
+            starter_prompts?: string[];
         };
         v1ExpertTeamMember: {
             id?: string;
@@ -3213,6 +3291,12 @@ export interface components {
             name?: string;
             expert_id?: string;
             labels?: string[];
+            definition?: components["schemas"]["v1ExpertInput"];
+        };
+        v1ExportedExpertPackage: {
+            /** Format: byte */
+            archive?: string;
+            filename?: string;
         };
         v1FileReference: {
             kind?: string;
@@ -3389,6 +3473,14 @@ export interface components {
             version?: number;
             endpoint?: string;
             api_key_configured?: boolean;
+        };
+        v1ImportExpertPackageRequest: {
+            /** Format: byte */
+            archive?: string;
+            copy_name?: string;
+            /** Format: int64 */
+            expected_version?: number;
+            target_resource_id?: string;
         };
         v1KnowledgeBase: {
             id?: string;
@@ -3731,6 +3823,8 @@ export interface components {
             version?: number;
             execution_inherited?: boolean;
             platform_execution_available?: boolean;
+            /** Format: int64 */
+            team_credit_budget_hundredths?: number;
         };
         v1PlatformExecutionDefault: {
             runtime_engine?: string;
@@ -3895,6 +3989,7 @@ export interface components {
             /** Format: int32 */
             schema_version?: number;
             stages?: components["schemas"]["v1ExecutionStageSnapshot"][];
+            team?: components["schemas"]["v1TeamExecutionContext"];
         };
         v1Run: {
             id?: string;
@@ -4092,6 +4187,30 @@ export interface components {
             original_prompt?: string;
         };
         v1SyncIdentityGroupsRequest: Record<string, never>;
+        v1TeamExecutionContext: {
+            id?: string;
+            name?: string;
+            lead_member_id?: string;
+            members?: components["schemas"]["v1TeamRosterMember"][];
+            /** Format: int32 */
+            max_model_calls?: number;
+            /** Format: int32 */
+            max_parallel?: number;
+            /** Format: int64 */
+            active_timeout_seconds?: number;
+            /** Format: int64 */
+            credit_budget_hundredths?: number;
+        };
+        v1TeamRosterMember: {
+            id?: string;
+            name?: string;
+        };
+        v1TeamWorkspaceConflict: {
+            path?: string;
+            task_ids?: string[];
+            state?: string;
+            resolution_source_task_id?: string;
+        };
         v1TransferGroupResourcesResponse: {
             /** Format: int64 */
             knowledge_base_count?: number;
@@ -4115,6 +4234,8 @@ export interface components {
             /** Format: int64 */
             expected_version?: number;
             inherit_platform_execution?: boolean;
+            /** Format: int64 */
+            team_credit_budget_hundredths?: number;
         };
         v1UploadConnectorPackageRequest: {
             /** Format: byte */
@@ -7198,6 +7319,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["v1CreditBalance"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ImportExpertPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["v1ImportExpertPackageRequest"];
+            };
+        };
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ExpertPackageImport"];
+                };
+            };
+            /** @description An unexpected error response. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["rpcStatus"];
+                };
+            };
+        };
+    };
+    AgentWorkspaceService_ExportExpertPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resource_kind: string;
+                resource_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A successful response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["v1ExportedExpertPackage"];
                 };
             };
             /** @description An unexpected error response. */

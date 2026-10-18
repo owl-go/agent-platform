@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { ElForm, ElFormItem } from "element-plus";
 import "element-plus/theme-chalk/el-form.css";
@@ -168,7 +169,7 @@ async function save() {
   const credentials = Object.fromEntries(Object.entries(form.credentials).filter(([,v]) => v.trim() !== ""));
   const input: MessageChannelInput = { channel_id: editing.value?.id, version: editing.value?.version ?? 0, provider: form.provider, name: form.name.trim(), region: form.provider === "feishu" ? form.region : "", audience: { sender_ids:ids(form.senders), group_ids:ids(form.groups), allow_direct:form.direct }, credentials, login_id: login.value?.status === "connected" ? login.value.id : undefined };
   try { await api.saveMessageChannel(props.workflowId, input, abort.signal); clearSecrets(); login.value = undefined; closeConfiguration(); await refresh(); }
-  catch { if (!disposed) error.value = t("channels.saveFailed"); }
+  catch (cause) { if (!disposed) error.value = saveErrorMessage(cause, t, "channels.saveFailed"); }
   finally { busy.value = false; }
 }
 async function control(channel: MessageChannel, action: string) {

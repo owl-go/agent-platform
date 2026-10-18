@@ -27,7 +27,8 @@ func directoryFixture(t *testing.T) string {
 	writeResourceFixture(t, root, "resources.json", `{"version":"1.0.0"}`)
 	writeResourceFixture(t, root, "skills/example/resource.json", `{"key":"local.skill.example","version":"1.0.0","icon":"sparkles"}`)
 	writeResourceFixture(t, root, "skills/example/SKILL.md", "---\nname: example\ndisplay_name: Example Skill\ndescription: Use for the example fixture.\n---\n\n# Example\n\nRead the supplied input and explain the result.\n")
-	writeResourceFixture(t, root, "experts/example/expert.json", `{"key":"local.expert.example","version":"1.0.0","name":"Example Expert","icon":"sparkles","icon_background":"sage","introduction":"Fixture","core_capability":"Fixture","operating_procedure":"Fixture","output_standard":"Fixture","skill_keys":["local.skill.example"]}`)
+	writeResourceFixture(t, root, "experts/example/.plugin/plugin.json", `{"schema_version":1,"id":"local.expert.example","version":"1.0.0","kind":"expert","expert":{"name":"Example Expert","icon":"sparkles","icon_background":"sage","introduction":"Fixture","guidance_file":"agents/expert.md","skill_keys":["local.skill.example"]}}`)
+	writeResourceFixture(t, root, "experts/example/agents/expert.md", "# Fixture\n")
 	for _, name := range []string{"connector-meta.json", "icon.svg", "mcp.json", "skills/ai-hive/SKILL.md"} {
 		data, err := os.ReadFile(filepath.Join("../../../connectors/ai-hive/package", name))
 		if err != nil {
@@ -83,18 +84,18 @@ func TestDirectoryRejectsInvalidDefinitionsBeforeInstallation(t *testing.T) {
 				writeResourceFixture(t, root, "skills/other/resource.json", string(meta))
 				writeResourceFixture(t, root, "skills/other/SKILL.md", string(body))
 			case "unknown Skill reference", "incomplete Expert", "unknown JSON field":
-				file := filepath.Join(root, "experts/example/expert.json")
+				file := filepath.Join(root, "experts/example/.plugin/plugin.json")
 				body, _ := os.ReadFile(file)
 				if problem == "unknown Skill reference" {
 					body = bytes.ReplaceAll(body, []byte("local.skill.example"), []byte("missing"))
 				}
 				if problem == "incomplete Expert" {
-					body = bytes.ReplaceAll(body, []byte(`"core_capability":"Fixture"`), []byte(`"core_capability":""`))
+					body = bytes.ReplaceAll(body, []byte(`"introduction":"Fixture"`), []byte(`"introduction":""`))
 				}
 				if problem == "unknown JSON field" {
 					body = bytes.Replace(body, []byte("{"), []byte(`{"credential":"forbidden",`), 1)
 				}
-				writeResourceFixture(t, root, "experts/example/expert.json", string(body))
+				writeResourceFixture(t, root, "experts/example/.plugin/plugin.json", string(body))
 			case "missing Skill document":
 				os.Remove(filepath.Join(root, "skills/example/SKILL.md"))
 			case "reserved Skill key":
@@ -123,7 +124,7 @@ func TestDirectoryRejectsInvalidDefinitionsBeforeInstallation(t *testing.T) {
 }
 
 func TestDirectoryRejectsSymlinksIncludingMetadataAndPackageRoots(t *testing.T) {
-	for _, name := range []string{"resources.json", "skills/example/resource.json", "experts/example/expert.json", "connectors/ai-hive/package", "connectors/ai-hive/package/mcp.json", "skills"} {
+	for _, name := range []string{"resources.json", "skills/example/resource.json", "experts/example/.plugin/plugin.json", "connectors/ai-hive/package", "connectors/ai-hive/package/mcp.json", "skills"} {
 		t.Run(name, func(t *testing.T) {
 			root := directoryFixture(t)
 			target := filepath.Join(root, filepath.FromSlash(name))
@@ -154,12 +155,12 @@ func TestExplicitDirectoryNeverFallsBackAndCancellationIsPropagated(t *testing.T
 
 func TestExpertMayReferenceBuiltInCreationSkill(t *testing.T) {
 	root := directoryFixture(t)
-	file := filepath.Join(root, "experts/example/expert.json")
+	file := filepath.Join(root, "experts/example/.plugin/plugin.json")
 	body, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeResourceFixture(t, root, "experts/example/expert.json", strings.ReplaceAll(string(body), "local.skill.example", "system.create_skill"))
+	writeResourceFixture(t, root, "experts/example/.plugin/plugin.json", strings.ReplaceAll(string(body), "local.skill.example", "system.create_skill"))
 	if _, err := LoadDirectory(context.Background(), root); err != nil {
 		t.Fatal(err)
 	}
@@ -198,5 +199,28 @@ func TestDirectoryDigestIgnoresGitArchiveWriteBitsButRetainsExecutability(t *tes
 	}
 	if nonExecutable.Skills[0].SHA256 == before.Skills[0].SHA256 {
 		t.Fatal("script executability was discarded")
+	}
+}
+
+func TestDirectoryDiscoversNeutralExpertAndTeamPackages(t *testing.T) {
+	root := directoryFixture(t)
+	writeResourceFixture(t, root, "experts/portable/.plugin/plugin.json", `{"schema_version":1,"id":"example.portable","version":"1.0.0","kind":"expert","expert":{"name":"Portable","introduction":"Review evidence","guidance_file":"agents/reviewer.md"}}`)
+	writeResourceFixture(t, root, "experts/portable/agents/reviewer.md", "# Review\n\nPreserve whitespace.\n")
+	writeResourceFixture(t, root, "experts/team/.plugin/plugin.json", `{"schema_version":1,"id":"example.team","version":"1.0.0","kind":"expert_team","team":{"name":"Portable Team","introduction":"Review evidence","core_capability":"Review and synthesize","lead_member_id":"lead","members":[{"id":"lead","name":"Lead","expert":{"name":"Lead","introduction":"Coordinate","guidance_file":"agents/lead.md"}},{"id":"reviewer","name":"Reviewer","expert":{"name":"Reviewer","introduction":"Review","guidance_file":"agents/reviewer.md"}}]}}`)
+	writeResourceFixture(t, root, "experts/team/agents/lead.md", "# Coordinate\n")
+	writeResourceFixture(t, root, "experts/team/agents/reviewer.md", "# Review\n")
+	catalog, err := LoadDirectory(context.Background(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Experts) != 2 || len(catalog.Teams) != 1 {
+		t.Fatalf("packages not discovered: Experts=%d Teams=%d", len(catalog.Experts), len(catalog.Teams))
+	}
+	writeResourceFixture(t, root, "experts/portable/agents/reviewer.md", "changed after load")
+	if catalog.Experts[1].Guidance != "# Review\n\nPreserve whitespace.\n" {
+		t.Fatal("guidance was not frozen")
+	}
+	if catalog.Teams[0].Definition.LeadMemberID != "lead" || len(catalog.Teams[0].Definition.Members) != 2 {
+		t.Fatal("team lead or owned roster lost")
 	}
 }

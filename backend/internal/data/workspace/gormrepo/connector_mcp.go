@@ -2,6 +2,7 @@ package gormrepo
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -112,6 +113,9 @@ func connectorMCPServerSnapshot(tx *gorm.DB, ownerID, installationID string) (do
 		}
 		var authorization connectorAuthorizationRecord
 		if err := tx.Where("id = ? AND installation_id = ? AND owner_user_id = ? AND state = ? AND (expires_at IS NULL OR expires_at > now())", *installation.AuthorizationID, installation.ID, ownerID, domain.ConnectorAuthorizationActive).Take(&authorization).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.MCPServerSnapshot{}, fmt.Errorf("load Connector authorization: %w", err)
+			}
 			return domain.MCPServerSnapshot{}, fmt.Errorf("%w: Connector authorization is unavailable", domain.ErrConflict)
 		}
 		ciphertext = append([]byte(nil), authorization.CredentialCiphertext...)

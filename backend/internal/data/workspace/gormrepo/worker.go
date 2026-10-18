@@ -48,14 +48,6 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 			job = claimed
 			return nil
 		}
-		claimed, err = claimExpertTagProjection(tx)
-		if err != nil {
-			return err
-		}
-		if claimed != nil {
-			job = claimed
-			return nil
-		}
 		claimed, err = claimMCPTest(tx)
 		if err != nil {
 			return err
@@ -79,7 +71,7 @@ func (repository *Repository) ClaimNext(ctx context.Context) (*application.Execu
 		job = claimed
 		return err
 	})
-	if err != nil || job == nil || job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection || job.Kind == application.JobCLIConnectorBuild {
+	if err != nil || job == nil || job.Kind == application.JobMCPTest || job.Kind == application.JobCLIConnectorBuild {
 		return job, err
 	}
 	job.Timezone = "Asia/Shanghai"
@@ -165,12 +157,13 @@ func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
 		OwnerID          string `gorm:"column:owner_user_id"`
 		State            string `gorm:"column:state"`
 		ExpertStages     []byte `gorm:"column:expert_stages"`
+		Snapshot         []byte `gorm:"column:snapshot"`
 		CancelRequested  bool   `gorm:"column:cancel_requested"`
 		Unavailable      bool   `gorm:"column:unavailable"`
 		ConsumedApproval bool   `gorm:"column:consumed_approval"`
 	}
 	if err := tx.Raw(`
-		SELECT message.id, message.session_id, session.owner_user_id, message.state, message.expert_stages,
+		SELECT message.id, message.session_id, session.owner_user_id, message.state, message.expert_stages, message.response_snapshot AS snapshot,
 		       message.cancel_requested_at IS NOT NULL AS cancel_requested,
 		       session.archived_at IS NOT NULL OR owner.disabled_at IS NOT NULL AS unavailable,
 		       EXISTS (
@@ -187,6 +180,15 @@ func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
 		return err
 	}
 	for _, message := range messages {
+		coordinated := isCoordinatedSnapshot(message.Snapshot)
+		if coordinated && message.State == "waiting_for_user" && !hasTeamInvocations(message.ExpertStages) {
+			continue // An unstarted execution-plan approval is not interrupted work.
+		}
+		if coordinated {
+			if err := deleteTeamCreditLeases(tx, message.OwnerID, message.ExpertStages); err != nil {
+				return err
+			}
+		}
 		jobID := fmt.Sprintf("session-%s-%d", message.SessionID, message.ID)
 		if message.State != "waiting_for_user" {
 			if err := deleteExecutionCreditLease(tx, message.OwnerID, jobID); err != nil {
@@ -209,8 +211,11 @@ func recoverInterruptedSessionMessages(tx *gorm.DB, now time.Time) error {
 			if err := tx.Model(&messageRecord{}).Where("id = ?", message.ID).Updates(updates).Error; err != nil {
 				return err
 			}
-		case message.ConsumedApproval:
-			const interruptedOperation = "Worker restarted after an approved Connector command; its outcome is unknown, so this response was not retried automatically"
+		case message.ConsumedApproval || coordinated:
+			interruptedOperation := "Worker restarted after an approved Connector command; its outcome is unknown, so this response was not retried automatically"
+			if coordinated {
+				interruptedOperation = "Worker interrupted this response; external operations may already have occurred. It was not retried automatically; review the recorded facts before retrying"
+			}
 			stages, err := closeRunningExpertStages(message.ExpertStages, "failed", interruptedOperation, now)
 			if err != nil {
 				return err
@@ -241,12 +246,13 @@ func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
 		OwnerID          string `gorm:"column:owner_user_id"`
 		State            string `gorm:"column:state"`
 		ExpertStages     []byte `gorm:"column:expert_stages"`
+		Snapshot         []byte `gorm:"column:snapshot"`
 		CancelRequested  bool   `gorm:"column:cancel_requested"`
 		Unavailable      bool   `gorm:"column:unavailable"`
 		ConsumedApproval bool   `gorm:"column:consumed_approval"`
 	}
 	if err := tx.Raw(`
-		SELECT run.id, run.owner_user_id, run.state, run.expert_stages,
+		SELECT run.id, run.owner_user_id, run.state, run.expert_stages, run.workflow_snapshot AS snapshot,
 		       run.cancel_requested_at IS NOT NULL AS cancel_requested,
 		       owner.disabled_at IS NOT NULL OR workflow.id IS NULL OR workflow.deleted_at IS NOT NULL AS unavailable,
 		       EXISTS (
@@ -263,6 +269,15 @@ func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
 		return err
 	}
 	for _, run := range runs {
+		coordinated := isCoordinatedSnapshot(run.Snapshot)
+		if coordinated && run.State == "waiting_for_user" && !hasTeamInvocations(run.ExpertStages) {
+			continue
+		}
+		if coordinated {
+			if err := deleteTeamCreditLeases(tx, run.OwnerID, run.ExpertStages); err != nil {
+				return err
+			}
+		}
 		if run.State != "waiting_for_user" {
 			if err := deleteExecutionCreditLease(tx, run.OwnerID, run.ID); err != nil {
 				return err
@@ -285,8 +300,11 @@ func recoverInterruptedWorkflowRuns(tx *gorm.DB, now time.Time) error {
 			if err := appendRunEvents(tx, run.ID, nil, "run.cancelled", now); err != nil {
 				return err
 			}
-		case run.ConsumedApproval:
-			const interruptedOperation = "Worker restarted after an approved Connector command; its outcome is unknown, so this Run was not retried automatically"
+		case run.ConsumedApproval || coordinated:
+			interruptedOperation := "Worker restarted after an approved Connector command; its outcome is unknown, so this Run was not retried automatically"
+			if coordinated {
+				interruptedOperation = "Worker interrupted this Run; external operations may already have occurred. It was not retried automatically; review the recorded facts before retrying"
+			}
 			stages, err := closeRunningExpertStages(run.ExpertStages, "failed", interruptedOperation, now)
 			if err != nil {
 				return err
@@ -317,6 +335,41 @@ func closeInterruptedApprovals(tx *gorm.DB, executionKind, executionID string) e
 	return tx.Table("cli_command_approvals").
 		Where("execution_kind = ? AND execution_id = ? AND state IN ?", executionKind, executionID, []string{"pending", "approved"}).
 		Updates(map[string]any{"state": "closed", "version": gorm.Expr("version + 1")}).Error
+}
+
+func isCoordinatedSnapshot(encoded []byte) bool {
+	var header struct {
+		SchemaVersion int `json:"schema_version"`
+	}
+	return json.Unmarshal(encoded, &header) == nil && header.SchemaVersion == 3
+}
+
+func hasTeamInvocations(encoded []byte) bool {
+	var stages []domain.ExpertStage
+	if json.Unmarshal(encoded, &stages) != nil {
+		return false
+	}
+	for _, stage := range stages {
+		if stage.InvocationID != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func deleteTeamCreditLeases(tx *gorm.DB, ownerID string, encoded []byte) error {
+	var stages []domain.ExpertStage
+	if err := json.Unmarshal(encoded, &stages); err != nil {
+		return err
+	}
+	for _, stage := range stages {
+		if stage.InvocationID != "" {
+			if err := deleteExecutionCreditLease(tx, ownerID, stage.InvocationID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func deleteExecutionCreditLease(tx *gorm.DB, ownerID, executionID string) error {
@@ -397,29 +450,6 @@ func (repository *Repository) FinishCLIConnectorBuild(ctx context.Context, job a
 		}
 		return nil
 	})
-}
-
-func claimExpertTagProjection(tx *gorm.DB) (*application.ExecutionJob, error) {
-	var row expertRecord
-	err := tx.Raw(`SELECT expert.* FROM experts expert JOIN users owner ON owner.id = expert.owner_user_id AND owner.disabled_at IS NULL WHERE expert.tag_projection_status = 'queued' ORDER BY expert.tag_projection_requested_at, expert.id FOR UPDATE OF expert SKIP LOCKED LIMIT 1`).Scan(&row).Error
-	if err != nil || row.ID == "" {
-		return nil, err
-	}
-	if err := tx.Model(&expertRecord{}).Where("id = ? AND tag_projection_status = 'queued'", row.ID).Updates(map[string]any{"tag_projection_status": "running", "tag_projection_error": nil}).Error; err != nil {
-		return nil, err
-	}
-	fake := workflowRecord{OwnerID: row.OwnerID, Name: "Expert tag projection", Goal: "", WorkspacePath: "tag-projections/" + row.OwnerID + "/" + row.ID}
-	snapshot, err := loadExecutionSnapshot(tx, fake)
-	if err == nil {
-		err = hydrateStageCredentials(tx, &snapshot)
-	}
-	if err != nil {
-		if updateErr := tx.Model(&expertRecord{}).Where("id = ?", row.ID).Updates(map[string]any{"tag_projection_status": "failed", "tag_projection_error": err.Error()}).Error; updateErr != nil {
-			return nil, updateErr
-		}
-		return nil, nil
-	}
-	return &application.ExecutionJob{Kind: application.JobExpertTagProjection, ID: "expert-tags-" + row.ID, OwnerID: row.OwnerID, ExpertID: row.ID, Instruction: "Generate a broad category first, followed by up to four concise discovery tags for this Expert's core capability. Return only a JSON array of strings: the first string is the category and the remaining strings are tags; each string must be at most 20 characters.\n\nCore capability:\n" + row.CoreCapability, Snapshot: snapshot}, nil
 }
 
 func claimMCPTest(tx *gorm.DB) (*application.ExecutionJob, error) {
@@ -989,7 +1019,7 @@ func validateQueuedSnapshotAvailability(tx *gorm.DB, snapshot domain.ExecutionSn
 }
 
 func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.ResponseSnapshot) (domain.ExecutionSnapshot, error) {
-	if response.SchemaVersion == 2 && len(response.Stages) > 0 {
+	if (response.SchemaVersion == 2 || response.SchemaVersion == 3) && len(response.Stages) > 0 {
 		var current domain.ExecutionSnapshot
 		stored := session.ExpertSnapshot
 		if len(stored) > 0 && string(stored) != "null" {
@@ -1004,6 +1034,7 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 				return domain.ExecutionSnapshot{}, err
 			}
 			current.Stages = append([]domain.ExecutionStageSnapshot(nil), response.Stages...)
+			current.SchemaVersion, current.Coordination, current.TeamProfile = response.SchemaVersion, response.Coordination, response.TeamProfile
 			encoded, err := marshal(current)
 			if err != nil {
 				return domain.ExecutionSnapshot{}, err
@@ -1013,6 +1044,7 @@ func loadSessionSnapshot(tx *gorm.DB, session sessionRecord, response domain.Res
 			}
 		}
 		current.Stages = append([]domain.ExecutionStageSnapshot(nil), response.Stages...)
+		current.SchemaVersion, current.Coordination, current.TeamProfile = response.SchemaVersion, response.Coordination, response.TeamProfile
 		if err := hydrateStageCredentials(tx, &current); err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
@@ -1095,7 +1127,7 @@ func hydrateStageCredentials(tx *gorm.DB, snapshot *domain.ExecutionSnapshot) er
 		model.APIKeyCiphertext = credential.APIKeyCiphertext
 		model.CredentialOwnerID = connection.CredentialOwnerID
 	}
-	if snapshot.SchemaVersion == 2 {
+	if snapshot.SchemaVersion == 2 || snapshot.SchemaVersion == 3 {
 		snapshot.Stages = stages
 	} else {
 		snapshot.ProviderModel = stages[0].ProviderModel
@@ -1136,6 +1168,12 @@ func (repository *Repository) FinishSucceeded(ctx context.Context, job applicati
 				return actionErr
 			}
 			actionID := ""
+			if shouldCreateAction && proposal.Kind == resourceaction.TeamKind {
+				if err := requireTeamAdministrator(tx, job.OwnerID); err != nil {
+					shouldCreateAction = false
+					finalMessage = "专家团只能由管理员创建。"
+				}
+			}
 			if shouldCreateAction {
 				payload, marshalErr := proposal.JSON()
 				if marshalErr != nil {
@@ -1260,12 +1298,12 @@ func resourceActionForJob(job application.ExecutionJob, content string) (string,
 		return content, resourceaction.Proposal{}, false, nil
 	}
 	if err != nil {
-		return strings.TrimSpace(content), resourceaction.Proposal{}, false, nil
+		return "资源预览无效，请重新生成后确认。", resourceaction.Proposal{}, false, nil
 	}
 	wanted := ""
 	if proposal.Kind == resourceaction.SkillKind {
 		wanted = "create_skill"
-	} else if proposal.Kind == resourceaction.ExpertKind {
+	} else if proposal.Kind == resourceaction.ExpertKind || proposal.Kind == resourceaction.TeamKind {
 		wanted = "create_expert"
 	} else if proposal.Kind == resourceaction.ConnectorKind {
 		wanted = "create_connector"
@@ -1357,6 +1395,15 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		message = message[:4_096]
 	}
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if job.Snapshot.SchemaVersion == 3 {
+			kind, id := "run", job.ID
+			if job.Kind == application.JobSession {
+				kind, id = "session", fmt.Sprint(job.AssistantMessageID)
+			}
+			if err := closeInterruptedApprovals(tx, kind, id); err != nil {
+				return err
+			}
+		}
 		redactor, err := channelRedactor(tx, job)
 		if err != nil {
 			return err
@@ -1376,7 +1423,7 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "cancel_requested_at", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "cancel_requested_at", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state IN ('generating', 'waiting_for_user')", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
 			stageState, terminalState := "failed", "failed"
@@ -1398,7 +1445,7 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(updates).Error
 		}
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "workflow_id", "trigger", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "workflow_id", "trigger", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state IN ('running', 'waiting_for_user')", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "failed", message, now)
@@ -1411,7 +1458,7 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 		} else if plan != nil {
 			updates["execution_plan"] = plan
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(updates)
+		update := tx.Model(&runRecord{}).Where("id = ? AND state IN ('running', 'waiting_for_user')", job.ID).Updates(updates)
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -1428,6 +1475,15 @@ func (repository *Repository) FinishFailed(ctx context.Context, job application.
 
 func (repository *Repository) FinishCancelled(ctx context.Context, job application.ExecutionJob, executionResult application.ExecutionResult) error {
 	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if job.Snapshot.SchemaVersion == 3 {
+			kind, id := "run", job.ID
+			if job.Kind == application.JobSession {
+				kind, id = "session", fmt.Sprint(job.AssistantMessageID)
+			}
+			if err := closeInterruptedApprovals(tx, kind, id); err != nil {
+				return err
+			}
+		}
 		now := time.Now().UTC()
 		if err := repository.settleTerminalCredits(tx, executionResult); err != nil {
 			return err
@@ -1442,7 +1498,7 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 		}
 		if job.Kind == application.JobSession {
 			var row messageRecord
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state IN ('generating', 'waiting_for_user')", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 				return mapNotFound(err)
 			}
 			stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "cancelled", "", now)
@@ -1458,7 +1514,7 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 			return tx.Model(&messageRecord{}).Where("id = ?", row.ID).Updates(updates).Error
 		}
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state IN ('running', 'waiting_for_user')", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
 		}
 		stages, err := terminalExpertStages(row.ExpertStages, executionResult.ExpertStages, "cancelled", "", now)
@@ -1471,7 +1527,7 @@ func (repository *Repository) FinishCancelled(ctx context.Context, job applicati
 		} else if plan != nil {
 			updates["execution_plan"] = plan
 		}
-		update := tx.Model(&runRecord{}).Where("id = ? AND state = 'running'", job.ID).Updates(updates)
+		update := tx.Model(&runRecord{}).Where("id = ? AND state IN ('running', 'waiting_for_user')", job.ID).Updates(updates)
 		if update.Error != nil || update.RowsAffected != 1 {
 			return update.Error
 		}
@@ -1506,12 +1562,14 @@ func closeRunningExpertStages(encoded []byte, state, terminalError string, ended
 		return nil, fmt.Errorf("decode Expert stages: %w", err)
 	}
 	for index := range stages {
-		if stages[index].State != "running" {
+		if stages[index].State != "running" && !(stages[index].InvocationID != "" && (stages[index].State == "queued" || stages[index].State == "waiting_for_user")) {
 			continue
 		}
 		stages[index].State = state
 		stages[index].EndedAt = endedAt
-		stages[index].ElapsedMS = endedAt.Sub(stages[index].StartedAt).Milliseconds()
+		if !stages[index].StartedAt.IsZero() {
+			stages[index].ElapsedMS = max(int64(0), endedAt.Sub(stages[index].StartedAt).Milliseconds())
+		}
 		if state == "failed" {
 			stages[index].Error = terminalError
 		}
@@ -1520,6 +1578,31 @@ func closeRunningExpertStages(encoded []byte, state, terminalError string, ended
 }
 
 func terminalExpertStages(encoded []byte, completed []domain.ExpertStage, state, terminalError string, endedAt time.Time) ([]byte, error) {
+	if hasTeamInvocations(encoded) || (len(completed) > 0 && completed[0].InvocationID != "") {
+		var stages []domain.ExpertStage
+		if len(encoded) > 0 {
+			if err := json.Unmarshal(encoded, &stages); err != nil {
+				return nil, err
+			}
+		}
+		for _, value := range completed {
+			found := false
+			for index := range stages {
+				if stages[index].InvocationID == value.InvocationID {
+					stages[index], found = value, true
+					break
+				}
+			}
+			if !found {
+				stages = append(stages, value)
+			}
+		}
+		data, err := marshal(stages)
+		if err != nil {
+			return nil, err
+		}
+		return closeRunningExpertStages(data, state, terminalError, endedAt)
+	}
 	if len(completed) > 0 {
 		stages := append([]domain.ExpertStage(nil), completed...)
 		if state == "cancelled" && stages[len(stages)-1].State != "succeeded" {
@@ -1588,64 +1671,9 @@ func (repository *Repository) FinishMCPTest(ctx context.Context, job application
 	return nil
 }
 
-func (repository *Repository) FinishExpertTagProjection(ctx context.Context, job application.ExecutionJob, result application.ExecutionResult, executionError string) error {
-	updates := map[string]any{"tag_projection_status": "failed", "tag_projection_error": executionError, "updated_at": gorm.Expr("now()"), "version": gorm.Expr("version + 1")}
-	if executionError == "" {
-		tags, err := parseProjectedTags(result.FinalMessage)
-		if err != nil {
-			updates["tag_projection_error"] = err.Error()
-		} else {
-			encoded, _ := marshal(tags)
-			updates["expertise_tags"], updates["tag_projection_status"], updates["tag_projection_error"] = encoded, "succeeded", nil
-		}
-	}
-	resultDB := repository.db.WithContext(ctx).Model(&expertRecord{}).Where("id = ? AND owner_user_id = ? AND tag_projection_status = 'running'", job.ExpertID, job.OwnerID).Updates(updates)
-	if resultDB.Error != nil {
-		return resultDB.Error
-	}
-	if resultDB.RowsAffected != 1 {
-		return domain.ErrConflict
-	}
-	return nil
-}
-
-func parseProjectedTags(value string) ([]string, error) {
-	trimmed := strings.TrimSpace(value)
-	trimmed = strings.TrimPrefix(trimmed, "```json")
-	trimmed = strings.TrimPrefix(trimmed, "```")
-	trimmed = strings.TrimSuffix(strings.TrimSpace(trimmed), "```")
-	var input []string
-	if err := json.Unmarshal([]byte(strings.TrimSpace(trimmed)), &input); err != nil {
-		return nil, fmt.Errorf("parse projected Expertise Tags: %w", err)
-	}
-	result, seen := make([]string, 0, 5), map[string]struct{}{}
-	for _, item := range input {
-		tag := strings.TrimSpace(item)
-		key := strings.ToLower(tag)
-		if tag == "" || len([]rune(tag)) > 20 {
-			continue
-		}
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		result = append(result, tag)
-		if len(result) == 5 {
-			break
-		}
-	}
-	if len(result) == 0 {
-		return nil, fmt.Errorf("tag projection returned no valid tags")
-	}
-	return result, nil
-}
-
 func (repository *Repository) RecordProgress(ctx context.Context, job application.ExecutionJob, event application.ExecutionEvent) error {
 	if len(event.Payload) > 256<<10 || !json.Valid(event.Payload) {
 		return fmt.Errorf("invalid Runtime progress payload")
-	}
-	if job.Kind == application.JobExpertTagProjection {
-		return nil
 	}
 	if event.Type == "expert.stage.updated" {
 		return repository.recordExpertStage(ctx, job, event)
@@ -1799,16 +1827,25 @@ func (repository *Repository) recordExpertStage(ctx context.Context, job applica
 func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.ExecutionJob, event application.ExecutionEvent, stage domain.ExpertStage) error {
 	var encoded []byte
 	var executionPlan []byte
+	var coordination bool
 	if job.Kind == application.JobSession {
 		var row messageRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "expert_stages", "execution_plan").Where("id = ? AND session_id = ? AND state = 'generating'", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages", "execution_plan", "response_snapshot").Where("id = ? AND session_id = ? AND state IN ('generating', 'waiting_for_user') AND cancel_requested_at IS NULL", job.AssistantMessageID, job.SessionID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
+		}
+		coordination = isCoordinatedSnapshot(row.ResponseSnapshot)
+		if row.State == "waiting_for_user" && !coordination {
+			return domain.ErrConflict
 		}
 		encoded, executionPlan = row.ExpertStages, row.ExecutionPlan
 	} else if job.Kind == application.JobWorkflow {
 		var row runRecord
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages", "execution_plan").Where("id = ? AND owner_user_id = ? AND state = 'running'", job.ID, job.OwnerID).Take(&row).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id", "state", "expert_stages", "execution_plan", "workflow_snapshot").Where("id = ? AND owner_user_id = ? AND state IN ('running', 'waiting_for_user') AND cancel_requested_at IS NULL", job.ID, job.OwnerID).Take(&row).Error; err != nil {
 			return mapNotFound(err)
+		}
+		coordination = isCoordinatedSnapshot(row.WorkflowSnapshot)
+		if row.State == "waiting_for_user" && !coordination {
+			return domain.ErrConflict
 		}
 		encoded, executionPlan = row.ExpertStages, row.ExecutionPlan
 	} else {
@@ -1835,6 +1872,9 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 	}
 	if job.Kind == application.JobSession {
 		updates := map[string]any{"expert_stages": encoded, "progress_stage": "thinking"}
+		if coordination {
+			updates["state"] = teamExecutionState(stages, "generating")
+		}
 		if plan, planErr := executionPlanStageUpdated(executionPlan, stage.Position, stage.State); planErr != nil {
 			return planErr
 		} else if plan != nil {
@@ -1846,6 +1886,9 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 		return tx.Model(&messageRecord{}).Where("id = ?", job.AssistantMessageID).Updates(updates).Error
 	}
 	updates := map[string]any{"expert_stages": encoded}
+	if coordination {
+		updates["state"] = teamExecutionState(stages, "running")
+	}
 	if plan, planErr := executionPlanStageUpdated(executionPlan, stage.Position, stage.State); planErr != nil {
 		return planErr
 	} else if plan != nil {
@@ -1853,6 +1896,13 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 	}
 	if err := tx.Model(&runRecord{}).Where("id = ?", job.ID).Updates(updates).Error; err != nil {
 		return err
+	}
+	if coordination {
+		payload, err := json.Marshal(stage.TaskPanelView())
+		if err != nil {
+			return err
+		}
+		event.Payload = payload
 	}
 	var sequence int64
 	if err := tx.Table("run_events").Select("COALESCE(MAX(sequence), 0)").Where("run_id = ?", job.ID).Scan(&sequence).Error; err != nil {
@@ -1862,7 +1912,7 @@ func (repository *Repository) recordExpertStageTx(tx *gorm.DB, job application.E
 }
 
 func (repository *Repository) CancellationRequested(ctx context.Context, job application.ExecutionJob) (bool, error) {
-	if job.Kind == application.JobMCPTest || job.Kind == application.JobExpertTagProjection {
+	if job.Kind == application.JobMCPTest {
 		return false, nil
 	}
 	var count int64

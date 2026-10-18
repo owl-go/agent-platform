@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Archive, ArchiveRestore, PanelRightOpen, Pencil, Trash2 } from "@lucide/vue";
 import { useRoute, useRouter } from "vue-router";
@@ -95,7 +96,7 @@ const statusActivity = computed(() => {
   const summary = activitySummaries(message).at(-1);
   return summary ? activitySummaryLabel(summary) : activeStageLabel(message);
 });
-const statusModelCalls = computed(() => activeAssistant.value?.expert_stages?.length ?? activeAssistant.value?.credit_consumption?.stages.length ?? 0);
+const statusModelCalls = computed(() => activeAssistant.value?.expert_stages?.length ?? activeAssistant.value?.credit_consumption?.stages?.length ?? 0);
 const cliAuthorizationRequest = computed(() => {
   const latestAssistant = [...messages.value].reverse().find((message) => message.role === "assistant");
   const attempted = cliAuthorizationRequestFromActivities(latestAssistant?.activities);
@@ -150,7 +151,7 @@ const conversationMessages = computed<ConversationMessage[]>(() => messages.valu
       items: summary.activities.map((activity, activityIndex) => ({ id: activityIndex, label: activityLabel(activity, true), detail: activity.detail })),
     })),
     stages: message.role === "assistant" ? message.expert_stages?.map((stage) => ({ ...stage, error: authorizationMessage && authorizationUnavailable(stage.error) ? authorizationMessage : stage.error })) : undefined,
-    creditConsumption: message.credit_consumption,
+    team:message.response_snapshot?.team, creditConsumption: message.credit_consumption,
     artifacts: message.artifacts,
     evidence: message.evidence,
     executionPlan: message.execution_plan,
@@ -184,7 +185,7 @@ onMounted(async () => {
   document.addEventListener("visibilitychange", resumeAssistantStream);
   await refresh();
   if (route.query.new) await create();
-  else if (typeof route.query.open === "string") { const item = sessions.value.find((session) => session.id === route.query.open); if (item) await open(item); }
+  else if (typeof route.query.open === "string") { const item = sessions.value.find((session) => session.id === route.query.open); if (item && selected.value?.id !== item.id) await open(item); }
 });
 watch(() => route.query.new, (value) => { if (value) void create(); });
 watch(() => route.query.open, (value) => { if (typeof value === "string") { const item = sessions.value.find((session) => session.id === value); if (item) void open(item); } });
@@ -309,7 +310,7 @@ async function confirmWorkflowSave() {
     workflowLinks.value[workflowDraftMessageID.value] = created.link;
     workflowDraft.value = undefined;
     await router.push({ path: `/workflows/${created.workflow.id}`, query: { open_run: created.validation_run.id, from_session: created.link.session_id } });
-  } catch { error.value = t("sessions.workflowSave.createFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "sessions.workflowSave.createFailed"); }
   finally { savingWorkflow.value = false; }
 }
 async function create() {
@@ -333,8 +334,8 @@ async function create() {
     launchPrompt.value = prompt ? { sessionID: item.id, text: prompt } : undefined;
     sessions.value.unshift(item);
     await router.replace({ path: "/sessions" }); await open(item);
-  } catch {
-    error.value = t("errors.validation");
+  } catch (cause) {
+    error.value = saveErrorMessage(cause, t, "errors.validation");
     if (route.query.new) await router.replace({ path: "/sessions" });
   } finally {
     creating.value = false;
@@ -497,7 +498,8 @@ function resumeAssistantStream() {
 function applySnapshot(messageID: number, snapshot: SessionMessageSnapshot) {
   const message = messages.value.find((item) => item.id === messageID);
   if (!message) return;
-  message.progress_stage = snapshot.progress_stage;
+  if (snapshot.team && message.response_snapshot) message.response_snapshot.team=snapshot.team;
+ message.progress_stage = snapshot.progress_stage;
   message.error = snapshot.error;
   message.elapsed_ms = snapshot.elapsed_ms;
   message.expert_stages = snapshot.expert_stages ?? message.expert_stages;
@@ -676,7 +678,7 @@ async function saveRename(item: Session) {
   cancelRename();
   if (!title || title === item.title) return;
   try { const updated = await api.renameSession(item.id, title, item.version); Object.assign(item, updated); if (selected.value?.id === item.id) selected.value = updated; }
-  catch { error.value = t("errors.conflict"); }
+  catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
 }
 function requestRemove(item: Session, event?: Event) {
   pendingDelete.value = item;

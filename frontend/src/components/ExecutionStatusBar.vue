@@ -37,7 +37,7 @@ const stateLabel = computed(() => {
 const active = computed(() => ["queued", "running", "waiting_for_user"].includes(normalizedState.value));
 const stale = computed(() => normalizedState.value === "running" && props.lastActivityAt !== undefined && now.value - props.lastActivityAt >= 10_000);
 const lastActivityLabel = computed(() => props.lastActivityAt === undefined ? "" : new Date(props.lastActivityAt).toLocaleTimeString(locale.value as SupportedLocale, { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
-const tokenCount = computed(() => props.creditConsumption?.stages.reduce((total, stage) => total + stage.input_tokens + stage.output_tokens, 0));
+const tokenCount = computed(() => props.creditConsumption?.stages?.reduce((total, stage) => total + stage.input_tokens + stage.output_tokens, 0));
 const formattedTokens = computed(() => {
   const value = tokenCount.value;
   if (value === undefined) return "";

@@ -2,6 +2,12 @@
 
 状态：从仓库目录分发完整无凭据资源，通过 API/Worker 现有启动入口自动初始化。目录原版沿用现有默认资源权限；初始化不代表外部供应商、模型引擎或当前 Linux Worker 已通过验收。
 
+## 专家资源包
+
+平台专家与专家团共用 `experts/<key>/.plugin/plugin.json`，定义位于 `agents/`，可选包内技能位于 `skills/`，头像位于 `avatars/`。新增子目录自动发现，旧 `expert.json` 原件格式明确拒绝。严格 schema、安全、修订和执行边界见[资源包技术契约](portable-experts.md)。
+
+加载先冻结和验证完整 Catalog，再沿用事务锁、稳定 Key、版本/摘要账本和 Bootstrap Administrator 归属。默认原件不可修改，升级保留身份及历史内容，保护已有自建资源，移除目录不删除数据库资源；目录初始化不授予账号授权或 Conformance。
+
 ## 分发内容
 
 正式资源的权威来源为顶层 `connectors/`、`skills/`、`experts/`。根 `resources.json` 仅记录 Catalog 版本 `1.0.0`，不列举资源；新增子目录自动发现，无需修改中心清单。当前内容来自已有 Platform Experts/Skills 和有效 Connector Publications 的无凭据导出，只保留定义，不分发账号、User Installation/Authorization、模型连接、凭据或原环境 Conformance 记录。
@@ -10,11 +16,11 @@
 |---|---|---|
 | `connectors/<source>/package/` | metadata、图标、恰好一个模式 manifest、伴随 Skills、CLI bundle | source + package version + 规范化 SHA-256 |
 | `skills/<name>/` | SKILL.md、资源、resource.json | resource.json 的 key / version |
-| `experts/<name>/expert.json` | 完整结构化指导、图标、Skill Keys | key / version |
+| `experts/<name>/.plugin/plugin.json` | 专家或独立团队、Markdown 指引、profile、资源声明 | id / version / SHA-256 |
 
 纯包目录也支持直接放在 `connectors/<source>/`；存在 `package/` 时仅该子目录进入安装包，旁边的构建工具不会混入。`scripts/connectors/` 是构建、测试与发布工具，**不参与扫描**。构建并验证真实包后更新正式目录；同 source 别名目录拒绝导入，避免将脚本副本或测试包重复加入目录。
 
-- 8 个 Expert：旅行计划与行程规划师、UI设计师、产品管理专家、亚马逊广告投放执行专家、亚马逊listing 文案优化大师、跨境电商专家、跨境运营专家、AI 工作流架构师。保留图标、简介、完整结构化指导以及旅行专家的 Skill 绑定；原部署 UUID 转为稳定 Skill Key。
+- 8 个 Expert：旅行计划与行程规划师、UI设计师、产品管理专家、亚马逊广告投放执行专家、亚马逊listing 文案优化大师、跨境电商专家、跨境运营专家、AI 工作流架构师。保留图标、简介、完整 Markdown 指引以及旅行专家的 Skill 绑定；原部署 UUID 转为稳定 Skill Key。
 - 9 个附加 Skill：旅行规划与行程安排、前端设计、grill-me、腾讯会议、腾讯问卷、PPT 一键生成大师、PDF图片文字提取、周报生成助手、PDF 文档处理。目录保留所引用的脚本和参考文档；个人下载来源 `_skillhub_meta.json` 不分发，机器路径使用通用占位符。
 - 3 个创建 Skill：继续复用 `internal/systemskills` 的 `Create Skill`、`Create Expert`、`Create Connector`，共 12 个 Skill。
 

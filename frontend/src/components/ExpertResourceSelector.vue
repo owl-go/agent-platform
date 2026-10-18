@@ -1,94 +1,50 @@
 <script setup lang="ts">
-import { Check } from "@lucide/vue";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { CLIConnectorDefinition, CLIConnectorEnablement, MCPServer, Skill } from "../api/client";
-import ConnectorIcon from "./ConnectorIcon.vue";
-import ProfileIcon from "./ProfileIcon.vue";
 
 const props = withDefaults(defineProps<{
-  mcpServers?: MCPServer[];
-  skills?: Skill[];
-  cliConnectors?: CLIConnectorDefinition[];
-  cliEnablements?: CLIConnectorEnablement[];
-  mcpServerIds?: string[];
-  skillIds?: string[];
+  disabled?: boolean; mcpServers?: MCPServer[]; skills?: Skill[]; cliConnectors?: CLIConnectorDefinition[];
+  cliEnablements?: CLIConnectorEnablement[]; mcpServerIds?: string[]; skillIds?: string[];
   cliConnectorDefinitionIds?: string[];
 }>(), {
-  mcpServers: () => [],
-  skills: () => [],
-  cliConnectors: () => [],
-  cliEnablements: () => [],
-  mcpServerIds: () => [],
-  skillIds: () => [],
-  cliConnectorDefinitionIds: () => [],
+  disabled: false, mcpServers: () => [], skills: () => [], cliConnectors: () => [], cliEnablements: () => [],
+  mcpServerIds: () => [], skillIds: () => [], cliConnectorDefinitionIds: () => [],
 });
-
 const emit = defineEmits<{
-  "update:mcpServerIds": [ids: string[]];
-  "update:skillIds": [ids: string[]];
+  "update:mcpServerIds": [ids: string[]]; "update:skillIds": [ids: string[]];
   "update:cliConnectorDefinitionIds": [ids: string[]];
 }>();
-
 const { t } = useI18n();
-
-function toggle(ids: string[], id: string) {
-  return ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
+// Prefix values because MCP and CLI identifiers belong to independent catalogs.
+const connectors = computed(() => [
+  ...props.mcpServerIds.map(id => `mcp:${id}`),
+  ...props.cliConnectorDefinitionIds.map(id => `cli:${id}`),
+]);
+function updateConnectors(values: string[]) {
+  emit("update:mcpServerIds", values.filter(id => id.startsWith("mcp:")).map(id => id.slice(4)));
+  emit("update:cliConnectorDefinitionIds", values.filter(id => id.startsWith("cli:")).map(id => id.slice(4)));
 }
-
-function toggleMCP(item: MCPServer) {
-  if (!item.tested && !props.mcpServerIds.includes(item.id)) return;
-  emit("update:mcpServerIds", toggle(props.mcpServerIds, item.id));
-}
-
-function toggleSkill(item: Skill) {
-  emit("update:skillIds", toggle(props.skillIds, item.id));
-}
-
 function cliEnabled(id: string) {
-  return props.cliEnablements.some((item) => item.definition_id === id && item.state === "enabled");
-}
-
-function toggleCLI(item: CLIConnectorDefinition) {
-  if (!cliEnabled(item.id) && !props.cliConnectorDefinitionIds.includes(item.id)) return;
-  emit("update:cliConnectorDefinitionIds", toggle(props.cliConnectorDefinitionIds, item.id));
+  return props.cliEnablements.some(item => item.definition_id === id && item.state === "enabled");
 }
 </script>
 
 <template>
   <div class="expert-resource-selector">
-    <section class="expert-resource-group">
-      <header>
-        <div><h3>{{ t('experts.skills') }}</h3><p>{{ t('experts.selectSkillsHint') }}</p></div>
-        <span>{{ t('experts.selectedCount', { count: skillIds.length }) }}</span>
-      </header>
-      <div v-if="skills.length" class="expert-resource-options">
-        <button v-for="item in skills" :key="item.id" type="button" class="expert-resource-option" :class="{ selected: skillIds.includes(item.id) }" :aria-pressed="skillIds.includes(item.id)" @click="toggleSkill(item)">
-          <ProfileIcon :icon="item.icon || 'sparkles'" />
-          <span class="expert-resource-copy"><strong>{{ item.name }}</strong><small>{{ item.platform ? t('resources.platformSkills') : t('resources.mySkills') }}</small></span>
-          <span class="expert-resource-check" aria-hidden="true"><Check v-if="skillIds.includes(item.id)" /></span>
-        </button>
-      </div>
-      <p v-else class="expert-resource-empty">{{ t('common.empty') }}</p>
-    </section>
-
-    <section class="expert-resource-group">
-      <header>
-        <div><h3>{{ t('resources.connectors') }}</h3><p>{{ t('experts.selectConnectorsHint') }}</p></div>
-        <span>{{ t('experts.selectedCount', { count: mcpServerIds.length + cliConnectorDefinitionIds.length }) }}</span>
-      </header>
-      <div v-if="mcpServers.length || cliConnectors.length" class="expert-resource-options">
-        <button v-for="item in mcpServers" :key="`mcp-${item.id}`" type="button" class="expert-resource-option" :class="{ selected: mcpServerIds.includes(item.id) }" :disabled="!item.tested && !mcpServerIds.includes(item.id)" :aria-pressed="mcpServerIds.includes(item.id)" @click="toggleMCP(item)">
-          <ConnectorIcon :icon="item.icon" :size="38" />
-          <span class="expert-resource-copy"><strong>{{ item.name }}</strong><small>MCP · {{ item.tested ? t('experts.tested') : t('experts.testRequired') }}</small></span>
-          <span class="expert-resource-check" aria-hidden="true"><Check v-if="mcpServerIds.includes(item.id)" /></span>
-        </button>
-        <button v-for="item in cliConnectors" :key="`cli-${item.id}`" type="button" class="expert-resource-option" :class="{ selected: cliConnectorDefinitionIds.includes(item.id) }" :disabled="!cliEnabled(item.id) && !cliConnectorDefinitionIds.includes(item.id)" :aria-pressed="cliConnectorDefinitionIds.includes(item.id)" @click="toggleCLI(item)">
-          <ConnectorIcon :icon="item.icon" :size="38" />
-          <span class="expert-resource-copy"><strong>{{ item.name }}</strong><small>{{ t('resources.cli') }} · {{ cliEnabled(item.id) ? t('common.enabled') : t('settings.unavailable') }}</small></span>
-          <span class="expert-resource-check" aria-hidden="true"><Check v-if="cliConnectorDefinitionIds.includes(item.id)" /></span>
-        </button>
-      </div>
-      <p v-else class="expert-resource-empty">{{ t('common.empty') }}</p>
-    </section>
+    <label>{{ t('experts.skills') }}
+      <el-select :disabled="disabled" :model-value="skillIds" multiple filterable collapse-tags collapse-tags-tooltip :max-collapse-tags="2" :aria-label="t('experts.skills')" :placeholder="t('experts.selectSkillsHint')" @update:model-value="emit('update:skillIds', $event)">
+        <el-option v-for="item in skills" :key="item.id" :label="item.name" :value="item.id" />
+        <el-option v-for="id in skillIds.filter(id => !skills.some(item => item.id === id))" :key="id" :label="t('composer.resourceUnavailable')" :value="id" disabled />
+      </el-select>
+    </label>
+    <label>{{ t('resources.connectors') }}
+      <el-select :disabled="disabled" :model-value="connectors" multiple filterable collapse-tags collapse-tags-tooltip :max-collapse-tags="2" :aria-label="t('resources.connectors')" :placeholder="t('experts.selectConnectorsHint')" @update:model-value="updateConnectors">
+        <el-option v-for="item in mcpServers" :key="`mcp:${item.id}`" :label="item.name" :value="`mcp:${item.id}`" :disabled="!item.tested && !mcpServerIds.includes(item.id)"><span>{{ item.name }}</span><small v-if="!item.tested"> · {{ t('experts.testRequired') }}</small></el-option>
+        <el-option v-for="item in cliConnectors" :key="`cli:${item.id}`" :label="item.name" :value="`cli:${item.id}`" :disabled="!cliEnabled(item.id) && !cliConnectorDefinitionIds.includes(item.id)"><span>{{ item.name }}</span><small v-if="!cliEnabled(item.id)"> · {{ t('settings.unavailable') }}</small></el-option>
+        <el-option v-for="id in mcpServerIds.filter(id => !mcpServers.some(item => item.id === id))" :key="`mcp:${id}`" :label="t('composer.resourceUnavailable')" :value="`mcp:${id}`" disabled />
+        <el-option v-for="id in cliConnectorDefinitionIds.filter(id => !cliConnectors.some(item => item.id === id))" :key="`cli:${id}`" :label="t('composer.resourceUnavailable')" :value="`cli:${id}`" disabled />
+      </el-select>
+    </label>
   </div>
 </template>

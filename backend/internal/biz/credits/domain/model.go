@@ -9,11 +9,12 @@ import (
 )
 
 var (
-	ErrInvalid             = errors.New("Credits value is invalid")
-	ErrInsufficientCredits = errors.New("Credit Balance is not positive")
-	ErrCodeUnavailable     = errors.New("Redemption Code is unavailable")
-	ErrRedemptionDisabled  = errors.New("Redemption Codes are disabled")
-	ErrConflict            = errors.New("Credits state conflicts with current state")
+	ErrInvalid                 = errors.New("Credits value is invalid")
+	ErrResponseBudgetExhausted = errors.New("Response Credit admission budget exhausted")
+	ErrInsufficientCredits     = errors.New("Credit Balance is not positive")
+	ErrCodeUnavailable         = errors.New("Redemption Code is unavailable")
+	ErrRedemptionDisabled      = errors.New("Redemption Codes are disabled")
+	ErrConflict                = errors.New("Credits state conflicts with current state")
 )
 
 type InsufficientCreditsError struct {
@@ -69,6 +70,8 @@ func (rate ModelCreditRate) Validate() error {
 }
 
 type Admission struct {
+	ResponseID         string
+	ResponseBudget     Amount
 	UserID             string
 	ExecutionID        string
 	StagePosition      int

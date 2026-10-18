@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ApiError, platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type PlatformExecutionDefault, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
+import { platformApiKey, runtimeEngineDisplayName, type ModelProviderConnection, type ModelProviderPreset, type PersonalSettings, type Personality, type PlatformExecutionDefault, type RuntimeEngine, type RuntimeEngineStatus } from "../api/client";
 import { authContextKey } from "../auth/session";
 import ToastMessage from "../components/ToastMessage.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -13,6 +14,10 @@ const auth = inject(authContextKey)!;
 const { t, locale } = useI18n();
 const canManageModels = computed(() => auth.session.state.value.kind === "authenticated" && auth.session.state.value.currentUser.administrator);
 const settings = ref<PersonalSettings>();
+const teamCreditBudget = computed({
+  get: () => (settings.value?.team_credit_budget_hundredths ?? 0) / 100,
+  set: (value: number) => { if (settings.value) settings.value.team_credit_budget_hundredths = Math.round(value * 100); },
+});
 const connections = ref<ModelProviderConnection[]>([]);
 const presets = ref<ModelProviderPreset[]>([]);
 const runtimes = ref<RuntimeEngineStatus[]>([]);
@@ -66,7 +71,7 @@ async function saveSettings() {
     document.documentElement.lang = settings.value.language;
     localStorage.setItem("agent-workspace-locale", settings.value.language);
     notice.value = t("settings.saved");
-  } catch { showError("conflict"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
 }
 
 const selectableModels = computed(() => connections.value.flatMap((connection) => connection.models.filter((model) => model.available).map((model) => ({ ...model, connection }))));
@@ -74,9 +79,7 @@ function choosePreset(providerType: string) { const preset = presets.value.find(
 function openNewConnection() { clearFeedback(); connectionError.value = ""; editingConnection.value = undefined; const preset = presets.value[0]; connectionForm.value = { name: preset?.display_name ?? "", provider_type: preset?.provider_type ?? "openai", endpoint: preset?.official_endpoint ?? "", protocols: [...(preset?.protocols ?? [])], api_key: "" }; showConnection.value = true; }
 function openConnection(item: ModelProviderConnection) { clearFeedback(); connectionError.value = ""; editingConnection.value = item; connectionForm.value = { name: item.name, provider_type: item.provider_type, endpoint: item.endpoint, protocols: [...item.protocols], api_key: "" }; showConnection.value = true; }
 function providerSaveError(cause: unknown) {
-  if (cause instanceof ApiError && cause.kind === "validation") return t("settings.providerValidationFailed");
-  if (cause instanceof ApiError && cause.kind === "conflict") return t("errors.conflict");
-  return t("settings.providerSaveFailed");
+  return saveErrorMessage(cause, t, "settings.providerSaveFailed");
 }
 async function saveConnection() {
 	if (savingConnection.value) return;
@@ -101,7 +104,7 @@ async function saveConnection() {
 async function removeConnection() { if (!pendingConnectionDelete.value) return; try { await api.deleteModelProviderConnection(pendingConnectionDelete.value.id); pendingConnectionDelete.value = undefined; await refresh(); } catch { showError("conflict"); } }
 async function refreshModels(item: ModelProviderConnection) { try { await api.refreshProviderModels(item.id); await refresh(); } catch { showError(); } }
 function openManualModel(item: ModelProviderConnection) { manualConnection.value = item; manualModel.value = { model_id: "" }; }
-async function saveManualModel() { if (!manualConnection.value) return; try { await api.createProviderModel(manualConnection.value.id, manualModel.value); manualConnection.value = undefined; await refresh(); } catch { showError("validation"); } }
+async function saveManualModel() { if (!manualConnection.value) return; try { await api.createProviderModel(manualConnection.value.id, manualModel.value); manualConnection.value = undefined; await refresh(); } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); } }
 function runtimeDefault(runtime: RuntimeEngine) { return settings.value?.runtime_model_defaults.find((item) => item.runtime_engine === runtime)?.provider_model_id ?? ""; }
 function setRuntimeDefault(runtime: RuntimeEngine, modelID: string) { if (!settings.value) return; settings.value.runtime_model_defaults = settings.value.runtime_model_defaults.filter((item) => item.runtime_engine !== runtime); if (modelID) settings.value.runtime_model_defaults.push({ runtime_engine: runtime, provider_model_id: modelID }); }
 function setRuntimeDefaultFromEvent(runtime: RuntimeEngine, event: Event) { setRuntimeDefault(runtime, (event.target as HTMLSelectElement).value); }
@@ -114,7 +117,7 @@ async function savePlatformDefault() {
     platformDefault.value = await api.setPlatformExecutionDefault({ ...platformDefaultForm.value, expected_version: platformDefault.value?.version ?? 0 });
     await refresh();
     notice.value = t("settings.platformDefaultSaved");
-  } catch { showError("validation"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); }
   finally { savingPlatformDefault.value = false; }
 }
 function selectPersonality(personality: Personality) {
@@ -146,6 +149,7 @@ function selectPersonality(personality: Personality) {
             <label class="full check-row enterprise-default-toggle"><input v-model="settings.execution_inherited" type="checkbox" :disabled="!settings.platform_execution_available && !settings.execution_inherited"><span><strong>{{ t("settings.usePlatformDefault") }}</strong><small>{{ settings.platform_execution_available ? t("settings.platformDefaultHint") : t("settings.platformDefaultUnavailable") }}</small></span></label>
             <label>{{ t("settings.runtime") }}<select v-model="settings.default_runtime_engine" :disabled="settings.execution_inherited"><option v-for="runtime in runtimes" :key="runtime.name" :value="runtime.name" :disabled="!runtime.available">{{ runtimeEngineDisplayName(runtime.name) }} · {{ runtime.available ? t("settings.available") : t("settings.unavailable") }}</option></select></label>
             <label>{{ t("settings.language") }}<select v-model="settings.language"><option value="zh-CN">中文</option><option value="en-US">English</option></select></label><label>{{ t("settings.timezone") }}<input v-model="settings.timezone"></label>
+            <label class="full">{{ t("settings.teamBudget") }}<input v-model.number="teamCreditBudget" type="number" min="0" max="10000000000" step="0.01" :aria-label="t('settings.teamBudget')"><small>{{ t("settings.teamBudgetHint") }}</small></label>
             <fieldset class="full runtime-defaults" :disabled="settings.execution_inherited"><legend>{{ t("settings.runtimeModels") }}</legend><label v-for="runtime in runtimes" :key="runtime.name"><span>{{ runtimeEngineDisplayName(runtime.name) }}</span><select :value="runtimeDefault(runtime.name)" @change="setRuntimeDefaultFromEvent(runtime.name, $event)"><option value="">—</option><option v-for="item in selectableModels" :key="item.id" :value="item.id" :disabled="item.compatibility.find((compatibility) => compatibility.runtime_engine === runtime.name)?.status === 'incompatible'">{{ item.connection.name }} / {{ item.display_name }}</option></select></label></fieldset>
           </div>
         </form>

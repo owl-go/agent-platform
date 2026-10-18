@@ -205,6 +205,31 @@ func TestWorkerLeavesActiveExecutionForRecoveryOnShutdown(t *testing.T) {
 	}
 }
 
+func TestWorkerFinalizesCoordinatedAttemptOnShutdown(t *testing.T) {
+	repository := &terminalRepository{job: ExecutionJob{Kind: JobSession, Snapshot: domain.ExecutionSnapshot{SchemaVersion: 3}}}
+	executor := &cancellationExecutor{started: make(chan struct{})}
+	worker, err := NewWorker(repository, executor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	done := make(chan error, 1)
+	go func() { _, err := worker.ProcessNext(ctx); done <- err }()
+	select {
+	case <-executor.started:
+	case <-time.After(time.Second):
+		t.Fatal("execution did not start")
+	}
+	stop()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if !repository.failed.Load() {
+		t.Fatal("coordinated attempt left available for replay")
+	}
+}
+
 func TestWorkerRecordsOnlyPrivacyBoundedSessionTerminalFacts(t *testing.T) {
 	repository := &terminalRepository{job: ExecutionJob{Kind: JobSession, ID: "execution-1", OwnerID: "owner-1", SessionID: "session-1", AssistantMessageID: 2}}
 	result := ExecutionResult{FinalMessage: "private answer", ExpertStages: []domain.ExpertStage{{ElapsedMS: 1_500}}, Artifacts: []ExecutionArtifact{{Name: "private.txt"}}}

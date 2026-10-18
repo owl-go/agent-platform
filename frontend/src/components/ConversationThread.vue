@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { formatDuration, type SupportedLocale } from "../i18n";
 import { renderInlineMarkdown, renderMarkdown } from "../markdown";
 import { displayArtifactNames } from "../artifactDisplay";
+import ResourceCreationPreview from "./ResourceCreationPreview.vue";
 import ArtifactDisclosure from "./ArtifactDisclosure.vue";
 import ConversationAttachments from "./ConversationAttachments.vue";
 import CreditConsumption from "./CreditConsumption.vue";
@@ -42,6 +43,7 @@ const visibleStages = (message: ConversationMessage) => {
   });
 };
 
+const previewAction = ref<{id:string;messageID:string}>();
 const copiedID = ref("");
 let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -138,6 +140,7 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
 </script>
 
 <template>
+  <ResourceCreationPreview :action-id="previewAction?.id" @close="previewAction=undefined" @confirmed="previewAction && emit('resourceAction',previewAction.messageID,'confirm')" />
   <div class="conversation-thread">
     <div v-for="message in props.messages" :key="message.id" class="message" :class="[message.role, { 'is-task-selected': message.id === selectedTaskId }]">
       <span v-if="message.role === 'assistant'" class="agent-avatar" aria-hidden="true">AI</span>
@@ -209,9 +212,9 @@ onBeforeUnmount(() => { if (copiedTimer) clearTimeout(copiedTimer); });
         </div>
         <ArtifactDisclosure v-if="message.role === 'assistant' && message.artifacts?.length" :artifacts="message.artifacts" @download="emit('downloadArtifact', $event)" />
         <section v-if="message.role === 'assistant' && message.resourceAction" class="resource-action-card" :class="`resource-action-${message.resourceAction.state}`" aria-live="polite">
-          <div class="resource-action-heading"><strong>{{ t(`sessions.${message.resourceAction.kind === 'skill' ? 'resourceActionSkill' : message.resourceAction.kind === 'connector' ? 'resourceActionConnector' : 'resourceActionExpert'}`) }}</strong><span>{{ message.resourceAction.name }}</span></div>
+          <div class="resource-action-heading"><strong>{{ t(`sessions.${message.resourceAction.kind === 'skill' ? 'resourceActionSkill' : message.resourceAction.kind === 'connector' ? 'resourceActionConnector' : message.resourceAction.kind === 'expert_team' ? 'resourceActionTeam' : 'resourceActionExpert'}`) }}</strong><span>{{ message.resourceAction.name }}</span></div>
           <p v-if="message.resourceAction.description">{{ message.resourceAction.description }}</p>
-          <div v-if="message.resourceAction.state === 'pending'" class="resource-action-actions"><el-button type="primary" @click="emit('resourceAction', message.id, 'confirm')">{{ t('sessions.resourceActionConfirm') }}</el-button><el-button @click="emit('resourceAction', message.id, 'cancel')">{{ t('common.cancel') }}</el-button></div>
+          <div v-if="message.resourceAction.state === 'pending'" class="resource-action-actions"><el-button v-if="message.resourceAction.kind === 'expert' || message.resourceAction.kind === 'expert_team'" @click="previewAction={id:message.resourceAction.id,messageID:message.id}">查看或修订</el-button><el-button type="primary" @click="emit('resourceAction', message.id, 'confirm')">{{ t('sessions.resourceActionConfirm') }}</el-button><el-button @click="emit('resourceAction', message.id, 'cancel')">{{ t('common.cancel') }}</el-button></div>
           <small v-else-if="message.resourceAction.state === 'confirmed'">{{ t('sessions.resourceActionConfirmed') }}</small>
           <small v-else-if="message.resourceAction.state === 'cancelled'">{{ t('sessions.resourceActionCancelled') }}</small>
           <small v-else-if="message.resourceAction.error" class="resource-action-error">{{ message.resourceAction.error }}</small>

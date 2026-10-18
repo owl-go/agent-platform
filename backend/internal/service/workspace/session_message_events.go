@@ -11,6 +11,7 @@ import (
 )
 
 type sessionMessageSnapshot struct {
+	Team              *domain.TeamExecutionContext   `json:"team,omitempty"`
 	State             string                         `json:"state"`
 	Content           string                         `json:"content"`
 	Error             string                         `json:"error,omitempty"`
@@ -95,7 +96,25 @@ func (service *Service) streamSessionMessage(writer http.ResponseWriter, request
 }
 
 func snapshotOf(message domain.Message) sessionMessageSnapshot {
-	return sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages, CreditConsumption: message.CreditConsumption, Activities: message.Activities, Evidence: message.Evidence, ExecutionPlan: message.ExecutionPlan, ResourceAction: message.ResourceAction}
+	result := sessionMessageSnapshot{State: message.State, Content: message.Content, Error: message.Error, ProgressStage: message.ProgressStage, ElapsedMS: message.ElapsedMS, ExpertStages: message.ExpertStages, CreditConsumption: message.CreditConsumption, Activities: message.Activities, Evidence: message.Evidence, ExecutionPlan: message.ExecutionPlan, ResourceAction: message.ResourceAction}
+	if coordinatedStages(message.ExpertStages) || (message.ResponseSnapshot != nil && message.ResponseSnapshot.SchemaVersion == 3) {
+		result.ExpertStages = make([]domain.ExpertStage, len(message.ExpertStages))
+		for i, stage := range message.ExpertStages {
+			result.ExpertStages[i] = stage.TaskPanelView()
+		}
+		if message.CreditConsumption != nil {
+			credit := *message.CreditConsumption
+			credit.Stages = make([]domain.CreditStageConsumption, len(message.CreditConsumption.Stages))
+			for i, stage := range message.CreditConsumption.Stages {
+				credit.Stages[i] = stage.TaskPanelView()
+			}
+			result.CreditConsumption = &credit
+		}
+		if message.ResponseSnapshot != nil {
+			result.Team = domain.PublicTeamContext(message.ResponseSnapshot.Coordination, message.ResponseSnapshot.TeamProfile, message.ResponseSnapshot.Stages)
+		}
+	}
+	return result
 }
 
 func terminalMessageState(state string) bool {

@@ -225,31 +225,8 @@ func validateWorkflowReferences(tx *gorm.DB, ownerID string, input domain.Workfl
 		}
 	}
 	if input.ExpertTeamID != nil {
-		var team expertTeamRecord
-		if err := tx.Where("owner_user_id = ? AND id = ?", ownerID, *input.ExpertTeamID).Take(&team).Error; err != nil {
-			return fmt.Errorf("%w: selected Expert Team does not belong to the User", domain.ErrInvalid)
-		}
-		var ids []string
-		var members []domain.ExpertTeamMemberInput
-		if len(team.Members) > 0 && string(team.Members) != "null" {
-			if err := json.Unmarshal(team.Members, &members); err != nil {
-				return err
-			}
-			for _, member := range members {
-				ids = append(ids, member.ExpertID)
-			}
-		} else if err := json.Unmarshal(team.ExpertIDs, &ids); err != nil {
+		if _, _, err := loadTeamSelection(tx, ownerID, *input.ExpertTeamID); err != nil {
 			return err
-		}
-		if len(ids) < 2 {
-			return fmt.Errorf("%w: selected Expert Team requires at least two Experts", domain.ErrInvalid)
-		}
-		var available int64
-		if err := tx.Model(&expertRecord{}).Where("owner_user_id IN (?) AND id IN ? AND introduction <> '' AND core_capability <> '' AND operating_procedure <> '' AND output_standard <> ''", accessibleResourceOwnerIDs(tx, ownerID), ids).Count(&available).Error; err != nil {
-			return err
-		}
-		if available != int64(len(ids)) {
-			return fmt.Errorf("%w: selected Expert Team contains an unavailable Expert", domain.ErrInvalid)
 		}
 	}
 	if len(input.KnowledgeBaseIDs) > 0 {
@@ -666,6 +643,12 @@ func (repository *Repository) continueRunConversationTriggered(ctx context.Conte
 			return err
 		}
 		stages = withCurrentExecutionConfiguration(stages, configuration)
+		if retired, err := retiredSnapshotTeam(tx, ownerID, plan); err != nil {
+			return err
+		} else if retired {
+			stages = []domain.ExecutionStageSnapshot{configuration}
+			plan.TeamProfile = nil
+		}
 		created = runRecord{ID: uuid.NewString(), ConversationID: root.ID, TurnNumber: lastTurn + 1, OwnerID: ownerID, WorkflowID: root.WorkflowID, WorkflowName: root.WorkflowName, Trigger: trigger, State: "queued", Input: input, ExpertStages: []byte("[]"), Evidence: []byte("[]"), QueuedAt: time.Now().UTC(), Version: 1}
 		if selectionID == "" && root.SelectionID != nil {
 			selectionID = *root.SelectionID
@@ -679,16 +662,24 @@ func (repository *Repository) continueRunConversationTriggered(ctx context.Conte
 			if len(stages) == 0 {
 				return domain.ErrInvalid
 			}
+			if retired, err := retiredPrivateTeam(tx, ownerID, selected.ExpertTeamID); err != nil {
+				return err
+			} else if retired {
+				return domain.ErrConflict
+			}
 			stages = selected.Apply(stages[0])
 			plan.TeamProfile = nil
 			if selected.ExpertTeamID != "" {
-				plan.TeamProfile = &domain.ExpertTeamProfileSnapshot{ID: selected.ExpertTeamID, Name: selected.Name, Icon: selected.Icon, IconBackground: selected.IconBackground}
+				plan.TeamProfile = selected.TeamProfile
 			}
 			if err := retainConversationSelection(tx, ownerID, scope, selected); err != nil {
 				return err
 			}
 		}
 		setExecutionStages(&plan, stages)
+		if err := freezeTeamCreditBudget(tx, ownerID, &plan.Coordination); err != nil {
+			return err
+		}
 		created.WorkflowSnapshot, err = marshal(plan)
 		if err != nil {
 			return err
@@ -729,6 +720,17 @@ func (repository *Repository) continueRunConversationTriggered(ctx context.Conte
 }
 
 func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.ExecutionSnapshot, error) {
+	plan, err := loadExecutionSnapshotDefinition(tx, workflow)
+	if err != nil {
+		return plan, err
+	}
+	if err := freezeTeamCreditBudget(tx, workflow.OwnerID, &plan.Coordination); err != nil {
+		return plan, err
+	}
+	return plan, nil
+}
+
+func loadExecutionSnapshotDefinition(tx *gorm.DB, workflow workflowRecord) (domain.ExecutionSnapshot, error) {
 	var settings settingsRecord
 	if err := tx.Where("user_id = ?", workflow.OwnerID).Take(&settings).Error; err != nil {
 		return domain.ExecutionSnapshot{}, fmt.Errorf("load Personal Settings for Run: %w", err)
@@ -783,6 +785,17 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 			return domain.ExecutionSnapshot{}, err
 		}
 		snapshot.Stages = withCurrentExecutionConfiguration(template, configuration)
+		if len(workflow.ExecutionCoordination) > 0 && string(workflow.ExecutionCoordination) != "null" {
+			if err := json.Unmarshal(workflow.ExecutionCoordination, &snapshot.Coordination); err != nil {
+				return domain.ExecutionSnapshot{}, err
+			}
+			snapshot.SchemaVersion = 3
+		}
+		if len(workflow.ExecutionTeamProfile) > 0 && string(workflow.ExecutionTeamProfile) != "null" {
+			if err := json.Unmarshal(workflow.ExecutionTeamProfile, &snapshot.TeamProfile); err != nil {
+				return domain.ExecutionSnapshot{}, err
+			}
+		}
 		if _, err := snapshot.OrderedStages(); err != nil {
 			return domain.ExecutionSnapshot{}, err
 		}
@@ -806,45 +819,17 @@ func loadExecutionSnapshot(tx *gorm.DB, workflow workflowRecord) (domain.Executi
 		}
 		return application.PlanExecution(snapshot, application.ExecutionSelection{Expert: &stage})
 	}
-	var team expertTeamRecord
-	if err := tx.Where("owner_user_id = ? AND id = ?", workflow.OwnerID, *workflow.ExpertTeamID).Take(&team).Error; err != nil {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("load Expert Team for Run: %w", mapNotFound(err))
-	}
-	var expertIDs []string
-	var members []domain.ExpertTeamMemberInput
-	snapshot.TeamProfile = &domain.ExpertTeamProfileSnapshot{ID: team.ID, Name: team.Name, Icon: team.Icon, IconBackground: team.IconBackground}
-	if len(team.Members) > 0 && string(team.Members) != "null" {
-		_ = json.Unmarshal(team.Members, &members)
-	}
-	if len(members) > 0 {
-		for _, member := range members {
-			expertIDs = append(expertIDs, member.ExpertID)
-		}
-	} else if err := json.Unmarshal(team.ExpertIDs, &expertIDs); err != nil {
+	team, memberDefaults, err := loadTeamSelection(tx, workflow.OwnerID, *workflow.ExpertTeamID)
+	if err != nil {
 		return domain.ExecutionSnapshot{}, err
 	}
-	if len(expertIDs) < 2 {
-		return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team requires at least two Experts", domain.ErrInvalid)
+	snapshot.TeamProfile = &domain.ExpertTeamProfileSnapshot{StarterPrompts: decodeStrings(team.StarterPrompts), ID: team.ID, Name: team.Name, Icon: team.Icon, IconBackground: team.IconBackground, LeadMemberID: team.LeadMemberID, Version: team.Version}
+	configuration, err := loadExecutionStage(tx, workflow.OwnerID, providerModelID, runtime, nil, nil, nil, nil, 1)
+	if err != nil {
+		return domain.ExecutionSnapshot{}, err
 	}
-	for index, expertID := range expertIDs {
-		var expert expertRecord
-		if err := tx.Where("owner_user_id IN (?) AND id = ?", accessibleResourceOwnerIDs(tx, workflow.OwnerID), expertID).Take(&expert).Error; err != nil {
-			return domain.ExecutionSnapshot{}, fmt.Errorf("%w: Expert Team member is unavailable", domain.ErrInvalid)
-		}
-		stage, err := loadExpertExecutionStage(tx, workflow.OwnerID, expert, providerModelID, runtime, index+1)
-		if err != nil {
-			return domain.ExecutionSnapshot{}, fmt.Errorf("Expert %q: %w", expert.Name, err)
-		}
-		if len(members) > 0 {
-			stage.TeamMemberID = members[index].ID
-			stage.TeamMemberName = members[index].Name
-			stage.TeamMemberLabels = append([]string(nil), members[index].Labels...)
-		}
-		snapshot.Stages = append(snapshot.Stages, stage)
-	}
-	teamStages := snapshot.Stages
-	snapshot.Stages = nil
-	return application.PlanExecution(snapshot, application.ExecutionSelection{Team: teamStages})
+	stages := withCurrentExecutionConfiguration(memberDefaults, configuration)
+	return application.PlanExecution(snapshot, application.ExecutionSelection{Team: stages})
 }
 
 // currentExecutionStage resolves only the User's current engine/model settings.
@@ -873,8 +858,17 @@ func withCurrentExecutionConfiguration(stages []domain.ExecutionStageSnapshot, c
 }
 
 func setExecutionStages(plan *domain.ExecutionSnapshot, stages []domain.ExecutionStageSnapshot) {
+	previousCoordination := plan.Coordination
 	plan.SchemaVersion = 2
 	plan.Stages = stages
+	plan.Coordination = nil
+	if plan.TeamProfile != nil && plan.TeamProfile.LeadMemberID != "" && len(stages) > 1 {
+		plan.SchemaVersion = 3
+		plan.Coordination = &domain.TeamCoordinationSnapshot{LeadMemberID: plan.TeamProfile.LeadMemberID}
+		if previousCoordination != nil && previousCoordination.LeadMemberID == plan.TeamProfile.LeadMemberID {
+			plan.Coordination = previousCoordination
+		}
+	}
 	plan.RuntimeEngine = ""
 	plan.ProviderModel = domain.ProviderModelSnapshot{}
 	plan.Expert = nil
@@ -954,14 +948,14 @@ func loadCreditRateSnapshot(tx *gorm.DB, providerType, protocol, modelID string)
 
 func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, position int) (domain.ExpertMemberSnapshot, error) {
 	structured := strings.TrimSpace(expert.Introduction) != "" && strings.TrimSpace(expert.CoreCapability) != "" && strings.TrimSpace(expert.OperatingProcedure) != "" && strings.TrimSpace(expert.OutputStandard) != ""
-	if !structured && strings.TrimSpace(expert.ExecutionInstruction) == "" {
+	if strings.TrimSpace(expert.Guidance) == "" && !structured && strings.TrimSpace(expert.ExecutionInstruction) == "" {
 		return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert guidance is incomplete", domain.ErrInvalid)
 	}
 	var tags, mcpIDs, skillIDs, cliConnectorIDs []string
 	if err := json.Unmarshal(expert.ExpertiseTags, &tags); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
-	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{ID: expert.ID, Name: expert.Name, Icon: expert.Icon, IconBackground: expert.IconBackground, Introduction: expert.Introduction, CoreCapability: expert.CoreCapability, OperatingProcedure: expert.OperatingProcedure, OutputStandard: expert.OutputStandard, Cautions: expert.Cautions, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags, Version: expert.Version}, Position: position}
+	member := domain.ExpertMemberSnapshot{ExpertSnapshot: domain.ExpertSnapshot{StarterPrompts: decodeStrings(expert.StarterPrompts), ID: expert.ID, Name: expert.Name, Icon: expert.Icon, IconBackground: expert.IconBackground, Introduction: expert.Introduction, Guidance: expert.Guidance, CoreCapability: expert.CoreCapability, OperatingProcedure: expert.OperatingProcedure, OutputStandard: expert.OutputStandard, Cautions: expert.Cautions, CapabilityIntroduction: expert.CapabilityIntroduction, ExecutionInstruction: expert.ExecutionInstruction, ExpertiseTags: tags, Version: expert.Version}, Position: position}
 	if err := json.Unmarshal(expert.MCPServerIDs, &mcpIDs); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
@@ -971,6 +965,13 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 	if err := json.Unmarshal(expert.CLIConnectorDefinitionIDs, &cliConnectorIDs); err != nil {
 		return domain.ExpertMemberSnapshot{}, err
 	}
+	dependencies := decodeExpertDependencies(expert.ConnectorDependencies)
+	dependencyMCP, dependencyCLI, err := resolveExpertDependencies(tx, ownerID, dependencies)
+	if err != nil {
+		return domain.ExpertMemberSnapshot{}, err
+	}
+	mcpIDs = append(mcpIDs, dependencyMCP...)
+	cliConnectorIDs = append(cliConnectorIDs, dependencyCLI...)
 	for _, id := range mcpIDs {
 		var row mcpRecord
 		err := tx.Where("owner_user_id IN (?) AND id = ? AND tested_at IS NOT NULL AND test_error IS NULL", accessibleResourceOwnerIDs(tx, ownerID), id).Take(&row).Error
@@ -986,6 +987,11 @@ func loadExpertMemberSnapshot(tx *gorm.DB, ownerID string, expert expertRecord, 
 			return domain.ExpertMemberSnapshot{}, fmt.Errorf("%w: Expert MCP Connector is unavailable", domain.ErrInvalid)
 		}
 		member.MCPServers = append(member.MCPServers, packageSnapshot)
+	}
+	if len(expert.BundledSkills) > 0 {
+		if err := json.Unmarshal(expert.BundledSkills, &member.Skills); err != nil {
+			return domain.ExpertMemberSnapshot{}, err
+		}
 	}
 	for _, id := range skillIDs {
 		var row skillRecord
@@ -1515,6 +1521,13 @@ func runDomain(row runRecord) domain.Run {
 				stageProjection = append(stageProjection, value)
 			}
 			projection["execution_stages"] = stageProjection
+		}
+		if snapshot.SchemaVersion == 3 && snapshot.Coordination != nil {
+			publicTeam := domain.PublicTeamContext(snapshot.Coordination, snapshot.TeamProfile, snapshot.Stages)
+			teamJSON, _ := json.Marshal(publicTeam)
+			var team map[string]any
+			_ = json.Unmarshal(teamJSON, &team)
+			projection = map[string]any{"schema_version": 3, "workflow_name": snapshot.WorkflowName, "goal": snapshot.Goal, "team": team}
 		}
 		item.WorkflowSnapshot = projection
 	}

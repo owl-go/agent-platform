@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -69,12 +70,12 @@ async function create() {
     showCreate.value = false;
     form.value = { name: "", goal: "", environment: [], knowledge_base_ids: [] };
     await router.push({ path: `/workflows/${item.id}`, query: { tab: "history", open_run: validationRun.id } });
-  } catch {
+  } catch (cause) {
     if (item) {
       showCreate.value = false;
       form.value = { name: "", goal: "", environment: [], knowledge_base_ids: [] };
       await router.push({ path: `/workflows/${item.id}`, query: { tab: "history", validation_error: "1" } });
-    } else error.value = t("errors.validation");
+    } else error.value = saveErrorMessage(cause, t, "errors.validation");
   } finally { creating.value = false; }
 }
 
@@ -105,7 +106,7 @@ async function renameWorkflow() {
     const updated = await api.updateWorkflow(item.id, { name, goal: item.goal, expert_id: item.expert_id, expert_team_id: item.expert_team_id, environment: item.environment, schedule: item.schedule }, item.version);
     workflows.value = workflows.value.map((workflow) => workflow.id === updated.id ? { ...workflow, ...updated } : workflow);
     renameTarget.value = undefined;
-  } catch { error.value = t("errors.generic"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.generic"); }
   finally { renameBusy.value = false; }
 }
 

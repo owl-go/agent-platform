@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { assistantEmbedSnippet } from "../assistantEmbedding";
-import { ApiError, platformApiKey, type AssistantPublicationStats, type SmartAssistant, type SmartAssistantFAQ, type SmartAssistantInput } from "../api/client";
+import { platformApiKey, type AssistantPublicationStats, type SmartAssistant, type SmartAssistantFAQ, type SmartAssistantInput } from "../api/client";
 
 const props = defineProps<{ modelValue: boolean; assistant?: SmartAssistant }>();
 const emit = defineEmits<{ "update:modelValue": [value: boolean]; updated: [assistant: SmartAssistant]; error: [message: string] }>();
@@ -85,10 +86,7 @@ function input(origins: string[]): SmartAssistantInput | undefined {
   };
 }
 function errorMessage(cause: unknown) {
-  if (cause instanceof ApiError && cause.code === "version_conflict") return t("aiApplications.versionConflict");
-  if (cause instanceof ApiError && cause.code === "assistant_model_unavailable") return t("aiApplications.modelUnavailable");
-  if (cause instanceof ApiError && cause.kind === "validation") return t("aiApplications.share.validationFailed");
-  return t("aiApplications.saveFailed");
+  return saveErrorMessage(cause, t, "aiApplications.saveFailed");
 }
 function showError(message: string) {
   saveError.value = message;

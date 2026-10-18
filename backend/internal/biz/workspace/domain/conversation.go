@@ -23,17 +23,18 @@ func (scope ConversationScope) Validate() error {
 // ConversationSelection is stored server-side. Clients receive only its opaque
 // identity and display metadata, never frozen Connector configuration or secrets.
 type ConversationSelection struct {
-	ID                 string                   `json:"id"`
-	ExpertID           string                   `json:"expert_id"`
-	ExpertTeamID       string                   `json:"expert_team_id"`
-	Name               string                   `json:"name"`
-	Icon               string                   `json:"icon"`
-	IconBackground     string                   `json:"icon_background"`
-	Defaults           []ExecutionStageSnapshot `json:"defaults"`
-	Skills             []SkillSnapshot          `json:"skills"`
-	MCPServers         []MCPServerSnapshot      `json:"mcp_servers"`
-	CLIConnectors      []CLIConnectorSnapshot   `json:"cli_connectors"`
-	DisabledConnectors []string                 `json:"disabled_connectors"`
+	TeamProfile        *ExpertTeamProfileSnapshot `json:"team_profile,omitempty"`
+	ID                 string                     `json:"id"`
+	ExpertID           string                     `json:"expert_id"`
+	ExpertTeamID       string                     `json:"expert_team_id"`
+	Name               string                     `json:"name"`
+	Icon               string                     `json:"icon"`
+	IconBackground     string                     `json:"icon_background"`
+	Defaults           []ExecutionStageSnapshot   `json:"defaults"`
+	Skills             []SkillSnapshot            `json:"skills"`
+	MCPServers         []MCPServerSnapshot        `json:"mcp_servers"`
+	CLIConnectors      []CLIConnectorSnapshot     `json:"cli_connectors"`
+	DisabledConnectors []string                   `json:"disabled_connectors"`
 }
 
 type ConversationSelectionInput struct {

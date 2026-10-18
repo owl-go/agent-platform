@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { ArrowLeft, ArrowRight, Download, MagicStick, Picture, Plus, Setting, VideoPause } from "@element-plus/icons-vue";
@@ -159,7 +160,7 @@ async function uploadReferences(event: Event) {
   const files = [...(input.files ?? [])].slice(0, 10 - references.value.length);
   for (const file of files) {
     try { references.value.push({ ...(await api.uploadReferenceImage(file)), name: file.name }); }
-    catch { error.value = t("imageGeneration.requestFailed"); }
+    catch (cause) { error.value = saveErrorMessage(cause, t, "imageGeneration.requestFailed"); }
   }
   input.value = "";
 }
@@ -323,7 +324,7 @@ async function reuseImageAsReference(position: number) {
     references.value.push({ ...(await api.uploadReferenceImage(file)), name: file.name });
     form.image_model_id = editableModel.id;
     form.mode = "edit";
-  } catch { error.value = t("imageGeneration.requestFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "imageGeneration.requestFailed"); }
 }
 
 function movePreview(offset: number) {
@@ -348,11 +349,11 @@ async function createModel() {
       ? await api.reviseImageModel(editingModel.value.id, editingModel.value.version, { ...input, ...(adminForm.api_key ? { replacement_api_key: adminForm.api_key } : {}) })
       : await api.createImageModel({ ...input, api_key: adminForm.api_key });
     adminModels.value = [model, ...adminModels.value.filter((item) => item.id !== model.id)]; editingModel.value = undefined; adminForm.api_key = "";
-  } catch { error.value = t("imageGeneration.requestFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "imageGeneration.requestFailed"); }
 }
 
 async function verify(model: ImageModel) { error.value = ""; try { Object.assign(model, await api.verifyImageModel(model.id)); } catch { error.value = t("imageGeneration.verifyFailed"); } }
-async function toggle(model: ImageModel) { error.value = ""; try { Object.assign(model, await api.setImageModelAvailability(model.id, model.state !== "available")); await load(); } catch { error.value = t("imageGeneration.requestFailed"); } }
+async function toggle(model: ImageModel) { error.value = ""; try { Object.assign(model, await api.setImageModelAvailability(model.id, model.state !== "available")); await load(); } catch (cause) { error.value = saveErrorMessage(cause, t, "imageGeneration.requestFailed"); } }
 function editModel(model: ImageModel) { editingModel.value = model; Object.assign(adminForm, { endpoint: model.endpoint ?? "", api_key: "", provider_model_id: model.provider_model_id }); }
 async function deleteModel(model: ImageModel) { if (!window.confirm(`${t('common.delete')}?`)) return; await api.deleteImageModel(model.id, model.version); adminModels.value = adminModels.value.filter((item) => item.id !== model.id); await load(); }
 async function savePromptCandidates() {
@@ -361,7 +362,7 @@ async function savePromptCandidates() {
     promptModels.value = await api.replacePromptOptimizationCandidates([{ ...promptAdminForm }]);
     promptAdminForm.api_key = "";
     promptModelID.value = promptModels.value[0]?.provider_model_id ?? "";
-  } catch { error.value = t("imageGeneration.requestFailed"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "imageGeneration.requestFailed"); }
 }
 
 onMounted(load);

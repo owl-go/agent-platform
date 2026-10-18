@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type ModelCreditRate, type RedemptionCodeBatch, type RedemptionCodeStatus } from "../api/client";
@@ -23,9 +24,9 @@ async function createRate() {
     const existing = currentRates.value.find((item) => exact ? item.provider_type === rateForm.value.provider_type && item.api_protocol === rateForm.value.api_protocol && item.provider_model_id === rateForm.value.provider_model_id : !item.provider_type);
     await api.createModelCreditRate({ ...(exact ? { provider_type: rateForm.value.provider_type, api_protocol: rateForm.value.api_protocol, provider_model_id: rateForm.value.provider_model_id } : {}), input_multiplier_micros: Math.round(rateForm.value.input * 1_000_000), output_multiplier_micros: Math.round(rateForm.value.output * 1_000_000), fallback_hundredths: Math.round(rateForm.value.fallback * 100), expected_revision_id: existing?.revision_id });
     await refreshRates();
-  } catch { error.value = t("errors.validation"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); }
 }
-async function createCodes() { try { createdBatch.value = await api.createRedemptionCodeBatch(codeForm.value.count, Math.round(codeForm.value.value * 100), codeForm.value.expires_at ? new Date(codeForm.value.expires_at).toISOString() : undefined); } catch { error.value = t("errors.validation"); } }
+async function createCodes() { try { createdBatch.value = await api.createRedemptionCodeBatch(codeForm.value.count, Math.round(codeForm.value.value * 100), codeForm.value.expires_at ? new Date(codeForm.value.expires_at).toISOString() : undefined); } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); } }
 async function refreshCodes(cursor = "") { try { const page = await api.listRedemptionCodes(cursor); codeStatuses.value = cursor ? [...codeStatuses.value, ...(page.items ?? [])] : (page.items ?? []); codesNextCursor.value = page.next_cursor ?? ""; } catch { error.value = t("errors.generic"); } }
 async function voidCode(id: string) { try { const updated = await api.voidRedemptionCode(id); codeStatuses.value = codeStatuses.value.map((item) => item.id === id ? updated : item); } catch { error.value = t("errors.generic"); } }
 async function copyCodes() { if (createdBatch.value) await navigator.clipboard.writeText(createdBatch.value.codes.map((item) => item.plaintext).join("\n")); }

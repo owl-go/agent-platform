@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage, type InputInstance } from "element-plus";
 import { ArrowLeft, Download, Eye, FileText, FolderOpen, Globe2, LayoutGrid, List as ListIcon, LockKeyhole, MoreHorizontal, Pencil, Plus, Search, Trash2, Upload } from "@lucide/vue";
@@ -192,8 +193,8 @@ async function saveBase() {
       await openBase(created);
     }
     showBaseDialog.value = false;
-  } catch {
-    error.value = t("knowledgeBases.saveFailed");
+  } catch (cause) {
+    error.value = saveErrorMessage(cause, t, "knowledgeBases.saveFailed");
   } finally {
     busy.value = false;
   }
@@ -226,8 +227,8 @@ async function upload(event: Event) {
     const document = await api.uploadKnowledgeDocument(selected.value.id, file);
     documents.value = [document, ...documents.value];
     ElMessage.success(t("knowledgeBases.accepted"));
-  } catch {
-    error.value = t("knowledgeBases.uploadFailed");
+  } catch (cause) {
+    error.value = saveErrorMessage(cause, t, "knowledgeBases.uploadFailed");
   } finally {
     (event.target as HTMLInputElement).value = "";
   }

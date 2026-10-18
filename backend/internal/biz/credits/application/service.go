@@ -71,19 +71,24 @@ func New(repository Repository, now Clock) (*Service, error) {
 }
 
 type AdmissionRequest struct {
-	UserID        string
-	ExecutionID   string
-	StagePosition int
-	Timezone      string
-	ProviderType  string
-	Protocol      string
-	ModelID       string
-	FrozenRate    *domain.ModelCreditRate
+	ResponseID     string
+	ResponseBudget domain.Amount
+	UserID         string
+	ExecutionID    string
+	StagePosition  int
+	Timezone       string
+	ProviderType   string
+	Protocol       string
+	ModelID        string
+	FrozenRate     *domain.ModelCreditRate
 }
 
 func (service *Service) Admit(ctx context.Context, request AdmissionRequest) (domain.Admission, error) {
 	if strings.TrimSpace(request.UserID) == "" || strings.TrimSpace(request.ExecutionID) == "" || request.StagePosition < 1 {
 		return domain.Admission{}, fmt.Errorf("%w: User, execution, and Stage position are required", domain.ErrInvalid)
+	}
+	if request.ResponseBudget < 0 || len(request.ResponseID) > 200 || (request.ResponseBudget > 0 && request.ResponseID == "") {
+		return domain.Admission{}, fmt.Errorf("%w: invalid response admission budget", domain.ErrInvalid)
 	}
 	location, err := time.LoadLocation(request.Timezone)
 	if err != nil {
@@ -107,6 +112,7 @@ func (service *Service) Admit(ctx context.Context, request AdmissionRequest) (do
 	}
 	startedAt := service.now().UTC()
 	admission := domain.Admission{
+		ResponseID: request.ResponseID, ResponseBudget: request.ResponseBudget,
 		UserID: request.UserID, ExecutionID: request.ExecutionID, StagePosition: request.StagePosition,
 		Source: fmt.Sprintf("%s:%d", request.ExecutionID, request.StagePosition), Timezone: request.Timezone,
 		CreditDay: startedAt.In(location).Format(time.DateOnly), StartedAt: startedAt, Rate: rate,

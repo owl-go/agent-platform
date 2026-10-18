@@ -68,7 +68,12 @@ try {
   console.log('Starting isolated PostgreSQL, Keycloak and MinIO...');
   const db = docker('db', ['--env-file', resolve(temp, 'db.env'), '-p', `127.0.0.1:${ports.db}:5432`, 'postgres:17-alpine']);
   docker('identity', ['-p', `127.0.0.1:${ports.identity}:8080`, '-v', `${temp}/realm.json:/opt/keycloak/data/import/realm.json:ro`, '-v', `${temp}/themes:/opt/keycloak/themes:ro`, process.env.E2E_KEYCLOAK_IMAGE || 'quay.io/keycloak/keycloak@sha256:f1f1f01e472c8a78df40d8f2a49a925274eda4d3d80d5f6edbb5c880ee3c01c6', 'start-dev', '--import-realm']);
-  docker('minio', ['--env-file', resolve(temp, 'minio.env'), '-p', `127.0.0.1:${ports.minio}:9000`, 'minio/minio:latest', 'server', '/data']);
+  if (process.env.E2E_MINIO_BINARY) {
+    mkdirSync(resolve(temp, 'objects'));
+    start(process.env.E2E_MINIO_BINARY, ['server', resolve(temp, 'objects'), '--address', `127.0.0.1:${ports.minio}`], 'minio', { MINIO_ROOT_USER: 'e2e', MINIO_ROOT_PASSWORD: secret });
+  } else {
+    docker('minio', ['--env-file', resolve(temp, 'minio.env'), '-p', `127.0.0.1:${ports.minio}:9000`, process.env.E2E_MINIO_IMAGE || 'minio/minio:latest', 'server', '/data']);
+  }
   await Promise.all([ready(`${identity}/realms/${realm}/.well-known/openid-configuration`), ready(`http://127.0.0.1:${ports.minio}/minio/health/ready`)]);
   run('docker', ['exec', db, 'pg_isready', '-U', 'e2e']);
   await bucket();
@@ -82,7 +87,7 @@ try {
   const env = { VITE_OIDC_AUTHORITY: `${identity}/realms/${realm}`, VITE_OIDC_CLIENT_ID: 'agent-platform-web', VITE_OIDC_REDIRECT_URI: `${web}/auth/callback`, VITE_OIDC_POST_LOGOUT_REDIRECT_URI: web, VITE_API_PROXY_TARGET: `http://127.0.0.1:${ports.api}` };
   start('pnpm', ['--dir', 'frontend', 'exec', 'vite', '--host', '127.0.0.1', '--port', String(ports.web), '--strictPort'], 'web', env);
   await ready(web, 30000);
-  const result = spawn('pnpm', ['--dir', 'frontend', 'exec', 'playwright', 'test', ...process.argv.slice(2)], { cwd: root, stdio: 'inherit', env: { ...process.env, E2E_BASE_URL: web, E2E_PASSWORD: password, E2E_IDENTITY: identity, E2E_REALM: realm, E2E_CLIENT_SECRET: secret } });
+  const result = spawn('pnpm', ['--dir', 'frontend', 'exec', 'playwright', 'test', ...process.argv.slice(2)], { cwd: root, stdio: 'inherit', env: { ...process.env, E2E_POSTGRES_CONTAINER: db, E2E_BASE_URL: web, E2E_PASSWORD: password, E2E_IDENTITY: identity, E2E_REALM: realm, E2E_CLIENT_SECRET: secret } });
   children.push(result);
   exitCode = await new Promise(r => result.on('exit', code => r(code ?? 1)));
 } catch (error) { console.error(error.message); }

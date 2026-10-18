@@ -3008,6 +3008,74 @@
         ]
       }
     },
+    "/api/v1/expert-packages/import": {
+      "post": {
+        "operationId": "AgentWorkspaceService_ImportExpertPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExpertPackageImport"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ImportExpertPackageRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
+    "/api/v1/expert-packages/{resource_kind}/{resource_id}/export": {
+      "get": {
+        "operationId": "AgentWorkspaceService_ExportExpertPackage",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExportedExpertPackage"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "resource_kind",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AgentWorkspaceService"
+        ]
+      }
+    },
     "/api/v1/expert-teams": {
       "get": {
         "operationId": "AgentWorkspaceService_ListExpertTeams",
@@ -6792,6 +6860,20 @@
         }
       }
     },
+    "v1BundledSkillSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      }
+    },
     "v1CLICapability": {
       "type": "object",
       "properties": {
@@ -8497,6 +8579,12 @@
             "type": "string"
           }
         },
+        "tag_projection_status": {
+          "type": "string"
+        },
+        "tag_projection_error": {
+          "type": "string"
+        },
         "available": {
           "type": "boolean"
         },
@@ -8530,12 +8618,6 @@
         "cautions": {
           "type": "string"
         },
-        "tag_projection_status": {
-          "type": "string"
-        },
-        "tag_projection_error": {
-          "type": "string"
-        },
         "cli_connector_definition_ids": {
           "type": "array",
           "items": {
@@ -8550,6 +8632,43 @@
         },
         "immutable": {
           "type": "boolean"
+        },
+        "guidance": {
+          "type": "string"
+        },
+        "starter_prompts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bundled_skills": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1BundledSkillSummary"
+          }
+        },
+        "connector_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertConnectorDependency"
+          }
+        }
+      }
+    },
+    "v1ExpertConnectorDependency": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
         }
       }
     },
@@ -8597,6 +8716,42 @@
           "items": {
             "type": "string"
           }
+        },
+        "guidance": {
+          "type": "string"
+        },
+        "starter_prompts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "connector_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ExpertConnectorDependency"
+          }
+        }
+      }
+    },
+    "v1ExpertPackageImport": {
+      "type": "object",
+      "properties": {
+        "expert": {
+          "$ref": "#/definitions/v1Expert"
+        },
+        "expert_team": {
+          "$ref": "#/definitions/v1ExpertTeam"
+        },
+        "package_id": {
+          "type": "string"
+        },
+        "package_version": {
+          "type": "string"
+        },
+        "replayed": {
+          "type": "boolean"
         }
       }
     },
@@ -8635,6 +8790,9 @@
           "type": "string"
         },
         "cautions": {
+          "type": "string"
+        },
+        "guidance": {
           "type": "string"
         }
       }
@@ -8680,18 +8838,51 @@
         },
         "runtime_engine": {
           "type": "string"
+        },
+        "invocation_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "team_member_id": {
+          "type": "string"
+        },
+        "team_member_name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "repair_of": {
+          "type": "string"
+        },
+        "model_invoked": {
+          "type": "boolean"
+        },
+        "workspace_conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TeamWorkspaceConflict"
+          }
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ended_at": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
     "v1ExpertTeam": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
         "capability_introduction": {
           "type": "string"
         },
@@ -8700,6 +8891,12 @@
           "items": {
             "type": "string"
           }
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
         },
         "experts": {
           "type": "array",
@@ -8741,6 +8938,27 @@
             "type": "object",
             "$ref": "#/definitions/v1ExpertTeamMember"
           }
+        },
+        "platform": {
+          "type": "boolean"
+        },
+        "mutable": {
+          "type": "boolean"
+        },
+        "immutable": {
+          "type": "boolean"
+        },
+        "system_key": {
+          "type": "string"
+        },
+        "lead_member_id": {
+          "type": "string"
+        },
+        "starter_prompts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -8767,6 +8985,15 @@
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1ExpertTeamMemberInput"
+          }
+        },
+        "lead_member_id": {
+          "type": "string"
+        },
+        "starter_prompts": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }
@@ -8812,6 +9039,21 @@
           "items": {
             "type": "string"
           }
+        },
+        "definition": {
+          "$ref": "#/definitions/v1ExpertInput"
+        }
+      }
+    },
+    "v1ExportedExpertPackage": {
+      "type": "object",
+      "properties": {
+        "archive": {
+          "type": "string",
+          "format": "byte"
+        },
+        "filename": {
+          "type": "string"
         }
       }
     },
@@ -9301,6 +9543,25 @@
         },
         "api_key_configured": {
           "type": "boolean"
+        }
+      }
+    },
+    "v1ImportExpertPackageRequest": {
+      "type": "object",
+      "properties": {
+        "archive": {
+          "type": "string",
+          "format": "byte"
+        },
+        "copy_name": {
+          "type": "string"
+        },
+        "expected_version": {
+          "type": "string",
+          "format": "int64"
+        },
+        "target_resource_id": {
+          "type": "string"
         }
       }
     },
@@ -10395,6 +10656,10 @@
         },
         "platform_execution_available": {
           "type": "boolean"
+        },
+        "team_credit_budget_hundredths": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -10882,6 +11147,9 @@
             "type": "object",
             "$ref": "#/definitions/v1ExecutionStageSnapshot"
           }
+        },
+        "team": {
+          "$ref": "#/definitions/v1TeamExecutionContext"
         }
       }
     },
@@ -11446,6 +11714,74 @@
     "v1SyncIdentityGroupsRequest": {
       "type": "object"
     },
+    "v1TeamExecutionContext": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "lead_member_id": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1TeamRosterMember"
+          }
+        },
+        "max_model_calls": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "max_parallel": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "active_timeout_seconds": {
+          "type": "string",
+          "format": "int64"
+        },
+        "credit_budget_hundredths": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1TeamRosterMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1TeamWorkspaceConflict": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "task_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "resolution_source_task_id": {
+          "type": "string"
+        }
+      }
+    },
     "v1TransferGroupResourcesResponse": {
       "type": "object",
       "properties": {
@@ -11506,6 +11842,10 @@
         },
         "inherit_platform_execution": {
           "type": "boolean"
+        },
+        "team_credit_budget_hundredths": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

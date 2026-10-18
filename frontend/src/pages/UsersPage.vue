@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { useRouter } from "vue-router";
@@ -62,7 +63,7 @@ async function create() {
     showCreate.value = false;
     form.value = { username: "", email: "", display_name: "" };
     await refresh();
-  } catch { error.value = t("errors.validation"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); }
 }
 
 function requestStatusChange(item: UserAccount) { statusTarget.value = item; statusReason.value = ""; }
@@ -71,7 +72,7 @@ async function saveStatus() {
   if (!target || !statusReason.value.trim()) return;
   busy.value = true;
   try { await api.setUserEnabled(target.id, !target.enabled, target.version, statusReason.value.trim()); statusTarget.value = undefined; await refresh(); }
-  catch { error.value = t("errors.conflict"); }
+  catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
   finally { busy.value = false; }
 }
 
@@ -87,7 +88,7 @@ async function saveRoles() {
     await api.setUserRoles(target.id, { administrator: roleForm.value.administrator, resource_publisher: roleForm.value.resourcePublisher, expected_version: target.version, reason: roleForm.value.reason.trim() });
     roleTarget.value = undefined;
     await refresh();
-  } catch { error.value = t("errors.conflict"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
   finally { busy.value = false; }
 }
 
@@ -109,14 +110,14 @@ async function saveCredits() {
     if (creditForm.value.adjustment !== 0) await api.adjustUserCredits(creditUser.value.id, Math.round(creditForm.value.adjustment * 100), creditForm.value.reason, crypto.randomUUID());
     creditUser.value = undefined;
     await refresh();
-  } catch { error.value = t("errors.validation"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); }
 }
 async function savePolicy() {
   if (!policy.value) return;
   try {
     policy.value = await api.updateCreditPolicy({ default_daily_allocation_hundredths: Math.round(policyForm.value.defaultDaily * 100), warning_threshold_percent: policyForm.value.warning, redemption_codes_enabled: policyForm.value.redemptionCodes, version: policy.value.version });
     await refresh();
-  } catch { error.value = t("errors.conflict"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
 }
 
 async function syncGroups() {
@@ -137,7 +138,7 @@ async function saveBudget() {
     await api.updateIdentityGroupBudget(target.id, { daily_credit_limit_hundredths: budgetForm.value.enabled ? Math.round(budgetForm.value.daily * 100) : undefined, expected_version: target.version, reason: budgetForm.value.reason.trim() });
     budgetTarget.value = undefined;
     await refresh();
-  } catch { error.value = t("errors.conflict"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.conflict"); }
   finally { busy.value = false; }
 }
 function openTransfer(group: IdentityGroup) { transferGroup.value = group; transferForm.value = { from: "", to: "", reason: "" }; }
@@ -150,7 +151,7 @@ async function transferResources() {
     transferGroup.value = undefined;
     ElMessage.success(t("users.transferCompleted", { count: result.knowledge_base_count }));
     await refresh();
-  } catch { error.value = t("errors.validation"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "errors.validation"); }
   finally { busy.value = false; }
 }
 </script>

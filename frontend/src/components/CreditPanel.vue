@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { saveErrorMessage } from "../api/saveErrors";
 import { computed, inject, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { platformApiKey, type CreditBalance, type CreditLedgerEntry } from "../api/client";
@@ -54,7 +55,7 @@ async function redeem() {
     code.value = "";
     emit("updated", balance.value);
     ledger.value = (await api.listCreditLedger()).items ?? [];
-  } catch { error.value = t("credits.codeUnavailable"); }
+  } catch (cause) { error.value = saveErrorMessage(cause, t, "credits.codeUnavailable"); }
   finally { loading.value = false; }
 }
 
