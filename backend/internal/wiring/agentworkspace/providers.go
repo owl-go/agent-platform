@@ -25,6 +25,7 @@ import (
 	"agent-platform/backend/internal/objectstore"
 	"agent-platform/backend/internal/platformconfig"
 	"agent-platform/backend/internal/productanalytics"
+	"agent-platform/backend/internal/sandbox"
 	"agent-platform/backend/internal/secretcrypto"
 	platformserver "agent-platform/backend/internal/server"
 	workspaceservice "agent-platform/backend/internal/service/workspace"
@@ -93,13 +94,7 @@ func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analy
 
 func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider, box *secretcrypto.Box, config platformconfig.Config) (*workspaceapplication.Service, error) {
 	repository := workspacerepo.New(database.ORM(), credits)
-	var images []string
-	for _, runtime := range config.Worker.Runtimes {
-		if runtime.Available {
-			images = append(images, runtime.ImageDigest)
-		}
-	}
-	if err := repository.ConfigureConnectorExecution(config.Sandbox.Profile, config.Sandbox.Runtime, images); err != nil {
+	if err := configureLocalAPIConnectors(repository, config); err != nil {
 		return nil, err
 	}
 	if err := repository.EnsureDefaultResources(ctx, objects); err != nil {
@@ -122,6 +117,20 @@ func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits
 		service.EnableMessageChannels(channels)
 	}
 	return service, err
+}
+
+// Production API-only deployments do not require Worker sandbox settings.
+func configureLocalAPIConnectors(repository *workspacerepo.Repository, config platformconfig.Config) error {
+	if config.Sandbox.Profile != sandbox.LocalProfile {
+		return nil
+	}
+	var images []string
+	for _, runtime := range config.Worker.Runtimes {
+		if runtime.Available {
+			images = append(images, runtime.ImageDigest)
+		}
+	}
+	return repository.ConfigureConnectorExecution(config.Sandbox.Profile, config.Sandbox.Runtime, images)
 }
 
 func NewCreditsService(credits *creditsrepo.Repository) (*creditsapplication.Service, error) {

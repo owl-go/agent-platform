@@ -41,4 +41,6 @@ Migration 000088 是追加变更，不改已有 migration；新表无账号或�
 
 显式平台参数的 AMD64 仿真重验通过，55.52 秒（三包 8.36/11.12/10.72 秒，完整往返 15.50 秒），不等于原生硬件证据。最终候选真实构建捕获 MinIO `/out` 目录原先依赖 API build 隐式建立的问题；已加入显式初始化与 Dockerfile 层次回归，未切换旧服务，没有修改实际用户数据。中间候选不发布，最终 SOURCE_REVISION 使用完整 Git SHA。
 
+生产兼容复核发现 API-only 配置原本不要求 Worker runtime；API 现在只在显式 local profile 时装配本地验证，避免无故要求生产 API 填写 Worker 字段。新增构造 seam 回归验证省略 profile/production 不启用本地表、local/runc 只使用当前实际目标，Worker 严格配置校验不变。
+
 最终门禁、真实部署和 UI 验收、第三方账号授权与只读业务调用、Git 推送及本地镜像切换。Linux + gVisor 和真实供应商完整矩阵缺环境时保持未验证。仅本地修复不更新生产配置，也不复制生产凭据或验证记录。
