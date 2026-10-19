@@ -303,6 +303,29 @@ type stubCLICredentialRepository struct {
 	runtimeDigest         string
 }
 
+type localCLICredentialRepository struct {
+	*stubCLICredentialRepository
+	localVerified bool
+}
+
+func (r *localCLICredentialRepository) HasLocalConnectorConformance(context.Context, string, string) (bool, error) {
+	return r.localVerified, nil
+}
+
+func TestLocalConnectorDoesNotTrustFrozenProductionEvidence(t *testing.T) {
+	digest := "sha256:" + strings.Repeat("a", 64)
+	repo := &localCLICredentialRepository{stubCLICredentialRepository: &stubCLICredentialRepository{bundleVerified: true, runtimeVerified: true}}
+	executor := &Executor{cliCredentials: repo, config: platformconfig.Config{Sandbox: platformconfig.SandboxConfig{Profile: "local", Runtime: "runc"}}}
+	snapshot := domain.CLIConnectorSnapshot{ID: "connector-1", BundleSHA256: strings.Repeat("b", 64), RuntimeDigests: []string{digest}}
+	if verified, err := executor.cliConnectorRuntimeVerified(t.Context(), snapshot, digest); err != nil || verified {
+		t.Fatalf("production snapshot trusted: %v %v", verified, err)
+	}
+	repo.localVerified = true
+	if verified, err := executor.cliConnectorRuntimeVerified(t.Context(), snapshot, digest); err != nil || !verified {
+		t.Fatalf("local evidence unavailable: %v %v", verified, err)
+	}
+}
+
 func (repository *stubCLICredentialRepository) ValidateConnectorPackageCLIInvocation(context.Context, string, string, string, string) error {
 	return nil
 }

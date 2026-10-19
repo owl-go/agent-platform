@@ -115,4 +115,6 @@ Smart Assistant 受控发布使用追加式 Migration `000065_smart_assistant_co
 
 ## Connector Authorization 续期
 
+显式本地 Connector 执行按 [ADR-0049](../adr/0049-local-cli-connector-verification.md)装配，Migration 000088 添加独立的 `local_cli_connector_conformance`（bundle SHA-256 × 实际 Image ID）和 Publication 的 `local_activation_pending` 初始化标记。只有显式本地配置查询该表；生产继续只查询原始 runsc Conformance。验证不读取或生成 User Authorization，不回写不可变 Revision。API 对当前镜像投影验证目标，Worker 在物化和每次执行前独立复验。初始化标记只控制默认目录首次恢复，管理员显式变更清除它，seed 修订升级保留它；不改变 User-private 安装、授权、审批或历史快照所有权。
+
 Application 的 `ConnectorAuthorizationRenewal` 使用窄 Repository、Cipher 和供应商 Refresh port；Worker 装配当前飞书 OAuth Adapter，并通过独立分钟循环和渠道 Inbox 准入前检查调用。HTTP 不进入 GORM 事务，凭证明文只在 host 调用期间存在。Repository 负责 selected grant/owner/Installation/Publication 校验、会话 advisory lock、版本化保存及 Audit 原子性；API 手动刷新共享该锁，并在供应商调用前拒绝过期的 expected_version。没有自动扫码、账号切换或审批权限扩大。

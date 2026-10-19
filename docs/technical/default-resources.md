@@ -28,7 +28,7 @@
 |---|---|---|
 | feishu | CLI | 1.0.96 |
 | dingtalk | CLI | 1.0.64 |
-| wecom | CLI | 1.4.2 |
+| wecom | CLI | 1.4.3 |
 | notion | CLI | 0.23.15 |
 | teambition | CLI | 0.3.7 |
 | modao | CLI | 0.1.1 |
@@ -72,5 +72,7 @@ Connector Publication 已存在但不属于当前默认初始化时，保留其�
 9 个 MCP 发布定义为 available，仍须遵守既有用户安装、配置、测试与授权边界；外部服务可用性另验。11 个 CLI 发布初始状态为 disabled，不生成用户安装、授权、审批或 Conformance 记录。
 
 CLI 发布服务在结构校验之外查询当前数据库的 exact Bundle SHA-256 × Runtime RepoDigest Conformance。没有真实通过记录就拒绝发布。各 `scripts/connectors/<source>/README.md` 与发布脚本描述当前 source build → Worker Linux + runsc 验证 → Stage/Publish 路径；从 `main_temp` 部署候选版本后在受控主机执行，使用本安装的私有配置及证据目录。不能把原部署的证据行、Runtime 可用状态或用户凭据复制过来使包可用。
+
+显式个人本地 `local/runc` 的独立验证及恢复按 [ADR-0049](../adr/0049-local-cli-connector-verification.md)。Worker 对受管理的现成 CLI bundle 自动执行无网络、无凭据启动验证，绑定当前实际 Image ID；只恢复仍有 `local_activation_pending` 的默认 Publication，保留管理员明确停用。Migration 000088 只为未改动的 `disabled/version=1` 默认 CLI 回填该标记，后续 seed 升级保留它，管理员发布或停用则清除；新默认 CLI 初始化时设置该标记。生产永不查询本地证据表。目录可安装后仍须 User 自己授权，启动验证不证明企业业务 API 可用。
 
 变更目录包时增加对应资源版本，执行 `make resources-check`、PostgreSQL 初始化/并发/升级/冲突/失败测试和后端门禁。包摘要自动从规范化内容计算。供应商授权、Linux + gVisor、精确 Runtime Digest 及全新服务器部署仍需独立证据。

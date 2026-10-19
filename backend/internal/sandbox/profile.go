@@ -30,3 +30,16 @@ func ValidateExecutionProfile(profile, runtime string) error {
 func ValidExecutionImage(profile, image string) bool {
 	return registryImage.MatchString(image) || profile == LocalProfile && localImage.MatchString(image)
 }
+
+// ExecutionImageDigest keeps local Image IDs explicit and never accepts tags.
+func ExecutionImageDigest(profile, image string) (string, error) {
+	if !ValidExecutionImage(profile, image) {
+		return "", fmt.Errorf("Runtime image has no pinned digest")
+	}
+	for index := range image {
+		if image[index] == '@' {
+			return image[index+1:], nil
+		}
+	}
+	return image, nil
+}

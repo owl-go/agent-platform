@@ -198,3 +198,32 @@ func testDockerContainerConfig(gate EgressGate, run DockerCommandRunner, start D
 		Egress: gate, Run: run, Start: start, Name: func() (string, error) { return "agent-cli-test", nil },
 	}
 }
+
+func TestDockerConnectorExplicitLocalProfile(t *testing.T) {
+	config := testDockerContainerConfig(nil, func(context.Context, map[string]string, string, ...string) ([]byte, error) { return nil, nil }, func(context.Context, map[string]string, []string) (Result, error) { return Result{}, nil })
+	config.Profile, config.Runtime, config.Image, config.ResolverConfigFile = sandbox.LocalProfile, "runc", "sha256:"+strings.Repeat("a", 64), ""
+	process, err := NewDockerContainerProcess(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := strings.Join(process.createCommand("test-local", ProcessRequest{ConnectorID: "connector-1"}), " ")
+	if strings.Contains(command, "/etc/resolv.conf") || !strings.Contains(command, "--runtime runc") {
+		t.Fatal(command)
+	}
+	if _, err := process.Run(t.Context(), ProcessRequest{ConnectorID: "connector-1", Executable: "tool", Arguments: []string{"status"}, EgressHosts: []string{"example.com"}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, profile := range []string{"", "production", "invalid"} {
+		config.Profile = profile
+		if _, err := NewDockerContainerProcess(config); err == nil {
+			t.Fatalf("accepted runc in %q", profile)
+		}
+	}
+	config.Profile = sandbox.LocalProfile
+	for _, network := range []string{"host", "bridge"} {
+		config.EgressNetwork = network
+		if _, err := NewDockerContainerProcess(config); err == nil {
+			t.Fatalf("unsafe local network accepted: %s", network)
+		}
+	}
+}

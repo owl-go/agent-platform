@@ -16,12 +16,14 @@ import (
 )
 
 type Repository struct {
-	db            *gorm.DB
-	credits       creditTransactionSettler
-	recoveryOnce  sync.Once
-	recoveryError error
-	workerLock    *sql.Conn
-	workerLockMu  sync.Mutex
+	localConnectorImages  []string
+	localConnectorProfile bool
+	db                    *gorm.DB
+	credits               creditTransactionSettler
+	recoveryOnce          sync.Once
+	recoveryError         error
+	workerLock            *sql.Conn
+	workerLockMu          sync.Mutex
 }
 
 type connectorRevisionRecord struct {
@@ -38,12 +40,13 @@ type connectorRevisionRecord struct {
 func (connectorRevisionRecord) TableName() string { return "connector_revisions" }
 
 type connectorPublicationRecord struct {
-	PackageSource    string    `gorm:"column:package_source"`
-	ActiveRevisionID string    `gorm:"column:active_revision_id"`
-	State            string    `gorm:"column:state"`
-	AdministratorID  string    `gorm:"column:administrator_user_id"`
-	Version          int64     `gorm:"column:version"`
-	UpdatedAt        time.Time `gorm:"column:updated_at"`
+	LocalActivationPending bool      `gorm:"column:local_activation_pending"`
+	PackageSource          string    `gorm:"column:package_source"`
+	ActiveRevisionID       string    `gorm:"column:active_revision_id"`
+	State                  string    `gorm:"column:state"`
+	AdministratorID        string    `gorm:"column:administrator_user_id"`
+	Version                int64     `gorm:"column:version"`
+	UpdatedAt              time.Time `gorm:"column:updated_at"`
 }
 
 func (connectorPublicationRecord) TableName() string { return "connector_package_publications" }

@@ -383,7 +383,7 @@ func seedConnector(ctx context.Context, tx *gorm.DB, objects objectstore.Provide
 			return fmt.Errorf("default Connector publication changed during initialization")
 		}
 	} else {
-		err = tx.Create(&connectorPublicationRecord{PackageSource: definition.Source, ActiveRevisionID: revision.ID, State: state, AdministratorID: owner, Version: 1, UpdatedAt: time.Now().UTC()}).Error
+		err = tx.Create(&connectorPublicationRecord{LocalActivationPending: pkg.CLI != nil, PackageSource: definition.Source, ActiveRevisionID: revision.ID, State: state, AdministratorID: owner, Version: 1, UpdatedAt: time.Now().UTC()}).Error
 	}
 	if err != nil {
 		return err

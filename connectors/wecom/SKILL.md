@@ -2,13 +2,13 @@
 name: wecom
 display_name: 企业微信
 description: 使用 Agent Workspace 的企业微信连接器处理消息、邮件、文档、在线表格、智能表格、智能文档、待办、日程、会议、微盘与通讯录。
-version: 1.4.2
+version: 1.4.3
 author: Agent Workspace
 ---
 
 # 企业微信连接器
 
-本修订使用固定的 `@wecom/cli@1.3.4`，通过企业微信 API 模式智能机器人取得单次命令令牌。User 在 Connector Installation 的授权界面提供 `bot_id` 和 `secret`；平台加密保存并仅在执行时注入。连接器修订版本为 1.4.2，CLI 版本仍为 1.3.4。
+本修订使用固定的 `@wecom/cli@1.3.4`，通过企业微信 API 模式智能机器人取得单次命令令牌。User 在 Connector Installation 的授权界面提供 `bot_id` 和 `secret`；平台加密保存并仅在执行时注入。连接器修订版本为 1.4.3，CLI 版本仍为 1.3.4。分发包携带 Linux ARM64 与 x64 二进制；架构兼容验证和实际账号业务验证分别判断。
 
 ## 调用流程
 

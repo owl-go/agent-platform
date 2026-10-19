@@ -36,6 +36,7 @@ type DockerStartRunner func(context.Context, map[string]string, []string) (Resul
 type ContainerNameFactory func() (string, error)
 
 type DockerContainerProcessConfig struct {
+	Profile            string
 	DockerCommand      string
 	Image              string
 	Runtime            string
@@ -80,7 +81,20 @@ func NewDockerContainerProcess(config DockerContainerProcessConfig) (*DockerCont
 	if err := validateDockerContainerConfig(config); err != nil {
 		return nil, err
 	}
+	if config.Profile == sandbox.LocalProfile {
+		// Trusted personal Docker bridge only; this is NOT a production Egress Gate.
+		config.Egress = localBridgeGate{}
+	}
 	return &DockerContainerProcess{config: config}, nil
+}
+
+type localBridgeGate struct{}
+
+func (localBridgeGate) Execute(ctx context.Context, _ string, _ []string, execute func(context.Context) (Result, error)) (Result, error) {
+	if err := ctx.Err(); err != nil {
+		return Result{}, err
+	}
+	return execute(ctx)
 }
 
 func (process *DockerContainerProcess) Run(ctx context.Context, request ProcessRequest) (result Result, returnErr error) {
@@ -133,13 +147,22 @@ func (process *DockerContainerProcess) remove(ctx context.Context, name string) 
 }
 
 func validateDockerContainerConfig(config DockerContainerProcessConfig) error {
-	paths := []string{config.BundleDirectory, config.WorkspaceDirectory, config.ContainerWorkspace, config.ResolverConfigFile}
+	paths := []string{config.BundleDirectory, config.WorkspaceDirectory, config.ContainerWorkspace}
+	if config.Profile != sandbox.LocalProfile {
+		paths = append(paths, config.ResolverConfigFile)
+	}
 	for _, value := range paths {
 		if !filepath.IsAbs(value) || value == "/" || strings.Contains(value, ",") {
 			return errors.New("CLI Connector container paths must be absolute non-root paths without commas")
 		}
 	}
-	if strings.ContainsAny(config.DockerCommand, "\x00\r\n") || !containerImageDigest.MatchString(config.Image) || config.Runtime != "runsc" || !containerName.MatchString(config.RunID) || !dockerNetworkName.MatchString(config.EgressNetwork) || config.UID <= 0 || config.GID <= 0 || config.Egress == nil {
+	if err := sandbox.ValidateExecutionProfile(config.Profile, config.Runtime); err != nil {
+		return err
+	}
+	if config.Profile == sandbox.LocalProfile && (config.EgressNetwork == "host" || config.EgressNetwork == "bridge") {
+		return errors.New("local CLI Connector requires a dedicated bridge or no network")
+	}
+	if strings.ContainsAny(config.DockerCommand, "\x00\r\n") || !sandbox.ValidExecutionImage(config.Profile, config.Image) || !containerName.MatchString(config.RunID) || !dockerNetworkName.MatchString(config.EgressNetwork) || config.UID <= 0 || config.GID <= 0 || config.Profile != sandbox.LocalProfile && config.Egress == nil {
 		return errors.New("invalid Docker CLI Connector container configuration")
 	}
 	if config.Limits.CPUs <= 0 || config.Limits.MemoryBytes <= 0 || config.Limits.PIDs <= 0 || config.Limits.TempBytes <= 0 {
@@ -186,7 +209,6 @@ func (process *DockerContainerProcess) createCommand(name string, request Proces
 		"--cpus", strconv.FormatFloat(process.config.Limits.CPUs, 'f', -1, 64),
 		"--mount", "type=bind,src=" + process.config.WorkspaceDirectory + ",dst=" + process.config.ContainerWorkspace + ",readonly=false",
 		"--mount", "type=bind,src=" + bundle + ",dst=" + connectorContainerRoot + ",readonly=true",
-		"--mount", "type=bind,src=" + process.config.ResolverConfigFile + ",dst=/etc/resolv.conf,readonly=true",
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=" + strconv.FormatInt(process.config.Limits.TempBytes, 10),
 		"--workdir", process.config.ContainerWorkspace,
 		"--entrypoint", "/bin/sleep",
@@ -194,6 +216,10 @@ func (process *DockerContainerProcess) createCommand(name string, request Proces
 		"--label", "agent-platform.run-id=" + process.config.RunID,
 		"--label", "agent-platform.role=cli-connector",
 		"--init",
+		"--no-healthcheck",
+	}
+	if process.config.Profile != sandbox.LocalProfile {
+		arguments = append(arguments, "--mount", "type=bind,src="+process.config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
 	}
 	return append(arguments, process.config.Image, "900")
 }

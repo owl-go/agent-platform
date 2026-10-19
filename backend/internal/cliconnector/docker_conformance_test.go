@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"os"
 	"slices"
 	"strings"
@@ -46,6 +47,64 @@ func TestExtractBundleRejectsTraversal(t *testing.T) {
 	err := extractBundle(testBundle(t, map[string]string{"../escape": "bad"}), t.TempDir())
 	if err == nil {
 		t.Fatal("expected traversal to be rejected")
+	}
+}
+
+func TestDockerConformanceLocalEvidenceRequiresExplicitProfile(t *testing.T) {
+	uid, gid := os.Getuid(), os.Getgid()
+	if uid == 0 {
+		uid, gid = 65532, 65532
+	}
+	digest := "sha256:" + strings.Repeat("a", 64)
+	config := DockerConformanceConfig{Profile: "local", DockerCommand: "docker", Runtime: "runc", TempRoot: t.TempDir(), RuntimeImages: map[string]string{digest: digest}, UID: uid, GID: gid, Timeout: time.Minute}
+	var args []string
+	suite, err := NewDockerConformance(config, func(_ context.Context, _ string, arguments ...string) error {
+		args = slices.Clone(arguments)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := suite.Test(t.Context(), testBundle(t, map[string]string{"node_modules/.bin/tool": "#!/bin/sh\n"}), digest, Definition{Executable: "tool"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(args, "runc") || !slices.Contains(args, "none") {
+		t.Fatal(args)
+	}
+	for _, profile := range []string{"", "production", "unknown"} {
+		config.Profile = profile
+		if _, err := NewDockerConformance(config, nil); err == nil {
+			t.Fatalf("accepted local evidence in %q", profile)
+		}
+	}
+}
+
+func TestDockerConformanceCancellationRemovesContainerWithLiveCleanupContext(t *testing.T) {
+	uid, gid := os.Getuid(), os.Getgid()
+	if uid == 0 {
+		uid, gid = 65532, 65532
+	}
+	digest := "sha256:" + strings.Repeat("a", 64)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	removed := false
+	suite, err := NewDockerConformance(DockerConformanceConfig{Profile: "local", DockerCommand: "docker", Runtime: "runc", TempRoot: t.TempDir(), RuntimeImages: map[string]string{digest: digest}, UID: uid, GID: gid, Timeout: time.Minute}, func(ctx context.Context, _ string, args ...string) error {
+		if args[0] == "run" {
+			cancel()
+			return context.Canceled
+		}
+		if args[0] != "rm" || ctx.Err() != nil {
+			t.Fatal("cleanup must remove container outside cancellation")
+		}
+		removed = true
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = suite.Test(ctx, testBundle(t, map[string]string{"node_modules/.bin/tool": "#!/bin/sh\n"}), digest, Definition{Executable: "tool"})
+	if !errors.Is(err, context.Canceled) || !removed {
+		t.Fatalf("err=%v removed=%v", err, removed)
 	}
 }
 

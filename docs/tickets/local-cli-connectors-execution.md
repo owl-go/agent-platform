@@ -1,0 +1,34 @@
+# 本地 runc CLI Connector 恢复
+
+2026-10-19；会话分支 `codex/local-deployment`，沿用 `/Users/frank/projects/agent-platform-local-deployment`。基线集成 `origin/main_temp` 的 `f88bc11`。不操作欠费云服务器，不读取或迁移旧账号凭据。
+
+## 范围与验收
+
+- AC-LCLI-1 / G-SEC、G-RUNTIME：仅显式 local/runc 使用个人 bridge 和实际本地 Image ID；生产省略 profile/production 仍强制 runsc/RepoDigest，禁止自动降级。模型容器仅挂载 Broker socket，连接器容器只挂当前 bundle，保持非 root、只读、限额、审批和脱敏。
+- AC-LCLI-2 / G-DB、G-API：当前实际 bundle × Image ID 的本地证据独立存储，不继承生产/其他镜像证据；API 与 Worker 分别校验。只恢复受管理默认目录，管理员明确停用与 User 私有授权不被覆盖。
+- AC-LCLI-3 / G-RUNTIME：飞书、钉钉、企业微信真实分发包在当前 ARM64 Runtime 启动，`agent-cli`→Unix Broker→独立 Connector Container 完整往返及 canary 脱敏通过。AMD64 仿真另记，不能称原生 AMD64。
+- AC-LCLI-4 / G-E2E：本地部署后检查管理员目录每种一个条目、真实品牌图标、安装与未授权连接入口；真实账号授权及只读业务调用独立验收，无账号不能宣称通过。
+- AC-LCLI-5 / G-DEPLOY：通过适用门禁，提交推送本会话分支，集成 main_temp 后才构建并切换本地服务；保留原镜像、数据卷、私密备份和恢复点。
+
+## 发现与实现
+
+诊断已复现三个 CLI Publication 均 disabled、原生产证据为零，市场接口过滤 disabled，前端同时隐藏空分类。不能把目录启用当作执行成功。
+
+显式 local 模式装配独立的无网络/无凭据 Docker 启动验证；现成 bundle 经 Object Store 完整性复核，不启用 npm Builder。API 展示实际配置镜像的兼容验证结果，生产查询与 Worker 执行保持分离。Migration 000088 添加本地证据表和初始化恢复标记，默认记录的 seed 修订升级保留标记，管理员变更清除。没有可用 Runtime 时 API 仍可启动，但不会回退生产证据。
+
+真实 ARM64 测试首先发现并修复：模型 Container 禁止 Broker socket；WeCom 1.4.2 分发只带 x64。1.4.3 追加同一固定上游的 ARM64 npm artifact，复核已审核两个原生二进制 SHA-256，保留全部 90 项能力和授权方式，升级不可变资源版本而不是改写旧 Revision。SQL 初次集成发现 seed 的 text ID 与 Revision UUID 比较不匹配，已显式转换并保留回归。
+
+## 已执行证据（进行中）
+
+- 聚焦 local process/profile/conformance 测试先因缺少 Profile 支持而红，后通过；生产拒绝 runc/未知 profile、root、host 网络的边界继续覆盖。
+- 第一次真实 Docker 复现 WeCom 架构错误和 socket 限制；修复后 ARM64 三个包启动均通过，真实模型客户端→Broker→独立 Fixture 进程通过，测试 canary 已脱敏。该 Fixture 不访问第三方账号，不证明外部业务 API。
+- WeCom 包 Parse：版本 1.4.3，包 SHA-256 `34bc101e21dabd46592f9dd48aad705812dee4f44fe0173fe2d5572cf0711be7`，bundle SHA-256 `16747bdbc47d4923ec4cfd92f3b5e54eff1ce5f9ed495693c19ca95364488ea1`；五项 Python 检查通过。新 bundle 的生产 runsc 证据尚无。
+- `make test`、`make build`、`make deploy-test`、`go -C backend vet ./...` 通过；受影响包最后增补的取消清理测试也通过。独立 PostgreSQL 上完整 `gormrepo` 与 `gormdb` 套件实际运行通过（约 99 秒），未把默认无 DSN 的 Skip 当作数据库通过。随后增补的 Migration 000088 重跑与标记回填、seed 升级保留标记、没有 Runtime 时禁止回退的聚焦测试通过。目录 Parser 和不可变资源版本测试通过。
+
+## 迁移与恢复边界
+
+Migration 000088 是追加变更，不改已有 migration；新表无账号或凭据，主键为 bundle × Image ID；新增标记默认 false，只回填首次默认目录。旧代码忽略新表/列，应用回退不删 schema；包旧版本与历史记录仍保留。实际切换前备份业务数据库、Keycloak 数据库及加密状态，备份仅放私密数据卷且不提交；数据恢复会回退到备份时点，不能冒称零数据损失。恢复演练和切换结果待补。
+
+## 待完成
+
+最终门禁、真实部署和 UI 验收、第三方账号授权与只读业务调用、Git 推送及本地镜像切换。Linux + gVisor 和真实供应商完整矩阵缺环境时保持未验证。仅本地修复不更新生产配置，也不复制生产凭据或验证记录。

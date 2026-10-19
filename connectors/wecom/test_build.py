@@ -2,12 +2,24 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import tarfile
 import unittest
 
 from connectors.wecom import build
 
 
 class UpstreamResourcesTest(unittest.TestCase):
+    def test_distributed_bundle_carries_both_reviewed_linux_binaries(self):
+        with tarfile.open(build.HERE / "package/cli-bundle.tgz", mode="r:gz") as archive:
+            for arch, digest in build.NATIVE_SHA256.items():
+                body = archive.extractfile(f"node_modules/@wecom/cli-linux-{arch}/bin/wecom-cli").read()
+                self.assertEqual(hashlib.sha256(body).hexdigest(), digest)
+
+    def test_dual_bundle_rejects_unreviewed_native_artifact(self):
+        from connectors.wecom.dual_arch import dual_bundle
+        with self.assertRaisesRegex(ValueError, "integrity mismatch"):
+            dual_bundle(b"irrelevant", b"unreviewed artifact")
+
     def test_runsc_process_limit_allows_connector_container_startup(self):
         # Production runsc could not start its sandbox with a limit of eight.
         self.assertGreaterEqual(build.RESOURCE_LIMITS["child_processes"], 128)

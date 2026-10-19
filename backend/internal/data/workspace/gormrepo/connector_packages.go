@@ -104,7 +104,7 @@ func (repository *Repository) PublishConnectorRevision(ctx context.Context, admi
 		}
 		result := tx.Model(&connectorPublicationRecord{}).
 			Where("package_source = ? AND version = ?", row.PackageSource, row.Version).
-			Updates(map[string]any{"active_revision_id": revision.ID, "state": string(domain.ConnectorPublicationAvailable), "administrator_user_id": administratorID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
+			Updates(map[string]any{"local_activation_pending": false, "active_revision_id": revision.ID, "state": string(domain.ConnectorPublicationAvailable), "administrator_user_id": administratorID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -126,7 +126,7 @@ func (repository *Repository) SetConnectorPublicationState(ctx context.Context, 
 	var row connectorPublicationRecord
 	result := repository.db.WithContext(ctx).Model(&connectorPublicationRecord{}).
 		Where("package_source = ? AND version = ?", packageSource, expectedVersion).
-		Updates(map[string]any{"state": string(state), "administrator_user_id": administratorID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
+		Updates(map[string]any{"local_activation_pending": false, "state": string(state), "administrator_user_id": administratorID, "version": gorm.Expr("version + 1"), "updated_at": gorm.Expr("now()")})
 	if result.Error != nil {
 		return domain.ConnectorPublication{}, fmt.Errorf("set Connector Publication state: %w", result.Error)
 	}

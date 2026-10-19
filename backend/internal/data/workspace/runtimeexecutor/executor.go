@@ -872,9 +872,9 @@ func (executor *Executor) materializeCLIConnectors(ctx context.Context, job appl
 	if len(job.Snapshot.CLIConnectors) == 0 {
 		return "", nil
 	}
-	_, runtimeDigest, ok := strings.Cut(runtimeImage, "@")
-	if !ok || runtimeDigest == "" {
-		return "", fmt.Errorf("Runtime image has no pinned digest")
+	runtimeDigest, err := sandbox.ExecutionImageDigest(executor.config.Sandbox.Profile, runtimeImage)
+	if err != nil {
+		return "", err
 	}
 	directory = filepath.Join(filepath.Clean(scratch), "connectors")
 	if err := os.Mkdir(directory, 0o755); err != nil {
@@ -937,12 +937,12 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 	if len(job.Snapshot.CLIConnectors) == 0 {
 		return nil, "", nil
 	}
-	if executor.cliEgress == nil {
+	if executor.cliEgress == nil && executor.config.Sandbox.Profile != sandbox.LocalProfile {
 		return nil, "", fmt.Errorf("CLI Connector execution is unavailable on this Worker")
 	}
-	_, runtimeDigest, ok := strings.Cut(runtime.ImageDigest, "@")
-	if !ok || runtimeDigest == "" {
-		return nil, "", fmt.Errorf("Runtime image has no pinned digest")
+	runtimeDigest, err := sandbox.ExecutionImageDigest(executor.config.Sandbox.Profile, runtime.ImageDigest)
+	if err != nil {
+		return nil, "", err
 	}
 	definitions := make([]cliconnector.Definition, 0, len(job.Snapshot.CLIConnectors))
 	requiresApproval := false
@@ -977,7 +977,8 @@ func (executor *Executor) startCLIConnectorBroker(ctx context.Context, job appli
 		return nil, "", fmt.Errorf("CLI Connector approvals are unavailable on this Worker")
 	}
 	process, err := cliconnector.NewDockerContainerProcess(cliconnector.DockerContainerProcessConfig{
-		Image: runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
+		Profile: executor.config.Sandbox.Profile,
+		Image:   runtime.ImageDigest, Runtime: executor.config.Sandbox.Runtime, RunID: job.ID,
 		BundleDirectory: bundleDirectory, WorkspaceDirectory: workspace, ContainerWorkspace: runtimeWorkspaceDirectory,
 		ResolverConfigFile: executor.config.Sandbox.ResolverConfig, EgressNetwork: executor.config.Sandbox.EgressNetwork,
 		Limits: cliconnector.ExecutionLimits(definitions...),
@@ -1037,6 +1038,19 @@ func appendExecutionEvidence(existing []workspacedomain.Evidence, items ...works
 }
 
 func (executor *Executor) cliConnectorRuntimeVerified(ctx context.Context, connector workspacedomain.CLIConnectorSnapshot, runtimeDigest string) (bool, error) {
+	if executor.config.Sandbox.Profile == sandbox.LocalProfile {
+		// Frozen production evidence is never a substitute for local verification.
+		if executor.cliCredentials == nil {
+			return false, nil
+		}
+		local, ok := executor.cliCredentials.(interface {
+			HasLocalConnectorConformance(context.Context, string, string) (bool, error)
+		})
+		if !ok {
+			return false, nil
+		}
+		return local.HasLocalConnectorConformance(ctx, connector.BundleSHA256, runtimeDigest)
+	}
 	if connector.InstallationID != "" {
 		if executor.cliCredentials == nil {
 			return false, nil

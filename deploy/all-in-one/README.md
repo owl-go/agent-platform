@@ -89,6 +89,10 @@ Compose 会分别拉取产品镜像与 Runtime 镜像；没有新 Digest 时复�
 
 ## 6. 生产 `runsc`
 
+本地 `local/runc` 下，Worker 会对分发的固定 CLI Connector 包进行独立、无网络和无账号凭据的启动检查；通过当前 Runtime Image ID 检查后，默认目录会自动恢复可安装状态，通常在启动后数十秒内完成。管理员已经明确停用的条目不会自动恢复。飞书、钉钉与企业微信安装后的账号授权仍需 User 完成，真实业务读写必须另验；企业微信 1.4.3 包含 ARM64/x64 二进制。切换 Runtime 镜像后重新验证，不继承旧 Image ID 的通过记录。隔离 npm Builder 和 Workflow Message Channel 不因此启用。
+
+本地 Connector 使用可信个人 bridge，没有生产域名级网络隔离保证，不应在共享主机使用。生产验证表与本地验证表分开，详见 [本地 Connector 边界](../../docs/adr/0049-local-cli-connector-verification.md)。
+
 本 Compose 默认是本地 `runc` 模式。生产仍要求 Linux + `runsc`、固定 Runtime RepoDigest、受管 Egress Network、固定 Resolver、宿主 Egress Controller 和对应 Digest 的 Conformance。
 
 生产覆盖至少需要：

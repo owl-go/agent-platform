@@ -2,6 +2,7 @@ package containerprocess
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -38,6 +39,16 @@ func TestLocalRuncPreservesIsolationAndProductionRejectsIt(t *testing.T) {
 	warm := strings.Join(warmCreateArguments(config, "local-test", "fingerprint"), " ")
 	if !strings.Contains(warm, "--runtime runc") || strings.Contains(warm, "dst=/etc/resolv.conf") {
 		t.Fatal("local warm container lost runc or Docker DNS")
+	}
+	brokerConfig := config
+	brokerConfig.ScratchDirectory = "/runtime/scratch"
+	brokerConfig.CLIBrokerSocket = filepath.Join(brokerConfig.ScratchDirectory, "broker", "cli-broker.sock")
+	if _, err := New(brokerConfig); err != nil {
+		t.Fatal(err)
+	}
+	warmBroker := strings.Join(warmCreateArguments(brokerConfig, "local-test", "fingerprint"), " ")
+	if !strings.Contains(warmBroker, "dst=/run/agent-cli,readonly=true") {
+		t.Fatal("local broker socket must be read-only")
 	}
 	production := validConfig(nil, nil)
 	explicitProduction := production

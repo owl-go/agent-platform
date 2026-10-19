@@ -6,7 +6,7 @@
 
 Docker Desktop 停止容器后可能短暂保留嵌套只读挂载的权限状态。本地模式仅对附件挂载点删除的 `EACCES` / `EPERM` / `EBUSY` 最多重试 1 秒，并响应取消；不更改目录权限、不忽略永久错误，生产删除逻辑不重试。对应真实本机验收见 [2026-10-18 本地 runc 记录](../evidence/agent-workspace/2026-10-18-local-runc-execution.md)。
 
-`make local-up` 构建固定版本 Runtime 与本地 Linux Worker 镜像。Worker 挂载 Docker socket，仅控制进程拥有文件归属调整权限；模型容器不挂载 Docker socket。Workspace 和凭证目录在 Worker 与 Docker 宿主使用相同绝对路径。本地 Runtime 使用带所有权标签的专用 bridge 和 Docker DNS，不挂载生产 Resolver、不声明生产公网/私网过滤保证；CLI Connector Egress Gate、CLI Builder 和消息渠道关闭。API/Web/Worker 管理端口只发布到 127.0.0.1。固定镜像版本检查后提供本地引擎选择，真实模型调用按组合单独验证，不等于 Production Conformance。
+`make local-up` 构建固定版本 Runtime 与本地 Linux Worker 镜像。Worker 挂载 Docker socket，仅控制进程拥有文件归属调整权限；模型容器不挂载 Docker socket。Workspace 和凭证目录在 Worker 与 Docker 宿主使用相同绝对路径。本地 Runtime 使用带所有权标签的专用 bridge 和 Docker DNS，不挂载生产 Resolver、不声明生产公网/私网过滤保证。CLI Connector 按 [ADR-0049](../adr/0049-local-cli-connector-verification.md)使用独立的本地兼容验证和短生命周期容器；模型 Runtime 只读挂载本 Stage 的 Broker socket，不直接挂载 CLI bundle。CLI Builder 和消息渠道仍关闭。API/Web/Worker 管理端口只发布到 127.0.0.1。固定镜像版本检查后提供本地引擎选择，真实模型调用按组合单独验证，不等于 Production Conformance。
 
 ## 生产隔离
 

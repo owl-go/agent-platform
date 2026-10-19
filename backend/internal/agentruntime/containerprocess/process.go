@@ -179,8 +179,8 @@ func runDockerControl(ctx context.Context, command string, arguments ...string) 
 }
 
 func validateConfig(config Config) error {
-	if config.Profile == sandbox.LocalProfile && (config.CLIBrokerSocket != "" || config.ConnectorDirectory != "" || config.PublicEgressNetwork == "host") {
-		return fmt.Errorf("local sandbox does not support CLI Connector mounts or host networking")
+	if config.Profile == sandbox.LocalProfile && (config.ConnectorDirectory != "" || config.PublicEgressNetwork == "host") {
+		return fmt.Errorf("local sandbox does not support direct CLI bundle mounts or host networking")
 	}
 	if !sandbox.ValidExecutionImage(config.Profile, config.Image) {
 		return fmt.Errorf("runtime image must use an immutable sha256 digest")

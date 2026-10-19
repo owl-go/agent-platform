@@ -265,6 +265,32 @@ type starterConnectorRepository struct {
 	bundle, runtime string
 }
 
+type localStarterRepository struct {
+	*starterConnectorRepository
+	localVerified bool
+	local         bool
+}
+
+func (r *localStarterRepository) LocalConnectorVerification() bool { return r.local }
+func (r *localStarterRepository) ConnectorVerificationDigests(string) []string {
+	return []string{"sha256:" + strings.Repeat("d", 64)}
+}
+func (r *localStarterRepository) HasLocalConnectorConformance(context.Context, string, string) (bool, error) {
+	return r.localVerified, nil
+}
+
+func TestConnectorVerificationNeverFallsBackAcrossProfiles(t *testing.T) {
+	for _, tc := range []struct{ local, localPassed, productionPassed, want bool }{
+		{true, false, true, false}, {true, true, false, true}, {false, true, false, false}, {false, false, true, true},
+	} {
+		r := &localStarterRepository{starterConnectorRepository: &starterConnectorRepository{verified: tc.productionPassed}, localVerified: tc.localPassed, local: tc.local}
+		got, err := connectorBundleVerified(t.Context(), r, strings.Repeat("a", 64), "sha256:"+strings.Repeat("b", 64))
+		if err != nil || got != tc.want {
+			t.Fatalf("case=%+v got=%v err=%v", tc, got, err)
+		}
+	}
+}
+
 func (r *starterConnectorRepository) GetConnectorRevision(context.Context, string) (domain.ConnectorRevision, error) {
 	return r.revision, nil
 }

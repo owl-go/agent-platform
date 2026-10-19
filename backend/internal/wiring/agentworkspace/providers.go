@@ -93,6 +93,15 @@ func NewProductAnalytics(database *gormdb.Database, logger *slog.Logger) (*analy
 
 func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits *creditsrepo.Repository, _ *accountapplication.Service, objects objectstore.Provider, box *secretcrypto.Box, config platformconfig.Config) (*workspaceapplication.Service, error) {
 	repository := workspacerepo.New(database.ORM(), credits)
+	var images []string
+	for _, runtime := range config.Worker.Runtimes {
+		if runtime.Available {
+			images = append(images, runtime.ImageDigest)
+		}
+	}
+	if err := repository.ConfigureConnectorExecution(config.Sandbox.Profile, config.Sandbox.Runtime, images); err != nil {
+		return nil, err
+	}
 	if err := repository.EnsureDefaultResources(ctx, objects); err != nil {
 		return nil, err
 	}

@@ -14,9 +14,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"agent-platform/backend/internal/sandbox"
 )
 
 type DockerConformanceConfig struct {
+	Profile       string
 	DockerCommand string
 	Runtime       string
 	TempRoot      string
@@ -31,11 +34,12 @@ type DockerConformance struct {
 }
 
 func NewDockerConformance(config DockerConformanceConfig, run DockerCommand) (*DockerConformance, error) {
-	if config.DockerCommand == "" || config.Runtime != "runsc" || !filepath.IsAbs(config.TempRoot) || filepath.Clean(config.TempRoot) == string(filepath.Separator) || config.UID <= 0 || config.GID <= 0 || config.Timeout <= 0 || config.Timeout > 5*time.Minute || len(config.RuntimeImages) == 0 {
+	if sandbox.ValidateExecutionProfile(config.Profile, config.Runtime) != nil || config.DockerCommand == "" || !filepath.IsAbs(config.TempRoot) || filepath.Clean(config.TempRoot) == string(filepath.Separator) || config.UID <= 0 || config.GID <= 0 || config.Timeout <= 0 || config.Timeout > 5*time.Minute || len(config.RuntimeImages) == 0 {
 		return nil, errors.New("invalid CLI Runtime Conformance configuration")
 	}
 	for digest, image := range config.RuntimeImages {
-		if !runtimeDigest.MatchString(digest) || !imageRepoDigest.MatchString(image) || !strings.HasSuffix(image, "@"+digest) {
+		actual, err := sandbox.ExecutionImageDigest(config.Profile, image)
+		if !runtimeDigest.MatchString(digest) || err != nil || actual != digest {
 			return nil, errors.New("CLI Runtime Conformance requires matching pinned Runtime images")
 		}
 	}
@@ -52,6 +56,9 @@ func NewDockerConformance(config DockerConformanceConfig, run DockerCommand) (*D
 }
 
 func (suite *DockerConformance) Test(ctx context.Context, bundle []byte, runtimeDigest string, definition Definition) error {
+	if definition.Executable == "" || filepath.Base(definition.Executable) != definition.Executable || strings.ContainsAny(definition.Executable, "\\/\x00\r\n") {
+		return errors.New("invalid CLI Conformance executable")
+	}
 	image, ok := suite.config.RuntimeImages[runtimeDigest]
 	if !ok {
 		return errors.New("Runtime Digest is not configured for CLI Conformance")
@@ -74,18 +81,30 @@ func (suite *DockerConformance) Test(ctx context.Context, bundle []byte, runtime
 	executable := "/opt/agent-connector/node_modules/.bin/" + definition.Executable
 	execution, cancel := context.WithTimeout(ctx, suite.config.Timeout)
 	defer cancel()
+	name, err := randomConnectorContainerName()
+	if err != nil {
+		return err
+	}
 	arguments := []string{
-		"run", "--rm", "--runtime", suite.config.Runtime,
+		"run", "--rm", "--name", name, "--no-healthcheck", "--runtime", suite.config.Runtime,
 		"--user", fmt.Sprintf("%d:%d", suite.config.UID, suite.config.GID),
 		"--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 		"--network", "none", "--memory", strconv.FormatInt(limits.MemoryBytes, 10), "--cpus", strconv.FormatFloat(limits.CPUs, 'f', -1, 64), "--pids-limit", strconv.FormatInt(limits.PIDs, 10),
 		"--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=" + strconv.FormatInt(limits.TempBytes, 10),
+		"--env", "HOME=/tmp",
 		"--mount", "type=bind,src=" + root + ",dst=/opt/agent-connector,readonly=true",
 		"--entrypoint", executable,
 		"--label", "agent-platform.managed=true", "--label", "agent-platform.workload=cli-conformance",
 		image, "--help",
 	}
 	if err := suite.run(execution, suite.config.DockerCommand, arguments...); err != nil {
+		err = errors.Join(err, execution.Err())
+		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+		defer cancel()
+		// Killing the Docker client does not prove its container stopped.
+		if cleanupErr := suite.run(cleanup, suite.config.DockerCommand, "rm", "--force", name); cleanupErr != nil {
+			return errors.Join(fmt.Errorf("run CLI Conformance on %s: %w", runtimeDigest, err), fmt.Errorf("clean CLI Conformance container: %w", cleanupErr))
+		}
 		return fmt.Errorf("run CLI Conformance on %s: %w", runtimeDigest, err)
 	}
 	return nil

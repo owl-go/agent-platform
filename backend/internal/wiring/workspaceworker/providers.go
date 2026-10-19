@@ -44,6 +44,7 @@ func NewWarmManager(config platformconfig.Config) (*containerprocess.WarmManager
 }
 
 type Worker struct {
+	localConnectors      func(context.Context) (bool, error)
 	ingestion            *ingestion.Processor
 	legacy               *ingestion.LegacyProcessor
 	knowledgeProvider    *ragflow.Client
@@ -99,6 +100,15 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 	}
 	creditsRepository := creditsrepo.New(database.ORM())
 	repository := workspacerepo.New(database.ORM(), creditsRepository)
+	var images []string
+	for _, runtime := range config.Worker.Runtimes {
+		if runtime.Available {
+			images = append(images, runtime.ImageDigest)
+		}
+	}
+	if err := repository.ConfigureConnectorExecution(config.Sandbox.Profile, config.Sandbox.Runtime, images); err != nil {
+		return nil, err
+	}
 	if err := repository.EnsureDefaultResources(context.Background(), objects); err != nil {
 		return nil, err
 	}
@@ -152,6 +162,28 @@ func NewWorker(database *gormdb.Database, config platformconfig.Config, objects 
 		return nil, err
 	}
 	worker := &Worker{workspace: workspaceWorker, aicreation: aicreation}
+	if config.Sandbox.Profile == sandbox.LocalProfile && len(images) > 0 {
+		runtimeImages := make(map[string]string)
+		for _, image := range images {
+			runtimeImages[image] = image
+		}
+		suite, err := cliconnector.NewDockerConformance(cliconnector.DockerConformanceConfig{Profile: sandbox.LocalProfile, DockerCommand: "docker", Runtime: "runc", TempRoot: filepath.Join(config.Worker.CredentialTempRoot, "local-cli-conformance"), RuntimeImages: runtimeImages, UID: config.Worker.SandboxUID, GID: config.Worker.SandboxGID, Timeout: 30 * time.Second}, nil)
+		if err != nil {
+			return nil, err
+		}
+		store, err := cliconnector.NewArtifactStore(objects)
+		if err != nil {
+			return nil, err
+		}
+		worker.localConnectors = func(ctx context.Context) (bool, error) {
+			worked, err := repository.VerifyNextLocalConnector(ctx, store, suite)
+			if err != nil && ctx.Err() == nil {
+				logger.Warn("local Connector verification failed; unavailable and will retry")
+				return worked, nil
+			}
+			return worked, err
+		}
+	}
 	provider, err := knowledgewiring.NewProvider(config, repository)
 	if err != nil {
 		return nil, err
@@ -320,6 +352,13 @@ func NewServers(database *gormdb.Database, worker *Worker, warm *containerproces
 		return nil, err
 	}
 	servers := make([]transport.Server, 0, len(loops)+3)
+	if worker.localConnectors != nil {
+		loop, err := workerserver.NewLoopWithState("local-connector-verification", 2*time.Second, worker.localConnectors, state)
+		if err != nil {
+			return nil, err
+		}
+		servers = append(servers, loop)
+	}
 	for _, loop := range loops {
 		servers = append(servers, loop)
 	}

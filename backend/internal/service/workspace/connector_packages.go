@@ -160,7 +160,7 @@ func (service *Service) StageConnectorPackage(ctx context.Context, request *work
 		return nil, publicError(err)
 	}
 	if pkg.CLI != nil {
-		verified, verifyErr := repository.HasConnectorBundleRuntimeConformance(ctx, pkg.CLIBundleSHA256, pkg.CLI.Runtime.Digest)
+		verified, verifyErr := connectorBundleVerified(ctx, repository, pkg.CLIBundleSHA256, pkg.CLI.Runtime.Digest)
 		if verifyErr != nil {
 			return nil, publicError(verifyErr)
 		}
@@ -235,7 +235,7 @@ func (service *Service) PublishConnectorRevision(ctx context.Context, request *w
 		if policyErr != nil {
 			return nil, publicError(policyErr)
 		}
-		verified, verifyErr := repository.HasConnectorBundleRuntimeConformance(ctx, policy.BundleSHA256, policy.CLI.Runtime.Digest)
+		verified, verifyErr := connectorBundleVerified(ctx, repository, policy.BundleSHA256, policy.CLI.Runtime.Digest)
 		if verifyErr != nil {
 			return nil, publicError(verifyErr)
 		}
@@ -1407,12 +1407,36 @@ func applyConnectorConformance(ctx context.Context, repository connectorPackageR
 	if !connectorConformanceAvailable(revision, policy) {
 		return nil
 	}
-	verified, err := repository.HasConnectorBundleRuntimeConformance(ctx, policy.BundleSHA256, policy.CLI.Runtime.Digest)
+	verified, err := connectorBundleVerified(ctx, repository, policy.BundleSHA256, policy.CLI.Runtime.Digest)
 	if err != nil {
 		return err
 	}
 	response.ConformanceAvailable = verified
+	if targets, ok := repository.(interface{ ConnectorVerificationDigests(string) []string }); ok {
+		response.RuntimeDigests = targets.ConnectorVerificationDigests(policy.CLI.Runtime.Digest)
+	}
 	return nil
+}
+
+func connectorBundleVerified(ctx context.Context, repository connectorPackageRepository, bundle, declared string) (bool, error) {
+	if local, ok := repository.(interface {
+		LocalConnectorVerification() bool
+		ConnectorVerificationDigests(string) []string
+		HasLocalConnectorConformance(context.Context, string, string) (bool, error)
+	}); ok && local.LocalConnectorVerification() {
+		targets := local.ConnectorVerificationDigests(declared)
+		if len(targets) == 0 {
+			return false, nil
+		}
+		for _, target := range targets {
+			verified, err := local.HasLocalConnectorConformance(ctx, bundle, target)
+			if err != nil || !verified {
+				return false, err
+			}
+		}
+		return true, nil
+	}
+	return repository.HasConnectorBundleRuntimeConformance(ctx, bundle, declared)
 }
 
 func connectorRevisionResponse(item domain.ConnectorRevision) *workspacev1.ConnectorRevision {
