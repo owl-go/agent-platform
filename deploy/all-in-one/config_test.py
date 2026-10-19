@@ -16,6 +16,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_fixed_components_build_without_backend_side_effects(self):
+        dockerfile = (ROOT / 'deploy/all-in-one/Dockerfile').read_text()
+        fixed_stage = dockerfile.split('COPY backend .', 1)[0]
+        self.assertIn('mkdir -p /out', fixed_stage)
+        self.assertIn('go install -trimpath', fixed_stage)
+        self.assertGreater(dockerfile.index('COPY --from=build /out/api /out/worker'),
+                           dockerfile.index('/opt/keycloak/bin/kc.sh build --db=postgres'))
+
     def test_compose_prepares_a_separate_runtime_image(self):
         compose = (ROOT / 'deploy/all-in-one/compose.yaml').read_text()
         dockerfile = (ROOT / 'deploy/all-in-one/Dockerfile').read_text()

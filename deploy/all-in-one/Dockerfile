@@ -4,7 +4,8 @@ COPY backend/go.mod backend/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install -trimpath -ldflags="-s -w" github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z \
+    mkdir -p /out \
+    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install -trimpath -ldflags="-s -w" github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z \
     && if [ -f "/go/bin/${TARGETOS}_${TARGETARCH}/minio" ]; then cp "/go/bin/${TARGETOS}_${TARGETARCH}/minio" /out/minio; else cp /go/bin/minio /out/minio; fi \
     && cp /go/pkg/mod/github.com/minio/minio@*/LICENSE /out/minio.LICENSE
 COPY backend .
