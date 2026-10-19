@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"slices"
 	"time"
 
@@ -51,7 +52,7 @@ func (r *Repository) HasLocalConnectorConformance(ctx context.Context, bundle, i
 		return false, nil
 	}
 	var count int64
-	err := r.db.WithContext(ctx).Table("local_cli_connector_conformance").Where("bundle_sha256=? AND runtime_image_id=? AND passed=true", bundle, image).Count(&count).Error
+	err := r.db.WithContext(ctx).Table("local_cli_connector_conformance").Where("bundle_sha256=? AND runtime_image_id=? AND worker_architecture=? AND passed=true", bundle, image, runtime.GOARCH).Count(&count).Error
 	return count > 0, err
 }
 
@@ -83,7 +84,7 @@ func (r *Repository) VerifyNextLocalConnector(ctx context.Context, store *clicon
 		}
 		for _, image := range r.localConnectorImages {
 			var count int64
-			if err := r.db.WithContext(ctx).Table("local_cli_connector_conformance").Where("bundle_sha256=? AND runtime_image_id=? AND (passed=true OR verified_at>?)", policy.BundleSHA256, image, time.Now().Add(-time.Minute)).Count(&count).Error; err != nil {
+			if err := r.db.WithContext(ctx).Table("local_cli_connector_conformance").Where("bundle_sha256=? AND runtime_image_id=? AND worker_architecture=? AND (passed=true OR verified_at>?)", policy.BundleSHA256, image, runtime.GOARCH, time.Now().Add(-time.Minute)).Count(&count).Error; err != nil {
 				return false, err
 			}
 			if count > 0 {
@@ -96,7 +97,7 @@ func (r *Repository) VerifyNextLocalConnector(ctx context.Context, store *clicon
 			if ctx.Err() != nil {
 				return true, ctx.Err()
 			}
-			saveErr := r.db.WithContext(ctx).Exec("INSERT INTO local_cli_connector_conformance(bundle_sha256,runtime_image_id,passed) VALUES(?,?,?) ON CONFLICT(bundle_sha256,runtime_image_id) DO UPDATE SET passed=EXCLUDED.passed,verified_at=now()", policy.BundleSHA256, image, err == nil).Error
+			saveErr := r.db.WithContext(ctx).Exec("INSERT INTO local_cli_connector_conformance(bundle_sha256,runtime_image_id,worker_architecture,passed) VALUES(?,?,?,?) ON CONFLICT(bundle_sha256,runtime_image_id,worker_architecture) DO UPDATE SET passed=EXCLUDED.passed,verified_at=now()", policy.BundleSHA256, image, runtime.GOARCH, err == nil).Error
 			if saveErr != nil {
 				return true, saveErr
 			}

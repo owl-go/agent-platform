@@ -31,4 +31,8 @@ Migration 000088 是追加变更，不改已有 migration；新表无账号或�
 
 ## 待完成
 
+代码首轮 `e5214bc` 已推送本会话分支并快进集成 `main_temp`。GitHub 最初 TLS/分块推送失败，使用本次命令级 HTTP/1.1 与 50 MiB postBuffer 后成功，未修改全局 Git 配置或历史。候选 ARM 控制镜像构建中，尚未切换服务。业务库、身份库与加密状态备份位于私密卷 `/data/backups/local-cli-before-e5214bc`（0600）；业务库恢复出 1 User、20 Publications、1 Model Connection，身份库恢复出 2 Realms，恢复库已删除，原库未改。
+
+额外 AMD64 仿真检查的三个启动用例在 30 秒内超时，不能记为通过或等同原生 AMD64 验收。检查 Docker 元数据发现 `latest` 的本地 Image ID 是多架构索引；补充 Migration 000089，以 Worker 架构隔离本地证据，旧无架构行失效。此项不修改已提交 Migration 000088，也不改变生产证据。
+
 最终门禁、真实部署和 UI 验收、第三方账号授权与只读业务调用、Git 推送及本地镜像切换。Linux + gVisor 和真实供应商完整矩阵缺环境时保持未验证。仅本地修复不更新生产配置，也不复制生产凭据或验证记录。

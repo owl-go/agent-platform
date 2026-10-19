@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -22,7 +23,7 @@ type localConnectorSuite struct {
 
 func TestLocalConnectorMigrationOnlyOptsInUntouchedDefaults(t *testing.T) {
 	r, owner := defaultResourceRepositoryFixture(t)
-	if err := r.db.Exec("ALTER TABLE connector_package_publications DROP COLUMN local_activation_pending; DROP TABLE local_cli_connector_conformance; DELETE FROM schema_migrations WHERE name='000088_local_connector_conformance.sql'").Error; err != nil {
+	if err := r.db.Exec("ALTER TABLE connector_package_publications DROP COLUMN local_activation_pending; DROP TABLE local_cli_connector_conformance; DELETE FROM schema_migrations WHERE name IN ('000088_local_connector_conformance.sql','000089_local_connector_architecture.sql')").Error; err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
@@ -109,6 +110,19 @@ func TestLocalConnectorEvidenceIsIsolatedAndPreservesAdministratorDisable(t *tes
 	}
 	if ok, err := repo.HasLocalConnectorConformance(ctx, hash, image); err != nil || !ok {
 		t.Fatalf("local evidence %v %v", ok, err)
+	}
+	other := "amd64"
+	if runtime.GOARCH == other {
+		other = "arm64"
+	}
+	if err := repo.db.Exec("UPDATE local_cli_connector_conformance SET worker_architecture=?", other).Error; err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := repo.HasLocalConnectorConformance(ctx, hash, image); err != nil || ok {
+		t.Fatalf("other architecture evidence trusted: %v %v", ok, err)
+	}
+	if err := repo.db.Exec("UPDATE local_cli_connector_conformance SET worker_architecture=?", runtime.GOARCH).Error; err != nil {
+		t.Fatal(err)
 	}
 	// Even the same SHA-256 can never satisfy production verification.
 	production := New(repo.db, nil)
