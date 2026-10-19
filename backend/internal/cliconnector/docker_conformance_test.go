@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -68,7 +69,7 @@ func TestDockerConformanceLocalEvidenceRequiresExplicitProfile(t *testing.T) {
 	if err := suite.Test(t.Context(), testBundle(t, map[string]string{"node_modules/.bin/tool": "#!/bin/sh\n"}), digest, Definition{Executable: "tool"}); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(args, "runc") || !slices.Contains(args, "none") {
+	if !slices.Contains(args, "runc") || !slices.Contains(args, "none") || !slices.Contains(args, "linux/"+runtime.GOARCH) || !slices.Contains(args, "--pull=never") {
 		t.Fatal(args)
 	}
 	for _, profile := range []string{"", "production", "unknown"} {

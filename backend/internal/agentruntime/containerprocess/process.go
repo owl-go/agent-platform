@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -317,6 +318,9 @@ func dockerCommand(config Config, spec processharness.Spec, name string, scratch
 		"--cpus", strconv.FormatFloat(config.Limits.CPUs, 'f', -1, 64),
 		"--mount", workspaceMount,
 		"--mount", "type=bind,src=" + config.CredentialDirectory + ",dst=/run/agent-credentials,readonly=true",
+	}
+	if config.Profile == sandbox.LocalProfile {
+		args = append(args, "--platform", "linux/"+runtime.GOARCH, "--pull=never")
 	}
 	if config.NativeStateDirectory != "" {
 		args = append(args, "--mount", "type=bind,src="+config.NativeStateDirectory+",dst=/tmp/runtime-home/.codex,readonly=false")

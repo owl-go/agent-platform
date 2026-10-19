@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -96,6 +97,9 @@ func (suite *DockerConformance) Test(ctx context.Context, bundle []byte, runtime
 		"--entrypoint", executable,
 		"--label", "agent-platform.managed=true", "--label", "agent-platform.workload=cli-conformance",
 		image, "--help",
+	}
+	if suite.config.Profile == sandbox.LocalProfile {
+		arguments = append([]string{"run", "--platform", "linux/" + runtime.GOARCH, "--pull=never"}, arguments[1:]...)
 	}
 	if err := suite.run(execution, suite.config.DockerCommand, arguments...); err != nil {
 		err = errors.Join(err, execution.Err())

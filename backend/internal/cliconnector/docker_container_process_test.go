@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -207,7 +208,7 @@ func TestDockerConnectorExplicitLocalProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := strings.Join(process.createCommand("test-local", ProcessRequest{ConnectorID: "connector-1"}), " ")
-	if strings.Contains(command, "/etc/resolv.conf") || !strings.Contains(command, "--runtime runc") {
+	if strings.Contains(command, "/etc/resolv.conf") || !strings.Contains(command, "--runtime runc") || !strings.Contains(command, "--platform linux/"+runtime.GOARCH) || !strings.Contains(command, "--pull=never") {
 		t.Fatal(command)
 	}
 	if _, err := process.Run(t.Context(), ProcessRequest{ConnectorID: "connector-1", Executable: "tool", Arguments: []string{"status"}, EgressHosts: []string{"example.com"}}); err != nil {

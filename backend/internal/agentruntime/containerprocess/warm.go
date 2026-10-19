@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -213,6 +214,9 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 		"--mount", "type=bind,src=" + config.WorkspaceDirectory + ",dst=" + config.ContainerWorkspace + ",readonly=false",
 		"--mount", "type=bind,src=" + config.CredentialDirectory + ",dst=/run/agent-credentials,readonly=true",
 	}
+	if config.Profile == sandbox.LocalProfile {
+		arguments = append(arguments, "--platform", "linux/"+runtime.GOARCH, "--pull=never")
+	}
 	if config.NativeStateDirectory != "" {
 		arguments = append(arguments, "--mount", "type=bind,src="+config.NativeStateDirectory+",dst=/tmp/runtime-home/.codex,readonly=false")
 	}
@@ -251,7 +255,7 @@ func warmCreateArguments(config Config, name, fingerprint string) []string {
 
 func warmFingerprint(name string, config Config) string {
 	if config.Profile == sandbox.LocalProfile {
-		name += "\x00" + sandbox.LocalProfile
+		name += "\x00" + sandbox.LocalProfile + "\x00" + runtime.GOARCH
 	}
 	value := strings.Join([]string{
 		name, config.Image, config.RuntimeCommand, config.Runtime,

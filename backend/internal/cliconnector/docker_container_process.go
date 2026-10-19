@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -220,6 +221,8 @@ func (process *DockerContainerProcess) createCommand(name string, request Proces
 	}
 	if process.config.Profile != sandbox.LocalProfile {
 		arguments = append(arguments, "--mount", "type=bind,src="+process.config.ResolverConfigFile+",dst=/etc/resolv.conf,readonly=true")
+	} else {
+		arguments = append(arguments, "--platform", "linux/"+runtime.GOARCH, "--pull=never")
 	}
 	return append(arguments, process.config.Image, "900")
 }

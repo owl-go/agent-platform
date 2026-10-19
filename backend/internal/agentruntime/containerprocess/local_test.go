@@ -3,6 +3,7 @@ package containerprocess
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -28,7 +29,7 @@ func TestLocalRuncPreservesIsolationAndProductionRejectsIt(t *testing.T) {
 	if _, err = run(t.Context(), processharness.Spec{Command: []string{"claude", "--version"}, Dir: config.WorkspaceDirectory}, discardSink{}); err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"--runtime runc", "--user 65532:65532", "--read-only", "--cap-drop ALL", "--security-opt no-new-privileges", "--pids-limit", "--memory", "readonly=true"} {
+	for _, required := range []string{"--runtime runc", "--platform linux/" + runtime.GOARCH, "--pull=never", "--user 65532:65532", "--read-only", "--cap-drop ALL", "--security-opt no-new-privileges", "--pids-limit", "--memory", "readonly=true"} {
 		if !strings.Contains(strings.Join(command, " "), required) {
 			t.Fatalf("missing protection %q", required)
 		}

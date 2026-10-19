@@ -2,15 +2,15 @@ FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.25-bookwor
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
-COPY backend .
 ARG TARGETOS TARGETARCH
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
-    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go install -trimpath -ldflags="-s -w" github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z \
     && if [ -f "/go/bin/${TARGETOS}_${TARGETARCH}/minio" ]; then cp "/go/bin/${TARGETOS}_${TARGETARCH}/minio" /out/minio; else cp /go/bin/minio /out/minio; fi \
     && cp /go/pkg/mod/github.com/minio/minio@*/LICENSE /out/minio.LICENSE
+COPY backend .
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
+    && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker
 
 FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/node:24.15.0-bookworm-slim@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d AS web
 WORKDIR /src
@@ -49,7 +49,7 @@ COPY --from=identity /usr/share/crypto-policies /usr/share/crypto-policies
 COPY --from=identity /usr/share/javazi-1.8 /usr/share/javazi-1.8
 COPY --from=identity /usr/share/licenses /usr/share/licenses
 COPY --from=docker /usr/local/bin/docker /usr/bin/docker
-COPY --from=build /out/api /out/worker /out/minio /usr/local/bin/
+COPY --from=build /out/minio /usr/local/bin/
 RUN /usr/lib/postgresql/17/bin/postgres --version && /usr/lib/postgresql/17/bin/initdb --version \
     && /usr/lib/postgresql/17/bin/psql --version && /opt/java/bin/java -version \
     && test -r /usr/share/postgresql/17/postgresql.conf.sample \
@@ -70,6 +70,7 @@ COPY frontend/src/design-tokens.css /opt/keycloak/themes/agent-workspace/login/r
 COPY deploy/all-in-one/*.py /opt/agent-platform/
 COPY --chmod=0755 deploy/all-in-one/docker-shim /opt/agent-platform/docker-bin/docker
 COPY --from=build /out/minio.LICENSE /usr/share/licenses/minio/LICENSE
+COPY --from=build /out/api /out/worker /usr/local/bin/
 ENV AGENT_WORKSPACE_RESOURCE_ROOT=/opt/agent-platform/resources \
     JAVA_HOME=/opt/java \
     PATH=/usr/lib/postgresql/17/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
