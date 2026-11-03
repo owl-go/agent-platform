@@ -159,3 +159,9 @@ Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/Docke
 HTTP 登录验收首次遇到 Python CookieJar 不发送 localhost 的 Secure Cookie，返回 400；仅在标签隔离的测试实例固定 localhost Origin 模拟[浏览器的 localhost 例外](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)，生产 Cookie 与应用鉴权没有调整。该项是 HTTP/API 验收，不声称完成真实浏览器界面验收。两个新建 Smoke 容器及其带测试标签的独立卷均已按精确名称清理，未删除原有服务、镜像或业务数据。
 
 真实外部连接器账号授权与业务 API、所有引擎/模型组合、完整 Sandbox/Production Conformance、备份恢复及容量/长期压力检查仍未完成。上述“默认启用”与目录中的启动证据不表示这些项目已通过。
+
+#### 设置页漏项补齐（进行中）
+
+最终核对发现 `SettingsPage.refresh` 仍按品牌过滤 OpenClaw，并在保存前删除它的默认模型、替换已有 OpenClaw 引擎选择。此前“五引擎”证据是后台 API 状态，不能等同于设置页五个都可选。产品需求的 Runtime Settings 契约与本次“全部启用”均要求显示五个现有引擎；移除该过滤和静默改写，沿用现有控件与可用性/协议校验。
+
+组件回归先复现 OpenClaw option 缺失，修复后目标 13 项通过；前端完整 696 项、`make web-typecheck`、`make web-build` 通过。后端与 Runtime 镜像源码没有新增变化，既有 runsc、CLI 及模型验收证据不改写。浏览器操作使用独立标签验收实例，绑定本次构建的前端产物，不使用线上账号或数据库；界面和最终镜像更新结果将在完成后补充。

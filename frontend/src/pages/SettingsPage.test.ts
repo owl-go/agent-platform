@@ -254,7 +254,7 @@ describe("SettingsPage model provider feedback", () => {
     wrapper.unmount();
   });
 
-  it("uses the localized Runtime Engine labels and omits OpenClaw", async () => {
+  it("shows every Runtime Engine and preserves OpenClaw settings on save", async () => {
     const api = apiStub();
     api.getSettings = vi.fn(async (): Promise<PersonalSettings> => ({
       personality: "direct_efficient",
@@ -283,14 +283,17 @@ describe("SettingsPage model provider feedback", () => {
 
     expect(wrapper.get(".form-grid > label:not(.enterprise-default-toggle)").text()).toContain("运行引擎");
     expect(wrapper.get(".runtime-defaults legend").text()).toBe("各运行引擎默认模型");
-    expect(wrapper.find('option[value="openclaw"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain("OpenClaw");
+    expect(wrapper.find('option[value="openclaw"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain("OpenClaw");
 
     await wrapper.get("form").trigger("submit");
     await flushPromises();
     expect(api.updateSettings).toHaveBeenCalledWith(expect.objectContaining({
-      default_runtime_engine: "codex",
-      runtime_model_defaults: [{ runtime_engine: "codex", provider_model_id: "model-codex" }],
+      default_runtime_engine: "openclaw",
+      runtime_model_defaults: [
+        { runtime_engine: "openclaw", provider_model_id: "model-openclaw" },
+        { runtime_engine: "codex", provider_model_id: "model-codex" },
+      ],
     }));
     wrapper.unmount();
   });

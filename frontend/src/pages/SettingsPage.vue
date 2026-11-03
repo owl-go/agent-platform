@@ -45,11 +45,7 @@ async function refresh() {
   clearFeedback();
   try {
     const [nextSettings, nextConnections, nextPresets, nextRuntimes] = await Promise.all([api.getSettings(), api.listModelProviderConnections(), api.listModelProviderPresets(), api.listRuntimeEngines()]);
-    runtimes.value = nextRuntimes.filter((runtime) => runtime.name !== "openclaw");
-    nextSettings.runtime_model_defaults = nextSettings.runtime_model_defaults.filter((item) => item.runtime_engine !== "openclaw");
-    if (nextSettings.default_runtime_engine === "openclaw") {
-      nextSettings.default_runtime_engine = runtimes.value.find((runtime) => runtime.available)?.name ?? runtimes.value[0]?.name ?? nextSettings.default_runtime_engine;
-    }
+    runtimes.value = nextRuntimes;
     settings.value = nextSettings;
     connections.value = nextConnections;
     presets.value = nextPresets;
