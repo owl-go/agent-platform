@@ -30,7 +30,7 @@ FROM public.ecr.aws/docker/library/docker:29-cli@sha256:6fae2214c3121a28d5aa639d
 FROM public.ecr.aws/docker/library/python:3.13.11-slim-bookworm@sha256:20080e807bfc404f8450b185cf0fc95d553462673598549613735f70a5b4d5d0
 RUN apt-get -o Acquire::Retries=5 update \
     && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
-       ca-certificates curl git jq nginx-light openssh-client ripgrep \
+       ca-certificates curl git jq nginx-light openssh-client openssl ripgrep \
        libicu72 libxml2 libxslt1.1 liblz4-1 libzstd1 libreadline8 \
        libssl3 libldap-2.5-0 libpam0g libkrb5-3 libnuma1 liburing2 libnss3 libstdc++6 zlib1g \
     && groupadd --gid 65531 postgres && useradd --uid 65531 --gid 65531 --no-create-home postgres \
@@ -69,6 +69,7 @@ COPY deploy/platform/config/keycloak-realm.json /opt/agent-platform/keycloak-rea
 COPY deploy/platform/themes/agent-workspace /opt/keycloak/themes/agent-workspace
 COPY frontend/src/design-tokens.css /opt/keycloak/themes/agent-workspace/login/resources/css/design-tokens.css
 COPY deploy/all-in-one/*.py /opt/agent-platform/
+COPY scripts/configure-registration-identity.py scripts/configure-identity-theme.py /opt/agent-platform/
 COPY --chmod=0755 deploy/all-in-one/docker-shim /opt/agent-platform/docker-bin/docker
 COPY --from=build /out/minio.LICENSE /usr/share/licenses/minio/LICENSE
 COPY --from=build /out/api /out/worker /usr/local/bin/

@@ -43,10 +43,14 @@ def configure(mode):
     credentials = urlencode({"grant_type": "password", "client_id": "admin-cli", "username": os.environ["KEYCLOAK_ADMIN_USER"], "password": os.environ["KEYCLOAK_ADMIN_PASSWORD"]}).encode()
     token = identity.request(token_url, "POST", credentials, content_type="application/x-www-form-urlencoded")["access_token"]
     request = lambda path, method="GET", body=None: identity.request(realm_url + path, method, body, token)
+    synchronize(request, os.environ["KEYCLOAK_SERVICE_CLIENT_ID"], mode)
+
+
+def synchronize(request, client_name, mode="apply"):
+    """Shared by the protected deployment CLI and one-container startup."""
     import json
     profile = request("/users/profile")
     desired = desired_profile(profile)
-    client_name = os.environ["KEYCLOAK_SERVICE_CLIENT_ID"]
     clients = request("/clients?clientId=" + quote(client_name, safe=""))
     if len(clients) != 1 or clients[0].get("clientId") != client_name or not clients[0].get("serviceAccountsEnabled"):
         raise ValueError("Expected one existing service-account client")

@@ -3,6 +3,7 @@
 import fcntl
 import hashlib
 import hmac
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
-from config import browser_config, initialize_state, nginx_config, platform_config, private_write, public_origin, realm_config, sandbox_runtime
+from config import browser_config, initialize_state, nginx_config, platform_config, private_write, public_origin, realm_config, registration_config, sandbox_runtime
 
 DATA = Path('/data')
 RUN = Path('/run/agent-platform')
@@ -180,22 +181,38 @@ def initialize_bucket(state):
             raise RuntimeError('private object bucket initialization failed (HTTP ' + str(error.code) + ', ' + detail + ')') from None
 
 
-def synchronize_redirects(state, origin):
-    # Imports deliberately never reset an existing User password. Only the
-    # public OIDC client's redirect/origin configuration is updated at restart.
+def identity_request(state):
     base = 'http://127.0.0.1:8081/identity'
     token = json.loads(request(base + '/realms/master/protocol/openid-connect/token', data=urlencode({
         'grant_type': 'password', 'client_id': 'admin-cli', 'username': 'bootstrap-administrator', 'password': state['identity_password']}).encode(),
         headers={'Content-Type': 'application/x-www-form-urlencoded'}))['access_token']
     headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
-    endpoint = base + '/admin/realms/agent-platform/clients'
-    clients = json.loads(request(endpoint + '?clientId=agent-platform-web', headers=headers))
+    def call(path, method='GET', body=None):
+        data = request(base + '/admin/realms/agent-platform' + path, method=method, data=body, headers=headers)
+        return json.loads(data) if data else None
+    return call
+
+
+def synchronize_redirects(state, origin):
+    # Imports deliberately never reset an existing User password. Only the
+    # public OIDC client's redirect/origin configuration is updated at restart.
+    call = identity_request(state)
+    clients = call('/clients?clientId=agent-platform-web')
     if len(clients) != 1:
         raise RuntimeError('public OIDC client is missing or ambiguous')
     client = clients[0]
     client['redirectUris'], client['webOrigins'] = [origin + '/*'], [origin]
     client.setdefault('attributes', {})['post.logout.redirect.uris'] = origin + '/*'
-    request(endpoint + '/' + client['id'], method='PUT', data=json.dumps(client).encode(), headers=headers)
+    call('/clients/' + client['id'], 'PUT', json.dumps(client).encode())
+
+
+def synchronize_registration(state, origin):
+    if urlsplit(origin).scheme != 'https':
+        return
+    spec = importlib.util.spec_from_file_location('registration_identity', APPLICATION / 'configure-registration-identity.py')
+    registration_identity = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(registration_identity)
+    registration_identity.synchronize(identity_request(state), 'agent-workspace-admin')
 
 
 def main():
@@ -217,7 +234,8 @@ def main():
     profile = os.environ.get('SANDBOX_PROFILE', 'local')
     sandbox_runtime(profile, origin)
     image, mounts, source, network = docker_identity(profile)
-    configuration = platform_config(state, origin, image, source, profile, network, os.environ)
+    registration = registration_config(DATA / 'config', origin)
+    configuration = platform_config(state, origin, image, source, profile, network, os.environ, registration=registration)
     private_write(DATA / 'config/platform.yaml', json.dumps(configuration))
     known_hosts = DATA / 'config/known_hosts'
     if not known_hosts.exists():
@@ -246,6 +264,7 @@ def main():
     start('keycloak', ['/opt/keycloak/bin/kc.sh', 'start', '--optimized', '--import-realm'], environment=environment)
     wait_for(lambda: request('http://127.0.0.1:8081/identity/realms/agent-platform/.well-known/openid-configuration'), 'Keycloak', timeout=600)
     synchronize_redirects(state, origin)
+    synchronize_registration(state, origin)
     start('nginx', ['/usr/sbin/nginx', '-c', str(RUN / 'nginx.conf'), '-g', 'daemon off;'])
     start('api', ['/usr/local/bin/api', '-config', '/data/config/platform.yaml'])
     wait_for(lambda: request('http://127.0.0.1:19080/readyz'), 'API')

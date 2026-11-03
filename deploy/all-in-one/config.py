@@ -5,6 +5,7 @@ import json
 import os
 import re
 import secrets
+import subprocess
 import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -57,6 +58,39 @@ def initialize_state(root, username):
     return state
 
 
+def registration_config(root, origin):
+    """Provision only the broker infrastructure; provider methods stay closed."""
+    if urlsplit(origin).scheme != 'https':
+        return {}
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = root / 'registration.json'
+
+    def openssl(arguments, data=None):
+        result = subprocess.run(['openssl', *arguments], input=data, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, timeout=30, check=False)
+        if result.returncode:
+            raise ValueError('registration signing key initialization failed')
+        return result.stdout
+
+    if path.exists():
+        saved = json.loads(path.read_text())
+        if not isinstance(saved, dict) or not re.fullmatch(r'[a-f0-9]{64}', saved.get('client_secret', '')):
+            raise ValueError('invalid retained registration credentials; restore the original file')
+        try:
+            key = base64.b64decode(saved['signing_key'], validate=True)
+        except (KeyError, ValueError, TypeError):
+            raise ValueError('invalid retained registration signing key') from None
+        openssl(['rsa', '-inform', 'DER', '-check', '-noout'], key)
+        path.chmod(0o600)
+    else:
+        pem = openssl(['genpkey', '-algorithm', 'RSA', '-pkeyopt', 'rsa_keygen_bits:2048'])
+        der = openssl(['pkcs8', '-topk8', '-nocrypt', '-outform', 'DER'], pem)
+        saved = {'client_secret': secrets.token_hex(32), 'signing_key': base64.b64encode(der).decode()}
+        private_write(path, json.dumps(saved))
+    return {'public_url': origin, 'client_secret': saved['client_secret'], 'signing_key': saved['signing_key']}
+
+
 def realm_config(template, state, origin, password):
     realm = json.loads(json.dumps(template))
     realm['sslRequired'] = 'none' if urlsplit(origin).hostname in ('localhost', '127.0.0.1', '::1') else 'external'
@@ -82,7 +116,7 @@ def sandbox_runtime(profile, origin):
     return runtime
 
 
-def platform_config(state, origin, image, source, profile, network, environment):
+def platform_config(state, origin, image, source, profile, network, environment, *, registration=None):
     runtime = sandbox_runtime(profile, origin)
     if not (re.fullmatch(r'[^\s@]+@sha256:[a-f0-9]{64}', image) or profile == 'local' and re.fullmatch(r'sha256:[a-f0-9]{64}', image)):
         raise ValueError('Runtime must use an immutable image; production requires repository@sha256')
@@ -99,6 +133,7 @@ def platform_config(state, origin, image, source, profile, network, environment)
         'accounts': {'keycloak_base_url': 'http://127.0.0.1:8081/identity', 'realm': 'agent-platform',
                      'admin_client_id': 'agent-workspace-admin', 'admin_client_secret': state['service_secret'],
                      'bootstrap_subject': SUBJECT, 'bootstrap_username': state['admin_username'],
+                     'registration_broker': registration or {},
                      'bootstrap_email': state['admin_username'] + '@agent-workspace.local', 'bootstrap_display_name': 'Administrator'},
         'workspace': {'root': '/data/workspaces', 'known_hosts': '/data/config/known_hosts'},
         'security': {'data_encryption_key': state['encryption_key']},

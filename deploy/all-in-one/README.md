@@ -79,6 +79,10 @@ haozhi152/agent-platform-runtime:local
 
 修改本机端口时同时设置 `PORT=18080` 和 `PUBLIC_URL=http://localhost:18080`。公开使用时由外部 HTTPS 反向代理终止 TLS，并将 `PUBLIC_URL` 设置为精确 HTTPS Origin。代理须保留 API/SSE 长连接。
 
+HTTPS 部署启动时会自动装配扫码登录 Broker：首次将独立随机 client secret 和 RSA 签名 Key 保存到数据卷的 `config/registration.json`（0600），后续启动复用；同时幂等补齐 Keycloak 的 admin-only 身份属性、可选邮箱和最小服务账号权限。该文件必须随完整数据卷一起备份，不要删除或重新生成。变更公开 Origin 不会轮换密钥；已有微信/飞书方法在 Origin 变更后需要重新保存以同步回调。
+
+账号管理 → 注册方式中的微信公众号和飞书配置表单可用，但供应商方法仍默认关闭。管理员必须填写或迁移原应用配置并完成供应商回调设置后开放；镜像不包含公众号凭据，也不会自动迁移另一部署的配置。HTTP 本地入口不装配此 Broker；扫码身份需要 HTTPS。配置与真实扫码验收见 [扫码登录与注册](../../docs/technical/scan-registration.md)。
+
 更新前先停止任务并做一致性备份，然后执行：
 
 ```bash
@@ -120,6 +124,8 @@ python3 scripts/smoke-unified-image.py \
 ```
 
 它验证产品镜像不含五个 Runtime 命令、公开入口与认证边界、独立 Runtime 镜像的非 root / 只读 / 无网络执行，以及保留数据重启。
+
+加 `--https-broker` 可在独立测试数据卷中验证 HTTPS Origin 的 Broker 装配、公开 RSA JWKS、0600 和重启后密钥不变；探针仍使用 HTTP loopback 运输，不验证外部 TLS 或真实供应商扫码。
 
 维护者在干净且精确匹配 `origin/main_temp` 的提交上登录 Docker Hub，再运行：
 

@@ -16,6 +16,80 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_https_registration_infrastructure_survives_restart_without_rotating_other_secrets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = initialize_state(directory, 'admin')
+            original = dict(state)
+            registration = supervise.registration_config(Path(directory) / 'config', 'https://workspace.example')
+            self.assertEqual(registration['public_url'], 'https://workspace.example')
+            self.assertGreaterEqual(len(registration['client_secret']), 32)
+            self.assertTrue(registration['signing_key'])
+            restarted = supervise.registration_config(Path(directory) / 'config', 'https://workspace.example')
+            self.assertEqual(registration, restarted)
+            moved = supervise.registration_config(Path(directory) / 'config', 'https://other.example')
+            self.assertEqual(moved['client_secret'], registration['client_secret'])
+            self.assertEqual(moved['signing_key'], registration['signing_key'])
+            self.assertEqual(state, original)
+            self.assertEqual(initialize_state(directory, 'admin'), original)
+            self.assertEqual((Path(directory) / 'config/registration.json').stat().st_mode & 0o777, 0o600)
+            configured = platform_config(state, 'https://workspace.example', 'example/runtime@sha256:' + 'a' * 64,
+                                        '/volumes/test', 'production', 'network', {}, registration=registration)
+            self.assertEqual(configured['accounts']['registration_broker'], registration)
+            self.assertNotIn(registration['client_secret'], browser_config('https://workspace.example'))
+
+    def test_http_local_registration_stays_unconfigured_and_invalid_retained_keys_are_not_replaced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(supervise.registration_config(root, 'http://localhost:8080'), {})
+            self.assertFalse((root / 'registration.json').exists())
+            (root / 'registration.json').write_text('{"client_secret":"broken","signing_key":"broken"}')
+            with self.assertRaises(ValueError):
+                supervise.registration_config(root, 'https://workspace.example')
+            self.assertIn('broken', (root / 'registration.json').read_text())
+
+    def test_https_startup_uses_the_shared_narrow_identity_setup(self):
+        profile = {'attributes': [{'name': 'email', 'required': {'roles': ['user']}, 'validations': {'email': {}}}],
+                   'unmanagedAttributePolicy': 'DISABLED'}
+        roles = [{'name': 'query-users'}]
+        changes = []
+        def call(path, method='GET', body=None):
+            if path == '/users/profile':
+                if method == 'PUT':
+                    profile.update(json.loads(body))
+                    changes.append('profile')
+                return profile
+            if path == '/clients?clientId=agent-workspace-admin':
+                return [{'id': 'service', 'clientId': 'agent-workspace-admin', 'serviceAccountsEnabled': True}]
+            if path == '/clients?clientId=realm-management':
+                return [{'id': 'management'}]
+            if path == '/clients/service/service-account-user':
+                return {'id': 'service-user'}
+            if path == '/users/service-user/role-mappings/clients/management':
+                if method == 'POST':
+                    roles.extend(json.loads(body))
+                    changes.append('roles')
+                return roles
+            if path == '/clients/management/roles':
+                return [{'name': name} for name in ('manage-users', 'view-users', 'manage-identity-providers', 'manage-realm')]
+            self.fail('Unexpected identity request')
+        with patch.object(supervise, 'APPLICATION', ROOT / 'scripts'), \
+                patch.object(supervise, 'identity_request', return_value=call):
+            supervise.synchronize_registration({'identity_password': 'private'}, 'https://workspace.example')
+            supervise.synchronize_registration({'identity_password': 'private'}, 'https://workspace.example')
+        self.assertEqual(changes, ['profile', 'roles'])
+        self.assertEqual({role['name'] for role in roles}, {'query-users', 'manage-users', 'view-users', 'manage-identity-providers'})
+        self.assertEqual(profile['unmanagedAttributePolicy'], 'DISABLED')
+        self.assertEqual(profile['attributes'][0], {'name': 'email', 'validations': {'email': {}}})
+        with patch.object(supervise, 'identity_request', side_effect=AssertionError('HTTP must not configure identity')):
+            supervise.synchronize_registration({}, 'http://localhost:8080')
+
+    def test_registration_key_failure_never_echoes_subprocess_output_or_persists_partial_state(self):
+        with tempfile.TemporaryDirectory() as directory, patch('config.subprocess.run', return_value=
+                subprocess.CompletedProcess(['openssl'], 1, b'private-key-output', b'private-error')):
+            with self.assertRaisesRegex(ValueError, '^registration signing key initialization failed$'):
+                supervise.registration_config(directory, 'https://workspace.example')
+            self.assertFalse((Path(directory) / 'registration.json').exists())
+
     def test_enabled_engines_do_not_claim_optional_capabilities_or_override_explicit_opt_out(self):
         with tempfile.TemporaryDirectory() as directory:
             state = initialize_state(directory, 'admin')

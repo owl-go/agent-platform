@@ -193,3 +193,12 @@ AC-ASSISTANT-LIST / COD-002/006、TST-001/002/005、G-WEB：新回归修复前 3
 修复源码 `ef9a92084251dc54018091594270a2527930e127` 已经 main_temp 集成、干净 archive 构建并上线。产品 `2026-11-03-ef9a92084251-arm64` 平台 Manifest 为 `sha256:cd4312eee91aca0b13e36f06c7e8f38264173a3bcb558e1ea7f36b0eea49ed1e`，amd64/线上固定引用为 `sha256:b509124a2e0662805f93e4d22e330a54f389595de96ea129a9e9fcf09ca10baa`。两个仓库四个架构版本先完成推送与核验，再更新 latest 和架构标签；产品 latest Index 为 `sha256:279a53afd30da24aea1f0b585d32e5fc3f43dd9a786ea99ddb9bbd2fc26bd62c`，Runtime 继续复用相同不可变平台镜像。
 
 后端/部署/资源 Git diff 为空，两架构 API、Worker、MinIO 可执行文件 SHA-256 均与此前通过安装/重启验收的镜像相同，未重复未受影响的后端和模型检查。切换前活动执行为零，已生成 `/srv/agent-platform/backups/before-assistant-null-ef9a920` 私有冷备份并校验。部署后服务 healthy / RestartCount 0，两个原有助手的 ID 与 draft 状态保持相同，原始知识库字段仍为 null（在客户端规范化，未执行数据库修复或写入），五引擎与 20 条目录仍可用。公网前端 index 指纹 `7f44e0a40dd3e38b9ebdd99d26ad7d39d6dc45c69643c8b1e9ed396f40c5f956` 与本次通过回归测试的本地构建及两个镜像一致，维护标记已清除。验证采用真实所属账号 API 只读检查及同形 HTTP 响应的 Vue 渲染回归；未另行登录该账号的浏览器或修改其助手状态/内容，不把这些结果写成真实对话或发布验收。
+### 2026-11-03：恢复 HTTPS 部署的扫码注册基础设施（进行中）
+
+AC-REG-1：线上管理员 `GET /api/v1/admin/registration-methods` 可重复返回 `available=false`、微信/飞书均 version 0；数据库 registration_settings 为 0 行。只读身份检查证实 accounts 未装配 registration_broker、服务账号缺少 manage-identity-providers、admin-only 标记缺失。截图提示是部署装配遗漏，不是删除了外部身份或隐藏现有配置。
+
+修复在一体化 HTTPS 启动 seam 生成独立 RSA 2048 PKCS8/随机 client secret，0600 持久化并重启复用，向既有 Broker 配置注入当前公开 Origin；复用扫码身份脚本的共享最小权限同步，不授予 manage-realm、不改其他资料校验或密码。Provider 开关仍默认关闭。HTTP localhost 不启用，原配置损坏拒绝替换，不将密钥写入环境、镜像层或日志。
+
+AC-REG-2：新增配置测试先红（2 个缺失装配用例），随后覆盖密钥重启/Origin 变化复用、既有系统密钥不变、0600、HTTP 关闭、损坏拒绝、命令失败不泄漏和真实共享身份同步的幂等/权限 allowlist。`make deploy-test` 通过。关联 COD-003/004、TST-001/005 和 G-DEPLOY/G-SEC。真实供应商配置、回调握手及手机确认尚未验证，不能将基础设施恢复记为微信登录验收通过。
+
+发布前 `make test`、`make build`、独立的 `python3 scripts/configure-registration-identity_test.py`、`git diff --check` 和 AGENTS/CLAUDE 对比通过。通用 Go 测试未配置 PostgreSQL DSN，Skip 不算数据库集成通过。镜像 Smoke 新增显式 `--https-broker`，用于实际启动/重启验证公钥和密钥文件稳定，HTTP loopback 运输不替代 TLS/手机验收；目标镜像执行结果待记录。
