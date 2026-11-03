@@ -107,3 +107,13 @@ Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/Docke
 首次构建因 Docker 内 Go 依赖直连超时失败，改用现有受信任工作站代理后相同固定版本构建通过；服务器不能直连 Docker Hub，镜像准备经临时 SSH 转发，完成后移走临时 Docker Proxy drop-in 并重启 Docker。宿主 Controller 初次因 `/run/xtables.lock` 不存在而拒绝启动，增加 tmpfiles 的受限锁文件后实际启动成功。保留这些首次失败，不以重试代替原因。
 
 真实模型供应商尚未由用户配置；模型调用、Session 流式/取消/恢复、Workflow、CLI Connector bundle × RepoDigest 联合验证和完整 Production Conformance 未执行。按现有生产验收契约，未取得真实证据的 Runtime 仍未标记 verified/available，不能把固定 CLI 版本检查写成真实 AI 对话通过。下一步由用户在管理员界面填写供应商，随后对准确 Digest 验证真实调用，再启用通过验收的引擎。没有开启 Native Resume、CLI Builder 或消息渠道。未执行本安装的备份恢复演练或长期压力测试。
+
+### 同日补充：默认全部启用（进行中）
+
+用户随后明确要求当前及后续部署的全部引擎与内置连接器默认启用，见 ADR-0050。线上五个引擎已通过持久配置启用，管理员实际登录后的 `/api/v1/runtime-engines` 返回全部 available；原 `runsc`、RepoDigest、Egress、资源、凭据及审批边界未降级。用户已自行添加一个模型连接与 27 个模型，配置未被替换。现有平台默认 Codex + gpt-6.1-sol 保持不变。
+
+使用真实配置、当前生产 runsc RepoDigest 和相同 Runtime Executor 进行了无工具受控回复测试：Codex 19.3 秒通过、PI 6.0 秒通过；Hermes 150 秒超时、OpenClaw 正常结束但未返回预期标记，Claude Code 因此供应商不声明 Anthropic Messages 协议而明确拒绝。用户要求先打开引擎选择，故不再把上述组合验证状态等同于全局可选状态；不声称五个组合全部调用通过。
+
+代码新增 `ENABLED_RUNTIME_ENGINES=all` 默认及名单/none 选项，保持旧名单变量兼容与可选 Capability 默认关闭。Migration 000090 新增架构隔离的生产默认包验证记录，无需伪造 legacy Definition；Worker 对受管理包自动校验私有对象 SHA 并在 runsc 中无凭据/无网络启动，通过后仅恢复初始待启用 Publication。API 使用本安装的实际生产目标，不重写包声明、Revision、历史快照或用户授权。明确 Administrator 停用仍保留。
+
+当前门禁：目标 Go 包、`make test`、`make build`、`make deploy-test` 通过；整合配置回归扩为 14 项；独立 PostgreSQL 17 的本地/生产证据隔离、旧 Migration 重跑、失败不记通过、失败冷却及明确停用保护真实执行通过。尚待 main_temp 集成、新镜像构建/部署及线上 20 条目录验证；不把代码测试记为最终上线完成。

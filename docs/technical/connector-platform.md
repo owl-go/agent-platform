@@ -1,5 +1,9 @@
 # Connector Platform Contract
 
+## 默认目录开放
+
+按 [ADR-0050](../adr/0050-default-enabled-engines-and-connectors.md)，整合安装默认自动开放全部内置连接器。生产 Worker 对受管理的固定 CLI bundle 在当前配置的 runsc RepoDigest 下进行无网络、无凭据启动验证，结果按 bundle、RepoDigest、架构写入独立生产表。API/Worker 使用当前安装的验证目标，不重写不可变包的历史声明。全部目标通过后只恢复仍有首次初始化标记的默认 Publication；明确管理员停用、私人包和 User 授权不变。MCP 维持既有默认分发与各自账号授权流程。启动证明不是实际外部业务调用证明。
+
 The legal-compliance catalog includes two independent remote MCP packages: `pkulaw` and `mindbye`. PKULaw's current revision connects only the official statute semantic-search endpoint; the provider's separately addressed case and citation services are outside that revision. Its console-issued Token uses the existing provided-credentials flow and `MCP_BEARER_TOKEN` Runtime mapping, with a masked entry form and bounded server-side shape validation. The compatibility metadata uses `auth_mode: oauth`; it does not claim a browser OAuth protocol. Mindbye's public contract-review MCP needs no account credentials and exposes upload preparation, asynchronous submission, and result polling. Its Skill uses discovered tool names and retains the original task ID during retries. Both brand images and catalog categories are platform projections; packages and User grants retain the existing immutable revision and private authorization boundaries. Package parsing and tool discovery do not establish successful legal queries or completed contract reviews. Build and verification instructions are in `scripts/connectors/legal/README.md`.
 
 ## Modao CLI bridge (package 0.1.1)

@@ -1436,6 +1436,19 @@ func connectorBundleVerified(ctx context.Context, repository connectorPackageRep
 		}
 		return true, nil
 	}
+	if targets, ok := repository.(interface{ ConnectorVerificationDigests(string) []string }); ok {
+		digests := targets.ConnectorVerificationDigests(declared)
+		if len(digests) == 0 {
+			return false, nil
+		}
+		for _, target := range digests {
+			verified, err := repository.HasConnectorBundleRuntimeConformance(ctx, bundle, target)
+			if err != nil || !verified {
+				return false, err
+			}
+		}
+		return true, nil
+	}
 	return repository.HasConnectorBundleRuntimeConformance(ctx, bundle, declared)
 }
 

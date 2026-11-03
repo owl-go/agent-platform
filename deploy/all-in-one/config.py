@@ -86,9 +86,10 @@ def platform_config(state, origin, image, source, profile, network, environment)
     runtime = sandbox_runtime(profile, origin)
     if not (re.fullmatch(r'[^\s@]+@sha256:[a-f0-9]{64}', image) or profile == 'local' and re.fullmatch(r'sha256:[a-f0-9]{64}', image)):
         raise ValueError('Runtime must use an immutable image; production requires repository@sha256')
-    verified = set(environment.get('VERIFIED_RUNTIME_ENGINES', '').split(',')) - {''}
-    if verified - VERSIONS.keys():
-        raise ValueError('VERIFIED_RUNTIME_ENGINES contains an unknown Runtime')
+    selection = environment.get('ENABLED_RUNTIME_ENGINES', environment.get('VERIFIED_RUNTIME_ENGINES', 'all'))
+    enabled = set(VERSIONS) if selection == 'all' else set() if selection == 'none' else set(selection.split(',')) - {''}
+    if enabled - VERSIONS.keys():
+        raise ValueError('ENABLED_RUNTIME_ENGINES contains an unknown Runtime')
     return {
         'api': {'address': '127.0.0.1:19080', 'read_header_timeout': '5s', 'idle_timeout': '60s', 'shutdown_timeout': '10s'},
         'authentication': {'mode': 'oidc', 'issuer': origin + '/identity/realms/agent-platform',
@@ -105,7 +106,7 @@ def platform_config(state, origin, image, source, profile, network, environment)
                    'runtime_idle_timeout': '30m', 'runtime_namespace': hashlib.sha256(source.encode()).hexdigest()[:24],
                    'credential_temp_root': '/data/run-credentials', 'sandbox_uid': 65532, 'sandbox_gid': 65532,
                    'cli_builder': {'enabled': False},
-                   'runtimes': {name: {'available': profile == 'local' or name in verified, 'native_resume': False, 'image_digest': image, 'cli_version': version} for name, version in VERSIONS.items()}},
+                   'runtimes': {name: {'available': name in enabled, 'native_resume': False, 'image_digest': image, 'cli_version': version} for name, version in VERSIONS.items()}},
         'database': {'dsn': 'postgres://agent_workspace:' + state['database_password'] + '@127.0.0.1:5432/agent_workspace?sslmode=disable',
                      'max_open_connections': 20, 'max_idle_connections': 10, 'connection_max_idle': '5m', 'connection_max_lifetime': '30m'},
         'object_store': {'provider': 'minio', 'minio': {'endpoint': '127.0.0.1:9000', 'access_key': 'agent_workspace',

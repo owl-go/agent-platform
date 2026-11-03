@@ -121,7 +121,7 @@ func NewWorkspaceService(ctx context.Context, database *gormdb.Database, credits
 
 // Production API-only deployments do not require Worker sandbox settings.
 func configureLocalAPIConnectors(repository *workspacerepo.Repository, config platformconfig.Config) error {
-	if config.Sandbox.Profile != sandbox.LocalProfile {
+	if config.Sandbox.Profile != sandbox.LocalProfile && (config.Sandbox.Runtime == "" || len(config.Worker.Runtimes) == 0) {
 		return nil
 	}
 	var images []string

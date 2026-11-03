@@ -16,6 +16,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConfigurationTests(unittest.TestCase):
+    def test_enabled_engines_do_not_claim_optional_capabilities_or_override_explicit_opt_out(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = initialize_state(directory, 'admin')
+            args = (state, 'https://workspace.example', 'example/runtime@sha256:' + 'a' * 64, '/volumes/test', 'production', 'network')
+            selected = platform_config(*args, {'ENABLED_RUNTIME_ENGINES': 'codex,pi', 'VERIFIED_RUNTIME_ENGINES': 'claude'})
+            self.assertEqual({name for name, item in selected['worker']['runtimes'].items() if item['available']}, {'codex', 'pi'})
+            self.assertFalse(any(item['native_resume'] for item in selected['worker']['runtimes'].values()))
+            with self.assertRaisesRegex(ValueError, 'unknown Runtime'):
+                platform_config(*args, {'ENABLED_RUNTIME_ENGINES': 'codex,unknown'})
+
     def test_fixed_components_build_without_backend_side_effects(self):
         dockerfile = (ROOT / 'deploy/all-in-one/Dockerfile').read_text()
         fixed_stage = dockerfile.split('COPY backend .', 1)[0]
@@ -146,7 +156,9 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 platform_config(first, 'https://workspace.example', 'sha256:' + 'a' * 64, '/volumes/test', 'production', 'network', {})
             production = platform_config(first, 'https://workspace.example', 'example/runtime@sha256:' + 'a' * 64, '/volumes/test', 'production', 'network', {})
-            self.assertFalse(any(item['available'] for item in production['worker']['runtimes'].values()))
+            self.assertTrue(all(item['available'] and not item['native_resume'] for item in production['worker']['runtimes'].values()))
+            disabled = platform_config(first, 'https://workspace.example', 'example/runtime@sha256:' + 'a' * 64, '/volumes/test', 'production', 'network', {'ENABLED_RUNTIME_ENGINES': 'none'})
+            self.assertFalse(any(item['available'] for item in disabled['worker']['runtimes'].values()))
             verified = platform_config(first, 'https://workspace.example', 'example/runtime@sha256:' + 'a' * 64, '/volumes/test', 'production', 'network', {'VERIFIED_RUNTIME_ENGINES': 'codex'})
             self.assertTrue(verified['worker']['runtimes']['codex']['available'])
             self.assertFalse(verified['worker']['runtimes']['claude']['available'])

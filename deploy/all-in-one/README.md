@@ -34,6 +34,7 @@ ADMIN_PASSWORD=replace-with-a-strong-password
 IMAGE_TAG=latest
 RUNTIME_IMAGE=haozhi152/agent-platform-runtime:latest
 DATA_VOLUME=agent-platform-data
+ENABLED_RUNTIME_ENGINES=all
 ```
 
 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 只在空数据卷首次初始化时生效。已有数据不能通过环境变量改名或重置密码。公开部署必须使用精确 HTTPS Origin、强管理员密码和生产 Sandbox 配置；非环回 HTTP 或公开环境的默认弱密码会拒绝启动。
@@ -88,6 +89,10 @@ docker compose -f deploy/all-in-one/compose.yaml up -d
 Compose 会分别拉取产品镜像与 Runtime 镜像；没有新 Digest 时复用本地缓存。数据卷保持不变。镜像回退不是 Schema 或数据回退。
 
 ## 6. 生产 `runsc`
+
+五个引擎默认全部启用，不再等待人工填写验证名单。可用 `ENABLED_RUNTIME_ENGINES=none` 全部关闭，或填写 `codex,pi` 等名单。启用不等于模型协议兼容或完整生产验收通过；真实供应商调用结果单独验证，Native Resume 等可选 Capability 不自动开启。
+
+生产 Worker 也会对全部受管理的内置 CLI 包自动执行当前 bundle × Runtime RepoDigest × 架构的无网络、无用户凭据启动验证，随后自动开放首次安装的目录条目。管理员明确停用的包不会被重启恢复；外部账号授权和业务调用仍由 User 完成。换镜像会重新验证，不复用本地 runc 证据；不启用任意 npm Builder。
 
 本地 `local/runc` 下，Worker 会对分发的固定 CLI Connector 包进行独立、无网络和无账号凭据的启动检查；通过当前 Runtime Image ID 检查后，默认目录会自动恢复可安装状态，通常在启动后数十秒内完成。管理员已经明确停用的条目不会自动恢复。飞书、钉钉与企业微信安装后的账号授权仍需 User 完成，真实业务读写必须另验；企业微信 1.4.3 包含 ARM64/x64 二进制。切换 Runtime 镜像后重新验证，不继承旧 Image ID 的通过记录。隔离 npm Builder 和 Workflow Message Channel 不因此启用。
 

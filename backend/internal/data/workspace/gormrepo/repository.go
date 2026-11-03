@@ -16,14 +16,15 @@ import (
 )
 
 type Repository struct {
-	localConnectorImages  []string
-	localConnectorProfile bool
-	db                    *gorm.DB
-	credits               creditTransactionSettler
-	recoveryOnce          sync.Once
-	recoveryError         error
-	workerLock            *sql.Conn
-	workerLockMu          sync.Mutex
+	productionConnectorDigests []string
+	localConnectorImages       []string
+	localConnectorProfile      bool
+	db                         *gorm.DB
+	credits                    creditTransactionSettler
+	recoveryOnce               sync.Once
+	recoveryError              error
+	workerLock                 *sql.Conn
+	workerLockMu               sync.Mutex
 }
 
 type connectorRevisionRecord struct {

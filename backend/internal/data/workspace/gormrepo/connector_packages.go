@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -46,6 +47,14 @@ func (repository *Repository) HasConnectorBundleRuntimeConformance(ctx context.C
 		return false, fmt.Errorf("%w: Connector conformance identity is invalid", domain.ErrInvalid)
 	}
 	var count int64
+	if !repository.localConnectorProfile {
+		if err := repository.db.WithContext(ctx).Table("production_cli_connector_conformance").Where("bundle_sha256=? AND runtime_repo_digest=? AND worker_architecture=? AND passed=true", bundleSHA256, runtimeDigest, runtime.GOARCH).Count(&count).Error; err != nil {
+			return false, fmt.Errorf("read production Connector Conformance: %w", err)
+		}
+		if count > 0 {
+			return true, nil
+		}
+	}
 	err := repository.db.WithContext(ctx).Table("cli_connector_conformance").
 		Where("bundle_sha256 = ? AND runtime_repo_digest = ? AND passed = true", bundleSHA256, runtimeDigest).
 		Count(&count).Error

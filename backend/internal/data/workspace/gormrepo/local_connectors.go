@@ -20,6 +20,16 @@ func (r *Repository) ConfigureConnectorExecution(profile, runtime string, images
 		return err
 	}
 	if profile != sandbox.LocalProfile {
+		var digests []string
+		for _, image := range images {
+			digest, err := sandbox.ExecutionImageDigest(profile, image)
+			if err != nil {
+				return err
+			}
+			digests = append(digests, digest)
+		}
+		slices.Sort(digests)
+		r.productionConnectorDigests = slices.Compact(digests)
 		r.localConnectorImages = nil
 		r.localConnectorProfile = false
 		return nil
@@ -30,6 +40,7 @@ func (r *Repository) ConfigureConnectorExecution(profile, runtime string, images
 		}
 	}
 	r.localConnectorImages = slices.Clone(images)
+	r.productionConnectorDigests = nil
 	r.localConnectorProfile = true
 	slices.Sort(r.localConnectorImages)
 	r.localConnectorImages = slices.Compact(r.localConnectorImages)
@@ -41,6 +52,9 @@ func (r *Repository) ConfigureConnectorExecution(profile, runtime string, images
 func (r *Repository) ConnectorVerificationDigests(declared string) []string {
 	if r.localConnectorProfile {
 		return slices.Clone(r.localConnectorImages)
+	}
+	if len(r.productionConnectorDigests) > 0 {
+		return slices.Clone(r.productionConnectorDigests)
 	}
 	return []string{declared}
 }

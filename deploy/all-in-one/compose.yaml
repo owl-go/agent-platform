@@ -26,6 +26,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       SANDBOX_PROFILE: ${SANDBOX_PROFILE:-local}
       RUNTIME_IMAGE: ${RUNTIME_IMAGE:-haozhi152/agent-platform-runtime:latest}
+      ENABLED_RUNTIME_ENGINES: ${ENABLED_RUNTIME_ENGINES:-all}
     volumes:
       - data:/data
       - /var/run/docker.sock:/var/run/docker.sock

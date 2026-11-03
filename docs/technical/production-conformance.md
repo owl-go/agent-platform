@@ -19,4 +19,4 @@
 11. 中文/英文、桌面/移动端主要流程与刷新恢复。
 12. 数据库备份可恢复、增量 Expert/Connector Migration、API/Worker 健康检查和重启恢复。
 
-只有实际执行且保留日志、镜像 Digest、时间与环境信息的检查才能声明通过。任何 Runtime 未通过时，其 `/api/v1/runtime-engines` 状态必须为不可用，前端不得允许新配置选择它。
+只有实际执行且保留日志、镜像 Digest、时间与环境信息的检查才能声明通过。按 [ADR-0050](../adr/0050-default-enabled-engines-and-connectors.md)，整合部署默认启用五个已安装引擎；启用状态不再冒充完整 Conformance 状态。协议不兼容、镜像或 Sandbox 前提缺失仍拒绝执行，可选 Capability 仍须取得对应 Digest 的证据才可开启；未执行的真实模型、Connector 账号与完整产品验收必须单独报告。
