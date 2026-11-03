@@ -11,7 +11,9 @@ import tempfile
 import zipfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
-VERSION = '0.1.0'
+VERSION = '0.1.1'
+# This policy-only revision retains the reviewed executable bundle unchanged.
+BUNDLE_VERSION = '0.1.0'
 CLI_VERSION = '2.102.0'
 ASSETS = {'amd64':'bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386',
           'arm64':'7862c86c72f43df3a2d93ddde6f473285b4e2af61b494849846827e513ef6484'}
@@ -41,7 +43,7 @@ def build(assets,image,node):
     if len(prefixes)!=len(set(prefixes)) or any(a!=b and b[:len(a)]==a for a in prefixes for b in prefixes):raise ValueError('overlapping command policy')
     capabilities=[{k:v for k,v in c.items() if k not in ['options','repo_required','stdin_flags']} for c in reviewed]
     capabilities += [{'id':'gh_help' if flag=='--help' else 'gh_version','argv_prefix':[flag],'risk':'low','identities':['user'],'scopes':[],'egress_hosts':HOSTS,'timeout_seconds':30} for flag in ['--help','--version']]
-    metadata={'name':'@agent-platform/github-connector','version':VERSION,'bin':{'gh':'launcher.cjs'},'agentWorkspace':{'executable':'gh','authenticationDriver':'connector_package','supportedArchitectures':['linux-amd64','linux-arm64'],'capabilities':[{'id':c['id'],'argvPrefix':c['argv_prefix'],'risk':c['risk'],'identities':c['identities'],'scopes':c['scopes'],'egressHosts':c['egress_hosts'],'timeoutSeconds':c['timeout_seconds']} for c in capabilities]}}
+    metadata={'name':'@agent-platform/github-connector','version':BUNDLE_VERSION,'bin':{'gh':'launcher.cjs'},'agentWorkspace':{'executable':'gh','authenticationDriver':'connector_package','supportedArchitectures':['linux-amd64','linux-arm64'],'capabilities':[{'id':c['id'],'argvPrefix':c['argv_prefix'],'risk':c['risk'],'identities':c['identities'],'scopes':c['scopes'],'egressHosts':c['egress_hosts'],'timeoutSeconds':c['timeout_seconds']} for c in capabilities]}}
     source=zip_bytes({'package.json':(encoded(metadata),0o644),'launcher.cjs':((ROOT/'launcher.cjs').read_bytes(),0o755),'capabilities.json':(encoded(reviewed),0o644),'LICENSE':((ROOT/'LICENSE').read_bytes(),0o644),**{f'gh-linux-{arch}':(native(asset,arch),0o755) for arch,asset in assets.items()}})
     with tempfile.TemporaryDirectory(prefix='github-connector-build-') as directory:
         directory=Path(directory);(directory/'source.zip').write_bytes(source)
@@ -55,7 +57,7 @@ def build(assets,image,node):
             if not m.isfile() or not re.fullmatch(r'[A-Za-z0-9_.-]+',m.name):raise ValueError('unsafe manual reference')
             files['skills/github/references/manual/'+m.name]=(z.extractfile(m).read(),0o644)
     files['connector-meta.json']=(encoded({'source':'github','version':VERSION,'type':'cli','name':'GitHub','description':'GitHub 仓库、Issue、PR 与评论、Actions、Release、Projects 和搜索；通过浏览器设备授权连接。','examples_zh':['查询指定仓库的 Issue','在指定 Issue 发表评论'],'examples_en':['List issues in a selected repository','Comment on a selected issue'],'minPlatformVersion':'1.0.0','auth_mode':'oauth'}),0o644)
-    files['cli.json']=(encoded({'runtime':{'kind':'node','version':node,'digest':image.split('@')[1]},'executable':'gh','bundle_path':'node_modules/@agent-platform/github-connector/launcher.cjs','authentication_driver':'connector_package','commands':{name:{'argv':['gh','platform',value],'timeout_seconds':30} for name,value in [('init','init'),('auth','auth'),('status','status'),('unAuth','unauth')]},'status_match':{'json_path':'$.configured','equals':True},'capabilities':capabilities,'activation_scopes':['repo','read:org','gist','project','workflow'],'auth_url_domains':['github.com'],'egress_hosts':HOSTS,'timeout_seconds':120,'resource_limits':{'cpu_millis':1000,'memory_mib':512,'timeout_seconds':120,'concurrency':1,'child_processes':32}}),0o644)
+    files['cli.json']=(encoded({'runtime':{'kind':'node','version':node,'digest':image.split('@')[1]},'executable':'gh','bundle_path':'node_modules/@agent-platform/github-connector/launcher.cjs','authentication_driver':'connector_package','commands':{name:{'argv':['gh','platform',value],'timeout_seconds':30} for name,value in [('init','init'),('auth','auth'),('status','status'),('unAuth','unauth')]},'status_match':{'json_path':'$.configured','equals':True},'capabilities':capabilities,'activation_scopes':['repo','read:org','gist','project','workflow'],'auth_url_domains':['github.com'],'egress_hosts':HOSTS,'timeout_seconds':120,'resource_limits':{'cpu_millis':1000,'memory_mib':512,'timeout_seconds':120,'concurrency':1,'child_processes':64}}),0o644)
     return zip_bytes(files),source,bundle
 
 def main():

@@ -6,6 +6,15 @@ import unittest
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('github_build',Path(__file__).with_name('build.py'));build=importlib.util.module_from_spec(spec);spec.loader.exec_module(build)
 class BuildTest(unittest.TestCase):
+ def test_policy_revision_keeps_bundle_and_allows_native_process_start(self):
+  package=build.ROOT.parents[2]/'connectors'/'github'/'package'
+  meta=json.loads((package/'connector-meta.json').read_text())
+  policy=json.loads((package/'cli.json').read_text())
+  self.assertEqual(meta['version'],build.VERSION)
+  self.assertEqual(policy['resource_limits']['child_processes'],64)
+  # Both native architectures and the reviewed launcher remain immutable.
+  import hashlib
+  self.assertEqual(hashlib.sha256((package/'cli-bundle.tgz').read_bytes()).hexdigest(),'b98cf1c75a45b73c9c3b3254bee28da1cd54524586ccd981e1c4646bea13b073')
  def test_assets_require_exact_release_hash(self):
   for arch in build.ASSETS:
    with self.assertRaisesRegex(ValueError,'checksum'):build.native(b'unknown',arch)

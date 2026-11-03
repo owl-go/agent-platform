@@ -2238,7 +2238,7 @@
   ],
   "executable": "gh",
   "resource_limits": {
-    "child_processes": 32,
+    "child_processes": 64,
     "concurrency": 1,
     "cpu_millis": 1000,
     "memory_mib": 512,

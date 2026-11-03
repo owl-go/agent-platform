@@ -166,6 +166,14 @@ On 2026-10-01, integrated main_temp `42b5888` deployed API/Worker/Web release `c
 
 ## GitHub CLI package
 
+Package revision 0.1.1 retains the exact 0.1.0 executable bundle and increases
+the declared process limit from 32 to 64. On the game Linux + runsc deployment,
+the Node launcher could start but spawning the unchanged native `gh` failed
+with `ENOMEM` at 32; changing only that limit to 64 passed the diagnostic with
+the same 512 MiB memory cap. The new revision must pass normal Worker startup
+Conformance under its declared limits before becoming available. This does not
+grant a GitHub account or establish business API success.
+
 The `github` source packages official `gh` 2.102.0 (commit `fc4b137cdef0a6bd28fd461b7cf9c84a5812a8cd`), two SHA-256-pinned Linux binaries, a reviewed Node launcher, the MIT license, and all 237 official manual navigation pages read on 2026-10-02. `scripts/connectors/github/coverage.md` maps each page to a reviewed capability or its exclusion. The immutable policy permits 113 remote business command prefixes plus help/version; all mutations require one-use approval. Runtime Conformance only verifies the exact bundle can start and is distinct from account-level API validation.
 
 Managed GitHub revisions use `connector_package` and `auth_mode: oauth`, selecting a built-in provider adapter in the existing interactive authorization seam. The fixed CLI application's default browser login is GitHub's device flow, with no localhost callback or PKCE. The platform binds encrypted device state to the owning User, Installation and Flow, displays the public verification code, validates the fixed HTTPS verification URL, and uses owner-scoped compare-and-swap to reserve polling intervals and slow-down updates. Both provider requests are bounded; reservations exceed their combined timeout. A successful grant is identified through `/user` and the exact flow is atomically consumed before saving authorization. Denial, expiry and post-exchange identity failure terminate the flow; redirects and unreviewed scopes fail closed. The default CLI grant is non-expiring; an expiring response is honored and requires reconnection at expiry. This revision does not request `offline_access` or offer token entry.

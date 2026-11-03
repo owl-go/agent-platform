@@ -161,12 +161,19 @@ func extractBundle(bundle []byte, destination string) error {
 				return err
 			}
 			_, copyErr := io.CopyN(file, reader, header.Size)
+			// The supervisor keeps a private umask for credentials. Restore the
+			// validated archive bits explicitly so non-root Sandbox processes can
+			// read libraries and execute both launchers and bundled native CLIs.
+			modeErr := file.Chmod(os.FileMode(header.Mode) & 0o755)
 			closeErr := file.Close()
 			if copyErr != nil {
 				return copyErr
 			}
 			if closeErr != nil {
 				return closeErr
+			}
+			if modeErr != nil {
+				return modeErr
 			}
 		case tar.TypeSymlink:
 			link := filepath.Clean(filepath.FromSlash(header.Linkname))
@@ -189,7 +196,7 @@ func extractBundle(bundle []byte, destination string) error {
 			return err
 		}
 	}
-	return nil
+	return protectBundle(destination)
 }
 
 var _ Conformance = (*DockerConformance)(nil)

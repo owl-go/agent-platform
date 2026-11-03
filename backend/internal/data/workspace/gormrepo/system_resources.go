@@ -377,7 +377,10 @@ func seedConnector(ctx context.Context, tx *gorm.DB, objects objectstore.Provide
 		if publication.State == string(domain.ConnectorPublicationDisabled) {
 			state = publication.State
 		}
-		result := tx.Model(&connectorPublicationRecord{}).Where("package_source = ? AND version = ?", publication.PackageSource, publication.Version).Updates(map[string]any{"active_revision_id": revision.ID, "state": state, "version": gorm.Expr("version + 1"), "updated_at": time.Now().UTC()})
+		// An available managed CLI remains opted into verification after an
+		// upgrade. Explicit Administrator disablement must remain disabled.
+		pending := pkg.CLI != nil && (publication.State != string(domain.ConnectorPublicationDisabled) || publication.LocalActivationPending)
+		result := tx.Model(&connectorPublicationRecord{}).Where("package_source = ? AND version = ?", publication.PackageSource, publication.Version).Updates(map[string]any{"local_activation_pending": pending, "active_revision_id": revision.ID, "state": state, "version": gorm.Expr("version + 1"), "updated_at": time.Now().UTC()})
 		err = result.Error
 		if err == nil && result.RowsAffected != 1 {
 			return fmt.Errorf("default Connector publication changed during initialization")

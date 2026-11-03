@@ -117,3 +117,13 @@ Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/Docke
 代码新增 `ENABLED_RUNTIME_ENGINES=all` 默认及名单/none 选项，保持旧名单变量兼容与可选 Capability 默认关闭。Migration 000090 新增架构隔离的生产默认包验证记录，无需伪造 legacy Definition；Worker 对受管理包自动校验私有对象 SHA 并在 runsc 中无凭据/无网络启动，通过后仅恢复初始待启用 Publication。API 使用本安装的实际生产目标，不重写包声明、Revision、历史快照或用户授权。明确 Administrator 停用仍保留。
 
 当前门禁：目标 Go 包、`make test`、`make build`、`make deploy-test` 通过；整合配置回归扩为 14 项；独立 PostgreSQL 17 的本地/生产证据隔离、旧 Migration 重跑、失败不记通过、失败冷却及明确停用保护真实执行通过。尚待 main_temp 集成、新镜像构建/部署及线上 20 条目录验证；不把代码测试记为最终上线完成。
+
+#### 自动验证失败的后续诊断
+
+`e6e1149` 已从 main_temp 构建、推送版本化 amd64 标签并部署。真实管理员 API 返回五引擎全部可用；实际 Session `b6e77628-fd69-4e57-b2b9-377db4bc616e` 完成受控 Codex 回复。连接器首轮自动检查全部失败，未伪造通过或直接改写可用状态。相同配置的独立 Conformance 探针通过十个 CLI，目录实际恢复为 19 条（含飞书、钉钉、企业微信）。
+
+根因一：整合 Supervisor 的 `umask 0077` 被 Worker 继承，解压代码未恢复包的目录和文件位，导致非 root runsc 读取 launcher 时 permission denied；独立 Docker exec 的不同 umask 解释了其成功。新增独立子进程回归 `TestExtractBundleReadableBySandboxUnderPrivateUmask` 在修复前准确报 0700，修复后验证目录可遍历、只读文件及执行位。不改变 Supervisor 的凭证权限；解压只恢复 allowlisted 模式并统一保护 bundle，凭证目录不受影响。
+
+根因二：GitHub 的 32 进程上限下，Node spawnSync 原版 gh 返回 ENOMEM；原版 gh 直接启动正常，缩小 Node heap 或增加内存不能修复，仅将进程上限调到 64 后成功。新 0.1.1 包修订保留精确 executable bundle、权限白名单和授权模式，仅修改声明的进程上限；正式 Worker 将按同一上限重新验证。此项尚待修复镜像上线后验收，不计作 GitHub 已开放或真实账号业务通过。
+
+另补齐 managed CLI 修订升级后的自动启用意图：原已开放或等待首次验证的条目升级后仍等待新修订验证，明确 Administrator 停用仍不恢复。隔离 PostgreSQL 回归在修复前复现“原已开放条目升级后 pending=false”，其余两个状态正常；修复只更新同一 Publication 事务中的待启用标记。首次测试曾在测试 PostgreSQL 尚未就绪时报 EOF，未作为缺陷复现；实际红/绿证据以数据库 ready 后的运行结果为准。
