@@ -108,7 +108,7 @@ Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/Docke
 
 真实模型供应商尚未由用户配置；模型调用、Session 流式/取消/恢复、Workflow、CLI Connector bundle × RepoDigest 联合验证和完整 Production Conformance 未执行。按现有生产验收契约，未取得真实证据的 Runtime 仍未标记 verified/available，不能把固定 CLI 版本检查写成真实 AI 对话通过。下一步由用户在管理员界面填写供应商，随后对准确 Digest 验证真实调用，再启用通过验收的引擎。没有开启 Native Resume、CLI Builder 或消息渠道。未执行本安装的备份恢复演练或长期压力测试。
 
-### 同日补充：默认全部启用（进行中）
+### 同日补充：默认全部启用（已上线，以下保留过程）
 
 用户随后明确要求当前及后续部署的全部引擎与内置连接器默认启用，见 ADR-0050。线上五个引擎已通过持久配置启用，管理员实际登录后的 `/api/v1/runtime-engines` 返回全部 available；原 `runsc`、RepoDigest、Egress、资源、凭据及审批边界未降级。用户已自行添加一个模型连接与 27 个模型，配置未被替换。现有平台默认 Codex + gpt-6.1-sol 保持不变。
 
@@ -127,3 +127,35 @@ Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/Docke
 根因二：GitHub 的 32 进程上限下，Node spawnSync 原版 gh 返回 ENOMEM；原版 gh 直接启动正常，缩小 Node heap 或增加内存不能修复，仅将进程上限调到 64 后成功。新 0.1.1 修订保留原版程序、权限白名单和授权模式，将同一组新限额嵌入 bundle metadata 生成独立 SHA-256；历史 32 进程修订不会复用新证据。正式 Worker 按同一上限重新验证。b4f42c3 为未部署的中间构建；不能计作 GitHub 已开放或真实账号业务通过。
 
 另补齐 managed CLI 修订升级后的自动启用意图：原已开放或等待首次验证的条目升级后仍等待新修订验证，明确 Administrator 停用仍不恢复。隔离 PostgreSQL 回归在修复前复现“原已开放条目升级后 pending=false”，其余两个状态正常；修复只更新同一 Publication 事务中的待启用标记。首次测试曾在测试 PostgreSQL 尚未就绪时报 EOF，未作为缺陷复现；实际红/绿证据以数据库 ready 后的运行结果为准。
+
+#### 最终上线与双架构验证
+
+发布源码为 `916fcbad4144ad6aeed387877a898ff943f576c1`，功能分支自动提交/推送并 fast-forward 集成到 `main_temp`。产品镜像由精确 `origin/main_temp` 的干净 `git archive` 构建，未包含原工作区两项历史未提交改动或任何部署凭据。`b4f42c3` 的中间版本未部署；最终 GitHub 0.1.1 将 64 进程、512 MiB、1000 CPU millis 写入 bundle metadata，原版两架构 ELF 与 launcher 逐字节保持一致。
+
+两个仓库均已推送 `2026-11-03-916fcbad4144-arm64` 与 `2026-11-03-916fcbad4144-amd64`。全部四个版本引用在 Registry 核验成功、两个架构安装/默认启用检查通过后，才更新各自版本化多架构标签、`latest`、`arm64`、`amd64`；远端清单核验 latest 恰有两种 Linux 架构，各架构别名恰有对应单平台。Runtime 源码与已验证的 `477b258fb0aa` 相同，本次复用其不可变平台镜像，没有将重打标签描述为重新构建。
+
+| 2026-11-03 镜像引用 | Registry Digest |
+|---|---|
+| 产品 latest / 版本化多架构 Index | `sha256:5147d95afff741eaf9786118317024c1b0562b7b58aad900295543c20deceef5` |
+| 产品 ARM64 平台 Manifest | `sha256:776420ccabc56baf696ee97ef9026d86846472cb5c5aa662b26329185c25605a` |
+| 产品 AMD64 平台 Manifest | `sha256:112f42fda4dc8066674c49bb98919770a7e41181b7b113b6d867036ebc35aef0` |
+| Runtime latest / 版本化多架构 Index | `sha256:e87886e26da0f098c874f4ca1349b6a4f92ed484b5a7d87e7a6fa69c458ba3f8` |
+| Runtime ARM64 平台 Manifest（复用） | `sha256:79f313b38a13ea8ea67f1dcba5cc192306b0a54e7090c03ea6cd4fac1aa12606` |
+| Runtime AMD64 平台 Manifest（复用） | `sha256:a3f1a38d8af2b34418b29c4b95aaa0f384b878d4f840448cace4866a4052a63c` |
+
+- 当前线上控制镜像固定为 `haozhi152/agent-platform@sha256:112f42fda4dc8066674c49bb98919770a7e41181b7b113b6d867036ebc35aef0`。独立 Runtime 继续使用原生 amd64 的 `a3f1a38d…` RepoDigest、production/runsc，未因默认启用而更改隔离或 Egress。
+- 切换前确认活动执行为 0，并关闭入口后停止应用，生成 `/srv/agent-platform/backups/before-connector-fix-916fcba/data.tar.gz` 冷备份，权限 0600 / 目录 0700。SHA-256 校验与 tar 可读性检查通过；这是备份完整性检查，不是数据恢复演练。模型配置、27 条模型目录、平台默认及账号凭据保留。
+- 后台 Worker 自动验证 GitHub 新 bundle 后恢复其 Publication。当前 11 个 CLI 的活动 bundle × 实际生产 RepoDigest × amd64 均有真实通过记录；旧 32 进程 GitHub bundle 没有被写成通过。新 bundle SHA-256 为 `62c413457f6af358fd1db18165fd1112de34c525c1261d49b475750bd93690cf`，最终规范化 Package SHA-256 为 `d8553581788355a82001cdae41b6b30c0b3826073b6bf2c4204955093d40de06`。
+- 管理员实际登录后的 User catalog 与 Administrator publication-health 均为 20 条、全部 available/conformance_available；五引擎全部 available。部署后的同一受控 Codex Session 再次 completed 且标记匹配。应用 healthy / RestartCount 0，公网 readyz 成功，原网站 HTTPS 200，维护标记已清除。
+- 实际 Linux/runsc 的 `TestDockerConnectorWaitsForPolicyBeforeCommand` allowed/rejected 两项通过，使用当前固定 Runtime、受管网络和真实 Unix Egress Controller；验证策略前不运行命令、不在等待容器配置中注入凭据、拒绝不执行、结束清理。这不等于完整 Production Conformance。
+
+| AC / 门禁 | 实际结果 |
+|---|---|
+| AC-DEFAULT-ENGINES / G-GO、G-DEPLOY | 整合配置 14 项回归、相关 Go 包、`make test`、`make build`、`make deploy-test` 通过；配置默认全部引擎，显式 none/名单仍有效，可选 Capability 仍关闭。 |
+| AC-DEFAULT-CONNECTORS / G-GO、G-DB | 私有 umask 子进程回归先红后绿；隔离 PostgreSQL 17 的生产/本地证据隔离、失败冷却及升级后自动恢复/明确停用保护真实通过。完整 Go 门禁未设置 DSN 的其他数据库 Skip 不算通过。 |
+| AC-DEFAULT-IMAGES / G-DEPLOY | ARM64 与 AMD64 的 `smoke-unified-image.py --keep` 均完成首次安装、公开路由/匿名拒绝、非 root 只读隔离任务、保留数据重启和 state 摘要稳定。各自真实 HTTP 登录后的 API 均为 5 引擎、20 条 User/Administrator 目录、零临时 legacy Definition，全部 CLI 由新实例自动验证。AMD64 本机检查为 ARM Mac 模拟；线上另有原生 amd64/runsc 验证。 |
+| G-DOC | `git diff --check`、AGENTS/CLAUDE 镜像一致性及本次路径检查通过；当前记录为发布后的补充，不改变镜像源码 Revision。 |
+
+HTTP 登录验收首次遇到 Python CookieJar 不发送 localhost 的 Secure Cookie，返回 400；仅在标签隔离的测试实例固定 localhost Origin 模拟[浏览器的 localhost 例外](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)，生产 Cookie 与应用鉴权没有调整。该项是 HTTP/API 验收，不声称完成真实浏览器界面验收。两个新建 Smoke 容器及其带测试标签的独立卷均已按精确名称清理，未删除原有服务、镜像或业务数据。
+
+真实外部连接器账号授权与业务 API、所有引擎/模型组合、完整 Sandbox/Production Conformance、备份恢复及容量/长期压力检查仍未完成。上述“默认启用”与目录中的启动证据不表示这些项目已通过。
