@@ -166,8 +166,10 @@ On 2026-10-01, integrated main_temp `42b5888` deployed API/Worker/Web release `c
 
 ## GitHub CLI package
 
-Package revision 0.1.1 retains the exact 0.1.0 executable bundle and increases
-the declared process limit from 32 to 64. On the game Linux + runsc deployment,
+Package revision 0.1.1 retains the reviewed native binaries and launcher and
+increases the declared process limit from 32 to 64. The same limits and new
+version are embedded in bundle metadata, producing a new SHA-256 so historical
+32-process revisions cannot reuse the new proof. On game Linux + runsc,
 the Node launcher could start but spawning the unchanged native `gh` failed
 with `ENOMEM` at 32; changing only that limit to 64 passed the diagnostic with
 the same 512 MiB memory cap. The new revision must pass normal Worker startup

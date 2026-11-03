@@ -37,7 +37,7 @@ python3 scripts/connectors/github/publish.py \
 
 ## 2026-10-02 发布证据
 
-当前包修订 0.1.1 仅将进程上限从 32 调整为 64，保留 512 MiB 内存限制和原 0.1.0 executable bundle（SHA-256 不变）。Builder 的包版本与 bundle 内 npm metadata 版本分别固定，避免仅修改运行策略时重写已审核的原版二进制。2026-11-03 game 的 runsc 诊断复现了 32 进程时 Node 派生原版 gh 返回 ENOMEM；仅调整到 64 后通过。正式可用性仍须由 Worker 使用新修订声明的限制记录真实 Conformance；以下为原 0.1.0 历史证据。
+当前包修订 0.1.1 将进程上限从 32 调整为 64，保留 512 MiB 内存限制、已审核原版二进制及 launcher。新版本与相同限额写入 bundle 的 npm metadata，生成独立 SHA-256，防止历史 32 进程修订误用新证据。2026-11-03 game 的 runsc 诊断复现了 32 进程时 Node 派生原版 gh 返回 ENOMEM；仅调整到 64 后通过。正式可用性仍须由 Worker 使用新修订声明的限制记录真实 Conformance；以下为原 0.1.0 历史证据。
 
 集成 `main_temp` 的 `6fffda0` 已部署为 `github-6fffda0`，正式 Revision `66cf9265-5d8c-48bb-9a0c-d8b5679b7448`（0.1.0）为 available。最终 ZIP 经当前 Parse 校验；规范化 package SHA-256 为 `ae22bb4fcf2b27b4bb18c4e3e545ec9bdd57247438cdd6187884609560da24b4`，bundle 为 `b98cf1c75a45b73c9c3b3254bee28da1cd54524586ccd981e1c4646bea13b073`。生产 Worker 对此 bundle × Runtime `sha256:e4e3a508e82f296dd8dce1e40db0ddda639bc2a44bb1b45439cedce63ae12d0b` 记录 Linux + runsc Conformance。两次发布返回同一 Revision；Administrator 与 User catalog 各一个正式条目，临时构建 Definition 为零。
 

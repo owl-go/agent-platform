@@ -124,6 +124,6 @@ Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/Docke
 
 根因一：整合 Supervisor 的 `umask 0077` 被 Worker 继承，解压代码未恢复包的目录和文件位，导致非 root runsc 读取 launcher 时 permission denied；独立 Docker exec 的不同 umask 解释了其成功。新增独立子进程回归 `TestExtractBundleReadableBySandboxUnderPrivateUmask` 在修复前准确报 0700，修复后验证目录可遍历、只读文件及执行位。不改变 Supervisor 的凭证权限；解压只恢复 allowlisted 模式并统一保护 bundle，凭证目录不受影响。
 
-根因二：GitHub 的 32 进程上限下，Node spawnSync 原版 gh 返回 ENOMEM；原版 gh 直接启动正常，缩小 Node heap 或增加内存不能修复，仅将进程上限调到 64 后成功。新 0.1.1 包修订保留精确 executable bundle、权限白名单和授权模式，仅修改声明的进程上限；正式 Worker 将按同一上限重新验证。此项尚待修复镜像上线后验收，不计作 GitHub 已开放或真实账号业务通过。
+根因二：GitHub 的 32 进程上限下，Node spawnSync 原版 gh 返回 ENOMEM；原版 gh 直接启动正常，缩小 Node heap 或增加内存不能修复，仅将进程上限调到 64 后成功。新 0.1.1 修订保留原版程序、权限白名单和授权模式，将同一组新限额嵌入 bundle metadata 生成独立 SHA-256；历史 32 进程修订不会复用新证据。正式 Worker 按同一上限重新验证。b4f42c3 为未部署的中间构建；不能计作 GitHub 已开放或真实账号业务通过。
 
 另补齐 managed CLI 修订升级后的自动启用意图：原已开放或等待首次验证的条目升级后仍等待新修订验证，明确 Administrator 停用仍不恢复。隔离 PostgreSQL 回归在修复前复现“原已开放条目升级后 pending=false”，其余两个状态正常；修复只更新同一 Publication 事务中的待启用标记。首次测试曾在测试 PostgreSQL 尚未就绪时报 EOF，未作为缺陷复现；实际红/绿证据以数据库 ready 后的运行结果为准。

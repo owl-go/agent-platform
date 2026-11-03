@@ -12,8 +12,6 @@ import zipfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 VERSION = '0.1.1'
-# This policy-only revision retains the reviewed executable bundle unchanged.
-BUNDLE_VERSION = '0.1.0'
 CLI_VERSION = '2.102.0'
 ASSETS = {'amd64':'bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386',
           'arm64':'7862c86c72f43df3a2d93ddde6f473285b4e2af61b494849846827e513ef6484'}
@@ -43,7 +41,7 @@ def build(assets,image,node):
     if len(prefixes)!=len(set(prefixes)) or any(a!=b and b[:len(a)]==a for a in prefixes for b in prefixes):raise ValueError('overlapping command policy')
     capabilities=[{k:v for k,v in c.items() if k not in ['options','repo_required','stdin_flags']} for c in reviewed]
     capabilities += [{'id':'gh_help' if flag=='--help' else 'gh_version','argv_prefix':[flag],'risk':'low','identities':['user'],'scopes':[],'egress_hosts':HOSTS,'timeout_seconds':30} for flag in ['--help','--version']]
-    metadata={'name':'@agent-platform/github-connector','version':BUNDLE_VERSION,'bin':{'gh':'launcher.cjs'},'agentWorkspace':{'executable':'gh','authenticationDriver':'connector_package','supportedArchitectures':['linux-amd64','linux-arm64'],'capabilities':[{'id':c['id'],'argvPrefix':c['argv_prefix'],'risk':c['risk'],'identities':c['identities'],'scopes':c['scopes'],'egressHosts':c['egress_hosts'],'timeoutSeconds':c['timeout_seconds']} for c in capabilities]}}
+    metadata={'name':'@agent-platform/github-connector','version':VERSION,'bin':{'gh':'launcher.cjs'},'agentWorkspace':{'executable':'gh','authenticationDriver':'connector_package','resourceLimits':{'cpuMillis':1000,'memoryMiB':512,'childProcesses':64},'supportedArchitectures':['linux-amd64','linux-arm64'],'capabilities':[{'id':c['id'],'argvPrefix':c['argv_prefix'],'risk':c['risk'],'identities':c['identities'],'scopes':c['scopes'],'egressHosts':c['egress_hosts'],'timeoutSeconds':c['timeout_seconds']} for c in capabilities]}}
     source=zip_bytes({'package.json':(encoded(metadata),0o644),'launcher.cjs':((ROOT/'launcher.cjs').read_bytes(),0o755),'capabilities.json':(encoded(reviewed),0o644),'LICENSE':((ROOT/'LICENSE').read_bytes(),0o644),**{f'gh-linux-{arch}':(native(asset,arch),0o755) for arch,asset in assets.items()}})
     with tempfile.TemporaryDirectory(prefix='github-connector-build-') as directory:
         directory=Path(directory);(directory/'source.zip').write_bytes(source)
