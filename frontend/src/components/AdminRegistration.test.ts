@@ -2,7 +2,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { createAppI18n } from "../i18n";
-import { platformApiKey, type PlatformApi, type RegistrationMethod } from "../api/client";
+import { createPlatformApi, platformApiKey, type PlatformApi, type RegistrationMethod } from "../api/client";
 import AdminRegistration from "./AdminRegistration.vue";
 const method: RegistrationMethod = { provider: "feishu", enabled: false, ready: true, app_id: "app", app_secret_configured: true, tenant_key: "enterprise", official_account_id: "", verification_token_configured: false, encoding_aes_key_configured: false, version: 1, callback_url: "https://workspace.test/api/v1/registration/feishu/callback" };
 function fixture(available = true, locale = "zh-CN") {
@@ -11,6 +11,29 @@ function fixture(available = true, locale = "zh-CN") {
   return { wrapper, api };
 }
 describe("registration governance", () => {
+  it("renders both unconfigured methods from the sparse live HTTP response", async () => {
+    const renderError = vi.fn();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ available: true, items: [
+      { provider: "wechat_official", callback_url: "https://workspace.test/api/v1/registration/wechat_official/callback" },
+      { provider: "feishu", callback_url: "https://workspace.test/api/v1/registration/feishu/callback" },
+    ] }), { status: 200 })));
+    const wrapper = mount(AdminRegistration, { global: { plugins: [createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")],
+      provide: { [platformApiKey as symbol]: createPlatformApi(() => "fixture-token") }, config: { errorHandler: renderError } } });
+    try {
+      await flushPromises();
+      expect(renderError).not.toHaveBeenCalled();
+      expect(wrapper.findAll("form")).toHaveLength(2);
+      expect(wrapper.text()).toContain("微信公众号");
+      expect(wrapper.text()).toContain("飞书");
+      expect(wrapper.text()).not.toContain("扫码注册尚未配置");
+      expect(wrapper.findAll('input[type="password"]')).toHaveLength(4);
+      expect(wrapper.findAll('input[type="password"]').every((input) => (input.element as HTMLInputElement).value === "")).toBe(true);
+      expect(wrapper.findAll('button[type="submit"]').every((button) => button.attributes("disabled") !== undefined)).toBe(true);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
   it("retains write-only secrets and requires a reason before changing enablement", async () => {
     const { wrapper, api } = fixture(); await flushPromises();
     expect(wrapper.text()).toContain("已验证企业");

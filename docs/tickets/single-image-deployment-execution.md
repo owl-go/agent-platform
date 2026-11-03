@@ -193,7 +193,7 @@ AC-ASSISTANT-LIST / COD-002/006、TST-001/002/005、G-WEB：新回归修复前 3
 修复源码 `ef9a92084251dc54018091594270a2527930e127` 已经 main_temp 集成、干净 archive 构建并上线。产品 `2026-11-03-ef9a92084251-arm64` 平台 Manifest 为 `sha256:cd4312eee91aca0b13e36f06c7e8f38264173a3bcb558e1ea7f36b0eea49ed1e`，amd64/线上固定引用为 `sha256:b509124a2e0662805f93e4d22e330a54f389595de96ea129a9e9fcf09ca10baa`。两个仓库四个架构版本先完成推送与核验，再更新 latest 和架构标签；产品 latest Index 为 `sha256:279a53afd30da24aea1f0b585d32e5fc3f43dd9a786ea99ddb9bbd2fc26bd62c`，Runtime 继续复用相同不可变平台镜像。
 
 后端/部署/资源 Git diff 为空，两架构 API、Worker、MinIO 可执行文件 SHA-256 均与此前通过安装/重启验收的镜像相同，未重复未受影响的后端和模型检查。切换前活动执行为零，已生成 `/srv/agent-platform/backups/before-assistant-null-ef9a920` 私有冷备份并校验。部署后服务 healthy / RestartCount 0，两个原有助手的 ID 与 draft 状态保持相同，原始知识库字段仍为 null（在客户端规范化，未执行数据库修复或写入），五引擎与 20 条目录仍可用。公网前端 index 指纹 `7f44e0a40dd3e38b9ebdd99d26ad7d39d6dc45c69643c8b1e9ed396f40c5f956` 与本次通过回归测试的本地构建及两个镜像一致，维护标记已清除。验证采用真实所属账号 API 只读检查及同形 HTTP 响应的 Vue 渲染回归；未另行登录该账号的浏览器或修改其助手状态/内容，不把这些结果写成真实对话或发布验收。
-### 2026-11-03：恢复 HTTPS 部署的扫码注册基础设施（进行中）
+### 2026-11-03：恢复 HTTPS 部署的扫码注册基础设施（已上线，公众号待管理员配置）
 
 AC-REG-1：线上管理员 `GET /api/v1/admin/registration-methods` 可重复返回 `available=false`、微信/飞书均 version 0；数据库 registration_settings 为 0 行。只读身份检查证实 accounts 未装配 registration_broker、服务账号缺少 manage-identity-providers、admin-only 标记缺失。截图提示是部署装配遗漏，不是删除了外部身份或隐藏现有配置。
 
@@ -202,3 +202,13 @@ AC-REG-1：线上管理员 `GET /api/v1/admin/registration-methods` 可重复返
 AC-REG-2：新增配置测试先红（2 个缺失装配用例），随后覆盖密钥重启/Origin 变化复用、既有系统密钥不变、0600、HTTP 关闭、损坏拒绝、命令失败不泄漏和真实共享身份同步的幂等/权限 allowlist。`make deploy-test` 通过。关联 COD-003/004、TST-001/005 和 G-DEPLOY/G-SEC。真实供应商配置、回调握手及手机确认尚未验证，不能将基础设施恢复记为微信登录验收通过。
 
 发布前 `make test`、`make build`、独立的 `python3 scripts/configure-registration-identity_test.py`、`git diff --check` 和 AGENTS/CLAUDE 对比通过。通用 Go 测试未配置 PostgreSQL DSN，Skip 不算数据库集成通过。镜像 Smoke 新增显式 `--https-broker`，用于实际启动/重启验证公钥和密钥文件稳定，HTTP loopback 运输不替代 TLS/手机验收；目标镜像执行结果待记录。
+
+发布源 `dd94a667a691a18e196c30400c6addbc7c8b3073` 已推送并经 `main_temp` 的精确 Git Archive 构建。产品 `2026-11-03-dd94a667a691` / `latest` 多架构 Index 为 `sha256:971a3a51ad162a7e96d9f2be438eaba136d98bcc4ef3a875b11a20bd1fbf9ce6`，ARM64 Leaf `sha256:bdd1b2d991001d644bfbfc7be342cbc135fa27e33087bf22284e2ccd9280e211`，AMD64 Leaf `sha256:da43e845fc2be87aecc2a5c2e37c28337530c2ce2b04494613a552083fb5e4f1`。四个版本引用核对后更新两个仓库的 latest/arm64/amd64，并逐一核验平台集合和 Digest。Runtime 源码未变，复用已验证的 ARM64 `79f313b3…` / AMD64 `a3f1a38d…` 平台镜像，仅增加同版本标签；Runtime Index 仍为 `sha256:e87886e26da0f098c874f4ca1349b6a4f92ed484b5a7d87e7a6fa69c458ba3f8`，不声称重新构建了 Runtime。
+
+两架构均执行真实 `smoke-unified-image.py --https-broker`，通过新卷初始化、匿名 401、公开 RSA JWKS、0600、独立非 root/只读/无网络 Runtime、保留数据重启和两类密钥文件稳定检查。补充组件测试用线上同形状的稀疏 JSON（两个方法仅有 provider/callback_url）经过真实 HTTP Client 渲染，确认微信/飞书两份表单、四个空 Secret 输入框均存在且无 Vue 错误；目标组件 4 项测试、`make web-typecheck`、`make web-build` 通过。产品前后端及 MinIO 二进制/入口均与上一版逐项 SHA-256 相同；前端入口仍为 `7f44e0a40dd3e38b9ebdd99d26ad7d39d6dc45c69643c8b1e9ed396f40c5f956`。
+
+失败与恢复：初次 ARM 构建参数误填 Revision，主动取消，修正后核对实际镜像 Label，未发布错误标签；AMD 上传一次 Registry TLS 超时，保留原日志后重试成功。Mac 上首次 AMD 模拟 Smoke 容器以 1 退出且被默认清理，具体子进程原因无法从保留日志恢复，未将这次记作通过；随后保留诊断实例完整重跑，启动和重启均通过，最后仅删除该带测试标签的容器/卷。原失败日志保留为 `/tmp/registration-smoke-amd64-initial-failed.log`。实际 Linux 上本次受控切换首次即健康，没有用 Mac 结果替代生产结果。
+
+线上先确认活动执行为 0 并开启维护，停止 app，建立 `/srv/agent-platform/backups/before-registration-dd94a66` 完整冷备份及 Compose/env 恢复点，再固定 AMD64 RepoDigest 启动；备份 SHA-256 校验通过，未演练数据恢复。真实 HTTPS 管理员登录和只读接口返回 registration available=true、五引擎可用、User/Admin 目录各 20；匿名管理员接口 401，公网微信 JWKS 200。Keycloak 服务账号窄权限与两个 admin-only marker 均实测为 true；registration_settings 仍为 0 行。新 Broker 文件权限 0600；完整 state.json 与冷备份逐字段相等，管理员凭据、公开 Origin 和 Runtime 设置保持原值，production/runsc 未降级，服务 healthy、restart=0、维护已解除。原站从服务器本地 SNI 检查为 200，本机直连其域名 TLS reset，未将后者记为外网可用，也未更改原站配置。
+
+用户明确选择自行在后台填写公众号配置，不迁移其他部署的 Secret。当前已恢复“账号管理 → 注册方式”配置能力，两个供应商入口仍关闭；保存并开放后才会在登录页显示。没有填写虚构公众号凭据、调用真实供应商、发送消息或扫码，没有真实用户浏览器/手机登录验收；完整 Production Conformance、真实供应商配置/回调握手和手机首次/返回登录仍未验证。
