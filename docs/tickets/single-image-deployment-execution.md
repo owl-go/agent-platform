@@ -160,7 +160,7 @@ HTTP 登录验收首次遇到 Python CookieJar 不发送 localhost 的 Secure Co
 
 真实外部连接器账号授权与业务 API、所有引擎/模型组合、完整 Sandbox/Production Conformance、备份恢复及容量/长期压力检查仍未完成。上述“默认启用”与目录中的启动证据不表示这些项目已通过。
 
-#### 设置页漏项补齐（进行中）
+#### 设置页漏项补齐（已发布）
 
 最终核对发现 `SettingsPage.refresh` 仍按品牌过滤 OpenClaw，并在保存前删除它的默认模型、替换已有 OpenClaw 引擎选择。此前“五引擎”证据是后台 API 状态，不能等同于设置页五个都可选。产品需求的 Runtime Settings 契约与本次“全部启用”均要求显示五个现有引擎；移除该过滤和静默改写，沿用现有控件与可用性/协议校验。
 
@@ -169,3 +169,15 @@ HTTP 登录验收首次遇到 Python CookieJar 不发送 localhost 的 Secure Co
 Playwright 已通过真实 OIDC 登录独立实例，在 1440×900 与 375×812 验证个人/企业默认设置中的五个引擎，取消继承后的 OpenClaw 及企业默认 OpenClaw 均可选择。重新加载后的继承模式仍按契约禁用个人覆盖控件，不将此状态写成引擎不可用。前端市场实际显示 20 条品牌条目，首组恢复为含钉钉、飞书、企业微信的“沟通协作”，不再从项目管理开始；未操作外部账号授权。
 
 同时复现旧全局 input 规则覆盖隐藏性格 radio 的 1px 宽度，导致手机页面 scrollWidth 589 > 375；局部提高设置页隐藏 radio 选择器的优先级并固定其 1px 盒子后，个人与模型页在两个视口均无横向溢出（375/375、1440/1440）。没有改变可见卡片视觉或其他页面控件。修改后类型检查与构建再次通过，浏览器尺寸/交互/截图证据在忽略目录 `output/playwright/all-engines-*` 与 `all-connectors-desktop.png`。独立实例没有模型供应商，截图中的空目录不是线上模型配置被清除。首次在服务 ready 前导航产生 empty response、继承模式下选择产生禁用超时，均按真实状态保留，没有绕过控件或修改鉴权。
+
+最终设置页源码 `441ebabd539bd2853e289bdd8a6874ab84cef496` 已提交、推送并经 main_temp 发布。`4cd1386` 为未部署的中间 UI 构建。最终两架构镜像的 API、Worker、MinIO 可执行文件 SHA-256 均与已完成启动/重启及默认启用验收的 916fcba 镜像逐项一致，后端、部署和资源目录 Git diff 为空，因此未重复同一套后端测试或模型调用。新增前端组件、类型/构建、真实浏览器操作及视口检查用于验证本轮变化。
+
+| 最终产品引用（441ebab，取代上述 916fcba 当前入口） | Registry Digest |
+|---|---|
+| `latest` / `2026-11-03-441ebabd539b` 多架构 Index | `sha256:29199bdc8ba085c128456bfefea62806779777cb85a2f8d23ed679679cf13038` |
+| `2026-11-03-441ebabd539b-arm64` 平台 Manifest | `sha256:1def605c999aaed276dfbf2c853558ed4ab12045777ebb2d5d96ff8389164f80` |
+| `2026-11-03-441ebabd539b-amd64` 平台 Manifest / 线上固定引用 | `sha256:7d9f0c800640c2bebe0361c374147f4a48acca78c583182eb8f3c39071bf72b8` |
+
+Runtime 的对应版本标签复用相同两架构平台 Manifest，latest Index 仍为 `e87886e2…`。四个版本引用先核验成功，再更新两仓库的 latest/架构别名；远端 latest 各恰含 ARM64、AMD64，两类架构别名各恰含相应单平台。源码仍使用精确 main_temp 的干净 git archive 构建，未纳入历史未提交文件。
+
+切换前再次确认没有活动执行并生成 root-only 冷备份 `/srv/agent-platform/backups/before-settings-ui-441ebab`，校验通过。最终线上 healthy / RestartCount 0，维护标记清除；管理员实际登录后仍为五引擎和 20 条 User/Administrator 目录，11 条生产 CLI 证据全部保留，旧 GitHub bundle 仍不记通过，平台默认未重写。公网前端 index SHA-256 为 `1a68c9f933c18516e966c2e84ac2f0b101a3311bda24c06c7057ed31cdad5a0c`，与两架构镜像及本次浏览器所用构建产物一致。原网站继续 HTTPS 200。新建的浏览器验收实例与标签隔离卷已清理；最终只追加本次前端证据，没有将启动检查扩写为全部真实第三方业务或完整 Production Conformance 通过。
