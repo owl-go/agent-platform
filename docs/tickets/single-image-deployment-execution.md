@@ -182,10 +182,14 @@ Runtime 的对应版本标签复用相同两架构平台 Manifest，latest Index
 
 切换前再次确认没有活动执行并生成 root-only 冷备份 `/srv/agent-platform/backups/before-settings-ui-441ebab`，校验通过。最终线上 healthy / RestartCount 0，维护标记清除；管理员实际登录后仍为五引擎和 20 条 User/Administrator 目录，11 条生产 CLI 证据全部保留，旧 GitHub bundle 仍不记通过，平台默认未重写。公网前端 index SHA-256 为 `1a68c9f933c18516e966c2e84ac2f0b101a3311bda24c06c7057ed31cdad5a0c`，与两架构镜像及本次浏览器所用构建产物一致。原网站继续 HTTPS 200。新建的浏览器验收实例与标签隔离卷已清理；最终只追加本次前端证据，没有将启动检查扩写为全部真实第三方业务或完整 Production Conformance 通过。
 
-### 同日：智能助手列表渲染空值修复（进行中）
+### 同日：智能助手列表渲染空值修复（已上线）
 
 用户截图显示 SmartAssistantsPage 读取 null.length 后整页列表不呈现。通过所属账号的真实 API 只读核验：两条智能助手记录仍存在，均为 draft，未绑定知识库字段为 JSON null，分享配置是正常对象。没有输出名称、提示词、分享 Token 或供应商凭据；没有恢复、删除或重建任何用户记录。
 
 前端 API 边界新增 SmartAssistant 响应规范化，将 null/缺省 knowledge_base_ids 转为空数组，保留实际绑定和其余字段；覆盖列表、详情、创建、更新、复制、状态、图标/Widget 图标及分享 Token 响应。空列表也规范化为数组。后端接口、数据库和权限语义不变。通过同一 HTTP client 将真实空值形状送入 Vue 卡片渲染，覆盖未绑定与已绑定两个条目；此前仅有 [] 的组件 fixture 未覆盖此故障。
 
 AC-ASSISTANT-LIST / COD-002/006、TST-001/002/005、G-WEB：新回归修复前 3 项失败，修复后客户端及列表/详情/分享相关 85 项通过，完整前端 701 项、web-typecheck、web-build、diff 检查通过。截图堆栈与线上字段已直接定位，未为已确认的空值原因增加无关假说。上线和保留记录核对结果待补充；不将 API 记录存在写成已完成真实账号浏览器列表验收。
+
+修复源码 `ef9a92084251dc54018091594270a2527930e127` 已经 main_temp 集成、干净 archive 构建并上线。产品 `2026-11-03-ef9a92084251-arm64` 平台 Manifest 为 `sha256:cd4312eee91aca0b13e36f06c7e8f38264173a3bcb558e1ea7f36b0eea49ed1e`，amd64/线上固定引用为 `sha256:b509124a2e0662805f93e4d22e330a54f389595de96ea129a9e9fcf09ca10baa`。两个仓库四个架构版本先完成推送与核验，再更新 latest 和架构标签；产品 latest Index 为 `sha256:279a53afd30da24aea1f0b585d32e5fc3f43dd9a786ea99ddb9bbd2fc26bd62c`，Runtime 继续复用相同不可变平台镜像。
+
+后端/部署/资源 Git diff 为空，两架构 API、Worker、MinIO 可执行文件 SHA-256 均与此前通过安装/重启验收的镜像相同，未重复未受影响的后端和模型检查。切换前活动执行为零，已生成 `/srv/agent-platform/backups/before-assistant-null-ef9a920` 私有冷备份并校验。部署后服务 healthy / RestartCount 0，两个原有助手的 ID 与 draft 状态保持相同，原始知识库字段仍为 null（在客户端规范化，未执行数据库修复或写入），五引擎与 20 条目录仍可用。公网前端 index 指纹 `7f44e0a40dd3e38b9ebdd99d26ad7d39d6dc45c69643c8b1e9ed396f40c5f956` 与本次通过回归测试的本地构建及两个镜像一致，维护标记已清除。验证采用真实所属账号 API 只读检查及同形 HTTP 响应的 Vue 渲染回归；未另行登录该账号的浏览器或修改其助手状态/内容，不把这些结果写成真实对话或发布验收。
