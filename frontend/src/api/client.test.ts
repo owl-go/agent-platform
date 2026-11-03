@@ -2,6 +2,38 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlatformApi, type SessionMessageSnapshot } from "./client";
 
 describe("Agent Workspace API client", () => {
+  it.each([null, undefined, ["knowledge-1"]])("normalizes assistant knowledge bindings across responses (%s)", async (bindings) => {
+    const assistant = { id: "assistant-1", name: "Existing assistant", knowledge_base_ids: bindings, version: 3 };
+    let response: unknown = assistant;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(response), { status: 200 })));
+    const api = createPlatformApi(() => "token");
+    const expected = bindings ?? [];
+    response = [assistant];
+    expect((await api.listSmartAssistants())[0]?.knowledge_base_ids).toEqual(expected);
+    response = assistant;
+    const icon = new File(["fixture"], "icon.png", { type: "image/png" });
+    for (const request of [
+      () => api.getSmartAssistant("assistant-1"),
+      () => api.createSmartAssistant({ name: "Existing assistant" }),
+      () => api.updateSmartAssistant("assistant-1", { name: "Existing assistant" }, 3),
+      () => api.copySmartAssistant("assistant-1"),
+      () => api.setSmartAssistantState("assistant-1", "enabled", 3),
+      () => api.uploadSmartAssistantIcon("assistant-1", icon, 3),
+      () => api.uploadSmartAssistantWidgetIcon("assistant-1", icon, { name: "Existing assistant" }, 3),
+    ]) {
+      const item = await request();
+      expect(item.knowledge_base_ids).toEqual(expected);
+      expect(item).toMatchObject({ id: assistant.id, name: assistant.name, version: 3 });
+    }
+    response = { token: "fixture-share-token", assistant };
+    expect((await api.regenerateAssistantShareToken("assistant-1", 3)).assistant.knowledge_base_ids).toEqual(expected);
+  });
+
+  it("normalizes a null assistant list to an empty list", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("null", { status: 200 })));
+    await expect(createPlatformApi(() => "token").listSmartAssistants()).resolves.toEqual([]);
+  });
+
   it("preserves the public validation cause of a failed save", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({reason: "invalid_input", message: "resource is invalid: API Key is required"}), {status: 422})));
     await expect(createPlatformApi(() => "token").createModelProviderConnection({ name: "Provider", provider_type: "openai", endpoint: "https://example.test/v1", protocols: ["openai_chat"], api_key: "" })).rejects.toMatchObject({code: "invalid_input", detail: "API Key is required"});

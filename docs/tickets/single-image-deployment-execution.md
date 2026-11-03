@@ -181,3 +181,11 @@ Playwright 已通过真实 OIDC 登录独立实例，在 1440×900 与 375×812 
 Runtime 的对应版本标签复用相同两架构平台 Manifest，latest Index 仍为 `e87886e2…`。四个版本引用先核验成功，再更新两仓库的 latest/架构别名；远端 latest 各恰含 ARM64、AMD64，两类架构别名各恰含相应单平台。源码仍使用精确 main_temp 的干净 git archive 构建，未纳入历史未提交文件。
 
 切换前再次确认没有活动执行并生成 root-only 冷备份 `/srv/agent-platform/backups/before-settings-ui-441ebab`，校验通过。最终线上 healthy / RestartCount 0，维护标记清除；管理员实际登录后仍为五引擎和 20 条 User/Administrator 目录，11 条生产 CLI 证据全部保留，旧 GitHub bundle 仍不记通过，平台默认未重写。公网前端 index SHA-256 为 `1a68c9f933c18516e966c2e84ac2f0b101a3311bda24c06c7057ed31cdad5a0c`，与两架构镜像及本次浏览器所用构建产物一致。原网站继续 HTTPS 200。新建的浏览器验收实例与标签隔离卷已清理；最终只追加本次前端证据，没有将启动检查扩写为全部真实第三方业务或完整 Production Conformance 通过。
+
+### 同日：智能助手列表渲染空值修复（进行中）
+
+用户截图显示 SmartAssistantsPage 读取 null.length 后整页列表不呈现。通过所属账号的真实 API 只读核验：两条智能助手记录仍存在，均为 draft，未绑定知识库字段为 JSON null，分享配置是正常对象。没有输出名称、提示词、分享 Token 或供应商凭据；没有恢复、删除或重建任何用户记录。
+
+前端 API 边界新增 SmartAssistant 响应规范化，将 null/缺省 knowledge_base_ids 转为空数组，保留实际绑定和其余字段；覆盖列表、详情、创建、更新、复制、状态、图标/Widget 图标及分享 Token 响应。空列表也规范化为数组。后端接口、数据库和权限语义不变。通过同一 HTTP client 将真实空值形状送入 Vue 卡片渲染，覆盖未绑定与已绑定两个条目；此前仅有 [] 的组件 fixture 未覆盖此故障。
+
+AC-ASSISTANT-LIST / COD-002/006、TST-001/002/005、G-WEB：新回归修复前 3 项失败，修复后客户端及列表/详情/分享相关 85 项通过，完整前端 701 项、web-typecheck、web-build、diff 检查通过。截图堆栈与线上字段已直接定位，未为已确认的空值原因增加无关假说。上线和保留记录核对结果待补充；不将 API 记录存在写成已完成真实账号浏览器列表验收。

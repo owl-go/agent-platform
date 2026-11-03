@@ -710,33 +710,36 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     },
     deleteMCPServer(id, confirmationToken, signal) { return remove(`/api/v1/connectors/mcp/${encodeURIComponent(id)}?confirmation_token=${encodeURIComponent(confirmationToken)}`, signal); },
     async listSkills(signal) { return (await call<{ items: Skill[] }>("/api/v1/skills", { signal })).items ?? []; },
-    async listSmartAssistants(signal) { return await call<SmartAssistant[]>("/api/v1/ai-apps/assistants", { signal }); },
-    createSmartAssistant(input, signal) { return call("/api/v1/ai-apps/assistants", json("POST", input, signal)); },
-    getSmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, { signal }); },
-    uploadSmartAssistantIcon(id, file, version, signal) {
+    async listSmartAssistants(signal) { return (await call<SmartAssistantResponse[] | null>("/api/v1/ai-apps/assistants", { signal }) ?? []).map(normalizeSmartAssistant); },
+    async createSmartAssistant(input, signal) { return normalizeSmartAssistant(await call("/api/v1/ai-apps/assistants", json("POST", input, signal))); },
+    async getSmartAssistant(id, signal) { return normalizeSmartAssistant(await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, { signal })); },
+    async uploadSmartAssistantIcon(id, file, version, signal) {
       const form = new FormData();
       form.append("icon", file);
       form.append("version", String(version));
-      return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } });
+      return normalizeSmartAssistant(await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } }));
     },
     getSmartAssistantIcon(id, signal) { return download(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/icon`, signal); },
-    uploadSmartAssistantWidgetIcon(id, file, input, version, signal) {
+    async uploadSmartAssistantWidgetIcon(id, file, input, version, signal) {
       const form = new FormData();
       form.append("icon", file);
       form.append("configuration", JSON.stringify(input));
       form.append("version", String(version));
-      return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/widget-icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } });
+      return normalizeSmartAssistant(await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/widget-icon`, { method: "POST", body: form, signal, headers: { "Idempotency-Key": crypto.randomUUID() } }));
     },
     getSmartAssistantWidgetIcon(id, signal) { return download(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/widget-icon`, signal); },
-    updateSmartAssistant(id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
-    copySmartAssistant(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/copy`, json("POST", {}, signal)); },
-    setSmartAssistantState(id, state, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal)); },
+    async updateSmartAssistant(id, input, version, signal) { return normalizeSmartAssistant(await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal))); },
+    async copySmartAssistant(id, signal) { return normalizeSmartAssistant(await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/copy`, json("POST", {}, signal))); },
+    async setSmartAssistantState(id, state, version, signal) { return normalizeSmartAssistant(await call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/state`, json("POST", { state, version }, signal))); },
     deleteSmartAssistant(id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}`, signal); },
     async listAssistantFAQs(id, signal) { return await call<SmartAssistantFAQ[]>(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/faqs`, { signal }); },
     createAssistantFAQ(id, input, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/faqs`, json("POST", input, signal)); },
     updateAssistantFAQ(assistantID, id, input, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, json("PATCH", { ...input, version }, signal)); },
     deleteAssistantFAQ(assistantID, id, signal) { return remove(`/api/v1/ai-apps/assistants/${encodeURIComponent(assistantID)}/faqs/${encodeURIComponent(id)}`, signal); },
-    regenerateAssistantShareToken(id, version, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/share-token`, json("POST", { version }, signal)); },
+    async regenerateAssistantShareToken(id, version, signal) {
+      const value = await call<{ token: string; assistant: SmartAssistantResponse }>(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/share-token`, json("POST", { version }, signal));
+      return { ...value, assistant: normalizeSmartAssistant(value.assistant) };
+    },
     runAssistantPublicationCheck(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/publication-check`, json("POST", {}, signal)); },
     getAssistantPublicationStats(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/publication-stats`, { signal }); },
     createAssistantSession(id, signal) { return call(`/api/v1/ai-apps/assistants/${encodeURIComponent(id)}/sessions`, json("POST", {}, signal)); },
@@ -852,6 +855,12 @@ export function createPlatformApi(getAccessToken: () => string | undefined): Pla
     async listGovernanceAuditEvents(limit = 100, signal) { return (await call<{ items: GovernanceAuditEvent[] }>(`/api/v1/admin/governance-audit-events?limit=${limit}`, { signal })).items ?? []; },
     transferGroupResources(groupID, input, signal) { return call(`/api/v1/admin/identity-groups/${encodeURIComponent(groupID)}/resource-transfers`, json("POST", input, signal)); },
   };
+}
+
+type SmartAssistantResponse = Omit<SmartAssistant, "knowledge_base_ids"> & { knowledge_base_ids?: string[] | null };
+
+function normalizeSmartAssistant(assistant: SmartAssistantResponse): SmartAssistant {
+  return { ...assistant, knowledge_base_ids: assistant.knowledge_base_ids ?? [] };
 }
 
 function normalizeExpert(expert: Expert): Expert {

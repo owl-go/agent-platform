@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { describe, expect, it, vi } from "vitest";
 import { createAppI18n } from "../i18n";
-import { ApiError, platformApiKey, type AssistantConversation, type PlatformApi, type SmartAssistant } from "../api/client";
+import { ApiError, createPlatformApi, platformApiKey, type AssistantConversation, type PlatformApi, type SmartAssistant } from "../api/client";
 import { createAppRouter } from "../router";
 import SmartAssistantsPage from "./SmartAssistantsPage.vue";
 
@@ -30,6 +30,30 @@ function apiStub(): PlatformApi {
 }
 
 describe("SmartAssistantsPage lifecycle", () => {
+  it("renders existing assistants through the HTTP client when unbound knowledge is null", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (path: RequestInfo | URL) => new Response(JSON.stringify(
+      String(path) === "/api/v1/ai-apps/assistants"
+        ? [{ ...source, knowledge_base_ids: null }, { ...source, id: "assistant-2", name: "已绑定助手", knowledge_base_ids: ["base-1"] }]
+        : { items: [] },
+    ), { status: 200 })));
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/ai-apps/assistants");
+    const renderError = vi.fn();
+    const wrapper = mount(SmartAssistantsPage, { global: { plugins: [router, createAppI18n({ getItem: () => "zh-CN" }, "zh-CN")], provide: { [platformApiKey as symbol]: createPlatformApi(() => "fixture-token") }, config: { errorHandler: renderError } } });
+    try {
+      await flushPromises();
+      expect(renderError).not.toHaveBeenCalled();
+      const cards = wrapper.findAll(".application-card");
+      expect(cards).toHaveLength(2);
+      expect(cards[0]!.get("h3").text()).toBe(source.name);
+      expect(cards[0]!.find("small").text()).toContain("0");
+      expect(cards[1]!.find("small").text()).toContain("1");
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("opens the assistant creation form from the create action", async () => {
     const router = createAppRouter(createMemoryHistory());
     await router.push("/ai-apps/assistants");
