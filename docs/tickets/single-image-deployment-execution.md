@@ -75,3 +75,35 @@
 Docker 虚拟磁盘继续位于 `/Volumes/Seagate Bas/AgentPlatform-Docker/DockerDesktop/Docker.raw`。最终仍有外置盘约 537GiB、内置盘约 44GiB 可用；未格式化或操作外置盘原有文件。使用 Docker 时必须连接此盘，安全弹出前先停止 Docker。
 
 本轮没有原生 AMD64 硬件验收、Linux + runsc Sandbox / Production Conformance、独立 PostgreSQL 集成环境或密码变更后的备份恢复演练。生产保持 runsc 与 Registry RepoDigest 的拒绝降级边界，不把本地 runc 或模拟测试描述成生产验证。
+
+## 2026-11-03：game 服务器基础安装
+
+用户授权通过 `ssh game` 部署，保留原网站，不部署 RAGFlow，但保留后续真实 AI 对话的执行路径。用户选择自行配置模型，不迁移本地供应商 Key、会话、连接器账号或系统密钥。本次为全新安装，不是旧本地实例的数据迁移。
+
+- 环境：Ubuntu 26.04 / 原生 amd64，2 vCPU、约 2 GiB RAM、2 GiB Swap。原网站及其 PostgreSQL / Redis 继续运行；这是资源受限的基础安装，不代表已验证生产容量或并发能力。
+- 应用源码来自 `origin/main_temp` 的 `0741b9157b5db0c765af4badb4f3f346a31f2691`，以干净 `git archive` 构建，没有上传工作区未提交文件。产品版本标签 `2026-11-03-0741b9157b5d-amd64` 已推送；本次未改 `latest` 或其他架构别名。
+- 产品固定为 `haozhi152/agent-platform@sha256:355982e17c2ed24e381541e10d226db4209926b1bfb0ee0bbec4cd225a4589ff`，独立 Runtime 固定为 `haozhi152/agent-platform-runtime@sha256:a3f1a38d8af2b34418b29c4b95aaa0f384b878d4f840448cace4866a4052a63c`。
+- 安装目录 `/srv/agent-platform`，Compose 常驻容器 `agent-platform`，独立卷 `agent-platform-production-data`；仅发布 `127.0.0.1:18080`，由宿主 Nginx 提供入口。Web/API/Worker/Keycloak/PostgreSQL/MinIO 共用产品容器；未部署 RAGFlow。
+- 为新安装生成独立系统凭据和强管理员密码。用户名 `admin`，访问说明保存在仅 root 可读的 `/srv/agent-platform/config/admin-access.txt`；没有使用公开弱密码，也未读取或输出该文件内容。
+- Docker 新容器默认进入 `agentplatform.slice`，平台总量 `MemoryHigh=1100M`、`MemoryMax=1350M`、`MemorySwapMax=1536M`、`CPUQuota=150%`，不把已有原站进程纳入此 Slice。应用另有容器资源限制。最终检查约使用 527 MiB Swap，说明当前容量余量有限，不承诺稳定并发。
+- 安装 `runsc release-20261102.0`，启用 `--host-uds=open`，保持 `production` / `runsc` / Registry RepoDigest；没有 `runc` 回退。Egress 策略与宿主 Controller 为 systemd 服务，Docker 重启后恢复；临时镜像下载代理与 SSH 转发已停止使用。
+
+### HTTPS 与访问
+
+- 当前规范入口为 `https://134.175.90.85/sessions`，OIDC issuer、授权地址、Token 地址及回调使用同一 HTTPS IP Origin。
+- IP 证书由 Let's Encrypt 签发，SAN 包含该 IP；Certbot 5.4.0 / ACME 5.4.0 使用隔离 venv，systemd timer、Nginx deploy hook 已配置。`certbot renew --cert-name agent-platform-ip --dry-run --no-random-sleep-on-renew` 实际通过。
+- 用户提供的 `agent.shunyuit.cloud_nginx.zip` 已校验域名、有效期及证书/私钥匹配，证书有效至 2027-02-01（客户端日期口径）。私钥安装到 `/etc/nginx/ssl/agent.shunyuit.cloud/privkey.pem`，root:root / 0600；原始 ZIP 归档在服务器的受限配置目录，私钥未进入仓库、镜像或日志。
+- 用户说明子域名备案尚未完成。域名证书已安装，但外网 HTTPS SNI 连接仍重置，不将 Nginx 本机配置检查记为域名公网可用。域名 HTTPS 配置先重定向到 IP 规范入口，备案完成后再显式切换唯一 OIDC Origin，不能仅做代理别名而破坏浏览器状态与回调。
+
+### 实测结果与缺失证据
+
+| AC / 门禁 | 结果 |
+|---|---|
+| AC-GAME-BASE / G-DEPLOY | `make deploy-test` 全部通过；原生 amd64 镜像真实启动，容器 healthy / RestartCount 0，外部页面 HTTP 200、`/api/readyz` ready，内部组合健康探针通过；原站 HTTPS 200。 |
+| AC-GAME-AUTH / G-SEC | 外部匿名 `/api/v1/sessions` 返回 401；公开 OIDC Discovery 返回精确 IP issuer 与端点；管理员初始化成功。浏览器自动化创建验收页超时，未声明完成浏览器管理员登录。 |
+| AC-GAME-RUNTIME / G-RUNTIME | 在实际 Linux + runsc 中验证五个固定 CLI 版本，UID 65532、只读 Rootfs、移除 Capability、no-new-privileges、资源限制及不挂 Docker Socket；受管网络访问公开 HTTPS 返回 200。只是基础检查，不是完整 Production Conformance。 |
+| AC-GAME-EGRESS / G-SEC | 初测云元数据与网桥宿主被阻断，但本机公网 IP 因云 NAT 回环仍可访问。通过既有 `AGENT_EXTRA_DENY_CIDRS=134.175.90.85/32` 增加本机公网地址拒绝后，同一组测试全部阻断；规则随 systemd 持久恢复。 |
+
+首次构建因 Docker 内 Go 依赖直连超时失败，改用现有受信任工作站代理后相同固定版本构建通过；服务器不能直连 Docker Hub，镜像准备经临时 SSH 转发，完成后移走临时 Docker Proxy drop-in 并重启 Docker。宿主 Controller 初次因 `/run/xtables.lock` 不存在而拒绝启动，增加 tmpfiles 的受限锁文件后实际启动成功。保留这些首次失败，不以重试代替原因。
+
+真实模型供应商尚未由用户配置；模型调用、Session 流式/取消/恢复、Workflow、CLI Connector bundle × RepoDigest 联合验证和完整 Production Conformance 未执行。按现有生产验收契约，未取得真实证据的 Runtime 仍未标记 verified/available，不能把固定 CLI 版本检查写成真实 AI 对话通过。下一步由用户在管理员界面填写供应商，随后对准确 Digest 验证真实调用，再启用通过验收的引擎。没有开启 Native Resume、CLI Builder 或消息渠道。未执行本安装的备份恢复演练或长期压力测试。
